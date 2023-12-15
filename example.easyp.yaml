@@ -1,0 +1,7 @@
+version: v1alpha
+lint:
+  use:
+    - COMMENT_ENUM
+    - COMMENT_ONEOF
+    - COMMENT_RPC
+    - COMMENT_SERVICE

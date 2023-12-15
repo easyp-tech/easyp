@@ -1,0 +1,51 @@
+syntax = "proto3";
+
+package api.session.v1;
+
+import "google/rpc/code.proto";
+
+option go_package = "github.com/ZergsLaw/back-template/api/session/v1;pb";
+
+// Internal service API for managing user session.
+service SessionInternalAPI {
+  // Save new user's session and returns auth token.
+  rpc Save(SaveRequest) returns (SaveResponse) {}
+
+  // Returns user's session info by token.
+  rpc Get(GetRequest) returns (GetResponse) {}
+
+  // Delete user's session by auth token.
+  rpc Delete(DeleteRequest) returns (DeleteResponse) {}
+}
+
+message GetRequest {
+  // Contains auth token, which was send by Save handler.
+  string token = 1;
+}
+
+message GetResponse {
+  // Contains session's UUID.
+  string session_id = 1;
+  // Contains user's UUID.
+  string user_id = 2;
+}
+
+message DeleteRequest {
+  // Contains session's UUID.
+  string session_id = 1;
+}
+message DeleteResponse {}
+
+message SaveRequest {
+  // Contains user UUID.
+  string user_id = 1;
+  // Contains user's origin IP.
+  string ip = 2;
+  // Contains user's client.
+  string user_agent = 3;
+}
+
+message SaveResponse {
+  // User's auth token.
+  string token = 1;
+}

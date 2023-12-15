@@ -1,0 +1,47 @@
+syntax = "proto3";
+
+package session;
+
+import "google/protobuf/empty.proto";
+import "google/rpc/code.proto";
+
+option go_package = "github.com/ZergsLaw/back-template/api/session/v1;pb";
+
+service Auth {
+  rpc Save(SessionInfo) returns (Result) {}
+  rpc Get(TokenData) returns (Session) {}
+  rpc Delete(DeleteInfo) returns (google.protobuf.Empty) {}
+}
+
+message TokenData {
+  string token = 1;
+}
+
+message Session {
+  string session_id = 1;
+  string user_id = 2;
+}
+
+message DeleteInfo {
+  string session_id = 1;
+}
+
+message SessionInfo {
+  string user_id = 1;
+  string ip = 2;
+  string user_agent = 3;
+  oneof social_network {
+    string email = 4;
+    string username = 5;
+  }
+}
+
+message Result {
+  string token = 1;
+}
+
+enum SocialNetwork {
+  google = 0;
+  yahoo = 1;
+  facebook = 2;
+}
