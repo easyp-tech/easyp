@@ -7,6 +7,8 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/yoheimuta/go-protoparser/v4"
 	"github.com/yoheimuta/go-protoparser/v4/interpret/unordered"
+
+	"github.com/easyp-tech/easyp/internal/core"
 )
 
 const (
@@ -14,12 +16,12 @@ const (
 	validAuthProto   = `./../../testdata/api/session/v1/session.proto`
 )
 
-func start(t testing.TB) (*require.Assertions, map[string]*unordered.Proto) {
+func start(t testing.TB) (*require.Assertions, map[string]core.ProtoInfo) {
 	t.Helper()
 
 	assert := require.New(t)
 
-	protos := map[string]*unordered.Proto{
+	protos := map[string]core.ProtoInfo{
 		invalidAuthProto: parseFile(t, assert, invalidAuthProto),
 		validAuthProto:   parseFile(t, assert, validAuthProto),
 	}
@@ -27,7 +29,7 @@ func start(t testing.TB) (*require.Assertions, map[string]*unordered.Proto) {
 	return assert, protos
 }
 
-func parseFile(t testing.TB, assert *require.Assertions, path string) *unordered.Proto {
+func parseFile(t testing.TB, assert *require.Assertions, path string) core.ProtoInfo {
 	t.Helper()
 
 	f, err := os.Open(path)
@@ -40,5 +42,8 @@ func parseFile(t testing.TB, assert *require.Assertions, path string) *unordered
 	res, err := unordered.InterpretProto(got)
 	assert.NoError(err)
 
-	return res
+	return core.ProtoInfo{
+		Path: path,
+		Info: res,
+	}
 }

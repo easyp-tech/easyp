@@ -73,7 +73,7 @@ func (l Lint) Action(ctx *cli.Context) error {
 
 	var useRule []core.Rule
 	for _, ruleName := range cfg.Lint.Use {
-		rule, ok := rules.Rules[ruleName]
+		rule, ok := rules.Rules()[ruleName]
 		if !ok {
 			return core.ErrInvalidRule
 		}

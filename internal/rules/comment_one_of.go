@@ -1,10 +1,6 @@
 package rules
 
 import (
-	"fmt"
-
-	"github.com/yoheimuta/go-protoparser/v4/interpret/unordered"
-
 	"github.com/easyp-tech/easyp/internal/core"
 )
 
@@ -14,15 +10,13 @@ var _ core.Rule = (*CommentOneOf)(nil)
 type CommentOneOf struct{}
 
 // Validate implements Rule.
-func (c *CommentOneOf) Validate(svc *unordered.Proto) []error {
+func (c *CommentOneOf) Validate(protoInfo core.ProtoInfo) []error {
 	var res []error
 
-	for _, msg := range svc.ProtoBody.Messages {
+	for _, msg := range protoInfo.Info.ProtoBody.Messages {
 		for _, oneof := range msg.MessageBody.Oneofs {
 			if len(oneof.Comments) == 0 {
-				res = append(res, &Error{
-					Err: fmt.Errorf("%d:%d:%s: %w", oneof.Meta.Pos.Line, oneof.Meta.Pos.Column, oneof.OneofName, core.ErrOneOfCommentIsEmpty),
-				})
+				res = append(res, buildError(oneof.Meta.Pos, oneof.OneofName, core.ErrOneOfCommentIsEmpty))
 			}
 		}
 	}

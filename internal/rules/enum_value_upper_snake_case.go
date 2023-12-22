@@ -1,10 +1,9 @@
 package rules
 
 import (
-	"fmt"
-	"github.com/easyp-tech/easyp/internal/core"
-	"github.com/yoheimuta/go-protoparser/v4/interpret/unordered"
 	"regexp"
+
+	"github.com/easyp-tech/easyp/internal/core"
 )
 
 var _ core.Rule = (*EnumValueUpperSnakeCase)(nil)
@@ -13,15 +12,13 @@ var _ core.Rule = (*EnumValueUpperSnakeCase)(nil)
 type EnumValueUpperSnakeCase struct{}
 
 // Validate implements Rule.
-func (c *EnumValueUpperSnakeCase) Validate(svc *unordered.Proto) []error {
+func (c *EnumValueUpperSnakeCase) Validate(protoInfo core.ProtoInfo) []error {
 	var res []error
 	upperSnakeCase := regexp.MustCompile("^[A-Z]+(_[A-Z]+)*$")
-	for _, enum := range svc.ProtoBody.Enums {
+	for _, enum := range protoInfo.Info.ProtoBody.Enums {
 		for _, field := range enum.EnumBody.EnumFields {
 			if !upperSnakeCase.MatchString(field.Ident) {
-				res = append(res, &Error{
-					Err: fmt.Errorf("%d:%d:%s: %w", field.Meta.Pos.Line, field.Meta.Pos.Column, field.Ident, core.ErrEnumValueUpperSnakeCase),
-				})
+				res = append(res, buildError(field.Meta.Pos, field.Ident, core.ErrEnumValueUpperSnakeCase))
 			}
 		}
 	}
