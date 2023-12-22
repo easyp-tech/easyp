@@ -40,7 +40,7 @@ message Result {
   string token = 1;
 }
 
-enum SocialNetwork {
+enum social_network {
   google = 0;
   yahoo = 1;
   facebook = 2;

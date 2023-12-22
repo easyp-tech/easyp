@@ -11,6 +11,7 @@ import (
 
 const (
 	invalidAuthProto = `./../../testdata/auth/service.proto`
+	validAuthProto   = `./../../testdata/api/session/v1/session.proto`
 )
 
 func start(t testing.TB) (*require.Assertions, map[string]*unordered.Proto) {
@@ -20,6 +21,7 @@ func start(t testing.TB) (*require.Assertions, map[string]*unordered.Proto) {
 
 	protos := map[string]*unordered.Proto{
 		invalidAuthProto: parseFile(t, assert, invalidAuthProto),
+		validAuthProto:   parseFile(t, assert, validAuthProto),
 	}
 
 	return assert, protos

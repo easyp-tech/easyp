@@ -18,11 +18,13 @@ service SessionInternalAPI {
   rpc Delete(DeleteRequest) returns (DeleteResponse) {}
 }
 
+//---Must be filled out---
 message GetRequest {
   // Contains auth token, which was send by Save handler.
   string token = 1;
 }
 
+//---Must be filled out---
 message GetResponse {
   // Contains session's UUID.
   string session_id = 1;
@@ -30,12 +32,16 @@ message GetResponse {
   string user_id = 2;
 }
 
+//---Must be filled out---
 message DeleteRequest {
   // Contains session's UUID.
   string session_id = 1;
 }
+
+//---Must be filled out---
 message DeleteResponse {}
 
+//---Must be filled out---
 message SaveRequest {
   // Contains user UUID.
   string user_id = 1;
@@ -45,7 +51,15 @@ message SaveRequest {
   string user_agent = 3;
 }
 
+//---Must be filled out---
 message SaveResponse {
   // User's auth token.
   string token = 1;
+}
+
+//---Must be filled out---
+enum SocialNetwork {
+  GOOGLE = 0;
+  YAHOO = 1;
+  FACEBOOK = 2;
 }
