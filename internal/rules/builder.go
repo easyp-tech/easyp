@@ -4,8 +4,9 @@ import (
 	"github.com/easyp-tech/easyp/internal/core"
 )
 
-var (
-	Rules = map[string]core.Rule{
+// Rules returns all rules.
+func Rules() map[string]core.Rule {
+	return map[string]core.Rule{
 		"COMMENT_ENUM":                &CommentEnum{},
 		"COMMENT_ONEOF":               &CommentOneOf{},
 		"COMMENT_RPC":                 &CommentRPC{},
@@ -15,4 +16,4 @@ var (
 		"ENUM_PASCAL_CASE":            &EnumPascalCase{},
 		"ENUM_VALUE_UPPER_SNAKE_CASE": &EnumValueUpperSnakeCase{},
 	}
-)
+}

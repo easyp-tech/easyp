@@ -54,7 +54,10 @@ func (c *Core) Lint(ctx context.Context, disk fs.FS) error {
 				return ctx.Err()
 			}
 
-			results := c.rules[i].Validate(proto)
+			results := c.rules[i].Validate(ProtoInfo{
+				Path: path,
+				Info: proto,
+			})
 			for _, result := range results {
 				res = append(res, fmt.Errorf("%s:%w", path, result))
 			}
