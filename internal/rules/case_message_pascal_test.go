@@ -8,18 +8,18 @@ import (
 	"github.com/easyp-tech/easyp/internal/rules"
 )
 
-func TestCommentService_Validate(t *testing.T) {
+func TestMessagePascalCase_Validate(t *testing.T) {
 	t.Parallel()
 
 	tests := map[string]struct {
 		fileName string
 		wantErr  error
 	}{
-		"auth_service_comment_is_empty": {
+		"check_message_pascal_case_is_invalid": {
 			fileName: invalidAuthProto,
-			wantErr:  core.ErrServiceCommentIsEmpty,
+			wantErr:  core.ErrMessagePascalCase,
 		},
-		"auth_service_comment_is_not_empty": {
+		"check_message_pascal_case_is_valid": {
 			fileName: validAuthProto,
 			wantErr:  nil,
 		},
@@ -32,8 +32,8 @@ func TestCommentService_Validate(t *testing.T) {
 
 			r, protos := start(t)
 
-			commentServiceRule := rules.CommentService{}
-			err := commentServiceRule.Validate(protos[tc.fileName])
+			messagePascalCase := rules.MessagePascalCase{}
+			err := messagePascalCase.Validate(protos[tc.fileName])
 			r.ErrorIs(errors.Join(err...), tc.wantErr)
 		})
 	}

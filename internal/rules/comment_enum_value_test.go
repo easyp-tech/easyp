@@ -8,18 +8,18 @@ import (
 	"github.com/easyp-tech/easyp/internal/rules"
 )
 
-func TestCommentService_Validate(t *testing.T) {
+func TestCommentEnumValue_Validate(t *testing.T) {
 	t.Parallel()
 
 	tests := map[string]struct {
 		fileName string
 		wantErr  error
 	}{
-		"auth_service_comment_is_empty": {
+		"auth_enum_value_comment_is_empty": {
 			fileName: invalidAuthProto,
-			wantErr:  core.ErrServiceCommentIsEmpty,
+			wantErr:  core.ErrEnumValueCommentIsEmpty,
 		},
-		"auth_service_comment_is_not_empty": {
+		"auth_enum_value_comment_is_not_empty": {
 			fileName: validAuthProto,
 			wantErr:  nil,
 		},
@@ -32,7 +32,7 @@ func TestCommentService_Validate(t *testing.T) {
 
 			r, protos := start(t)
 
-			commentServiceRule := rules.CommentService{}
+			commentServiceRule := rules.CommentEnumValue{}
 			err := commentServiceRule.Validate(protos[tc.fileName])
 			r.ErrorIs(errors.Join(err...), tc.wantErr)
 		})
