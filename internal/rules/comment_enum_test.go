@@ -15,9 +15,13 @@ func TestCommentEnum_Validate(t *testing.T) {
 		fileName string
 		wantErr  error
 	}{
-		"auth_rpc_comment_is_empty": {
+		"auth_enum_comment_is_empty": {
 			fileName: invalidAuthProto,
 			wantErr:  core.ErrEnumCommentIsEmpty,
+		},
+		"auth_enum_comment_is_not_empty": {
+			fileName: validAuthProto,
+			wantErr:  nil,
 		},
 	}
 

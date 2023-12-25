@@ -59,7 +59,10 @@ message SaveResponse {
 
 //---Must be filled out---
 enum SocialNetwork {
+  //---Must be filled out---
   GOOGLE = 0;
+  //---Must be filled out---
   YAHOO = 1;
+  //---Must be filled out---
   FACEBOOK = 2;
 }

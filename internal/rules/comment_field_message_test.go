@@ -15,11 +15,11 @@ func TestCommentMessageField_Validate(t *testing.T) {
 		fileName string
 		wantErr  error
 	}{
-		"auth_rpc_comment_is_empty": {
+		"auth_field_message_comment_is_empty": {
 			fileName: invalidAuthProto,
 			wantErr:  core.ErrMessageFieldCommentIsEmpty,
 		},
-		"auth_rpc_comment_is_not_empty": {
+		"auth_field_message_comment_is_not_empty": {
 			fileName: validAuthProto,
 			wantErr:  nil,
 		},

@@ -19,6 +19,10 @@ func TestCommentRPC_Validate(t *testing.T) {
 			fileName: invalidAuthProto,
 			wantErr:  core.ErrRPCCommentIsEmpty,
 		},
+		"auth_rpc_comment_is_not_empty": {
+			fileName: validAuthProto,
+			wantErr:  nil,
+		},
 	}
 
 	for name, tc := range tests {
