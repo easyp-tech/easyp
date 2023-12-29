@@ -32,8 +32,8 @@ func TestCommentMessageField_Validate(t *testing.T) {
 
 			r, protos := start(t)
 
-			commentServiceRule := rules.CommentMessageField{}
-			err := commentServiceRule.Validate(protos[tc.fileName])
+			rule := rules.CommentMessageField{}
+			err := rule.Validate(protos[tc.fileName])
 			r.ErrorIs(errors.Join(err...), tc.wantErr)
 		})
 	}

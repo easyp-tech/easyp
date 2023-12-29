@@ -8,18 +8,18 @@ import (
 	"github.com/easyp-tech/easyp/internal/rules"
 )
 
-func TestCommentEnumValue_Validate(t *testing.T) {
+func TestRpcPascalCase_Validate(t *testing.T) {
 	t.Parallel()
 
 	tests := map[string]struct {
 		fileName string
 		wantErr  error
 	}{
-		"auth_enum_value_comment_is_empty": {
+		"check_rpc_pascal_case_is_invalid": {
 			fileName: invalidAuthProto,
-			wantErr:  core.ErrEnumValueCommentIsEmpty,
+			wantErr:  core.ErrRpcPascalCase,
 		},
-		"auth_enum_value_comment_is_not_empty": {
+		"check_rpc_pascal_case_is_valid": {
 			fileName: validAuthProto,
 			wantErr:  nil,
 		},
@@ -32,7 +32,7 @@ func TestCommentEnumValue_Validate(t *testing.T) {
 
 			r, protos := start(t)
 
-			rule := rules.CommentEnumValue{}
+			rule := rules.RpcPascalCase{}
 			err := rule.Validate(protos[tc.fileName])
 			r.ErrorIs(errors.Join(err...), tc.wantErr)
 		})

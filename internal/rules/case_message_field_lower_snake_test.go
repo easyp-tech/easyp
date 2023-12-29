@@ -32,8 +32,8 @@ func TestMessageFieldLowerSnakeCase_Validate(t *testing.T) {
 
 			r, protos := start(t)
 
-			messageFieldLowerSnakeCase := rules.MessageFieldLowerSnakeCase{}
-			err := messageFieldLowerSnakeCase.Validate(protos[tc.fileName])
+			rule := rules.MessageFieldLowerSnakeCase{}
+			err := rule.Validate(protos[tc.fileName])
 			r.ErrorIs(errors.Join(err...), tc.wantErr)
 		})
 	}

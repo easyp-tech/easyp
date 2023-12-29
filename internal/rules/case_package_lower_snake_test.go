@@ -32,8 +32,8 @@ func TestPackageLowerSnakeCase_Validate(t *testing.T) {
 
 			r, protos := start(t)
 
-			packageLowerSnakeCase := rules.PackageLowerSnakeCase{}
-			err := packageLowerSnakeCase.Validate(protos[tc.fileName])
+			rule := rules.PackageLowerSnakeCase{}
+			err := rule.Validate(protos[tc.fileName])
 			r.ErrorIs(errors.Join(err...), tc.wantErr)
 		})
 	}

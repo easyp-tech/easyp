@@ -32,8 +32,8 @@ func TestEnumValueUpperSnakeCase_Validate(t *testing.T) {
 
 			r, protos := start(t)
 
-			enumValueUpperSnakeCase := rules.EnumValueUpperSnakeCase{}
-			err := enumValueUpperSnakeCase.Validate(protos[tc.fileName])
+			rule := rules.EnumValueUpperSnakeCase{}
+			err := rule.Validate(protos[tc.fileName])
 			r.ErrorIs(errors.Join(err...), tc.wantErr)
 		})
 	}

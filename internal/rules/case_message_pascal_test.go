@@ -32,8 +32,8 @@ func TestMessagePascalCase_Validate(t *testing.T) {
 
 			r, protos := start(t)
 
-			messagePascalCase := rules.MessagePascalCase{}
-			err := messagePascalCase.Validate(protos[tc.fileName])
+			rule := rules.MessagePascalCase{}
+			err := rule.Validate(protos[tc.fileName])
 			r.ErrorIs(errors.Join(err...), tc.wantErr)
 		})
 	}

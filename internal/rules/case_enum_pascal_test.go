@@ -32,8 +32,8 @@ func TestEnumPascalCase_Validate(t *testing.T) {
 
 			r, protos := start(t)
 
-			enumPascalCase := rules.EnumPascalCase{}
-			err := enumPascalCase.Validate(protos[tc.fileName])
+			rule := rules.EnumPascalCase{}
+			err := rule.Validate(protos[tc.fileName])
 			r.ErrorIs(errors.Join(err...), tc.wantErr)
 		})
 	}

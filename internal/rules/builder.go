@@ -20,5 +20,8 @@ func Rules() map[string]core.Rule {
 		"MESSAGE_FIELD_LOWER_SNAKE_CASE": &MessageFieldLowerSnakeCase{},
 		"ONEOF_LOWER_SNAKE_CASE":         &OneofLowerSnakeCase{},
 		"PACKAGE_LOWER_SNAKE_CASE":       &PackageLowerSnakeCase{},
+		"RPC_PASCAL_CASE":                &RpcPascalCase{},
+		"SERVICE_PASCAL_CASE":            &ServicePascalCase{},
+		"ENUM_FIRST_VALUE_ZERO":          &EnumFirstValueZero{},
 	}
 }

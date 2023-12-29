@@ -23,4 +23,7 @@ var (
 	ErrMessageFieldLowerSnakeCase = errors.New("message field is not lower snake case")
 	ErrOneofLowerSnakeCase        = errors.New("oneof is not lower snake case")
 	ErrPackageLowerSnakeCase      = errors.New("package is not lower snake case")
+	ErrRpcPascalCase              = errors.New("rpc is not pascal case")
+	ErrServicePascalCase          = errors.New("service is not pascal case")
+	ErrEnumFirstValueZero         = errors.New("enum first value is not zero")
 )
