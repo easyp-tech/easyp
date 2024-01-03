@@ -32,8 +32,8 @@ func TestOneofLowerSnakeCase_Validate(t *testing.T) {
 
 			r, protos := start(t)
 
-			oneofLowerSnakeCase := rules.OneofLowerSnakeCase{}
-			err := oneofLowerSnakeCase.Validate(protos[tc.fileName])
+			rule := rules.OneofLowerSnakeCase{}
+			err := rule.Validate(protos[tc.fileName])
 			r.ErrorIs(errors.Join(err...), tc.wantErr)
 		})
 	}

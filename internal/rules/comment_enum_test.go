@@ -32,8 +32,8 @@ func TestCommentEnum_Validate(t *testing.T) {
 
 			r, protos := start(t)
 
-			commentServiceRule := rules.CommentEnum{}
-			err := commentServiceRule.Validate(protos[tc.fileName])
+			rule := rules.CommentEnum{}
+			err := rule.Validate(protos[tc.fileName])
 			r.ErrorIs(errors.Join(err...), tc.wantErr)
 		})
 	}

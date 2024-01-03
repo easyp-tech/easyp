@@ -32,8 +32,8 @@ func TestCommentOneOf_Validate(t *testing.T) {
 
 			r, protos := start(t)
 
-			commentServiceRule := rules.CommentOneOf{}
-			err := commentServiceRule.Validate(protos[tc.fileName])
+			rule := rules.CommentOneOf{}
+			err := rule.Validate(protos[tc.fileName])
 			r.ErrorIs(errors.Join(err...), tc.wantErr)
 		})
 	}

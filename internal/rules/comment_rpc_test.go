@@ -32,8 +32,8 @@ func TestCommentRPC_Validate(t *testing.T) {
 
 			r, protos := start(t)
 
-			commentServiceRule := rules.CommentRPC{}
-			err := commentServiceRule.Validate(protos[tc.fileName])
+			rule := rules.CommentRPC{}
+			err := rule.Validate(protos[tc.fileName])
 			r.ErrorIs(errors.Join(err...), tc.wantErr)
 		})
 	}
