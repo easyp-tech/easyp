@@ -22,6 +22,7 @@ func main() {
 		Description: "description info",
 		Commands: buildCommand(
 			api.Lint{},
+			api.Mod{},
 		),
 		BashComplete: cli.DefaultAppComplete,
 	}
