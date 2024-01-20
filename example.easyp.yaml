@@ -5,3 +5,5 @@ lint:
     - COMMENT_ONEOF
     - COMMENT_RPC
     - COMMENT_SERVICE
+deps:
+  - github.com/googleapis/googleapis

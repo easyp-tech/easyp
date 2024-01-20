@@ -26,11 +26,11 @@ func (m Mod) Command() *cli.Command {
 		Action:       m.Action,
 		OnUsageError: nil,
 		Subcommands:  nil,
-		// FIXME: Use flags for mod
-		// Flags: []cli.Flag{
-		// 	flagCfg,
-		// 	flagLintDirectoryPath,
-		// },
+		Flags: []cli.Flag{
+			flagCfg,
+			// FIXME: Use flags for mod
+			// flagLintDirectoryPath,
+		},
 		SkipFlagParsing:        false,
 		HideHelp:               false,
 		HideHelpCommand:        false,
@@ -42,6 +42,11 @@ func (m Mod) Command() *cli.Command {
 }
 
 func (m Mod) Action(ctx *cli.Context) error {
-	fmt.Println("Start mod")
+	cfg, err := readConfig(ctx)
+	if err != nil {
+		return fmt.Errorf("readConfig: %w", err)
+	}
+
+	_ = cfg
 	return nil
 }
