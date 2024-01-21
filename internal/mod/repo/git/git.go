@@ -16,6 +16,11 @@ type gitRepo struct {
 	dir string
 }
 
+// TODO:
+// cmd/go/internal/modfetch/codehost/git.go:65 - create work dir
+// cmd/go/internal/modfetch/codehost/git.go:137 - git's struct
+// cmd/go/internal/modfetch/codehost/codehost.go: 228 - create workdir
+
 // New returns gitRepo instance
 // remote: full remote address with schema
 func New(remote string) (repo.Repo, error) {
