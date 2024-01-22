@@ -11,7 +11,7 @@ var _ core.Rule = (*RpcPascalCase)(nil)
 // RpcPascalCase is a rule for checking name of rpc for pascal case.
 type RpcPascalCase struct{}
 
-// Validate implements Rule.
+// Validate implements core.Rule.
 func (c *RpcPascalCase) Validate(protoInfo core.ProtoInfo) []error {
 	var res []error
 	pascalCase := regexp.MustCompile("^[A-Z][a-z]+([A-Z][a-z]+)*$")

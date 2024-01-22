@@ -9,7 +9,7 @@ var _ core.Rule = (*CommentMessageField)(nil)
 // CommentMessageField is a rule for checking message field comments.
 type CommentMessageField struct{}
 
-// Validate implements Rule.
+// Validate implements core.Rule.
 func (c *CommentMessageField) Validate(protoInfo core.ProtoInfo) []error {
 	var res []error
 

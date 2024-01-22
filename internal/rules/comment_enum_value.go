@@ -9,7 +9,7 @@ var _ core.Rule = (*CommentEnumValue)(nil)
 // CommentEnumValue is a rule for checking enum values comments.
 type CommentEnumValue struct{}
 
-// Validate implements Rule.
+// Validate implements core.Rule.
 func (c *CommentEnumValue) Validate(protoInfo core.ProtoInfo) []error {
 	var res []error
 

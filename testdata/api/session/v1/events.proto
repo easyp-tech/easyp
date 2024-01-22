@@ -1,0 +1,10 @@
+syntax = "proto3";
+
+package api.session.v1;
+
+import "google/rpc/code.proto";
+
+option go_package = "github.com/ZergsLaw/back-template/api/session/v1;pb";
+
+// Events, which can be sent by service.
+message Event {}

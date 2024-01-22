@@ -9,7 +9,7 @@ var _ core.Rule = (*CommentService)(nil)
 // CommentService is a rule for checking service comments.
 type CommentService struct{}
 
-// Validate implements Rule.
+// Validate implements core.Rule.
 func (c *CommentService) Validate(protoInfo core.ProtoInfo) []error {
 	var res []error
 

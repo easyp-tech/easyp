@@ -11,6 +11,7 @@ var (
 // Comment errors.
 var (
 	ErrServiceCommentIsEmpty      = errors.New("service comment is empty")
+	ErrPackageIsNotDefined        = errors.New("package is not defined")
 	ErrRPCCommentIsEmpty          = errors.New("rpc comment is empty")
 	ErrEnumCommentIsEmpty         = errors.New("enum comment is empty")
 	ErrOneOfCommentIsEmpty        = errors.New("oneof comment is empty")
@@ -22,6 +23,7 @@ var (
 	ErrRpcPascalCase              = errors.New("rpc is not pascal case")
 	ErrServicePascalCase          = errors.New("service is not pascal case")
 	ErrEnumFirstValueZero         = errors.New("enum first value is not zero")
+	ErrDirectorySamePackage       = errors.New("different proto files in the same directory should have the same package")
 	ErrMessagePascalCase          = errors.New("message is not pascal case")
 	ErrMessageFieldLowerSnakeCase = errors.New("message field is not lower snake case")
 	ErrOneofLowerSnakeCase        = errors.New("oneof is not lower snake case")

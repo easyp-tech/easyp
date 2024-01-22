@@ -11,7 +11,7 @@ var _ core.Rule = (*ServicePascalCase)(nil)
 // ServicePascalCase is a rule for checking name of service for pascal case.
 type ServicePascalCase struct{}
 
-// Validate implements Rule.
+// Validate implements core.Rule.
 func (c *ServicePascalCase) Validate(protoInfo core.ProtoInfo) []error {
 	var res []error
 	pascalCase := regexp.MustCompile("^[A-Z][a-z]+([A-Z]|[a-z]+)*$")

@@ -11,7 +11,7 @@ var _ core.Rule = (*EnumValueUpperSnakeCase)(nil)
 // EnumValueUpperSnakeCase is a rule for checking value of enum for upper snake case.
 type EnumValueUpperSnakeCase struct{}
 
-// Validate implements Rule.
+// Validate implements core.Rule.
 func (c *EnumValueUpperSnakeCase) Validate(protoInfo core.ProtoInfo) []error {
 	var res []error
 	upperSnakeCase := regexp.MustCompile("^[A-Z]+(_[A-Z]+)*$")
