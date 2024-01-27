@@ -24,10 +24,16 @@ func (c *Commands) Get(ctx context.Context, module string) error {
 		return fmt.Errorf("git.New: %w", err)
 	}
 
+	// TODO: read buf.work.yaml to determine dir with proto files
+
 	files, err := repo.GetFiles(ctx)
 	if err != nil {
 		return fmt.Errorf("repo.GetFiles: %w", err)
 	}
+
+	// 1. read all files (done)
+	// 2. read buf.work.yaml -> read dirs with proto files
+	// 3. filter or by buf.work or is it does not exist filter only proto files
 
 	_ = files
 

@@ -19,3 +19,9 @@ func New(dirs Dirs) *Commands {
 		dirs: dirs,
 	}
 }
+
+// filterDirs returns only root dirs with proto files
+//
+func filterDirs(files []string) []string {
+	return nil
+}

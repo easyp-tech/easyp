@@ -8,8 +8,12 @@ import (
 	"github.com/easyp-tech/easyp/internal/mod/utils"
 )
 
-func (r *gitRepo) GetFiles(ctx context.Context) ([]string, error) {
-	res, err := utils.RunCmd(ctx, r.cacheDir, "git", "ls-tree", "-r", "FETCH_HEAD")
+func (r *gitRepo) GetFiles(ctx context.Context, dirs ...string) ([]string, error) {
+	params := []string{
+		"ls-tree", "-r", "FETCH_HEAD",
+	}
+	params = append(params, dirs...)
+	res, err := utils.RunCmd(ctx, r.cacheDir, "git", params...)
 	if err != nil {
 		return nil, fmt.Errorf("utils.RunCmd: %w", err)
 	}
