@@ -4,7 +4,8 @@ import (
 	"context"
 	"log"
 
-	"github.com/easyp-tech/easyp/internal/mod"
+	"github.com/easyp-tech/easyp/internal/mod/commands"
+	dirs2 "github.com/easyp-tech/easyp/internal/mod/dirs"
 )
 
 // TEMO FUNCTION FOR DEBUG
@@ -13,9 +14,10 @@ func modTst() {
 
 	module := "github.com/googleapis/googleapis"
 
-	getCommand := &mod.GetCommand{}
+	dirs := dirs2.New("/tmp/tmp.zYICI6g0Nv/cache")
+	cmds := commands.New(dirs)
 
-	err := getCommand.Get(context.Background(), module)
+	err := cmds.Get(context.Background(), module)
 	if err != nil {
 		log.Fatalf("getCommand.Get: %v", err)
 	}
