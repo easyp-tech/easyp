@@ -1,4 +1,4 @@
-package mod
+package utils
 
 import (
 	"bytes"
@@ -20,11 +20,11 @@ func (e RunError) Error() string {
 	return fmt.Sprintf("Command: %s; Err: %v; Stderr: %s", e.Command, e.Err, e.Stderr)
 }
 
-// ExecuteCommand shell command. Running git commands, for example.
+// RunCmd shell command. Running git commands, for example.
 // inpsired by cmd/go/internal/modfetch/codehost/codehost.go:318:Run from go mod
 // But go mod function looks too complicated
 // so for PoC/MVP I decided to implement simpler solution
-func ExecuteCommand(ctx context.Context, dir string, command string, commandParams ...string) (string, error) {
+func RunCmd(ctx context.Context, dir string, command string, commandParams ...string) (string, error) {
 	var stderr bytes.Buffer
 	var stdout bytes.Buffer
 

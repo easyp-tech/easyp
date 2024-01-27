@@ -11,17 +11,12 @@ import (
 func modTst() {
 	log.Printf("Start")
 
-	result, err := mod.ExecuteCommand(
-		context.Background(), "/mnt/ssd_storage/Projects/Hound/easyp/easyp", "ls", "-la",
-	)
-	if err != nil {
-		log.Fatalf("Err: %v", err)
-	}
-	log.Printf("result: %v", result)
+	module := "github.com/googleapis/googleapis"
 
-	cacheDir, err := mod.CreateCacheDir("test")
+	getCommand := &mod.GetCommand{}
+
+	err := getCommand.Get(context.Background(), module)
 	if err != nil {
-		log.Fatalf("CreateCacheDir: %v", err)
+		log.Fatalf("getCommand.Get: %v", err)
 	}
-	log.Printf("CacheDir: %s", cacheDir)
 }
