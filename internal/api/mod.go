@@ -47,6 +47,10 @@ func (m Mod) Action(ctx *cli.Context) error {
 		return fmt.Errorf("readConfig: %w", err)
 	}
 
+	// TODO: TEMO DEBUG
+	modTst()
+	// TODO: TEMO DEBUG
+
 	_ = cfg
 	return nil
 }
