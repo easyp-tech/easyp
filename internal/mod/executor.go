@@ -1,4 +1,4 @@
-package repo
+package mod
 
 import (
 	"bytes"
@@ -20,7 +20,6 @@ func (e RunError) Error() string {
 	return fmt.Sprintf("Command: %s; Err: %v; Stderr: %s", e.Command, e.Err, e.Stderr)
 }
 
-// TODO: maybe should move to another package
 // ExecuteCommand shell command. Running git commands, for example.
 // inpsired by cmd/go/internal/modfetch/codehost/codehost.go:318:Run from go mod
 // But go mod function looks too complicated

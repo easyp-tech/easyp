@@ -3,6 +3,7 @@ package git
 import (
 	"fmt"
 
+	"github.com/easyp-tech/easyp/internal/mod"
 	"github.com/easyp-tech/easyp/internal/mod/repo"
 )
 
@@ -28,9 +29,9 @@ func New(remote string) (repo.Repo, error) {
 	}
 
 	// TODO: create workDir
-	err := repo.WorkDir()
+	err := mod.CreateCacheDir()
 	if err != nil {
-		return nil, fmt.Errorf("repo.WorkDir: %w", err)
+		return nil, fmt.Errorf("repo.CreateCacheDir: %w", err)
 	}
 
 	return gRepo, nil
