@@ -24,6 +24,12 @@ func (c *Commands) Get(ctx context.Context, module string) error {
 		return fmt.Errorf("git.New: %w", err)
 	}
 
-	_ = repo
+	files, err := repo.GetFiles(ctx)
+	if err != nil {
+		return fmt.Errorf("repo.GetFiles: %w", err)
+	}
+
+	_ = files
+
 	return nil
 }

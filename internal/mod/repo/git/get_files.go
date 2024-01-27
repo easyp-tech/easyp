@@ -1,0 +1,31 @@
+package git
+
+import (
+	"context"
+	"fmt"
+	"strings"
+
+	"github.com/easyp-tech/easyp/internal/mod/utils"
+)
+
+func (r *gitRepo) GetFiles(ctx context.Context) ([]string, error) {
+	res, err := utils.RunCmd(ctx, r.cacheDir, "git", "ls-tree", "-r", "FETCH_HEAD")
+	if err != nil {
+		return nil, fmt.Errorf("utils.RunCmd: %w", err)
+	}
+
+	stats := strings.Split(res, "\n")
+
+	files := make([]string, 0, len(stats))
+	for _, stat := range stats {
+		stat := stat
+		s := strings.Split(stat, "\t")
+		if len(s) != 2 {
+			// TODO: write debug log that len is wrong
+			continue
+		}
+		files = append(files, s[1])
+	}
+
+	return files, nil
+}
