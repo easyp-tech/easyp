@@ -32,7 +32,13 @@ func (c *Commands) Get(ctx context.Context, module string) error {
 	}
 
 	protoDirs := filterDirs(files)
-	_ = protoDirs
+
+	archive, err := repo.Archive(ctx, protoDirs...)
+	if err != nil {
+		return fmt.Errorf("repo.Archive: %w", err)
+	}
+
+	_ = archive
 
 	return nil
 }
