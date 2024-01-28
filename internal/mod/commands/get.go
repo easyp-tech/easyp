@@ -24,6 +24,9 @@ func (c *Commands) Get(ctx context.Context, module string) error {
 		return fmt.Errorf("git.New: %w", err)
 	}
 
+	// TODO: read HEAD and determine commit (if version is absent)
+	// TODO: create ref struct for storage version (commit)
+
 	// TODO: read buf.work.yaml to determine dir with proto files
 
 	files, err := repo.GetFiles(ctx)
