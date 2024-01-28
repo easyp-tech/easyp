@@ -44,7 +44,9 @@ func New(ctx context.Context, dep dependency.Dependency, cacheDir string) (repo.
 		return nil, fmt.Errorf("mod.RunCmd (add origin): %w", err)
 	}
 
-	_, err = utils.RunCmd(ctx, r.cacheDir, "git", "fetch", "-f", "origin", r.version)
+	_, err = utils.RunCmd(
+		ctx, r.cacheDir, "git", "fetch", "-f", "origin", "--depth=1", r.version,
+	)
 	if err != nil {
 		// it's hard to parse git stderr
 		// but since previous command doesn't have any errors we can rely that version is invalid
