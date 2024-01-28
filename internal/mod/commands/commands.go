@@ -4,13 +4,11 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-
-	"github.com/easyp-tech/easyp/internal/mod/dependency"
 )
 
 type (
 	Dirs interface {
-		CacheDir(dep dependency.Dependency) (string, error)
+		CacheDir(name string) (string, error)
 	}
 
 	Commands struct {

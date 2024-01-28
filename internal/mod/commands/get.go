@@ -14,7 +14,7 @@ import (
 func (c *Commands) Get(ctx context.Context, module string) error {
 	dep := dependency.ParseDependency(module)
 
-	cacheDir, err := c.dirs.CacheDir(dep)
+	cacheDir, err := c.dirs.CacheDir(dep.Name)
 	if err != nil {
 		return fmt.Errorf("CreateCacheDir: %w", err)
 	}
