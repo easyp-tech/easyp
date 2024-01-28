@@ -26,6 +26,7 @@ func (c *Commands) Get(ctx context.Context, module string) error {
 
 	// TODO: read HEAD and determine commit (if version is absent)
 	// TODO: create ref struct for storage version (commit)
+	// TODO: lock file: cmd/go/internal/lockedfile/mutex.go:46
 
 	// TODO: read buf.work.yaml to determine dir with proto files
 
