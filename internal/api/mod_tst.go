@@ -13,6 +13,7 @@ func modTst() {
 	log.Printf("Start")
 
 	module := "github.com/googleapis/googleapis"
+	// module := "gitlab.ptsecurity.com/vbliznetsov/proto-collects@v1.0.0"
 
 	dirs := dirs2.New("/tmp/tmp.zYICI6g0Nv/cache")
 	cmds := commands.New(dirs)
