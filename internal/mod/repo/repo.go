@@ -14,4 +14,7 @@ type Repo interface {
 
 	// Archive passed dirs to archive and return full path to archive
 	Archive(ctx context.Context, dirs ...string) (string, error)
+
+	// GetRev return current repo's revision
+	GetRev(ctx context.Context) (string, error)
 }
