@@ -8,7 +8,7 @@ import (
 )
 
 // CacheDir create and return path to cache dir.
-// cache dir contains repo cache for repository with proto files.
+// cache dir contains repository cache for repository with proto files.
 // cmd/go/internal/modfetch/codehost/codehost.go: 228 - create workdir
 func (d *Dirs) CacheDir(name string) (string, error) {
 	cacheDir := filepath.Join(d.cacheRootDir, fmt.Sprintf("%x", sha256.Sum256([]byte(name))))

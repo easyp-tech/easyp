@@ -14,17 +14,17 @@ func TestParseDependency(t *testing.T) {
 	}{
 		{
 			name:   "with version",
-			module: "github.com/company/repo@v1.2.3",
+			module: "github.com/company/repository@v1.2.3",
 			expectedResult: Dependency{
-				Name:    "github.com/company/repo",
+				Name:    "github.com/company/repository",
 				Version: "v1.2.3",
 			},
 		},
 		{
 			name:   "without version",
-			module: "github.com/company/repo",
+			module: "github.com/company/repository",
 			expectedResult: Dependency{
-				Name:    "github.com/company/repo",
+				Name:    "github.com/company/repository",
 				Version: "",
 			},
 		},

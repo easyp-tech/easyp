@@ -4,12 +4,13 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/easyp-tech/easyp/internal/package_manager/dependency"
-	"github.com/easyp-tech/easyp/internal/package_manager/repo/git"
+	"github.com/easyp-tech/easyp/internal/package_manager/services/repository/git"
+
+	"github.com/easyp-tech/easyp/internal/package_manager/models/dependency"
 )
 
 // Get download dependency.
-// module: string format: origin@version: github.com/company/repo@v1.2.3
+// module: string format: origin@version: github.com/company/repository@v1.2.3
 // if version is absent use the latest
 func (c *Mod) Get(ctx context.Context, module string) error {
 	dep := dependency.ParseDependency(module)
@@ -32,14 +33,14 @@ func (c *Mod) Get(ctx context.Context, module string) error {
 
 	files, err := repo.GetFiles(ctx)
 	if err != nil {
-		return fmt.Errorf("repo.GetFiles: %w", err)
+		return fmt.Errorf("repository.GetFiles: %w", err)
 	}
 
 	protoDirs := filterDirs(files)
 
 	archive, err := repo.Archive(ctx, protoDirs...)
 	if err != nil {
-		return fmt.Errorf("repo.Archive: %w", err)
+		return fmt.Errorf("repository.Archive: %w", err)
 	}
 
 	_ = archive

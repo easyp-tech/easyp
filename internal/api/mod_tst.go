@@ -4,8 +4,8 @@ import (
 	"context"
 	"log"
 
-	dirs2 "github.com/easyp-tech/easyp/internal/package_manager/dirs"
 	modPkg "github.com/easyp-tech/easyp/internal/package_manager/mod"
+	dirs2 "github.com/easyp-tech/easyp/internal/package_manager/services/dirs"
 )
 
 // TEMO FUNCTION FOR DEBUG

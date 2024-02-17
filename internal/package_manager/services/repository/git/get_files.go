@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/easyp-tech/easyp/internal/package_manager/utils"
+	"github.com/easyp-tech/easyp/internal/package_manager/services"
 )
 
 func (r *gitRepo) GetFiles(ctx context.Context, dirs ...string) ([]string, error) {
@@ -13,7 +13,7 @@ func (r *gitRepo) GetFiles(ctx context.Context, dirs ...string) ([]string, error
 		"ls-tree", "-r", "FETCH_HEAD",
 	}
 	params = append(params, dirs...)
-	res, err := utils.RunCmd(ctx, r.cacheDir, "git", params...)
+	res, err := services.RunCmd(ctx, r.cacheDir, "git", params...)
 	if err != nil {
 		return nil, fmt.Errorf("utils.RunCmd: %w", err)
 	}
