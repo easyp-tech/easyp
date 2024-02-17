@@ -43,6 +43,7 @@ func (c *Mod) Get(ctx context.Context, dependency string) error {
 
 	protoDirs := filterOnlyProtoDirs(files)
 
+	// TODO: generate temp file name for archive
 	archive, err := repository.Archive(ctx, revision, protoDirs...)
 	if err != nil {
 		return fmt.Errorf("repository.Archive: %w", err)
