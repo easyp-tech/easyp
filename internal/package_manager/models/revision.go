@@ -1,5 +1,5 @@
 package models
 
 type Revision struct {
-	Version string // version used in lookup
+	CommitHash string // commit's hash
 }
