@@ -23,7 +23,6 @@ func (r *gitRepo) GetFiles(ctx context.Context, dirs ...string) ([]string, error
 	files := make([]string, 0, len(stats))
 	for _, stat := range stats {
 		stat := stat
-		// s := strings.Split(stat, "\t")
 		s := strings.Fields(stat)
 		if len(s) != 4 {
 			// TODO: write debug log that len is wrong
