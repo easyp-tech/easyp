@@ -4,7 +4,7 @@ import (
 	"strings"
 )
 
-// Module contain module name and its version
+// Module contain dependency name and its version
 type Module struct {
 	Name    string
 	Version string

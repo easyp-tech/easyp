@@ -28,7 +28,7 @@ func (c *Mod) Get(ctx context.Context, dependency string) error {
 	// TODO: create ref struct for storage version (commit)
 	// TODO: lock file: cmd/go/internal/lockedfile/mutex.go:46
 
-	// TODO: read buf.work.yaml to determine dir with proto files
+	// TODO: read buf.work.yaml to determine dir with proto files and pass dirs to GetFiles
 
 	files, err := repository.GetFiles(ctx)
 	if err != nil {

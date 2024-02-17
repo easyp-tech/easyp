@@ -6,23 +6,23 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestParseDependency(t *testing.T) {
+func TestNewModule(t *testing.T) {
 	tests := []struct {
 		name           string
-		module         string
+		dependency     string
 		expectedResult Module
 	}{
 		{
-			name:   "with version",
-			module: "github.com/company/repository@v1.2.3",
+			name:       "with version",
+			dependency: "github.com/company/repository@v1.2.3",
 			expectedResult: Module{
 				Name:    "github.com/company/repository",
 				Version: "v1.2.3",
 			},
 		},
 		{
-			name:   "without version",
-			module: "github.com/company/repository",
+			name:       "without version",
+			dependency: "github.com/company/repository",
 			expectedResult: Module{
 				Name:    "github.com/company/repository",
 				Version: "",
@@ -33,7 +33,7 @@ func TestParseDependency(t *testing.T) {
 	for _, tc := range tests {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
-			result := NewModule(tc.module)
+			result := NewModule(tc.dependency)
 			require.Equal(t, tc.expectedResult, result)
 		})
 	}
