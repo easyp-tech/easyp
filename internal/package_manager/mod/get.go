@@ -24,6 +24,13 @@ func (c *Mod) Get(ctx context.Context, dependency string) error {
 		return fmt.Errorf("git.New: %w", err)
 	}
 
+	revision, err := repository.ReadRevision(ctx, module.Version)
+	if err != nil {
+		return fmt.Errorf("repository.ReadRevision: %w", err)
+	}
+
+	_ = revision
+
 	// TODO: read HEAD and determine commit (if version is absent)
 	// TODO: create ref struct for storage version (commit)
 	// TODO: lock file: cmd/go/internal/lockedfile/mutex.go:46

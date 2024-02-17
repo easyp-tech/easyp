@@ -9,10 +9,18 @@ import (
 )
 
 func (r *gitRepo) ReadRevision(ctx context.Context, version string) (models.Revision, error) {
-	res, err := services.RunCmd(ctx, r.cacheDir, "git", "rev-parse", "FETCH_HEAD")
-	if err != nil {
-		return models.Revision{}, fmt.Errorf("utils.RunCmd: %w", err)
+	// try to read passed version
+	// for now it could be only empty - for HEAD
+	// or tag
+	if version == "" {
+		// replace with HEAD if version is empty
+		version = "HEAD"
 	}
+	res, err := services.RunCmd(ctx, r.cacheDir, "git", "ls-remote", "origin", version)
+	if err != nil {
+		return models.Revision{}, fmt.Errorf("services.RunCmd (ls-remote): %w", err)
+	}
+
 	_ = res
 
 	return models.Revision{}, nil
