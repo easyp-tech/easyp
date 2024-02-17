@@ -43,7 +43,7 @@ func (c *Mod) Get(ctx context.Context, dependency string) error {
 
 	protoDirs := filterOnlyProtoDirs(files)
 
-	archive, err := repository.Archive(ctx, protoDirs...)
+	archive, err := repository.Archive(ctx, revision, protoDirs...)
 	if err != nil {
 		return fmt.Errorf("repository.Archive: %w", err)
 	}
