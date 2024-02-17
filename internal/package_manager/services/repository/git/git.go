@@ -3,6 +3,8 @@ package git
 import (
 	"context"
 	"fmt"
+	"os"
+	"path/filepath"
 
 	"github.com/easyp-tech/easyp/internal/package_manager/models"
 	"github.com/easyp-tech/easyp/internal/package_manager/services"
@@ -34,14 +36,18 @@ func New(ctx context.Context, dep models.Package, cacheDir string) (repository.R
 		version:   dep.Version,
 	}
 
-	// TODO: check if dir is already exists
+	if _, err := os.Stat(filepath.Join(r.cacheDir, "objects")); err == nil {
+		// repo is already exists
+		return r, nil
+	}
+
 	if _, err := services.RunCmd(ctx, r.cacheDir, "git", "init", "--bare"); err != nil {
-		return nil, fmt.Errorf("package_manager.RunCmd (init): %w", err)
+		return nil, fmt.Errorf("services.RunCmd (init): %w", err)
 	}
 
 	_, err := services.RunCmd(ctx, r.cacheDir, "git", "remote", "add", "origin", r.remoteURL)
 	if err != nil {
-		return nil, fmt.Errorf("package_manager.RunCmd (add origin): %w", err)
+		return nil, fmt.Errorf("services.RunCmd (add origin): %w", err)
 	}
 
 	_, err = services.RunCmd(
@@ -49,7 +55,7 @@ func New(ctx context.Context, dep models.Package, cacheDir string) (repository.R
 	)
 	if err != nil {
 		// it's hard to parse git stderr
-		// but since previous command doesn't have any errors we can rely that version is invalid
+		// but since previous command doesn't have any errors we can rely on that version is invalid
 		return nil, repository.ErrVersionNotFound
 	}
 
