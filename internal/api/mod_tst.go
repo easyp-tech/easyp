@@ -5,7 +5,7 @@ import (
 	"log"
 
 	modPkg "github.com/easyp-tech/easyp/internal/package_manager/mod"
-	dirs2 "github.com/easyp-tech/easyp/internal/package_manager/services/dirs"
+	"github.com/easyp-tech/easyp/internal/package_manager/services/storage"
 )
 
 // TEMO FUNCTION FOR DEBUG
@@ -21,7 +21,7 @@ func modTst() {
 	// module := "github.com/bufbuild/protovalidate@v0.3.1"
 	// module := "github.com/bufbuild/protovalidate@tools/v0.3.1"
 
-	dirs := dirs2.New("/tmp/tmp.zYICI6g0Nv/cache")
+	dirs := storage.New("/tmp/tmp.zYICI6g0Nv/cache")
 	mod := modPkg.New(dirs)
 
 	err := mod.Get(context.Background(), module)

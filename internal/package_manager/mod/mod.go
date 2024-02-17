@@ -7,23 +7,23 @@ import (
 )
 
 type (
-	Dirs interface {
+	Storage interface {
 		CacheDir(name string) (string, error)
 	}
 
 	// Mod implement package manager's commands
 	Mod struct {
-		dirs Dirs
+		storage Storage
 	}
 )
 
-func New(dirs Dirs) *Mod {
+func New(storage Storage) *Mod {
 	return &Mod{
-		dirs: dirs,
+		storage: storage,
 	}
 }
 
-// filterOnlyProtoDirs returns only root dirs with proto files
+// filterOnlyProtoDirs returns only root storage with proto files
 func filterOnlyProtoDirs(paths []string) []string {
 	found := map[string]struct{}{}
 

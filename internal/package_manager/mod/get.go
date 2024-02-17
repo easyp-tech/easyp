@@ -14,9 +14,9 @@ import (
 func (c *Mod) Get(ctx context.Context, dependency string) error {
 	module := models.NewModule(dependency)
 
-	cacheDir, err := c.dirs.CacheDir(module.Name)
+	cacheDir, err := c.storage.CacheDir(module.Name)
 	if err != nil {
-		return fmt.Errorf("c.dirs.CacheDir: %w", err)
+		return fmt.Errorf("c.storage.CacheDir: %w", err)
 	}
 
 	repository, err := git.New(ctx, module.Name, cacheDir)
@@ -34,7 +34,7 @@ func (c *Mod) Get(ctx context.Context, dependency string) error {
 	}
 
 	// TODO: lock file: cmd/go/internal/lockedfile/mutex.go:46
-	// TODO: read buf.work.yaml to determine dir with proto files and pass dirs to GetFiles
+	// TODO: read buf.work.yaml to determine dir with proto files and pass storage to GetFiles
 
 	files, err := repository.GetFiles(ctx, revision)
 	if err != nil {
@@ -44,7 +44,6 @@ func (c *Mod) Get(ctx context.Context, dependency string) error {
 	protoDirs := filterOnlyProtoDirs(files)
 
 	// TODO: generate temp file name for archive
-	// TODO: rename service.Dir to storage?
 	// TODO: in new storage service generate repo's archive path and name (depends on version)
 	// TODO: check how buf index deps (depends on version in config file?)
 	archive, err := repository.Archive(ctx, revision, protoDirs...)
