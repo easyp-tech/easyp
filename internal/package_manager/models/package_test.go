@@ -10,12 +10,12 @@ func TestParseDependency(t *testing.T) {
 	tests := []struct {
 		name           string
 		module         string
-		expectedResult Package
+		expectedResult Module
 	}{
 		{
 			name:   "with version",
 			module: "github.com/company/repository@v1.2.3",
-			expectedResult: Package{
+			expectedResult: Module{
 				Name:    "github.com/company/repository",
 				Version: "v1.2.3",
 			},
@@ -23,7 +23,7 @@ func TestParseDependency(t *testing.T) {
 		{
 			name:   "without version",
 			module: "github.com/company/repository",
-			expectedResult: Package{
+			expectedResult: Module{
 				Name:    "github.com/company/repository",
 				Version: "",
 			},
@@ -33,7 +33,7 @@ func TestParseDependency(t *testing.T) {
 	for _, tc := range tests {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
-			result := NewPackage(tc.module)
+			result := NewModule(tc.module)
 			require.Equal(t, tc.expectedResult, result)
 		})
 	}

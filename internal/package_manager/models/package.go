@@ -4,21 +4,21 @@ import (
 	"strings"
 )
 
-// Package contain package name and its version
-type Package struct {
+// Module contain module name and its version
+type Module struct {
 	Name    string
 	Version string
 }
 
-// NewPackage create Package struct from raw module string:
-func NewPackage(module string) Package {
-	parts := strings.Split(module, "@")
+// NewModule create Module struct from raw dependency string: remote@version
+func NewModule(dependency string) Module {
+	parts := strings.Split(dependency, "@")
 	name := parts[0]
 	version := ""
 	if len(parts) > 1 {
 		version = parts[1]
 	}
-	return Package{
+	return Module{
 		Name:    name,
 		Version: version,
 	}

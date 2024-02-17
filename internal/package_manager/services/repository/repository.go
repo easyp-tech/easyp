@@ -17,4 +17,7 @@ type Repo interface {
 
 	// GetRev return current repository's revision
 	GetRev(ctx context.Context) (string, error)
+
+	// Fetch from remote repository specified version
+	Fetch(ctx context.Context) error
 }

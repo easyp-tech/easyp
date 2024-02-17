@@ -11,15 +11,15 @@ import (
 // Get download package.
 // module: string format: origin@version: github.com/company/repository@v1.2.3
 // if version is absent use the latest
-func (c *Mod) Get(ctx context.Context, module string) error {
-	dep := models.NewPackage(module)
+func (c *Mod) Get(ctx context.Context, dependency string) error {
+	module := models.NewModule(dependency)
 
-	cacheDir, err := c.dirs.CacheDir(dep.Name)
+	cacheDir, err := c.dirs.CacheDir(module.Name)
 	if err != nil {
 		return fmt.Errorf("c.dirs.CacheDir: %w", err)
 	}
 
-	repository, err := git.New(ctx, dep, cacheDir)
+	repository, err := git.New(ctx, module.Name, cacheDir)
 	if err != nil {
 		return fmt.Errorf("git.New: %w", err)
 	}
