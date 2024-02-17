@@ -16,10 +16,10 @@ func (c *Mod) Get(ctx context.Context, module string) error {
 
 	cacheDir, err := c.dirs.CacheDir(dep.Name)
 	if err != nil {
-		return fmt.Errorf("CreateCacheDir: %w", err)
+		return fmt.Errorf("c.dirs.CacheDir: %w", err)
 	}
 
-	repo, err := git.New(ctx, dep, cacheDir)
+	repository, err := git.New(ctx, dep, cacheDir)
 	if err != nil {
 		return fmt.Errorf("git.New: %w", err)
 	}
@@ -30,14 +30,14 @@ func (c *Mod) Get(ctx context.Context, module string) error {
 
 	// TODO: read buf.work.yaml to determine dir with proto files
 
-	files, err := repo.GetFiles(ctx)
+	files, err := repository.GetFiles(ctx)
 	if err != nil {
 		return fmt.Errorf("repository.GetFiles: %w", err)
 	}
 
 	protoDirs := filterDirs(files)
 
-	archive, err := repo.Archive(ctx, protoDirs...)
+	archive, err := repository.Archive(ctx, protoDirs...)
 	if err != nil {
 		return fmt.Errorf("repository.Archive: %w", err)
 	}
