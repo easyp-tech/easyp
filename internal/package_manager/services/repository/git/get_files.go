@@ -5,12 +5,13 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/easyp-tech/easyp/internal/package_manager/models"
 	"github.com/easyp-tech/easyp/internal/package_manager/services"
 )
 
-func (r *gitRepo) GetFiles(ctx context.Context, dirs ...string) ([]string, error) {
+func (r *gitRepo) GetFiles(ctx context.Context, revision models.Revision, dirs ...string) ([]string, error) {
 	params := []string{
-		"ls-tree", "-r", "FETCH_HEAD",
+		"ls-tree", "-r", revision.CommitHash,
 	}
 	params = append(params, dirs...)
 	res, err := services.RunCmd(ctx, r.cacheDir, "git", params...)

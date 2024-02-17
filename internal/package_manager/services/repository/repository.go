@@ -12,7 +12,7 @@ const (
 
 type Repo interface {
 	// GetFiles returns list of all files in repository
-	GetFiles(ctx context.Context, dirs ...string) ([]string, error)
+	GetFiles(ctx context.Context, revision models.Revision, dirs ...string) ([]string, error)
 
 	// Archive passed dirs to archive and return full path to archive
 	Archive(ctx context.Context, dirs ...string) (string, error)
@@ -22,5 +22,5 @@ type Repo interface {
 	ReadRevision(ctx context.Context, version string) (models.Revision, error)
 
 	// Fetch from remote repository specified version
-	Fetch(ctx context.Context) error
+	Fetch(ctx context.Context, revision models.Revision) error
 }

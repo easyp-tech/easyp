@@ -29,15 +29,14 @@ func (c *Mod) Get(ctx context.Context, dependency string) error {
 		return fmt.Errorf("repository.ReadRevision: %w", err)
 	}
 
-	_ = revision
+	if err := repository.Fetch(ctx, revision); err != nil {
+		return fmt.Errorf("repository.Fetch: %w", err)
+	}
 
-	// TODO: read HEAD and determine commit (if version is absent)
-	// TODO: create ref struct for storage version (commit)
 	// TODO: lock file: cmd/go/internal/lockedfile/mutex.go:46
-
 	// TODO: read buf.work.yaml to determine dir with proto files and pass dirs to GetFiles
 
-	files, err := repository.GetFiles(ctx)
+	files, err := repository.GetFiles(ctx, revision)
 	if err != nil {
 		return fmt.Errorf("repository.GetFiles: %w", err)
 	}
