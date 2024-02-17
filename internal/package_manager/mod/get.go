@@ -4,16 +4,15 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/easyp-tech/easyp/internal/package_manager/models"
 	"github.com/easyp-tech/easyp/internal/package_manager/services/repository/git"
-
-	"github.com/easyp-tech/easyp/internal/package_manager/models/dependency"
 )
 
-// Get download dependency.
+// Get download package.
 // module: string format: origin@version: github.com/company/repository@v1.2.3
 // if version is absent use the latest
 func (c *Mod) Get(ctx context.Context, module string) error {
-	dep := dependency.ParseDependency(module)
+	dep := models.NewPackage(module)
 
 	cacheDir, err := c.dirs.CacheDir(dep.Name)
 	if err != nil {

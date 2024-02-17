@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/easyp-tech/easyp/internal/package_manager/models/dependency"
+	"github.com/easyp-tech/easyp/internal/package_manager/models"
 	"github.com/easyp-tech/easyp/internal/package_manager/services"
 	"github.com/easyp-tech/easyp/internal/package_manager/services/repository"
 )
@@ -27,7 +27,7 @@ type gitRepo struct {
 
 // New returns gitRepo instance
 // remoteURL: full remoteURL address with schema
-func New(ctx context.Context, dep dependency.Dependency, cacheDir string) (repository.Repo, error) {
+func New(ctx context.Context, dep models.Package, cacheDir string) (repository.Repo, error) {
 	r := &gitRepo{
 		remoteURL: getRemote(dep.Name),
 		cacheDir:  cacheDir,

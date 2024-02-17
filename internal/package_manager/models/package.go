@@ -1,23 +1,24 @@
-package dependency
+package models
 
 import (
 	"strings"
 )
 
-// Dependency contains dependency name and its version
-type Dependency struct {
+// Package contain package name and its version
+type Package struct {
 	Name    string
 	Version string
 }
 
-func ParseDependency(module string) Dependency {
+// NewPackage create Package struct from raw module string:
+func NewPackage(module string) Package {
 	parts := strings.Split(module, "@")
 	name := parts[0]
 	version := ""
 	if len(parts) > 1 {
 		version = parts[1]
 	}
-	return Dependency{
+	return Package{
 		Name:    name,
 		Version: version,
 	}

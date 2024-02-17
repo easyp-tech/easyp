@@ -1,4 +1,4 @@
-package dependency
+package models
 
 import (
 	"testing"
@@ -10,12 +10,12 @@ func TestParseDependency(t *testing.T) {
 	tests := []struct {
 		name           string
 		module         string
-		expectedResult Dependency
+		expectedResult Package
 	}{
 		{
 			name:   "with version",
 			module: "github.com/company/repository@v1.2.3",
-			expectedResult: Dependency{
+			expectedResult: Package{
 				Name:    "github.com/company/repository",
 				Version: "v1.2.3",
 			},
@@ -23,7 +23,7 @@ func TestParseDependency(t *testing.T) {
 		{
 			name:   "without version",
 			module: "github.com/company/repository",
-			expectedResult: Dependency{
+			expectedResult: Package{
 				Name:    "github.com/company/repository",
 				Version: "",
 			},
@@ -33,7 +33,7 @@ func TestParseDependency(t *testing.T) {
 	for _, tc := range tests {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
-			result := ParseDependency(tc.module)
+			result := NewPackage(tc.module)
 			require.Equal(t, tc.expectedResult, result)
 		})
 	}
