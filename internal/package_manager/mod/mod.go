@@ -1,4 +1,4 @@
-package commands
+package mod
 
 import (
 	"os"
@@ -11,13 +11,14 @@ type (
 		CacheDir(name string) (string, error)
 	}
 
-	Commands struct {
+	// Mod implement package manager's commands
+	Mod struct {
 		dirs Dirs
 	}
 )
 
-func New(dirs Dirs) *Commands {
-	return &Commands{
+func New(dirs Dirs) *Mod {
+	return &Mod{
 		dirs: dirs,
 	}
 }

@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/easyp-tech/easyp/internal/mod/utils"
+	"github.com/easyp-tech/easyp/internal/package_manager/utils"
 )
 
 func (r *gitRepo) GetRev(ctx context.Context) (string, error) {

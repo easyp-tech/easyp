@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"path/filepath"
 
-	"github.com/easyp-tech/easyp/internal/mod/repo"
-	"github.com/easyp-tech/easyp/internal/mod/utils"
+	"github.com/easyp-tech/easyp/internal/package_manager/repo"
+	"github.com/easyp-tech/easyp/internal/package_manager/utils"
 )
 
 func (r *gitRepo) Archive(ctx context.Context, dirs ...string) (string, error) {

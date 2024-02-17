@@ -4,9 +4,9 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/easyp-tech/easyp/internal/mod/dependency"
-	"github.com/easyp-tech/easyp/internal/mod/repo"
-	"github.com/easyp-tech/easyp/internal/mod/utils"
+	"github.com/easyp-tech/easyp/internal/package_manager/dependency"
+	"github.com/easyp-tech/easyp/internal/package_manager/repo"
+	"github.com/easyp-tech/easyp/internal/package_manager/utils"
 )
 
 var _ repo.Repo = (*gitRepo)(nil)
@@ -21,7 +21,7 @@ type gitRepo struct {
 	version string
 }
 
-// Some links from go mod:
+// Some links from go package_manager:
 // cmd/go/internal/modfetch/codehost/git.go:65 - create work dir
 // cmd/go/internal/modfetch/codehost/git.go:137 - git's struct
 
@@ -36,12 +36,12 @@ func New(ctx context.Context, dep dependency.Dependency, cacheDir string) (repo.
 
 	// TODO: check if dir is already exists
 	if _, err := utils.RunCmd(ctx, r.cacheDir, "git", "init", "--bare"); err != nil {
-		return nil, fmt.Errorf("mod.RunCmd (init): %w", err)
+		return nil, fmt.Errorf("package_manager.RunCmd (init): %w", err)
 	}
 
 	_, err := utils.RunCmd(ctx, r.cacheDir, "git", "remote", "add", "origin", r.remoteURL)
 	if err != nil {
-		return nil, fmt.Errorf("mod.RunCmd (add origin): %w", err)
+		return nil, fmt.Errorf("package_manager.RunCmd (add origin): %w", err)
 	}
 
 	_, err = utils.RunCmd(

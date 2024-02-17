@@ -28,7 +28,7 @@ func (m Mod) Command() *cli.Command {
 		Subcommands:  nil,
 		Flags: []cli.Flag{
 			flagCfg,
-			// FIXME: Use flags for mod
+			// FIXME: Use flags for package_manager
 			// flagLintDirectoryPath,
 		},
 		SkipFlagParsing:        false,

@@ -1,4 +1,4 @@
-package commands
+package mod
 
 import (
 	"testing"

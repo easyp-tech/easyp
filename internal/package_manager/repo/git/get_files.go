@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/easyp-tech/easyp/internal/mod/utils"
+	"github.com/easyp-tech/easyp/internal/package_manager/utils"
 )
 
 func (r *gitRepo) GetFiles(ctx context.Context, dirs ...string) ([]string, error) {
