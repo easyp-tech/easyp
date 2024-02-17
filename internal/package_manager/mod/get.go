@@ -46,6 +46,7 @@ func (c *Mod) Get(ctx context.Context, dependency string) error {
 	// TODO: generate temp file name for archive
 	// TODO: rename service.Dir to storage?
 	// TODO: in new storage service generate repo's archive path and name (depends on version)
+	// TODO: check how buf index deps (depends on version in config file?)
 	archive, err := repository.Archive(ctx, revision, protoDirs...)
 	if err != nil {
 		return fmt.Errorf("repository.Archive: %w", err)
