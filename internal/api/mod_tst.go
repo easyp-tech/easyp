@@ -5,7 +5,7 @@ import (
 	"log"
 
 	dirs2 "github.com/easyp-tech/easyp/internal/package_manager/dirs"
-	"github.com/easyp-tech/easyp/internal/package_manager/mod"
+	modPkg "github.com/easyp-tech/easyp/internal/package_manager/mod"
 )
 
 // TEMO FUNCTION FOR DEBUG
@@ -16,9 +16,9 @@ func modTst() {
 	// module := "github.com/googleapis/googleapis@0e50601ea3d1f828a90d2ddbd52920fcafd461fd"
 
 	dirs := dirs2.New("/tmp/tmp.zYICI6g0Nv/cache")
-	cmds := mod.New(dirs)
+	mod := modPkg.New(dirs)
 
-	err := cmds.Get(context.Background(), module)
+	err := mod.Get(context.Background(), module)
 	if err != nil {
 		log.Fatalf("getCommand.Get: %v", err)
 	}
