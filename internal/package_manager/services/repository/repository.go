@@ -2,6 +2,8 @@ package repository
 
 import (
 	"context"
+
+	"github.com/easyp-tech/easyp/internal/package_manager/models"
 )
 
 const (
@@ -15,8 +17,9 @@ type Repo interface {
 	// Archive passed dirs to archive and return full path to archive
 	Archive(ctx context.Context, dirs ...string) (string, error)
 
-	// GetRev return current repository's revision
-	GetRev(ctx context.Context) (string, error)
+	// ReadRevision reads commit's revision by passed version
+	// or return the latest commit if version is empty
+	ReadRevision(ctx context.Context, version string) (models.Revision, error)
 
 	// Fetch from remote repository specified version
 	Fetch(ctx context.Context) error
