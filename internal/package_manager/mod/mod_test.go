@@ -6,7 +6,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestFilterDirs(t *testing.T) {
+func TestFilterOnlyProtoDirs(t *testing.T) {
 	tests := []struct {
 		name     string
 		files    []string
@@ -42,7 +42,7 @@ func TestFilterDirs(t *testing.T) {
 	for _, tc := range tests {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
-			result := filterDirs(tc.files)
+			result := filterOnlyProtoDirs(tc.files)
 			require.ElementsMatch(t, tc.expected, result)
 		})
 	}

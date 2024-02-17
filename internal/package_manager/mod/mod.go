@@ -23,8 +23,8 @@ func New(dirs Dirs) *Mod {
 	}
 }
 
-// filterDirs returns only root dirs with proto files
-func filterDirs(paths []string) []string {
+// filterOnlyProtoDirs returns only root dirs with proto files
+func filterOnlyProtoDirs(paths []string) []string {
 	found := map[string]struct{}{}
 
 	for _, path := range paths {
