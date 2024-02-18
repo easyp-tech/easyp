@@ -4,11 +4,14 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/easyp-tech/easyp/internal/package_manager/models"
 )
 
 type (
 	Storage interface {
 		CacheDir(name string) (string, error)
+		CacheDownload(module models.Module) (string, error)
 	}
 
 	// Mod implement package manager's commands

@@ -1,5 +1,9 @@
 package storage
 
+const (
+	cacheDownload = "download"
+)
+
 // Storage implements workflows with directories
 type Storage struct {
 	rootDir string

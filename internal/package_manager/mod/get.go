@@ -43,6 +43,13 @@ func (c *Mod) Get(ctx context.Context, dependency string) error {
 
 	protoDirs := filterOnlyProtoDirs(files)
 
+	cacheDownloadPath, err := c.storage.CacheDownload(module)
+	if err != nil {
+		return fmt.Errorf("c.storage.CacheDownload: %w", err)
+	}
+
+	_ = cacheDownloadPath
+
 	// TODO: generate temp file name for archive
 	// TODO: in new storage service generate repo's archive path and name (depends on version)
 	// TODO: check how buf index deps (depends on version in config file?)
