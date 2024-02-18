@@ -1,18 +1,19 @@
 package storage
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
 
-	_ "github.com/codeclysm/extract/v3"
+	"github.com/codeclysm/extract/v3"
 )
 
 // Install package from archive
 func (s *Storage) Install(archivePath string) error {
-	installedDir := filepath.Join(s.rootDir, installedDir)
+	installedDirPath := filepath.Join(s.rootDir, installedDir)
 
-	if err := os.MkdirAll(installedDir, dirPerm); err != nil {
+	if err := os.MkdirAll(installedDirPath, dirPerm); err != nil {
 		return fmt.Errorf("os.MkdirAll: %w", err)
 	}
 
@@ -22,7 +23,9 @@ func (s *Storage) Install(archivePath string) error {
 	}
 	defer func() { _ = fp.Close() }()
 
-	// extract.Archive()
+	if err := extract.Archive(context.TODO(), fp, installedDirPath, nil); err != nil {
+		return fmt.Errorf("extract.Archive: %w", err)
+	}
 
 	return nil
 }
