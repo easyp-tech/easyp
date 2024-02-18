@@ -55,6 +55,10 @@ func (c *Mod) Get(ctx context.Context, dependency string) error {
 		return fmt.Errorf("repository.Archive: %w", err)
 	}
 
+	if err := c.storage.Install(downloadArchivePath); err != nil {
+		return fmt.Errorf("c.storage.Install: %w", err)
+	}
+
 	// unzip
 	// src/cmd/go/internal/modfetch/fetch.go:154
 
