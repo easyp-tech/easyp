@@ -21,7 +21,7 @@ func modTst() {
 	module := "github.com/bufbuild/protovalidate@v0.3.1"
 	// module := "github.com/bufbuild/protovalidate@tools/v0.3.1"
 
-	dirs := storage.New("/tmp/tmp.zYICI6g0Nv/cache")
+	dirs := storage.New("/tmp/tmp.zYICI6g0Nv")
 	mod := modPkg.New(dirs)
 
 	err := mod.Get(context.Background(), module)

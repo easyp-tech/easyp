@@ -12,6 +12,7 @@ type (
 	Storage interface {
 		CacheDir(name string) (string, error)
 		CacheDownload(module models.Module) (string, error)
+		GetDownloadArchivePath(cacheDownloadPath string, revision models.Revision) string
 	}
 
 	// Mod implement package manager's commands

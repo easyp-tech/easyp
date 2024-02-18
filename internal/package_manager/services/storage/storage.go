@@ -1,6 +1,7 @@
 package storage
 
 const (
+	cacheDir      = "cache"
 	cacheDownload = "download"
 )
 
