@@ -40,6 +40,9 @@ func (r *gitRepo) ReadRevision(ctx context.Context, version string) (models.Revi
 		// version was omitted
 		if rev[1] == "HEAD" {
 			commitHash = rev[0]
+			// for HEAD replace version with the latest commit's hash
+			version = commitHash
+			break
 		}
 	}
 
@@ -50,6 +53,7 @@ func (r *gitRepo) ReadRevision(ctx context.Context, version string) (models.Revi
 
 	revision := models.Revision{
 		CommitHash: commitHash,
+		Version:    version,
 	}
 	return revision, nil
 }

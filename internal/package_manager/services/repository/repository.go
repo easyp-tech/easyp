@@ -15,7 +15,7 @@ type Repo interface {
 	GetFiles(ctx context.Context, revision models.Revision, dirs ...string) ([]string, error)
 
 	// Archive passed storage to archive and return full path to archive
-	Archive(ctx context.Context, revision models.Revision, dirs ...string) (string, error)
+	Archive(ctx context.Context, revision models.Revision, archivePath string, dirs ...string) error
 
 	// ReadRevision reads commit's revision by passed version
 	// or return the latest commit if version is empty

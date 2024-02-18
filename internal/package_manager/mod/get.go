@@ -3,6 +3,7 @@ package mod
 import (
 	"context"
 	"fmt"
+	"path/filepath"
 
 	"github.com/easyp-tech/easyp/internal/package_manager/models"
 	"github.com/easyp-tech/easyp/internal/package_manager/services/repository/git"
@@ -48,17 +49,14 @@ func (c *Mod) Get(ctx context.Context, dependency string) error {
 		return fmt.Errorf("c.storage.CacheDownload: %w", err)
 	}
 
-	_ = cacheDownloadPath
+	downloadArchivePath := filepath.Join(cacheDownloadPath, revision.Version) + ".zip"
 
 	// TODO: generate temp file name for archive
 	// TODO: in new storage service generate repo's archive path and name (depends on version)
 	// TODO: check how buf index deps (depends on version in config file?)
-	archive, err := repository.Archive(ctx, revision, protoDirs...)
-	if err != nil {
+	if err := repository.Archive(ctx, revision, downloadArchivePath, protoDirs...); err != nil {
 		return fmt.Errorf("repository.Archive: %w", err)
 	}
-
-	_ = archive
 
 	return nil
 }
