@@ -51,8 +51,6 @@ func (c *Mod) Get(ctx context.Context, dependency string) error {
 
 	downloadArchivePath := filepath.Join(cacheDownloadPath, revision.Version) + ".zip"
 
-	// TODO: generate temp file name for archive
-	// TODO: in new storage service generate repo's archive path and name (depends on version)
 	// TODO: check how buf index deps (depends on version in config file?)
 	if err := repository.Archive(ctx, revision, downloadArchivePath, protoDirs...); err != nil {
 		return fmt.Errorf("repository.Archive: %w", err)
