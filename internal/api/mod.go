@@ -2,8 +2,13 @@ package api
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
 
 	"github.com/urfave/cli/v2"
+
+	"github.com/easyp-tech/easyp/internal/package_manager/mod"
+	"github.com/easyp-tech/easyp/internal/package_manager/services/storage"
 )
 
 var _ Handler = (*Mod)(nil)
@@ -41,16 +46,36 @@ func (m Mod) Command() *cli.Command {
 	}
 }
 
+const (
+	envEasypPath     = "EASYPPATH"
+	defaultEasypPath = ".easyp"
+)
+
 func (m Mod) Action(ctx *cli.Context) error {
 	cfg, err := readConfig(ctx)
 	if err != nil {
 		return fmt.Errorf("readConfig: %w", err)
 	}
 
-	// TODO: TEMO DEBUG
-	modTst()
-	// TODO: TEMO DEBUG
+	easypPath := os.Getenv(envEasypPath)
+	if easypPath == "" {
+		userHomeDir, err := os.UserHomeDir()
+		if err != nil {
+			return fmt.Errorf("os.UserHomeDir: %w", err)
+		}
+		easypPath = filepath.Join(userHomeDir, defaultEasypPath)
+	}
 
-	_ = cfg
+	fmt.Printf("Use storage: %s\n", easypPath)
+
+	store := storage.New(easypPath)
+	cmd := mod.New(store)
+
+	for _, dependency := range cfg.Deps {
+		if err := cmd.Get(ctx.Context, dependency); err != nil {
+			return fmt.Errorf("cmd.Get: %w", err)
+		}
+	}
+
 	return nil
 }

@@ -12,6 +12,8 @@ import (
 // module: string format: origin@version: github.com/company/repository@v1.2.3
 // if version is absent use the latest
 func (c *Mod) Get(ctx context.Context, dependency string) error {
+	fmt.Printf("Install %s...\n", dependency)
+
 	module := models.NewModule(dependency)
 
 	cacheDir, err := c.storage.CacheDir(module.Name)
