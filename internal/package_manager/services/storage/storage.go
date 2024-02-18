@@ -1,8 +1,12 @@
 package storage
 
 const (
-	cacheDir      = "cache"
+	// root cache dir
+	cacheDir = "cache"
+	// dir for downloaded (check sum, archive)
 	cacheDownload = "download"
+	// dir for installed packages
+	installedDir = "mod"
 )
 
 // Storage implements workflows with directories
