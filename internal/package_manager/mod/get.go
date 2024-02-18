@@ -56,5 +56,8 @@ func (c *Mod) Get(ctx context.Context, dependency string) error {
 		return fmt.Errorf("repository.Archive: %w", err)
 	}
 
+	// unzip
+	// src/cmd/go/internal/modfetch/fetch.go:154
+
 	return nil
 }
