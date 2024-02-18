@@ -13,7 +13,7 @@ import (
 func (s *Storage) CacheDir(name string) (string, error) {
 	cacheDir := filepath.Join(s.rootDir, cacheDir, fmt.Sprintf("%x", sha256.Sum256([]byte(name))))
 
-	if err := os.MkdirAll(cacheDir, cacheDirPerm); err != nil {
+	if err := os.MkdirAll(cacheDir, dirPerm); err != nil {
 		return "", fmt.Errorf("os.MkdirAll: %w", err)
 	}
 

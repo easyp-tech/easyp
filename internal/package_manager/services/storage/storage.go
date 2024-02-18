@@ -21,5 +21,5 @@ func New(rootDir string) *Storage {
 }
 
 const (
-	cacheDirPerm = 0755
+	dirPerm = 0755
 )

@@ -13,7 +13,7 @@ import (
 func (s *Storage) CacheDownload(module models.Module) (string, error) {
 	cacheDownloadPath := filepath.Join(s.rootDir, cacheDir, cacheDownload, module.Name)
 
-	if err := os.MkdirAll(cacheDownloadPath, cacheDirPerm); err != nil {
+	if err := os.MkdirAll(cacheDownloadPath, dirPerm); err != nil {
 		return "", fmt.Errorf("os.MkdirAll: %w", err)
 	}
 
