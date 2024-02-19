@@ -29,7 +29,6 @@ By default, `easyp` use `$HOME/.easyp` dir to storage cache and downloaded modul
 
 ### Roadmap
 
-1. Implement check sum calc, store it and compare (i.e go.sum)
-2. Implement support for `buf.work.yaml` config
-3. ...
-4. PROFIT?
+* [ ] Implement support for `buf.work.yaml` config
+* [ ] Calc hash sum, store it and compare (i.e go.sum)
+* [ ] Buf's blob support (for IDE plugins)
