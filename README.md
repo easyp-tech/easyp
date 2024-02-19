@@ -11,7 +11,7 @@ For now, it's just linter and package manager, but... who knows, who knows...
 To usage `easpy` as a package manager use `mod` command:
 
 ```bash
-mod -c example.easyp.yaml
+easyp mod -c example.easyp.yaml
 ```
 
 Your config file has to contains `deps` section which is list of repositories with proto files and its version (optional).
@@ -23,9 +23,9 @@ deps:
   - github.com/googleapis/googleapis@common-protos-1_3_1
 ```
 
-**NOTE:** Use only git tag or full hash of commit.
+**NOTE:** Use only git tag or full hash of commit version.
 
-By default, `easyp` use `$HOME/easyp` dir to storage cache and downloaded modules, you could override it with `EASYPPATH` env var.
+By default, `easyp` use `$HOME/.easyp` dir to storage cache and downloaded modules, you could override it with `EASYPPATH` env var.
 
 ### Roadmap
 
