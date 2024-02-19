@@ -16,9 +16,9 @@ func (c *Mod) Get(ctx context.Context, dependency string) error {
 
 	module := models.NewModule(dependency)
 
-	cacheDir, err := c.storage.CacheDir(module.Name)
+	cacheDir, err := c.storage.CreateCacheDir(module.Name)
 	if err != nil {
-		return fmt.Errorf("c.storage.CacheDir: %w", err)
+		return fmt.Errorf("c.storage.CreateCacheDir: %w", err)
 	}
 
 	repository, err := git.New(ctx, module.Name, cacheDir)
@@ -35,19 +35,25 @@ func (c *Mod) Get(ctx context.Context, dependency string) error {
 		return fmt.Errorf("repository.Fetch: %w", err)
 	}
 
+	moduleConfig, err := c.moduleConfig.ReadFromRepo(ctx, repository, revision)
+	if err != nil {
+		return fmt.Errorf("c.moduleConfig.Read: %w", err)
+	}
+
 	// TODO: lock file: cmd/go/internal/lockedfile/mutex.go:46
 	// TODO: read buf.work.yaml to determine dir with proto files and pass storage to GetFiles
 
-	files, err := repository.GetFiles(ctx, revision)
+	// TODO: check that buf.yaml,buf.lock,LICENSE files are disappeared after read buf.work config
+	files, err := repository.GetFiles(ctx, revision, moduleConfig.Directories...)
 	if err != nil {
 		return fmt.Errorf("repository.GetFiles: %w", err)
 	}
 
 	protoDirs := filterOnlyProtoDirs(files)
 
-	cacheDownloadPath, err := c.storage.CacheDownload(module)
+	cacheDownloadPath, err := c.storage.CreateCacheDownloadDir(module)
 	if err != nil {
-		return fmt.Errorf("c.storage.CacheDownload: %w", err)
+		return fmt.Errorf("c.storage.CreateCacheDownloadDir: %w", err)
 	}
 
 	downloadArchivePath := c.storage.GetDownloadArchivePath(cacheDownloadPath, revision)
@@ -57,7 +63,11 @@ func (c *Mod) Get(ctx context.Context, dependency string) error {
 		return fmt.Errorf("repository.Archive: %w", err)
 	}
 
-	if err := c.storage.Install(downloadArchivePath); err != nil {
+	// TODO: save buf.work like go mod: v1.0.1.mod or better to save ModuleConfig
+	// TODO: save archive checksum like go mod: v1.0.1.ziphash
+	// TODO: pass to Install config from buf
+	// renamer will rename dirs
+	if err := c.storage.Install(downloadArchivePath, moduleConfig); err != nil {
 		return fmt.Errorf("c.storage.Install: %w", err)
 	}
 

@@ -10,7 +10,7 @@ import (
 
 // CacheDownload create and return path to downloaded cache.
 // Like $GOPATH/pkg/mod/cache/download
-func (s *Storage) CacheDownload(module models.Module) (string, error) {
+func (s *Storage) CreateCacheDownloadDir(module models.Module) (string, error) {
 	cacheDownloadPath := filepath.Join(s.rootDir, cacheDir, cacheDownload, module.Name)
 
 	if err := os.MkdirAll(cacheDownloadPath, dirPerm); err != nil {

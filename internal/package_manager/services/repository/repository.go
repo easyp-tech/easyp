@@ -14,6 +14,9 @@ type Repo interface {
 	// GetFiles returns list of all files in repository
 	GetFiles(ctx context.Context, revision models.Revision, dirs ...string) ([]string, error)
 
+	// ReadFile returns file's content from repository
+	ReadFile(ctx context.Context, revision models.Revision, fileName string) (string, error)
+
 	// Archive passed storage to archive and return full path to archive
 	Archive(ctx context.Context, revision models.Revision, archivePath string, dirs ...string) error
 

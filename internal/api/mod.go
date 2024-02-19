@@ -8,6 +8,7 @@ import (
 	"github.com/urfave/cli/v2"
 
 	"github.com/easyp-tech/easyp/internal/package_manager/mod"
+	moduleconfig "github.com/easyp-tech/easyp/internal/package_manager/services/module_config"
 	"github.com/easyp-tech/easyp/internal/package_manager/services/storage"
 )
 
@@ -69,7 +70,8 @@ func (m Mod) Action(ctx *cli.Context) error {
 	fmt.Printf("Use storage: %s\n", easypPath)
 
 	store := storage.New(easypPath)
-	cmd := mod.New(store)
+	moduleConfig := moduleconfig.New()
+	cmd := mod.New(store, moduleConfig)
 
 	for _, dependency := range cfg.Deps {
 		if err := cmd.Get(ctx.Context, dependency); err != nil {

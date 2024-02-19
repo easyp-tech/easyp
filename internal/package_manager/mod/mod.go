@@ -1,30 +1,39 @@
 package mod
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"strings"
 
 	"github.com/easyp-tech/easyp/internal/package_manager/models"
+	"github.com/easyp-tech/easyp/internal/package_manager/services/repository"
 )
 
 type (
 	Storage interface {
-		CacheDir(name string) (string, error)
-		CacheDownload(module models.Module) (string, error)
+		CreateCacheDir(name string) (string, error)
+		CreateCacheDownloadDir(module models.Module) (string, error)
 		GetDownloadArchivePath(cacheDownloadPath string, revision models.Revision) string
-		Install(archivePath string) error
+		Install(archivePath string, moduleConfig models.ModuleConfig) error
+	}
+
+	// TODO: just pass Repository interface
+	ModuleConfig interface {
+		ReadFromRepo(ctx context.Context, repo repository.Repo, revision models.Revision) (models.ModuleConfig, error)
 	}
 
 	// Mod implement package manager's commands
 	Mod struct {
-		storage Storage
+		storage      Storage
+		moduleConfig ModuleConfig
 	}
 )
 
-func New(storage Storage) *Mod {
+func New(storage Storage, moduleConfig ModuleConfig) *Mod {
 	return &Mod{
-		storage: storage,
+		storage:      storage,
+		moduleConfig: moduleConfig,
 	}
 }
 
