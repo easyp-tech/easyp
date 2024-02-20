@@ -7,7 +7,7 @@ import (
 	"github.com/urfave/cli/v2"
 	"gopkg.in/yaml.v3"
 
-	"github.com/easyp-tech/easyp/internal/core"
+	"github.com/easyp-tech/easyp/internal/lint"
 	"github.com/easyp-tech/easyp/internal/rules"
 )
 
@@ -71,17 +71,17 @@ func (l Lint) Action(ctx *cli.Context) error {
 		return fmt.Errorf("yaml.NewDecoder.Decode: %w", err)
 	}
 
-	var useRule []core.Rule
+	var useRule []lint.Rule
 	for _, ruleName := range cfg.Lint.Use {
 		rule, ok := rules.Rules()[ruleName]
 		if !ok {
-			return core.ErrInvalidRule
+			return lint.ErrInvalidRule
 		}
 
 		useRule = append(useRule, rule)
 	}
 
-	c := core.New(useRule)
+	c := lint.New(useRule)
 
 	dirFS := os.DirFS(ctx.String(flagLintDirectoryPath.Name))
 
