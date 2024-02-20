@@ -11,7 +11,7 @@ var _ core.Rule = (*EnumPascalCase)(nil)
 // EnumPascalCase is a rule for checking name of enum for pascal case.
 type EnumPascalCase struct{}
 
-// Validate implements Rule.
+// Validate implements core.Rule.
 func (c *EnumPascalCase) Validate(protoInfo core.ProtoInfo) []error {
 	var res []error
 	pascalCase := regexp.MustCompile("^[A-Z][a-z]+(?:[A-Z][a-z]+)*$")

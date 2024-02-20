@@ -9,7 +9,7 @@ var _ core.Rule = (*CommentMessage)(nil)
 // CommentMessage is a rule for checking message comments.
 type CommentMessage struct{}
 
-// Validate implements Rule.
+// Validate implements core.Rule.
 func (c *CommentMessage) Validate(protoInfo core.ProtoInfo) []error {
 	var res []error
 

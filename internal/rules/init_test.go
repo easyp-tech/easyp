@@ -12,8 +12,11 @@ import (
 )
 
 const (
-	invalidAuthProto = `./../../testdata/auth/service.proto`
-	validAuthProto   = `./../../testdata/api/session/v1/session.proto`
+	invalidAuthProto         = `./../../testdata/auth/service.proto`
+	invalidAuthProto2        = `./../../testdata/auth/queue.proto`
+	invalidAuthProtoEmptyPkg = `./../../testdata/auth/empty_pkg.proto`
+	validAuthProto           = `./../../testdata/api/session/v1/session.proto`
+	validAuthProto2          = `./../../testdata/api/session/v1/events.proto`
 )
 
 func start(t testing.TB) (*require.Assertions, map[string]core.ProtoInfo) {
@@ -22,8 +25,11 @@ func start(t testing.TB) (*require.Assertions, map[string]core.ProtoInfo) {
 	assert := require.New(t)
 
 	protos := map[string]core.ProtoInfo{
-		invalidAuthProto: parseFile(t, assert, invalidAuthProto),
-		validAuthProto:   parseFile(t, assert, validAuthProto),
+		invalidAuthProto:         parseFile(t, assert, invalidAuthProto),
+		invalidAuthProto2:        parseFile(t, assert, invalidAuthProto2),
+		invalidAuthProtoEmptyPkg: parseFile(t, assert, invalidAuthProtoEmptyPkg),
+		validAuthProto:           parseFile(t, assert, validAuthProto),
+		validAuthProto2:          parseFile(t, assert, validAuthProto2),
 	}
 
 	return assert, protos

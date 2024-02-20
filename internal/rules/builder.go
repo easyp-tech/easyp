@@ -7,6 +7,12 @@ import (
 // Rules returns all rules.
 func Rules() map[string]core.Rule {
 	return map[string]core.Rule{
+		// Minimal
+		"DIRECTORY_SAME_PACKAGE":  &DirectorySamePackage{},
+		"PACKAGE_DEFINED":         &PackageDefined{},
+		"PACKAGE_DIRECTORY_MATCH": &PackageDirectoryMatch{},
+		"PACKAGE_SAME_DIRECTORY":  &PackageSameDirectory{},
+		// Basic
 		"COMMENT_ENUM":                   &CommentEnum{},
 		"COMMENT_ENUM_VALUE":             &CommentEnumValue{},
 		"COMMENT_MESSAGE":                &CommentMessage{},

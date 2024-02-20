@@ -11,7 +11,7 @@ var _ core.Rule = (*PackageLowerSnakeCase)(nil)
 // PackageLowerSnakeCase is a rule for checking package for lower snake case.
 type PackageLowerSnakeCase struct{}
 
-// Validate implements Rule.
+// Validate implements core.Rule.
 func (c *PackageLowerSnakeCase) Validate(protoInfo core.ProtoInfo) []error {
 	var res []error
 	lowerSnakeCase := regexp.MustCompile("^[a-z]+([_|[.][a-z0-9]+)*$")

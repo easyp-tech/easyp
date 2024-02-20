@@ -11,7 +11,7 @@ var _ core.Rule = (*MessageFieldLowerSnakeCase)(nil)
 // MessageFieldLowerSnakeCase is a rule for checking fields of messages for lower snake case.
 type MessageFieldLowerSnakeCase struct{}
 
-// Validate implements Rule.
+// Validate implements core.Rule.
 func (c *MessageFieldLowerSnakeCase) Validate(protoInfo core.ProtoInfo) []error {
 	var res []error
 	lowerSnakeCase := regexp.MustCompile("^[a-z]+(_[a-z]+)*$")

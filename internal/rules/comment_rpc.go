@@ -9,7 +9,7 @@ var _ core.Rule = (*CommentRPC)(nil)
 // CommentRPC is a rule for checking rpc comments.
 type CommentRPC struct{}
 
-// Validate implements Rule.
+// Validate implements core.Rule.
 func (c *CommentRPC) Validate(protoInfo core.ProtoInfo) []error {
 	var res []error
 

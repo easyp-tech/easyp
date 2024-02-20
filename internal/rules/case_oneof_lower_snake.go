@@ -11,7 +11,7 @@ var _ core.Rule = (*OneofLowerSnakeCase)(nil)
 // OneofLowerSnakeCase is a rule for checking oneof of messages for lower snake case.
 type OneofLowerSnakeCase struct{}
 
-// Validate implements Rule.
+// Validate implements core.Rule.
 func (c *OneofLowerSnakeCase) Validate(protoInfo core.ProtoInfo) []error {
 	var res []error
 	lowerSnakeCase := regexp.MustCompile("^[a-z]+(_[a-z]+)*$")

@@ -11,7 +11,7 @@ var _ core.Rule = (*MessagePascalCase)(nil)
 // MessagePascalCase is a rule for checking name of message for pascal case.
 type MessagePascalCase struct{}
 
-// Validate implements Rule.
+// Validate implements core.Rule.
 func (c *MessagePascalCase) Validate(protoInfo core.ProtoInfo) []error {
 	var res []error
 	pascalCase := regexp.MustCompile("^[A-Z][a-z]+(?:[A-Z][a-z]+)*$")

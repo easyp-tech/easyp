@@ -9,7 +9,7 @@ var _ core.Rule = (*CommentOneOf)(nil)
 // CommentOneOf is a rule for checking oneOf comments.
 type CommentOneOf struct{}
 
-// Validate implements Rule.
+// Validate implements core.Rule.
 func (c *CommentOneOf) Validate(protoInfo core.ProtoInfo) []error {
 	var res []error
 
