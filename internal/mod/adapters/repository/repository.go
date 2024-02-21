@@ -3,11 +3,7 @@ package repository
 import (
 	"context"
 
-	"github.com/easyp-tech/easyp/internal/package_manager/models"
-)
-
-const (
-	CacheArchiveName = "cache.zip"
+	"github.com/easyp-tech/easyp/internal/mod/models"
 )
 
 type Repo interface {

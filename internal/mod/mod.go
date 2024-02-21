@@ -6,8 +6,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/easyp-tech/easyp/internal/package_manager/models"
-	"github.com/easyp-tech/easyp/internal/package_manager/services/repository"
+	"github.com/easyp-tech/easyp/internal/mod/adapters/repository"
+	"github.com/easyp-tech/easyp/internal/mod/models"
 )
 
 type (

@@ -5,7 +5,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/easyp-tech/easyp/internal/package_manager/models"
+	"github.com/easyp-tech/easyp/internal/mod/models"
 )
 
 // CacheDownload create and return path to downloaded cache.

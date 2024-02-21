@@ -3,7 +3,7 @@ package storage
 import (
 	"path/filepath"
 
-	"github.com/easyp-tech/easyp/internal/package_manager/models"
+	"github.com/easyp-tech/easyp/internal/mod/models"
 )
 
 // GetDownloadArchivePath returns full path to download archive (include extension)

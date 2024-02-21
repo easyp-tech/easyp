@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/easyp-tech/easyp/internal/package_manager/models"
-	"github.com/easyp-tech/easyp/internal/package_manager/services/repository/git"
+	"github.com/easyp-tech/easyp/internal/mod/adapters/repository/git"
+	"github.com/easyp-tech/easyp/internal/mod/models"
 )
 
 // Get download package.

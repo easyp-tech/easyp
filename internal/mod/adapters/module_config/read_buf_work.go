@@ -8,8 +8,8 @@ import (
 
 	"gopkg.in/yaml.v3"
 
-	"github.com/easyp-tech/easyp/internal/package_manager/models"
-	"github.com/easyp-tech/easyp/internal/package_manager/services/repository"
+	"github.com/easyp-tech/easyp/internal/mod/adapters/repository"
+	"github.com/easyp-tech/easyp/internal/mod/models"
 )
 
 type bufWork struct {

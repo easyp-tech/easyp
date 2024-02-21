@@ -7,9 +7,9 @@ import (
 
 	"github.com/urfave/cli/v2"
 
-	"github.com/easyp-tech/easyp/internal/package_manager/mod"
-	moduleconfig "github.com/easyp-tech/easyp/internal/package_manager/services/module_config"
-	"github.com/easyp-tech/easyp/internal/package_manager/services/storage"
+	"github.com/easyp-tech/easyp/internal/mod"
+	moduleconfig "github.com/easyp-tech/easyp/internal/mod/adapters/module_config"
+	"github.com/easyp-tech/easyp/internal/mod/adapters/storage"
 )
 
 var _ Handler = (*Mod)(nil)
@@ -34,7 +34,7 @@ func (m Mod) Command() *cli.Command {
 		Subcommands:  nil,
 		Flags: []cli.Flag{
 			flagCfg,
-			// FIXME: Use flags for package_manager
+			// FIXME: Use flags for mod
 			// flagLintDirectoryPath,
 		},
 		SkipFlagParsing:        false,

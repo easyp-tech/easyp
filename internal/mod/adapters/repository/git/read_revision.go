@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/easyp-tech/easyp/internal/package_manager/models"
-	"github.com/easyp-tech/easyp/internal/package_manager/services"
+	"github.com/easyp-tech/easyp/internal/mod/adapters"
+	"github.com/easyp-tech/easyp/internal/mod/models"
 )
 
 // TODO: For now read only by tag or without version
@@ -18,9 +18,9 @@ func (r *gitRepo) ReadRevision(ctx context.Context, version string) (models.Revi
 		// replace with HEAD if version is empty
 		version = "HEAD"
 	}
-	res, err := services.RunCmd(ctx, r.cacheDir, "git", "ls-remote", "origin", version)
+	res, err := adapters.RunCmd(ctx, r.cacheDir, "git", "ls-remote", "origin", version)
 	if err != nil {
-		return models.Revision{}, fmt.Errorf("services.RunCmd (ls-remote): %w", err)
+		return models.Revision{}, fmt.Errorf("adapters.RunCmd (ls-remote): %w", err)
 	}
 
 	commitHash := ""

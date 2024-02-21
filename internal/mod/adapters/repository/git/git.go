@@ -6,8 +6,8 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/easyp-tech/easyp/internal/package_manager/services"
-	"github.com/easyp-tech/easyp/internal/package_manager/services/repository"
+	"github.com/easyp-tech/easyp/internal/mod/adapters"
+	"github.com/easyp-tech/easyp/internal/mod/adapters/repository"
 )
 
 var _ repository.Repo = (*gitRepo)(nil)
@@ -20,7 +20,7 @@ type gitRepo struct {
 	cacheDir string
 }
 
-// Some links from go package_manager:
+// Some links from go mod:
 // cmd/go/internal/modfetch/codehost/git.go:65 - create work dir
 // cmd/go/internal/modfetch/codehost/git.go:137 - git's struct
 
@@ -37,13 +37,13 @@ func New(ctx context.Context, remote string, cacheDir string) (repository.Repo, 
 		return r, nil
 	}
 
-	if _, err := services.RunCmd(ctx, r.cacheDir, "git", "init", "--bare"); err != nil {
-		return nil, fmt.Errorf("services.RunCmd (init): %w", err)
+	if _, err := adapters.RunCmd(ctx, r.cacheDir, "git", "init", "--bare"); err != nil {
+		return nil, fmt.Errorf("adapters.RunCmd (init): %w", err)
 	}
 
-	_, err := services.RunCmd(ctx, r.cacheDir, "git", "remote", "add", "origin", r.remoteURL)
+	_, err := adapters.RunCmd(ctx, r.cacheDir, "git", "remote", "add", "origin", r.remoteURL)
 	if err != nil {
-		return nil, fmt.Errorf("services.RunCmd (add origin): %w", err)
+		return nil, fmt.Errorf("adapters.RunCmd (add origin): %w", err)
 	}
 
 	return r, nil

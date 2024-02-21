@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/easyp-tech/easyp/internal/package_manager/models"
-	"github.com/easyp-tech/easyp/internal/package_manager/services"
+	"github.com/easyp-tech/easyp/internal/mod/adapters"
+	"github.com/easyp-tech/easyp/internal/mod/models"
 )
 
 func (r *gitRepo) Archive(
@@ -16,7 +16,7 @@ func (r *gitRepo) Archive(
 	}
 	params = append(params, dirs...)
 
-	if _, err := services.RunCmd(ctx, r.cacheDir, "git", params...); err != nil {
+	if _, err := adapters.RunCmd(ctx, r.cacheDir, "git", params...); err != nil {
 		return fmt.Errorf("utils.RunCmd: %w", err)
 	}
 

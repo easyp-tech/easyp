@@ -9,7 +9,7 @@ import (
 
 	"github.com/codeclysm/extract/v3"
 
-	"github.com/easyp-tech/easyp/internal/package_manager/models"
+	"github.com/easyp-tech/easyp/internal/mod/models"
 )
 
 // Install package from archive
