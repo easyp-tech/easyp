@@ -28,16 +28,16 @@ type LintConfig struct {
 	Use []string `json:"use" yaml:"use" env:"USE"`
 }
 
-func readConfig(ctx *cli.Context) (Config, error) {
+func readConfig(ctx *cli.Context) (*Config, error) {
 	cfgFile, err := os.Open(ctx.String(flagCfg.Name))
 	if err != nil {
-		return Config{}, fmt.Errorf("os.Open: %w", err)
+		return nil, fmt.Errorf("os.Open: %w", err)
 	}
 
-	cfg := Config{}
+	cfg := &Config{}
 	err = yaml.NewDecoder(cfgFile).Decode(&cfg)
 	if err != nil {
-		return Config{}, fmt.Errorf("yaml.NewDecoder.Decode: %w", err)
+		return nil, fmt.Errorf("yaml.NewDecoder.Decode: %w", err)
 	}
 
 	return cfg, nil

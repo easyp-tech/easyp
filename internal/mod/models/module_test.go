@@ -7,21 +7,18 @@ import (
 )
 
 func TestNewModule(t *testing.T) {
-	tests := []struct {
-		name           string
+	tests := map[string]struct {
 		dependency     string
 		expectedResult Module
 	}{
-		{
-			name:       "with version",
+		"with version": {
 			dependency: "github.com/company/repository@v1.2.3",
 			expectedResult: Module{
 				Name:    "github.com/company/repository",
 				Version: "v1.2.3",
 			},
 		},
-		{
-			name:       "without version",
+		"without version": {
 			dependency: "github.com/company/repository",
 			expectedResult: Module{
 				Name:    "github.com/company/repository",
@@ -30,9 +27,9 @@ func TestNewModule(t *testing.T) {
 		},
 	}
 
-	for _, tc := range tests {
-		tc := tc
-		t.Run(tc.name, func(t *testing.T) {
+	for name, tc := range tests {
+		name, tc := name, tc
+		t.Run(name, func(t *testing.T) {
 			result := NewModule(tc.dependency)
 			require.Equal(t, tc.expectedResult, result)
 		})

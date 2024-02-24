@@ -7,13 +7,11 @@ import (
 )
 
 func TestFilterOnlyProtoDirs(t *testing.T) {
-	tests := []struct {
-		name     string
+	tests := map[string]struct {
 		files    []string
 		expected []string
 	}{
-		{
-			name: "one dir",
+		"one dir": {
 			files: []string{
 				"collect/file.proto",
 				"collect/nested/file.proto",
@@ -22,8 +20,7 @@ func TestFilterOnlyProtoDirs(t *testing.T) {
 				"collect",
 			},
 		},
-		{
-			name: "several dir",
+		"several dir": {
 			files: []string{
 				"collect/file.proto",
 				"collect/nested/file.proto",
@@ -39,9 +36,9 @@ func TestFilterOnlyProtoDirs(t *testing.T) {
 		},
 	}
 
-	for _, tc := range tests {
-		tc := tc
-		t.Run(tc.name, func(t *testing.T) {
+	for name, tc := range tests {
+		name, tc := name, tc
+		t.Run(name, func(t *testing.T) {
 			result := filterOnlyProtoDirs(tc.files)
 			require.ElementsMatch(t, tc.expected, result)
 		})

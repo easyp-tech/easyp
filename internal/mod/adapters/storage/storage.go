@@ -4,7 +4,7 @@ const (
 	// root cache dir
 	cacheDir = "cache"
 	// dir for downloaded (check sum, archive)
-	cacheDownload = "download"
+	cacheDownloadDir = "download"
 	// dir for installed packages
 	installedDir = "mod"
 )

@@ -11,6 +11,7 @@ import (
 )
 
 type (
+	// Storage should implement workflow with storage adapter
 	Storage interface {
 		CreateCacheDir(name string) (string, error)
 		CreateCacheDownloadDir(module models.Module) (string, error)
@@ -18,7 +19,7 @@ type (
 		Install(archivePath string, moduleConfig models.ModuleConfig) error
 	}
 
-	// TODO: just pass Repository interface
+	// ModuleConfig should implement adapter for reading module configs
 	ModuleConfig interface {
 		ReadFromRepo(ctx context.Context, repo repository.Repo, revision models.Revision) (models.ModuleConfig, error)
 	}

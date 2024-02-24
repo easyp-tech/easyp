@@ -9,30 +9,26 @@ import (
 )
 
 func TestGetRenamer(t *testing.T) {
-	tests := []struct {
-		name           string
+	tests := map[string]struct {
 		moduleConfig   models.ModuleConfig
 		passedFile     string
 		expectedResult string
 	}{
-		{
-			name: "Directories are empty",
+		"directories are empty": {
 			moduleConfig: models.ModuleConfig{
 				Directories: nil,
 			},
 			passedFile:     "proto/file.proto",
 			expectedResult: "proto/file.proto",
 		},
-		{
-			name: "Directories contain one dir",
+		"directories contain one dir": {
 			moduleConfig: models.ModuleConfig{
 				Directories: []string{"proto/protovalidate"},
 			},
 			passedFile:     "proto/protovalidate/buf/validate/validate.proto",
 			expectedResult: "buf/validate/validate.proto",
 		},
-		{
-			name: "Directories contain several dirs",
+		"directories contain several dirs": {
 			moduleConfig: models.ModuleConfig{
 				Directories: []string{"proto/protovalidate", "proto/protovalidate-testing"},
 			},
@@ -41,9 +37,9 @@ func TestGetRenamer(t *testing.T) {
 		},
 	}
 
-	for _, tc := range tests {
-		tc := tc
-		t.Run(tc.name, func(t *testing.T) {
+	for name, tc := range tests {
+		name, tc := name, tc
+		t.Run(name, func(t *testing.T) {
 			renamer := getRenamer(tc.moduleConfig)
 			result := renamer(tc.passedFile)
 			require.Equal(t, tc.expectedResult, result)
