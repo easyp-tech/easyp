@@ -4,6 +4,32 @@
 
 For now, it's just linter and package manager, but... who knows, who knows...
 
+## Install
+
+### Build from source
+
+1. Clone repository
+2. Build
+```bash
+go build ./cmd/easyp
+```
+
+### Install from github
+
+```bash
+go install github.com/easyp-tech/easyp/cmd/easyp@latest
+```
+
+## Linter
+
+`easyp` support `buf's` linter rules.
+
+### Usage
+
+```bash
+easyp lint -c example.easyp.yaml
+```
+
 ## Package manager
 
 ### Usage
