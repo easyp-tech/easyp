@@ -5,21 +5,21 @@ import (
 	"testing"
 
 	"github.com/easyp-tech/easyp/internal/lint"
-	"github.com/easyp-tech/easyp/internal/rules"
+	"github.com/easyp-tech/easyp/internal/lint/rules"
 )
 
-func TestEnumValueUpperSnakeCase_Validate(t *testing.T) {
+func TestEnumNoAllowAlias_Validate(t *testing.T) {
 	t.Parallel()
 
 	tests := map[string]struct {
 		fileName string
 		wantErr  error
 	}{
-		"check_enum_value_upper_snake_case_is_invalid": {
+		"enum_no_allow_alias_invalid": {
 			fileName: invalidAuthProto,
-			wantErr:  lint.ErrEnumValueUpperSnakeCase,
+			wantErr:  lint.ErrEnumNoAllowAlias,
 		},
-		"check_enum_value_upper_snake_case_is_valid": {
+		"enum_no_allow_alias_valid": {
 			fileName: validAuthProto,
 			wantErr:  nil,
 		},
@@ -32,7 +32,7 @@ func TestEnumValueUpperSnakeCase_Validate(t *testing.T) {
 
 			r, protos := start(t)
 
-			rule := rules.EnumValueUpperSnakeCase{}
+			rule := rules.EnumNoAllowAlias{}
 			err := rule.Validate(protos[tc.fileName])
 			r.ErrorIs(errors.Join(err...), tc.wantErr)
 		})

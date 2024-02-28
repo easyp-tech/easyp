@@ -73,7 +73,11 @@ func (l Lint) Action(ctx *cli.Context) error {
 
 	var useRule []lint.Rule
 	for _, ruleName := range cfg.Lint.Use {
-		rule, ok := rules.Rules()[ruleName]
+		rule, ok := rules.Rules(rules.Config{
+			PackageDirectoryMatchRoot: ".",           // TODO: Move to config
+			EnumZeroValueSuffixPrefix: "UNSPECIFIED", // TODO: Move to config
+			ServiceSuffixSuffix:       "Service",     // TODO: Move to config
+		})[ruleName]
 		if !ok {
 			return lint.ErrInvalidRule
 		}

@@ -4,7 +4,7 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/easyp-tech/easyp/internal/rules"
+	"github.com/easyp-tech/easyp/internal/lint/rules"
 
 	"github.com/easyp-tech/easyp/internal/lint"
 )

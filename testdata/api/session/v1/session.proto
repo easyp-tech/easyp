@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package api.session.v1;
 
-import "google/rpc/code.proto";
+import "google/protobuf/timestamp.proto";
 
 option go_package = "github.com/ZergsLaw/back-template/api/session/v1;pb";
 
@@ -30,6 +30,8 @@ message GetResponse {
   string session_id = 1;
   // Contains user's UUID.
   string user_id = 2;
+  // Contains user's session start time.
+  google.protobuf.Timestamp created_at = 3;
 }
 
 //---Must be filled out---
@@ -60,9 +62,11 @@ message SaveResponse {
 //---Must be filled out---
 enum SocialNetwork {
   //---Must be filled out---
-  GOOGLE = 0;
+  SOCIAL_NETWORK_NONE = 0;
   //---Must be filled out---
-  YAHOO = 1;
+  SOCIAL_NETWORK_GOOGLE = 1;
   //---Must be filled out---
-  FACEBOOK = 2;
+  SOCIAL_NETWORK_YAHOO = 2;
+  //---Must be filled out---
+  SOCIAL_NETWORK_FACEBOOK = 3;
 }

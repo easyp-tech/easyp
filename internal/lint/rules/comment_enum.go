@@ -6,16 +6,16 @@ import (
 
 var _ lint.Rule = (*CommentEnum)(nil)
 
-// CommentEnum is a rule for checking enum comments.
+// CommentEnum this rule checks that enums have non-empty comments.
 type CommentEnum struct{}
 
-// Validate implements core.Rule.
+// Validate implements lint.Rule.
 func (c *CommentEnum) Validate(protoInfo lint.ProtoInfo) []error {
 	var res []error
 
 	for _, enum := range protoInfo.Info.ProtoBody.Enums {
 		if len(enum.Comments) == 0 {
-			res = append(res, buildError(enum.Meta.Pos, enum.EnumName, lint.ErrEnumCommentIsEmpty))
+			res = append(res, BuildError(enum.Meta.Pos, enum.EnumName, lint.ErrEnumCommentIsEmpty))
 		}
 	}
 

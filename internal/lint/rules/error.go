@@ -25,7 +25,8 @@ func (e Error) Unwrap() error {
 	return e.err
 }
 
-func buildError(pos meta.Position, sourceName string, err error) error {
+// BuildError creates an Error.
+func BuildError(pos meta.Position, sourceName string, err error) error {
 	return &Error{
 		position:   pos,
 		sourceName: sourceName,
