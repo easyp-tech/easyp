@@ -5,21 +5,21 @@ import (
 	"testing"
 
 	"github.com/easyp-tech/easyp/internal/lint"
-	"github.com/easyp-tech/easyp/internal/rules"
+	"github.com/easyp-tech/easyp/internal/lint/rules"
 )
 
-func TestPackageLowerSnakeCase_Validate(t *testing.T) {
+func TestServiceSuffix_Validate(t *testing.T) {
 	t.Parallel()
 
 	tests := map[string]struct {
 		fileName string
 		wantErr  error
 	}{
-		"check_package_lower_snake_case_is_invalid": {
+		"invalid": {
 			fileName: invalidAuthProto,
-			wantErr:  lint.ErrPackageLowerSnakeCase,
+			wantErr:  lint.ErrServiceSuffix,
 		},
-		"check_package_lower_snake_case_is_valid": {
+		"valid": {
 			fileName: validAuthProto,
 			wantErr:  nil,
 		},
@@ -32,7 +32,9 @@ func TestPackageLowerSnakeCase_Validate(t *testing.T) {
 
 			r, protos := start(t)
 
-			rule := rules.PackageLowerSnakeCase{}
+			rule := rules.ServiceSuffix{
+				Suffix: "API",
+			}
 			err := rule.Validate(protos[tc.fileName])
 			r.ErrorIs(errors.Join(err...), tc.wantErr)
 		})

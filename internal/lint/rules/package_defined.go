@@ -8,15 +8,15 @@ import (
 
 var _ lint.Rule = (*PackageDefined)(nil)
 
-// PackageDefined is a rule for checking package is defined.
+// PackageDefined this rule checks that all files have a package declaration.
 type PackageDefined struct{}
 
-// Validate implements core.Rule.
+// Validate implements lint.Rule.
 func (p *PackageDefined) Validate(protoInfo lint.ProtoInfo) []error {
 	var res []error
 
 	if len(protoInfo.Info.ProtoBody.Packages) == 0 {
-		res = append(res, buildError(meta.Position{}, protoInfo.Path, lint.ErrPackageIsNotDefined))
+		res = append(res, BuildError(meta.Position{}, protoInfo.Path, lint.ErrPackageIsNotDefined))
 	}
 
 	if len(res) == 0 {

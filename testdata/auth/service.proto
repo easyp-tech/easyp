@@ -2,15 +2,16 @@ syntax = "proto3";
 
 package Session;
 
-import "google/protobuf/empty.proto";
-import "google/rpc/code.proto";
+import weak "google/protobuf/empty.proto";
+import public "google/rpc/code.proto";
 
 option go_package = "github.com/ZergsLaw/back-template/api/session/v1;pb";
 
 service auth {
   rpc Save(SessionInfo) returns (Result) {}
   rpc Get(TokenData) returns (Session) {}
-  rpc delete(Delete_Info) returns (google.protobuf.Empty) {}
+  rpc delete(stream Delete_Info) returns (stream google.protobuf.Empty) {}
+  rpc GetByToken(TokenData) returns (Session) {}
 }
 
 message TokenData {
@@ -41,8 +42,10 @@ message Result {
 }
 
 enum social_network {
+  option allow_alias = true;
   none = 4;
   google = 1;
   yahoo = 2;
   facebook = 3;
+  meta = 3;
 }

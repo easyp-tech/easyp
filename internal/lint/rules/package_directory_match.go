@@ -14,7 +14,7 @@ type PackageDirectoryMatch struct {
 	Root string
 }
 
-// Validate implements core.Rule.
+// Validate implements lint.Rule.
 func (d *PackageDirectoryMatch) Validate(protoInfo lint.ProtoInfo) []error {
 	var res []error
 
@@ -23,7 +23,7 @@ func (d *PackageDirectoryMatch) Validate(protoInfo lint.ProtoInfo) []error {
 
 	for _, pkgInfo := range protoInfo.Info.ProtoBody.Packages {
 		if pkgInfo.Name != expectedPackage {
-			res = append(res, buildError(pkgInfo.Meta.Pos, protoInfo.Path, lint.ErrPackageIsNotMatchedWithPath))
+			res = append(res, BuildError(pkgInfo.Meta.Pos, protoInfo.Path, lint.ErrPackageIsNotMatchedWithPath))
 		}
 	}
 

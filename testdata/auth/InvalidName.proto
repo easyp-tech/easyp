@@ -1,0 +1,10 @@
+syntax = "proto3";
+
+package Empty;
+
+import "google/protobuf/empty.proto";
+import "google/rpc/code.proto";
+
+option go_package = "github.com/ZergsLaw/back-template/api/session/v1;pb";
+
+message Queue {}

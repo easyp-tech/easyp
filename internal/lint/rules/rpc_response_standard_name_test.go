@@ -5,21 +5,21 @@ import (
 	"testing"
 
 	"github.com/easyp-tech/easyp/internal/lint"
-	"github.com/easyp-tech/easyp/internal/rules"
+	"github.com/easyp-tech/easyp/internal/lint/rules"
 )
 
-func TestMessageFieldLowerSnakeCase_Validate(t *testing.T) {
+func TestRPCResponseStandardName_Validate(t *testing.T) {
 	t.Parallel()
 
 	tests := map[string]struct {
 		fileName string
 		wantErr  error
 	}{
-		"check_message_field_lower_snake_case_is_invalid": {
+		"invalid": {
 			fileName: invalidAuthProto,
-			wantErr:  lint.ErrMessageFieldLowerSnakeCase,
+			wantErr:  lint.ErrRPCResponseStandardName,
 		},
-		"check_message_field_lower_snake_case_is_valid": {
+		"valid": {
 			fileName: validAuthProto,
 			wantErr:  nil,
 		},
@@ -32,7 +32,7 @@ func TestMessageFieldLowerSnakeCase_Validate(t *testing.T) {
 
 			r, protos := start(t)
 
-			rule := rules.MessageFieldLowerSnakeCase{}
+			rule := rules.RPCResponseStandardName{}
 			err := rule.Validate(protos[tc.fileName])
 			r.ErrorIs(errors.Join(err...), tc.wantErr)
 		})

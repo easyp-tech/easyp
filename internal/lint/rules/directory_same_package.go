@@ -8,7 +8,7 @@ import (
 
 var _ lint.Rule = (*DirectorySamePackage)(nil)
 
-// DirectorySamePackage is a rule for checking consistency of directory and package names.
+// DirectorySamePackage this rule checks that all files in a given directory are in the same package.
 type DirectorySamePackage struct {
 	// dir => package
 	cache map[string]string
@@ -20,7 +20,7 @@ func (d *DirectorySamePackage) lazyInit() {
 	}
 }
 
-// Validate implements core.Rule.
+// Validate implements lint.Rule.
 func (d *DirectorySamePackage) Validate(protoInfo lint.ProtoInfo) []error {
 	d.lazyInit()
 	var res []error
@@ -33,7 +33,7 @@ func (d *DirectorySamePackage) Validate(protoInfo lint.ProtoInfo) []error {
 		}
 
 		if d.cache[directory] != pack.Name {
-			res = append(res, buildError(pack.Meta.Pos, pack.Name, lint.ErrDirectorySamePackage))
+			res = append(res, BuildError(pack.Meta.Pos, pack.Name, lint.ErrDirectorySamePackage))
 		}
 	}
 

@@ -6,17 +6,17 @@ import (
 
 var _ lint.Rule = (*CommentOneOf)(nil)
 
-// CommentOneOf is a rule for checking oneOf comments.
+// CommentOneOf this rule checks that oneofs have non-empty comments.
 type CommentOneOf struct{}
 
-// Validate implements core.Rule.
+// Validate implements lint.Rule.
 func (c *CommentOneOf) Validate(protoInfo lint.ProtoInfo) []error {
 	var res []error
 
 	for _, msg := range protoInfo.Info.ProtoBody.Messages {
 		for _, oneof := range msg.MessageBody.Oneofs {
 			if len(oneof.Comments) == 0 {
-				res = append(res, buildError(oneof.Meta.Pos, oneof.OneofName, lint.ErrOneOfCommentIsEmpty))
+				res = append(res, BuildError(oneof.Meta.Pos, oneof.OneofName, lint.ErrOneOfCommentIsEmpty))
 			}
 		}
 	}

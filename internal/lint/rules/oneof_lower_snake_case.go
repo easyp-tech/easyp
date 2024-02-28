@@ -8,17 +8,17 @@ import (
 
 var _ lint.Rule = (*OneofLowerSnakeCase)(nil)
 
-// OneofLowerSnakeCase is a rule for checking oneof of messages for lower snake case.
+// OneofLowerSnakeCase this rule checks that oneof names are lower_snake_case.
 type OneofLowerSnakeCase struct{}
 
-// Validate implements core.Rule.
+// Validate implements lint.Rule.
 func (c *OneofLowerSnakeCase) Validate(protoInfo lint.ProtoInfo) []error {
 	var res []error
 	lowerSnakeCase := regexp.MustCompile("^[a-z]+(_[a-z]+)*$")
 	for _, message := range protoInfo.Info.ProtoBody.Messages {
 		for _, oneof := range message.MessageBody.Oneofs {
 			if !lowerSnakeCase.MatchString(oneof.OneofName) {
-				res = append(res, buildError(oneof.Meta.Pos, oneof.OneofName, lint.ErrOneofLowerSnakeCase))
+				res = append(res, BuildError(oneof.Meta.Pos, oneof.OneofName, lint.ErrOneofLowerSnakeCase))
 			}
 		}
 	}

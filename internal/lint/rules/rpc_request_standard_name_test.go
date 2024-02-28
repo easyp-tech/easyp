@@ -5,21 +5,21 @@ import (
 	"testing"
 
 	"github.com/easyp-tech/easyp/internal/lint"
-	"github.com/easyp-tech/easyp/internal/rules"
+	"github.com/easyp-tech/easyp/internal/lint/rules"
 )
 
-func TestOneofLowerSnakeCase_Validate(t *testing.T) {
+func TestRPCRequestStandardName_Validate(t *testing.T) {
 	t.Parallel()
 
 	tests := map[string]struct {
 		fileName string
 		wantErr  error
 	}{
-		"check_oneof_lower_snake_case_is_invalid": {
+		"invalid": {
 			fileName: invalidAuthProto,
-			wantErr:  lint.ErrOneofLowerSnakeCase,
+			wantErr:  lint.ErrRPCRequestStandardName,
 		},
-		"check_oneof_lower_snake_case_is_valid": {
+		"valid": {
 			fileName: validAuthProto,
 			wantErr:  nil,
 		},
@@ -32,7 +32,7 @@ func TestOneofLowerSnakeCase_Validate(t *testing.T) {
 
 			r, protos := start(t)
 
-			rule := rules.OneofLowerSnakeCase{}
+			rule := rules.RPCRequestStandardName{}
 			err := rule.Validate(protos[tc.fileName])
 			r.ErrorIs(errors.Join(err...), tc.wantErr)
 		})

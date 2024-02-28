@@ -6,15 +6,17 @@ import (
 
 var _ lint.Rule = (*EnumFirstValueZero)(nil)
 
-// EnumFirstValueZero is a rule for checking is first enums value is zero.
+// EnumFirstValueZero this rule enforces that the first enum value is the zero value,
+// which is a proto3 requirement on build,
+// but isn't required in proto2 on build. The rule enforces that the requirement is also followed in proto2.
 type EnumFirstValueZero struct{}
 
-// Validate implements core.Rule.
+// Validate implements lint.Rule.
 func (c *EnumFirstValueZero) Validate(protoInfo lint.ProtoInfo) []error {
 	var res []error
 	for _, enum := range protoInfo.Info.ProtoBody.Enums {
 		if val := enum.EnumBody.EnumFields[0]; val.Number != "0" {
-			res = append(res, buildError(val.Meta.Pos, val.Number, lint.ErrEnumFirstValueZero))
+			res = append(res, BuildError(val.Meta.Pos, val.Number, lint.ErrEnumFirstValueZero))
 		}
 
 	}

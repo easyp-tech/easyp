@@ -8,17 +8,17 @@ import (
 
 var _ lint.Rule = (*RpcPascalCase)(nil)
 
-// RpcPascalCase is a rule for checking name of rpc for pascal case.
+// RpcPascalCase this rule checks that RPCs are PascalCase.
 type RpcPascalCase struct{}
 
-// Validate implements core.Rule.
+// Validate implements lint.Rule.
 func (c *RpcPascalCase) Validate(protoInfo lint.ProtoInfo) []error {
 	var res []error
 	pascalCase := regexp.MustCompile("^[A-Z][a-z]+([A-Z][a-z]+)*$")
 	for _, service := range protoInfo.Info.ProtoBody.Services {
 		for _, rpc := range service.ServiceBody.RPCs {
 			if !pascalCase.MatchString(rpc.RPCName) {
-				res = append(res, buildError(rpc.Meta.Pos, rpc.RPCName, lint.ErrRpcPascalCase))
+				res = append(res, BuildError(rpc.Meta.Pos, rpc.RPCName, lint.ErrRpcPascalCase))
 			}
 		}
 	}

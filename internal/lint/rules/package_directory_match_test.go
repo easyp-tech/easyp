@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/easyp-tech/easyp/internal/lint"
-	"github.com/easyp-tech/easyp/internal/rules"
+	"github.com/easyp-tech/easyp/internal/lint/rules"
 )
 
 func TestPackageDirectoryMatch_Validate(t *testing.T) {
@@ -33,7 +33,7 @@ func TestPackageDirectoryMatch_Validate(t *testing.T) {
 			r, protos := start(t)
 
 			rule := rules.PackageDirectoryMatch{
-				Root: "./../../testdata/",
+				Root: "./../../../testdata/",
 			}
 			err := rule.Validate(protos[tc.fileName])
 			r.ErrorIs(errors.Join(err...), tc.wantErr)

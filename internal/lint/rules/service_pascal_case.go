@@ -8,16 +8,16 @@ import (
 
 var _ lint.Rule = (*ServicePascalCase)(nil)
 
-// ServicePascalCase is a rule for checking name of service for pascal case.
+// ServicePascalCase this rule checks that services are PascalCase.
 type ServicePascalCase struct{}
 
-// Validate implements core.Rule.
+// Validate implements lint.Rule.
 func (c *ServicePascalCase) Validate(protoInfo lint.ProtoInfo) []error {
 	var res []error
 	pascalCase := regexp.MustCompile("^[A-Z][a-z]+([A-Z]|[a-z]+)*$")
 	for _, service := range protoInfo.Info.ProtoBody.Services {
 		if !pascalCase.MatchString(service.ServiceName) {
-			res = append(res, buildError(service.Meta.Pos, service.ServiceName, lint.ErrServicePascalCase))
+			res = append(res, BuildError(service.Meta.Pos, service.ServiceName, lint.ErrServicePascalCase))
 		}
 	}
 

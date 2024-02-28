@@ -4,19 +4,19 @@ import (
 	"github.com/easyp-tech/easyp/internal/lint"
 )
 
-var _ lint.Rule = (*CommentMessageField)(nil)
+var _ lint.Rule = (*CommentField)(nil)
 
-// CommentMessageField is a rule for checking message field comments.
-type CommentMessageField struct{}
+// CommentField this rule checks that fields have non-empty comments.
+type CommentField struct{}
 
-// Validate implements core.Rule.
-func (c *CommentMessageField) Validate(protoInfo lint.ProtoInfo) []error {
+// Validate implements lint.Rule.
+func (c *CommentField) Validate(protoInfo lint.ProtoInfo) []error {
 	var res []error
 
 	for _, message := range protoInfo.Info.ProtoBody.Messages {
 		for _, field := range message.MessageBody.Fields {
 			if len(field.Comments) == 0 {
-				res = append(res, buildError(field.Meta.Pos, field.FieldName, lint.ErrMessageFieldCommentIsEmpty))
+				res = append(res, BuildError(field.Meta.Pos, field.FieldName, lint.ErrMessageFieldCommentIsEmpty))
 			}
 		}
 	}

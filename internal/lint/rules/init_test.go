@@ -12,11 +12,13 @@ import (
 )
 
 const (
-	invalidAuthProto         = `./../../testdata/auth/service.proto`
-	invalidAuthProto2        = `./../../testdata/auth/queue.proto`
-	invalidAuthProtoEmptyPkg = `./../../testdata/auth/empty_pkg.proto`
-	validAuthProto           = `./../../testdata/api/session/v1/session.proto`
-	validAuthProto2          = `./../../testdata/api/session/v1/events.proto`
+	invalidAuthProto         = `./../../../testdata/auth/service.proto`
+	invalidAuthProto2        = `./../../../testdata/auth/queue.proto`
+	invalidAuthProto3        = `./../../../testdata/auth/InvalidName.proto`
+	invalidAuthProto4        = `./../../../testdata/invalid_pkg/queue.proto`
+	invalidAuthProtoEmptyPkg = `./../../../testdata/auth/empty_pkg.proto`
+	validAuthProto           = `./../../../testdata/api/session/v1/session.proto`
+	validAuthProto2          = `./../../../testdata/api/session/v1/events.proto`
 )
 
 func start(t testing.TB) (*require.Assertions, map[string]lint.ProtoInfo) {
@@ -27,6 +29,8 @@ func start(t testing.TB) (*require.Assertions, map[string]lint.ProtoInfo) {
 	protos := map[string]lint.ProtoInfo{
 		invalidAuthProto:         parseFile(t, assert, invalidAuthProto),
 		invalidAuthProto2:        parseFile(t, assert, invalidAuthProto2),
+		invalidAuthProto3:        parseFile(t, assert, invalidAuthProto3),
+		invalidAuthProto4:        parseFile(t, assert, invalidAuthProto4),
 		invalidAuthProtoEmptyPkg: parseFile(t, assert, invalidAuthProtoEmptyPkg),
 		validAuthProto:           parseFile(t, assert, validAuthProto),
 		validAuthProto2:          parseFile(t, assert, validAuthProto2),

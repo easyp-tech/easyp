@@ -8,16 +8,16 @@ import (
 
 var _ lint.Rule = (*EnumPascalCase)(nil)
 
-// EnumPascalCase is a rule for checking name of enum for pascal case.
+// EnumPascalCase this rule checks that enums are PascalCase.
 type EnumPascalCase struct{}
 
-// Validate implements core.Rule.
+// Validate implements lint.Rule.
 func (c *EnumPascalCase) Validate(protoInfo lint.ProtoInfo) []error {
 	var res []error
 	pascalCase := regexp.MustCompile("^[A-Z][a-z]+(?:[A-Z][a-z]+)*$")
 	for _, enum := range protoInfo.Info.ProtoBody.Enums {
 		if !pascalCase.MatchString(enum.EnumName) {
-			res = append(res, buildError(enum.Meta.Pos, enum.EnumName, lint.ErrEnumPascalCase))
+			res = append(res, BuildError(enum.Meta.Pos, enum.EnumName, lint.ErrEnumPascalCase))
 		}
 	}
 

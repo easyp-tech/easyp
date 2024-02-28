@@ -6,16 +6,16 @@ import (
 
 var _ lint.Rule = (*CommentService)(nil)
 
-// CommentService is a rule for checking service comments.
+// CommentService this rule checks that services have non-empty comments.
 type CommentService struct{}
 
-// Validate implements core.Rule.
+// Validate implements lint.Rule.
 func (c *CommentService) Validate(protoInfo lint.ProtoInfo) []error {
 	var res []error
 
 	for _, service := range protoInfo.Info.ProtoBody.Services {
 		if len(service.Comments) == 0 {
-			res = append(res, buildError(service.Meta.Pos, service.ServiceName, lint.ErrServiceCommentIsEmpty))
+			res = append(res, BuildError(service.Meta.Pos, service.ServiceName, lint.ErrServiceCommentIsEmpty))
 		}
 	}
 

@@ -5,21 +5,21 @@ import (
 	"testing"
 
 	"github.com/easyp-tech/easyp/internal/lint"
-	"github.com/easyp-tech/easyp/internal/rules"
+	"github.com/easyp-tech/easyp/internal/lint/rules"
 )
 
-func TestServicePascalCase_Validate(t *testing.T) {
+func TestPackageVersionSuffix_Validate(t *testing.T) {
 	t.Parallel()
 
 	tests := map[string]struct {
 		fileName string
 		wantErr  error
 	}{
-		"check_service_pascal_case_is_invalid": {
+		"invalid": {
 			fileName: invalidAuthProto,
-			wantErr:  lint.ErrServicePascalCase,
+			wantErr:  lint.ErrPackageVersionSuffix,
 		},
-		"check_service_pascal_case_is_valid": {
+		"valid": {
 			fileName: validAuthProto,
 			wantErr:  nil,
 		},
@@ -32,7 +32,7 @@ func TestServicePascalCase_Validate(t *testing.T) {
 
 			r, protos := start(t)
 
-			rule := rules.ServicePascalCase{}
+			rule := rules.PackageVersionSuffix{}
 			err := rule.Validate(protos[tc.fileName])
 			r.ErrorIs(errors.Join(err...), tc.wantErr)
 		})

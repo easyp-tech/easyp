@@ -8,16 +8,16 @@ import (
 
 var _ lint.Rule = (*PackageLowerSnakeCase)(nil)
 
-// PackageLowerSnakeCase is a rule for checking package for lower snake case.
+// PackageLowerSnakeCase his rule checks that packages are lower_snake_case.
 type PackageLowerSnakeCase struct{}
 
-// Validate implements core.Rule.
+// Validate implements lint.Rule.
 func (c *PackageLowerSnakeCase) Validate(protoInfo lint.ProtoInfo) []error {
 	var res []error
 	lowerSnakeCase := regexp.MustCompile("^[a-z]+([_|[.][a-z0-9]+)*$")
 	for _, pack := range protoInfo.Info.ProtoBody.Packages {
 		if !lowerSnakeCase.MatchString(pack.Name) {
-			res = append(res, buildError(pack.Meta.Pos, pack.Name, lint.ErrPackageLowerSnakeCase))
+			res = append(res, BuildError(pack.Meta.Pos, pack.Name, lint.ErrPackageLowerSnakeCase))
 		}
 	}
 
