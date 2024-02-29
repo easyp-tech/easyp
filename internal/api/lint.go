@@ -79,7 +79,7 @@ func (l Lint) Action(ctx *cli.Context) error {
 			ServiceSuffixSuffix:       "Service",     // TODO: Move to config
 		})[ruleName]
 		if !ok {
-			return lint.ErrInvalidRule
+			return fmt.Errorf("%w: %s", lint.ErrInvalidRule, ruleName)
 		}
 
 		useRule = append(useRule, rule)
