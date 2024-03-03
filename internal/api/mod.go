@@ -2,6 +2,7 @@ package api
 
 import (
 	"fmt"
+	"log/slog"
 	"os"
 	"path/filepath"
 
@@ -66,7 +67,7 @@ func (m Mod) Action(ctx *cli.Context) error {
 		easypPath = filepath.Join(userHomeDir, defaultEasypPath)
 	}
 
-	fmt.Printf("Use storage: %s\n", easypPath)
+	slog.Info("Use storage", "path", easypPath)
 
 	store := storage.New(easypPath)
 	moduleConfig := moduleconfig.New()
