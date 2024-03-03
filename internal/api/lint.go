@@ -2,6 +2,7 @@ package api
 
 import (
 	"fmt"
+	"log/slog"
 	"os"
 
 	"github.com/urfave/cli/v2"
@@ -93,7 +94,7 @@ func (l Lint) Action(ctx *cli.Context) error {
 	if splitErr, ok := res.(interface{ Unwrap() []error }); ok {
 
 		for _, err := range splitErr.Unwrap() {
-			fmt.Println(err)
+			slog.Info(err.Error())
 		}
 		return nil
 	}
