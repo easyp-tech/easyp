@@ -12,25 +12,18 @@ import (
 	"github.com/easyp-tech/easyp/internal/version"
 )
 
-func initLogger() {
-	var levelMapping = map[string]slog.Level{
-		"debug": slog.LevelDebug,
-		"info":  slog.LevelInfo,
-		"warn":  slog.LevelWarn,
-		"error": slog.LevelError,
-	}
+func initLogger(isDebug bool) {
+	// use info as default level
+	level := slog.LevelInfo
 
-	level, ok := levelMapping[os.Getenv("LOG_LEVEL")]
-	if !ok {
-		level = slog.LevelInfo
+	if isDebug {
+		level = slog.LevelDebug
 	}
 
 	slog.SetLogLoggerLevel(level)
 }
 
 func main() {
-	initLogger()
-
 	app := &cli.App{
 		Name:        "easyp info",
 		HelpName:    "easyp",
@@ -43,6 +36,14 @@ func main() {
 			api.Lint{},
 			api.Mod{},
 		),
+		Flags: []cli.Flag{
+			api.FlagDebug,
+			api.FlagCfg,
+		},
+		Before: func(ctx *cli.Context) error {
+			initLogger(ctx.Bool(api.FlagDebug.Name))
+			return nil
+		},
 		BashComplete: cli.DefaultAppComplete,
 	}
 
