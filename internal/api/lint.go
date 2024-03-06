@@ -2,10 +2,10 @@ package api
 
 import (
 	"fmt"
+	"log/slog"
 	"os"
 
 	"github.com/urfave/cli/v2"
-	"gopkg.in/yaml.v3"
 
 	"github.com/easyp-tech/easyp/internal/lint"
 	"github.com/easyp-tech/easyp/internal/lint/rules"
@@ -45,7 +45,6 @@ func (l Lint) Command() *cli.Command {
 		OnUsageError: nil,
 		Subcommands:  nil,
 		Flags: []cli.Flag{
-			flagCfg,
 			flagLintDirectoryPath,
 		},
 		SkipFlagParsing:        false,
@@ -60,15 +59,9 @@ func (l Lint) Command() *cli.Command {
 
 // Action implements Handler.
 func (l Lint) Action(ctx *cli.Context) error {
-	cfgFile, err := os.Open(ctx.String(flagCfg.Name))
+	cfg, err := readConfig(ctx)
 	if err != nil {
-		return fmt.Errorf("os.Open: %w", err)
-	}
-
-	cfg := Config{}
-	err = yaml.NewDecoder(cfgFile).Decode(&cfg)
-	if err != nil {
-		return fmt.Errorf("yaml.NewDecoder.Decode: %w", err)
+		return fmt.Errorf("readConfig: %w", err)
 	}
 
 	var useRule []lint.Rule
@@ -93,7 +86,7 @@ func (l Lint) Action(ctx *cli.Context) error {
 	if splitErr, ok := res.(interface{ Unwrap() []error }); ok {
 
 		for _, err := range splitErr.Unwrap() {
-			fmt.Println(err)
+			slog.Info(err.Error())
 		}
 		return nil
 	}

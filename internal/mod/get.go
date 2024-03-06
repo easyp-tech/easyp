@@ -3,6 +3,7 @@ package mod
 import (
 	"context"
 	"fmt"
+	"log/slog"
 
 	"github.com/easyp-tech/easyp/internal/mod/adapters/repository/git"
 	"github.com/easyp-tech/easyp/internal/mod/models"
@@ -12,7 +13,7 @@ import (
 // module: string format: origin@version: github.com/company/repository@v1.2.3
 // if version is absent use the latest
 func (c *Mod) Get(ctx context.Context, dependency string) error {
-	fmt.Printf("Install %s...\n", dependency)
+	slog.Info("Install", slog.String("package", dependency))
 
 	module := models.NewModule(dependency)
 
@@ -63,16 +64,11 @@ func (c *Mod) Get(ctx context.Context, dependency string) error {
 		return fmt.Errorf("repository.Archive: %w", err)
 	}
 
-	// TODO: save buf.work like go mod: v1.0.1.mod or better to save ModuleConfig
 	// TODO: save archive checksum like go mod: v1.0.1.ziphash
 	// TODO: pass to Install config from buf
-	// renamer will rename dirs
 	if err := c.storage.Install(downloadArchivePath, moduleConfig); err != nil {
 		return fmt.Errorf("c.storage.Install: %w", err)
 	}
-
-	// unzip
-	// src/cmd/go/internal/modfetch/fetch.go:154
 
 	return nil
 }
