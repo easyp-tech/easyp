@@ -13,7 +13,7 @@ import (
 // module: string format: origin@version: github.com/company/repository@v1.2.3
 // if version is absent use the latest
 func (c *Mod) Get(ctx context.Context, dependency string) error {
-	slog.Info("Install", "package", dependency)
+	slog.Info("Install", slog.String("package", dependency))
 
 	module := models.NewModule(dependency)
 
