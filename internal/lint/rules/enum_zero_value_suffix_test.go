@@ -33,7 +33,7 @@ func TestEnumZeroValueSuffix_Validate(t *testing.T) {
 			r, protos := start(t)
 
 			rule := rules.EnumZeroValueSuffix{
-				Prefix: "NONE",
+				Suffix: "NONE",
 			}
 			err := rule.Validate(protos[tc.fileName])
 			r.ErrorIs(errors.Join(err...), tc.wantErr)

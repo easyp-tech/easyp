@@ -11,7 +11,7 @@ var _ lint.Rule = (*PackageDirectoryMatch)(nil)
 
 // PackageDirectoryMatch is a rule for checking consistency of directory and package names.
 type PackageDirectoryMatch struct {
-	Root string
+	Root string `json:"root" yaml:"root" env:"PACKAGE_DIRECTORY_MATCH_ROOT"`
 }
 
 // Validate implements lint.Rule.
