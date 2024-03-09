@@ -1,5 +1,6 @@
 version: v1
 name:
 deps:
-  - buf.build/grpc-ecosystem/grpc-gateway
+#  - buf.build/grpc-ecosystem/grpc-gateway
+  - buf.build/grpc-ecosystem/grpc-gateway@v2.19.1
 
