@@ -1,4 +1,4 @@
 version: v1
 name:
 deps:
-  - buf.build/hound672/test:v0.0.1
+  - buf.build/hound672/test:v0.0.2

@@ -1,4 +1,4 @@
-# wo tag
+# v0.0.1
 
 $ tree -L 6
 .
@@ -16,3 +16,25 @@ $ tree -L 6
 
 8 directories, 4 files
 
+# v0.0.2
+
+$ tree -L 6
+.
+└── hound672
+    └── test
+        ├── blobs
+        │   ├── 06
+        │   │   └── f5647dbae7e3bc59515549513fe688a5fdf12a63bed99297d33bd587d98a72af38e4816b004a3cb7c8513f88a475376ba4bbbaccfeef48db6d1a71ad1dc744
+        │   ├── 0d
+        │   │   └── 6b15a7f523b73a5f29f68f62f09de47c7a12771c9c63b948501f3943fa1ebf1dc47eba9b540373e349b0612ca4d04926fd7880754cc6a01bd43e942897e94b
+        │   ├── 10
+        │   │   └── aa108115b00d15724fb124b5c7480b37feb9fcbc0625e9b2a6572d22e641124caee8f57f012902085daa6d8b5971a46e624a23d49ee491da293dd9d58726b7
+        │   ├── 2f
+        │   │   └── 29ea137ac9199c21a09bb723e4c759ef094804d47c6c6b2f6178bed80638f4f728a6b2662ca7a3be57beeb225f0fb76695b6390c10c885d4056b9d833c2ef1
+        │   └── a8
+        │       └── a1a09699579aaae5f0f2478c8e889a4f10c7cb258b68b15aca4acecb6d29acfd4eee3277b9bbeecf2d8c79d842442534320be8fc986fb38a6fa87cf46ecf04
+        └── commits
+            ├── b1a9414ee92b4e73b1acb656bf847098
+            └── e79bf7a81da1413984a06880e995bda2
+
+10 directories, 7 files

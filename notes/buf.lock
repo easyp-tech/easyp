@@ -4,5 +4,5 @@ deps:
   - remote: buf.build
     owner: hound672
     repository: test
-    commit: b1a9414ee92b4e73b1acb656bf847098
-    digest: shake256:06f5647dbae7e3bc59515549513fe688a5fdf12a63bed99297d33bd587d98a72af38e4816b004a3cb7c8513f88a475376ba4bbbaccfeef48db6d1a71ad1dc744
+    commit: e79bf7a81da1413984a06880e995bda2
+    digest: shake256:2f29ea137ac9199c21a09bb723e4c759ef094804d47c6c6b2f6178bed80638f4f728a6b2662ca7a3be57beeb225f0fb76695b6390c10c885d4056b9d833c2ef1
