@@ -2,7 +2,7 @@
 version: v1
 deps:
   - remote: buf.build
-    owner: bufbuild
-    repository: protovalidate
-    commit: c646c9dcc35947c6ba0d1c5373ef404d
-    digest: shake256:626bc9f2b732a341524ebfbd0502dd8dd51c7a1937a43e214155b966dc70d20f73ad3c93acf453ced66889bf687258f2216e5c98e4ff25c09a1fa6e882f54d96
+    owner: hound672
+    repository: test
+    commit: b1a9414ee92b4e73b1acb656bf847098
+    digest: shake256:06f5647dbae7e3bc59515549513fe688a5fdf12a63bed99297d33bd587d98a72af38e4816b004a3cb7c8513f88a475376ba4bbbaccfeef48db6d1a71ad1dc744

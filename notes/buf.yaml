@@ -1,5 +1,4 @@
 version: v1
 name:
 deps:
-#  - buf.build/bufbuild/protovalidate
-  - buf.build/bufbuild/protovalidate:v0.4.0
+  - buf.build/hound672/test:v0.0.1
