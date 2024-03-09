@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"strings"
 
 	"gopkg.in/yaml.v3"
@@ -23,6 +24,7 @@ const (
 func readBufWork(ctx context.Context, repo repository.Repo, revision models.Revision) (bufWork, error) {
 	content, err := repo.ReadFile(ctx, revision, bufWorkFile)
 	if err != nil {
+		slog.Debug("buf config not found")
 		if errors.Is(err, models.ErrFileNotFound) {
 			return bufWork{}, nil
 		}

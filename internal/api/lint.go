@@ -48,7 +48,6 @@ func (l Lint) Command() *cli.Command {
 		OnUsageError: nil,
 		Subcommands:  nil,
 		Flags: []cli.Flag{
-			flagCfg,
 			flagLintDirectoryPath,
 		},
 		SkipFlagParsing:        false,
@@ -63,9 +62,9 @@ func (l Lint) Command() *cli.Command {
 
 // Action implements Handler.
 func (l Lint) Action(ctx *cli.Context) error {
-	cfgFile, err := os.Open(ctx.String(flagCfg.Name))
+	cfg, err := readConfig(ctx)
 	if err != nil {
-		return fmt.Errorf("os.Open: %w", err)
+		return fmt.Errorf("readConfig: %w", err)
 	}
 
 	buf, err := io.ReadAll(cfgFile)

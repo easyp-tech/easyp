@@ -2,6 +2,7 @@ package main
 
 import (
 	"log"
+	"log/slog"
 	"os"
 
 	"github.com/samber/lo"
@@ -10,6 +11,17 @@ import (
 	"github.com/easyp-tech/easyp/internal/api"
 	"github.com/easyp-tech/easyp/internal/version"
 )
+
+func initLogger(isDebug bool) {
+	// use info as default level
+	level := slog.LevelInfo
+
+	if isDebug {
+		level = slog.LevelDebug
+	}
+
+	slog.SetLogLoggerLevel(level)
+}
 
 func main() {
 	app := &cli.App{
@@ -24,6 +36,14 @@ func main() {
 			api.Lint{},
 			api.Mod{},
 		),
+		Flags: []cli.Flag{
+			api.FlagDebug,
+			api.FlagCfg,
+		},
+		Before: func(ctx *cli.Context) error {
+			initLogger(ctx.Bool(api.FlagDebug.Name))
+			return nil
+		},
 		BashComplete: cli.DefaultAppComplete,
 	}
 

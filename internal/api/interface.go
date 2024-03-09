@@ -95,7 +95,7 @@ type LintConfig struct {
 }
 
 func readConfig(ctx *cli.Context) (*Config, error) {
-	cfgFile, err := os.Open(ctx.String(flagCfg.Name))
+	cfgFile, err := os.Open(ctx.String(FlagCfg.Name))
 	if err != nil {
 		return nil, fmt.Errorf("os.Open: %w", err)
 	}
