@@ -3,6 +3,7 @@ package api
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 
 	"github.com/goccy/go-yaml"
@@ -100,10 +101,20 @@ func readConfig(ctx *cli.Context) (*Config, error) {
 		return nil, fmt.Errorf("os.Open: %w", err)
 	}
 
-	cfg := &Config{}
-	err = yaml.NewDecoder(cfgFile).Decode(&cfg)
+	buf, err := io.ReadAll(cfgFile)
 	if err != nil {
-		return nil, fmt.Errorf("yaml.NewDecoder.Decode: %w", err)
+		return nil, fmt.Errorf("io.ReadAll: %w", err)
+	}
+
+	jsBuf, err := yaml.YAMLToJSON(buf)
+	if err != nil {
+		return nil, fmt.Errorf("yaml.YAMLToJSON: %w", err)
+	}
+
+	cfg := &Config{}
+	err = json.Unmarshal(jsBuf, &cfg)
+	if err != nil {
+		return nil, fmt.Errorf("json.Unmarshal: %w", err)
 	}
 
 	return cfg, nil

@@ -1,13 +1,10 @@
 package api
 
 import (
-	"encoding/json"
 	"fmt"
-	"io"
 	"log/slog"
 	"os"
 
-	"github.com/goccy/go-yaml"
 	"github.com/urfave/cli/v2"
 
 	"github.com/easyp-tech/easyp/internal/lint"
@@ -65,22 +62,6 @@ func (l Lint) Action(ctx *cli.Context) error {
 	cfg, err := readConfig(ctx)
 	if err != nil {
 		return fmt.Errorf("readConfig: %w", err)
-	}
-
-	buf, err := io.ReadAll(cfgFile)
-	if err != nil {
-		return fmt.Errorf("io.ReadAll: %w", err)
-	}
-
-	jsBuf, err := yaml.YAMLToJSON(buf)
-	if err != nil {
-		return fmt.Errorf("yaml.YAMLToJSON: %w", err)
-	}
-
-	cfg := Config{}
-	err = json.Unmarshal(jsBuf, &cfg)
-	if err != nil {
-		return fmt.Errorf("json.Unmarshal: %w", err)
 	}
 
 	lintRules, err := cfg.buildLinterRules()
