@@ -13,7 +13,7 @@ import (
 )
 
 // Install package from archive
-func (s *Storage) Install(archivePath string, moduleConfig models.ModuleConfig) error {
+func (s *Storage) Install(archivePath string, revision models.Revision, moduleConfig models.ModuleConfig) error {
 	installedDirPath := filepath.Join(s.rootDir, installedDir)
 
 	if err := os.MkdirAll(installedDirPath, dirPerm); err != nil {

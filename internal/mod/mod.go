@@ -16,7 +16,7 @@ type (
 		CreateCacheDir(name string) (string, error)
 		CreateCacheDownloadDir(module models.Module) (string, error)
 		GetDownloadArchivePath(cacheDownloadPath string, revision models.Revision) string
-		Install(archivePath string, moduleConfig models.ModuleConfig) error
+		Install(archivePath string, revision models.Revision, moduleConfig models.ModuleConfig) error
 	}
 
 	// ModuleConfig should implement adapter for reading module configs

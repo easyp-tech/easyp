@@ -66,7 +66,7 @@ func (c *Mod) Get(ctx context.Context, dependency string) error {
 
 	// TODO: save archive checksum like go mod: v1.0.1.ziphash
 	// TODO: pass to Install config from buf
-	if err := c.storage.Install(downloadArchivePath, moduleConfig); err != nil {
+	if err := c.storage.Install(downloadArchivePath, revision, moduleConfig); err != nil {
 		return fmt.Errorf("c.storage.Install: %w", err)
 	}
 
