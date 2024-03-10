@@ -47,7 +47,7 @@ func Rules(cfg Config) map[string]lint.Rule {
 		// Default
 		"ENUM_VALUE_PREFIX": &EnumValuePrefix{},
 		"ENUM_ZERO_VALUE_SUFFIX": &EnumZeroValueSuffix{
-			Prefix: cfg.EnumZeroValueSuffixPrefix,
+			Suffix: cfg.EnumZeroValueSuffixPrefix,
 		},
 		"FILE_LOWER_SNAKE_CASE":       &FileLowerSnakeCase{},
 		"RPC_REQUEST_RESPONSE_UNIQUE": &RPCRequestResponseUnique{},
