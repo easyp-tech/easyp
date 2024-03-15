@@ -3,7 +3,6 @@ package api
 import (
 	"fmt"
 	"log/slog"
-	"os"
 
 	"github.com/urfave/cli/v2"
 
@@ -71,9 +70,7 @@ func (l Lint) Action(ctx *cli.Context) error {
 
 	c := lint.New(lintRules)
 
-	dirFS := os.DirFS(ctx.String(flagLintDirectoryPath.Name))
-
-	res := c.Lint(ctx.Context, dirFS)
+	res := c.Lint(ctx.Context, ctx.String(flagLintDirectoryPath.Name))
 	if splitErr, ok := res.(interface{ Unwrap() []error }); ok {
 
 		for _, err := range splitErr.Unwrap() {
