@@ -13,7 +13,7 @@ import (
 )
 
 // Lint lints the proto file.
-func (c *Lint) Lint(ctx context.Context, disk fs.FS) error {
+func (c *Lint) Lint(ctx context.Context, disk fs.FS, rootPath string) error {
 	var res []error
 
 	err := fs.WalkDir(disk, ".", func(path string, d fs.DirEntry, err error) error {
@@ -28,6 +28,7 @@ func (c *Lint) Lint(ctx context.Context, disk fs.FS) error {
 			return nil
 		}
 
+		path = filepath.Join(rootPath, path)
 		f, err := os.Open(path)
 		if err != nil {
 			return fmt.Errorf("os.Open: %w", err)
