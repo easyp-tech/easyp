@@ -7,13 +7,14 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"slices"
 
 	"github.com/yoheimuta/go-protoparser/v4"
 	"github.com/yoheimuta/go-protoparser/v4/interpret/unordered"
 )
 
 // Lint lints the proto file.
-func (c *Lint) Lint(ctx context.Context, disk fs.FS, rootPath string) error {
+func (c *Lint) Lint(ctx context.Context, disk fs.FS) error {
 	var res []error
 
 	err := fs.WalkDir(disk, ".", func(path string, d fs.DirEntry, err error) error {
@@ -23,12 +24,15 @@ func (c *Lint) Lint(ctx context.Context, disk fs.FS, rootPath string) error {
 		case ctx.Err() != nil:
 			return ctx.Err()
 		case d.IsDir():
+			if slices.Contains(c.excludesDirs, d.Name()) {
+				return filepath.SkipDir
+			}
 			return nil
 		case filepath.Ext(path) != ".proto":
 			return nil
 		}
 
-		path = filepath.Join(rootPath, path)
+		path = filepath.Join(c.rootPath, path)
 		f, err := os.Open(path)
 		if err != nil {
 			return fmt.Errorf("os.Open: %w", err)

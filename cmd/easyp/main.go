@@ -9,6 +9,7 @@ import (
 	"github.com/urfave/cli/v2"
 
 	"github.com/easyp-tech/easyp/internal/api"
+	"github.com/easyp-tech/easyp/internal/api/config"
 	"github.com/easyp-tech/easyp/internal/version"
 )
 
@@ -37,11 +38,11 @@ func main() {
 			api.Mod{},
 		),
 		Flags: []cli.Flag{
-			api.FlagDebug,
-			api.FlagCfg,
+			config.FlagDebug,
+			config.FlagCfg,
 		},
 		Before: func(ctx *cli.Context) error {
-			initLogger(ctx.Bool(api.FlagDebug.Name))
+			initLogger(ctx.Bool(config.FlagDebug.Name))
 			return nil
 		},
 		BashComplete: cli.DefaultAppComplete,

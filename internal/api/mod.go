@@ -8,6 +8,7 @@ import (
 
 	"github.com/urfave/cli/v2"
 
+	"github.com/easyp-tech/easyp/internal/api/config"
 	"github.com/easyp-tech/easyp/internal/mod"
 	moduleconfig "github.com/easyp-tech/easyp/internal/mod/adapters/module_config"
 	"github.com/easyp-tech/easyp/internal/mod/adapters/storage"
@@ -33,10 +34,7 @@ func (m Mod) Command() *cli.Command {
 		Action:       m.Action,
 		OnUsageError: nil,
 		Subcommands:  nil,
-		Flags:        []cli.Flag{
-			// FIXME: Use flags for mod
-			// flagLintDirectoryPath,
-		},
+		Flags: []cli.Flag{},
 		SkipFlagParsing:        false,
 		HideHelp:               false,
 		HideHelpCommand:        false,
@@ -53,9 +51,9 @@ const (
 )
 
 func (m Mod) Action(ctx *cli.Context) error {
-	cfg, err := readConfig(ctx)
+	cfg, err := config.ReadConfig(ctx)
 	if err != nil {
-		return fmt.Errorf("readConfig: %w", err)
+		return fmt.Errorf("ReadConfig: %w", err)
 	}
 
 	easypPath := os.Getenv(envEasypPath)
