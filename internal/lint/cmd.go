@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
+	"log/slog"
 	"os"
 	"path/filepath"
 
@@ -17,15 +18,17 @@ func (c *Lint) Lint(ctx context.Context, disk fs.FS) error {
 	var res []error
 
 	err := fs.WalkDir(disk, ".", func(path string, d fs.DirEntry, err error) error {
+		slog.Info("path", "path", path, "d", d)
+
 		switch {
 		case err != nil:
 			return err
 		case ctx.Err() != nil:
 			return ctx.Err()
 		case d.IsDir():
-			return filepath.SkipDir
+			return nil
 		case filepath.Ext(path) != ".proto":
-			return filepath.SkipDir
+			return nil
 		}
 
 		path = filepath.Join(c.rootPath, path)

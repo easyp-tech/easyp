@@ -1,6 +1,6 @@
 module github.com/easyp-tech/easyp
 
-go 1.21.3
+go 1.22
 
 require (
 	github.com/codeclysm/extract/v3 v3.1.1
