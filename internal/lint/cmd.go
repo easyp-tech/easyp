@@ -23,9 +23,9 @@ func (c *Lint) Lint(ctx context.Context, disk fs.FS) error {
 		case ctx.Err() != nil:
 			return ctx.Err()
 		case d.IsDir():
-			return nil
+			return filepath.SkipDir
 		case filepath.Ext(path) != ".proto":
-			return nil
+			return filepath.SkipDir
 		}
 
 		path = filepath.Join(c.rootPath, path)
