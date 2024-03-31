@@ -69,12 +69,12 @@ func (l Lint) Action(ctx *cli.Context) error {
 		return fmt.Errorf("cfg.buildLinterRules: %w", err)
 	}
 
-	c := lint.New(lintRules)
+	rootPath := ctx.String(flagLintDirectoryPath.Name)
+	dirFS := os.DirFS(rootPath)
 
-	path := ctx.String(flagLintDirectoryPath.Name)
-	dirFS := os.DirFS(path)
+	c := lint.New(lintRules, rootPath, cfg.Lint.Excludes)
 
-	res := c.Lint(ctx.Context, dirFS, path)
+	res := c.Lint(ctx.Context, dirFS)
 	if splitErr, ok := res.(interface{ Unwrap() []error }); ok {
 
 		for _, err := range splitErr.Unwrap() {
