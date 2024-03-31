@@ -31,7 +31,8 @@ func (r *rule[T]) UnmarshalJSON(data []byte) error {
 
 // LintConfig contains linter configuration.
 type LintConfig struct {
-	Use []string `json:"use" yaml:"use" env:"USE"` // For supporting buf format.
+	Use      []string `json:"use" yaml:"use" env:"USE"`                // For supporting buf format.
+	Excludes []string `json:"excludes" yaml:"excludes" env:"EXCLUDES"` // Ignore dirs with proto file.
 
 	// Minimal
 	DirectorySamePackage  rule[rules.DirectorySamePackage]  `json:"directory_same_package" yaml:"directory_same_package" env:"DIRECTORY_SAME_PACKAGE"`
