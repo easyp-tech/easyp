@@ -21,20 +21,20 @@ type Mod struct{}
 
 func (m Mod) Command() *cli.Command {
 	return &cli.Command{
-		Name:         "mod",
-		Aliases:      []string{"m"},
-		Usage:        "package manager",
-		UsageText:    "package manager",
-		Description:  "package manager",
-		ArgsUsage:    "",
-		Category:     "",
-		BashComplete: nil,
-		Before:       nil,
-		After:        nil,
-		Action:       m.Action,
-		OnUsageError: nil,
-		Subcommands:  nil,
-		Flags: []cli.Flag{},
+		Name:                   "mod",
+		Aliases:                []string{"m"},
+		Usage:                  "package manager",
+		UsageText:              "package manager",
+		Description:            "package manager",
+		ArgsUsage:              "",
+		Category:               "",
+		BashComplete:           nil,
+		Before:                 nil,
+		After:                  nil,
+		Action:                 m.Action,
+		OnUsageError:           nil,
+		Subcommands:            nil,
+		Flags:                  []cli.Flag{},
 		SkipFlagParsing:        false,
 		HideHelp:               false,
 		HideHelpCommand:        false,
@@ -63,6 +63,11 @@ func (m Mod) Action(ctx *cli.Context) error {
 			return fmt.Errorf("os.UserHomeDir: %w", err)
 		}
 		easypPath = filepath.Join(userHomeDir, defaultEasypPath)
+	}
+
+	easypPath, err = filepath.Abs(easypPath)
+	if err != nil {
+		return fmt.Errorf("filepath.Abs: %w", err)
 	}
 
 	slog.Info("Use storage", "path", easypPath)
