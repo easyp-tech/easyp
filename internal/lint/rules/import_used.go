@@ -1,7 +1,6 @@
 package rules
 
 import (
-	"path/filepath"
 	"strings"
 
 	"github.com/yoheimuta/go-protoparser/v4/parser"
@@ -21,19 +20,23 @@ func (i ImportUsed) Validate(protoInfo lint.ProtoInfo) []error {
 	imports := make(map[string]bool)
 	importInfo := make(map[string]*parser.Import)
 	for _, imp := range protoInfo.Info.ProtoBody.Imports {
-		pkgName := filepath.Dir(imp.Location)
-		pkgName = strings.Trim(pkgName, "\"")
+		pkgName := i.formatImportName(imp.Location)
 		imports[pkgName] = false
 		importInfo[pkgName] = imp
 	}
 
 	for _, msg := range protoInfo.Info.ProtoBody.Messages {
 		for _, field := range msg.MessageBody.Fields {
-			replaced := strings.ReplaceAll(field.Type, ".", "/")
-			key := filepath.Dir(replaced)
-			key = strings.Trim(key, "\"")
+			key := i.formatField(field.Type)
 			if _, ok := imports[key]; ok {
 				imports[key] = true
+			}
+
+			for i2 := range field.FieldOptions {
+				key = i.formatOption(field.FieldOptions[i2].OptionName)
+				if _, ok := imports[key]; ok {
+					imports[key] = true
+				}
 			}
 		}
 	}
@@ -49,4 +52,28 @@ func (i ImportUsed) Validate(protoInfo lint.ProtoInfo) []error {
 	}
 
 	return res
+}
+
+func (i ImportUsed) formatImportName(input string) string {
+	importName := strings.Trim(input, "\"")
+	importName = strings.ToLower(importName)
+
+	return importName
+}
+
+func (i ImportUsed) formatField(input string) string {
+	field := strings.ReplaceAll(input, ".", "/")
+	field = i.formatImportName(field)
+	field += ".proto"
+
+	return field
+}
+
+func (i ImportUsed) formatOption(input string) string {
+	option := strings.ReplaceAll(input, "(", "")
+	option = strings.ReplaceAll(option, ")", "")
+	option = i.formatField(option)
+
+	return option
+
 }

@@ -19,6 +19,10 @@ func TestImportUsed_Validate(t *testing.T) {
 			fileName: invalidAuthProto,
 			wantErr:  lint.ErrImportIsNotUsed,
 		},
+		"invalid_partial_import": {
+			fileName: invalidsSessionProto,
+			wantErr:  lint.ErrImportIsNotUsed,
+		},
 		"valid": {
 			fileName: validAuthProto,
 			wantErr:  nil,
