@@ -2,6 +2,7 @@ syntax = "proto3";
 
 package api.session.v1;
 
+import "google/api/annotations.proto";
 import "google/api/field_behavior.proto";
 import "google/protobuf/timestamp.proto";
 
@@ -10,7 +11,12 @@ option go_package = "github.com/ZergsLaw/back-template/api/session/v1;pb";
 // Internal service API for managing user session.
 service SessionInternalAPI {
   // Save new user's session and returns auth token.
-  rpc Save(SaveRequest) returns (SaveResponse) {}
+  rpc Save(SaveRequest) returns (SaveResponse) {
+    option (google.api.http) = {
+      post: "/api/v1/session"
+      body: "*"
+    };
+  }
 
   // Returns user's session info by token.
   rpc Get(GetRequest) returns (GetResponse) {}
