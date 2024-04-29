@@ -78,14 +78,12 @@ func (l Lint) Action(ctx *cli.Context) error {
 	if splitErr, ok := res.(interface{ Unwrap() []error }); ok {
 
 		for _, err := range splitErr.Unwrap() {
-			slog.Info(err.Error())
+			slog.Error(err.Error())
 		}
 
-		return nil
-	}
+		os.Exit(1)
 
-	if err != nil {
-		return fmt.Errorf("c.Lint: %w", err)
+		return nil
 	}
 
 	return nil
