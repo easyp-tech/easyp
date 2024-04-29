@@ -62,17 +62,26 @@ func (i ImportUsed) formatImportName(input string) string {
 }
 
 func (i ImportUsed) formatField(input string) string {
+	// replacing . with / to match the import name
 	field := strings.ReplaceAll(input, ".", "/")
-	field = i.formatImportName(field)
+	field = strings.Trim(field, "\"")
+	field = strings.ToLower(field)
+	// adding .proto to match the import name file
 	field += ".proto"
 
 	return field
 }
 
 func (i ImportUsed) formatOption(input string) string {
+	// removing the parenthesis from option
 	option := strings.ReplaceAll(input, "(", "")
 	option = strings.ReplaceAll(option, ")", "")
-	option = i.formatField(option)
+	// replacing . with / to match the import name
+	option = strings.ReplaceAll(option, ".", "/")
+	option = strings.Trim(option, "\"")
+	option = strings.ToLower(option)
+	// adding .proto to match the import name file
+	option += ".proto"
 
 	return option
 
