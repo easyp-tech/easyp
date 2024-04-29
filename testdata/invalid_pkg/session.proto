@@ -2,8 +2,8 @@ syntax = "proto3";
 
 package api.session.v1;
 
-import "google/api/field_behavior.proto";
 import "google/protobuf/timestamp.proto";
+import "google/protobuf/some.proto";
 
 option go_package = "github.com/ZergsLaw/back-template/api/session/v1;pb";
 
@@ -28,7 +28,7 @@ message GetRequest {
 //---Must be filled out---
 message GetResponse {
   // Contains session's UUID.
-  string session_id = 1 [(google.api.field_behavior) = REQUIRED];
+  string session_id = 1;
   // Contains user's UUID.
   string user_id = 2;
   // Contains user's session start time.
