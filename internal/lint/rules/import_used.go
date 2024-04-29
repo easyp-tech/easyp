@@ -37,6 +37,19 @@ func (i ImportUsed) Validate(protoInfo lint.ProtoInfo) []error {
 				if _, ok := imports[key]; ok {
 					imports[key] = true
 				}
+
+			}
+		}
+	}
+
+	for _, service := range protoInfo.Info.ProtoBody.Services {
+		for _, rpc := range service.ServiceBody.RPCs {
+			for _, rpcOption := range rpc.Options {
+				key := i.formatOption(rpcOption.OptionName)
+				key = i.rpcOptionExclusion(key, rpcOption.Constant)
+				if _, ok := imports[key]; ok {
+					imports[key] = true
+				}
 			}
 		}
 	}
@@ -84,5 +97,19 @@ func (i ImportUsed) formatOption(input string) string {
 	option += ".proto"
 
 	return option
+}
 
+func (i ImportUsed) rpcOptionExclusion(input string, constant string) string {
+	switch input {
+	case "google/api/http.proto":
+		for _, method := range []string{"get", "post", "put", "delete", "patch"} {
+			if strings.Contains(constant, method) {
+				return "google/api/annotations.proto"
+			}
+		}
+
+		return input
+	default:
+		return input
+	}
 }
