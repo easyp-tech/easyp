@@ -7,6 +7,7 @@ import (
 	"io/fs"
 	"path/filepath"
 	"slices"
+	"strings"
 
 	"github.com/yoheimuta/go-protoparser/v4"
 	"github.com/yoheimuta/go-protoparser/v4/interpret/unordered"
@@ -52,6 +53,9 @@ func (c *Lint) Lint(ctx context.Context, disk fs.FS) error {
 			return fmt.Errorf("unordered.InterpretProto: %w", err)
 		}
 
+		// TODO:  read all imported proto files
+		c.readImportedFiles(ctx, disk, proto)
+
 		for i := range c.rules {
 			if ctx.Err() != nil {
 				return ctx.Err()
@@ -73,4 +77,34 @@ func (c *Lint) Lint(ctx context.Context, disk fs.FS) error {
 	}
 
 	return errors.Join(res...)
+}
+
+// readImportedFiles reads all files that imported from scanning file
+func (c *Lint) readImportedFiles(ctx context.Context, disk fs.FS, scanProto *unordered.Proto) error {
+	for _, imp := range scanProto.ProtoBody.Imports {
+		importedFile, err := c.readImportedFile(ctx, disk, strings.Trim(imp.Location, "\""))
+		if err != nil {
+			return fmt.Errorf("readImportedFile: %w", err)
+		}
+
+		_ = importedFile
+	}
+
+	return nil
+}
+
+func (c *Lint) readImportedFile(ctx context.Context, disk fs.FS, importName string) (*unordered.Proto, error) {
+	// first try to read it locally
+	f, err := disk.Open(importName)
+	if err != nil {
+		// not locally import
+		modulePath, err := c.moduleReflect.GetModulePath(ctx, importName)
+		_ = modulePath
+		_ = err
+	}
+
+	_ = f
+	_ = err
+
+	return nil, nil
 }
