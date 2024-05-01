@@ -3,12 +3,14 @@ module github.com/easyp-tech/easyp
 go 1.22
 
 require (
+	github.com/brianvoe/gofakeit/v6 v6.28.0
 	github.com/codeclysm/extract/v3 v3.1.1
 	github.com/goccy/go-yaml v1.11.3
 	github.com/samber/lo v1.39.0
 	github.com/stretchr/testify v1.8.4
-	github.com/urfave/cli/v2 v2.27.2
-	github.com/yoheimuta/go-protoparser/v4 v4.10.0
+	github.com/urfave/cli/v2 v2.27.1
+	github.com/yoheimuta/go-protoparser/v4 v4.9.0
+	golang.org/x/mod v0.17.0
 	gopkg.in/yaml.v3 v3.0.1
 )
 

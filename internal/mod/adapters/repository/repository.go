@@ -14,11 +14,13 @@ type Repo interface {
 	ReadFile(ctx context.Context, revision models.Revision, fileName string) (string, error)
 
 	// Archive passed storage to archive and return full path to archive
-	Archive(ctx context.Context, revision models.Revision, archivePath string, dirs ...string) error
+	Archive(
+		ctx context.Context, revision models.Revision, cacheDownloadPaths models.CacheDownloadPaths, dirs ...string,
+	) error
 
 	// ReadRevision reads commit's revision by passed version
 	// or return the latest commit if version is empty
-	ReadRevision(ctx context.Context, version string) (models.Revision, error)
+	ReadRevision(ctx context.Context, requestedVersion models.RequestedVersion) (models.Revision, error)
 
 	// Fetch from remote repository specified version
 	Fetch(ctx context.Context, revision models.Revision) error

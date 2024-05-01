@@ -9,10 +9,10 @@ import (
 )
 
 func (r *gitRepo) Archive(
-	ctx context.Context, revision models.Revision, archivePath string, dirs ...string,
+	ctx context.Context, revision models.Revision, cacheDownloadPaths models.CacheDownloadPaths, dirs ...string,
 ) error {
 	params := []string{
-		"archive", "--format=zip", revision.CommitHash, "-o", archivePath,
+		"archive", "--format=zip", revision.CommitHash, "-o", cacheDownloadPaths.ArchiveFile,
 	}
 	params = append(params, dirs...)
 
