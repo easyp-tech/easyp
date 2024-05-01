@@ -16,6 +16,10 @@ const (
 	invalidAuthProto2        = `./../../../testdata/auth/queue.proto`
 	invalidAuthProto3        = `./../../../testdata/auth/InvalidName.proto`
 	invalidAuthProto4        = `./../../../testdata/invalid_pkg/queue.proto`
+	invalidAuthProto5        = `./../../../testdata/invalid_options/queue.proto`
+	invalidAuthProto6        = `./../../../testdata/invalid_options/session.proto`
+	invalidAuthProto7        = `./../../../testdata/cycle_import/bar/one.proto`
+	invalidAuthProto8        = `./../../../testdata/cycle_import/foo/two.proto`
 	invalidAuthProtoEmptyPkg = `./../../../testdata/auth/empty_pkg.proto`
 	invalidsSessionProto     = `./../../../testdata/invalid_pkg/session.proto`
 	validAuthProto           = `./../../../testdata/api/session/v1/session.proto`
@@ -32,6 +36,10 @@ func start(t testing.TB) (*require.Assertions, map[string]lint.ProtoInfo) {
 		invalidAuthProto2:        parseFile(t, assert, invalidAuthProto2),
 		invalidAuthProto3:        parseFile(t, assert, invalidAuthProto3),
 		invalidAuthProto4:        parseFile(t, assert, invalidAuthProto4),
+		invalidAuthProto5:        parseFile(t, assert, invalidAuthProto5),
+		invalidAuthProto6:        parseFile(t, assert, invalidAuthProto6),
+		invalidAuthProto7:        parseFile(t, assert, invalidAuthProto7),
+		invalidAuthProto8:        parseFile(t, assert, invalidAuthProto8),
 		invalidAuthProtoEmptyPkg: parseFile(t, assert, invalidAuthProtoEmptyPkg),
 		invalidsSessionProto:     parseFile(t, assert, invalidsSessionProto),
 		validAuthProto:           parseFile(t, assert, validAuthProto),

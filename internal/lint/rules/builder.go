@@ -23,26 +23,26 @@ func Rules(cfg Config) map[string]lint.Rule {
 		"PACKAGE_SAME_DIRECTORY": &PackageSameDirectory{},
 
 		// Basic
-		"ENUM_FIRST_VALUE_ZERO":       &EnumFirstValueZero{},
-		"ENUM_NO_ALLOW_ALIAS":         &EnumNoAllowAlias{},
-		"ENUM_PASCAL_CASE":            &EnumPascalCase{},
-		"ENUM_VALUE_UPPER_SNAKE_CASE": &EnumValueUpperSnakeCase{},
-		"FIELD_LOWER_SNAKE_CASE":      &FieldLowerSnakeCase{},
-		"IMPORT_NO_PUBLIC":            &ImportNoPublic{},
-		"IMPORT_NO_WEAK":              &ImportNoWeak{},
-		"IMPORT_USED":                 &ImportUsed{}, // TODO: This rule is not implemented yet
-		"MESSAGE_PASCAL_CASE":         &MessagePascalCase{},
-		"ONEOF_LOWER_SNAKE_CASE":      &OneofLowerSnakeCase{},
-		"PACKAGE_LOWER_SNAKE_CASE":    &PackageLowerSnakeCase{},
-		//"PACKAGE_SAME_CSHARP_NAMESPACE":    &PackageSameCSharpNamespace{},  // TODO: This, rule, is not implemented yet
-		//"PACKAGE_SAME_GO_PACKAGE":          &PackageSameGoPackage{},  // TODO: This, rule, is not implemented yet
-		//"PACKAGE_SAME_JAVA_MULTIPLE_FILES": &PackageSameJavaMultipleFiles{},  // TODO: This, rule, is not implemented yet
-		//"PACKAGE_SAME_JAVA_PACKAGE":        &PackageSameJavaPackage{},  // TODO: This, rule, is not implemented yet
-		//"PACKAGE_SAME_PHP_NAMESPACE":       &PackageSamePHPNamespace{},  // TODO: This, rule, is not implemented yet
-		//"PACKAGE_SAME_RUBY_PACKAGE":        &PackageSameRubyPackage{},  // TODO: This, rule, is not implemented yet
-		//"PACKAGE_SAME_SWIFT_PREFIX":        &PackageSameSwiftPrefix{},  // TODO: This, rule, is not implemented yet
-		"RPC_PASCAL_CASE":     &RpcPascalCase{},
-		"SERVICE_PASCAL_CASE": &ServicePascalCase{},
+		"ENUM_FIRST_VALUE_ZERO":            &EnumFirstValueZero{},
+		"ENUM_NO_ALLOW_ALIAS":              &EnumNoAllowAlias{},
+		"ENUM_PASCAL_CASE":                 &EnumPascalCase{},
+		"ENUM_VALUE_UPPER_SNAKE_CASE":      &EnumValueUpperSnakeCase{},
+		"FIELD_LOWER_SNAKE_CASE":           &FieldLowerSnakeCase{},
+		"IMPORT_NO_PUBLIC":                 &ImportNoPublic{},
+		"IMPORT_NO_WEAK":                   &ImportNoWeak{},
+		"IMPORT_USED":                      &ImportUsed{},
+		"MESSAGE_PASCAL_CASE":              &MessagePascalCase{},
+		"ONEOF_LOWER_SNAKE_CASE":           &OneofLowerSnakeCase{},
+		"PACKAGE_LOWER_SNAKE_CASE":         &PackageLowerSnakeCase{},
+		"PACKAGE_SAME_CSHARP_NAMESPACE":    &PackageSameCSharpNamespace{},
+		"PACKAGE_SAME_GO_PACKAGE":          &PackageSameGoPackage{},
+		"PACKAGE_SAME_JAVA_MULTIPLE_FILES": &PackageSameJavaMultipleFiles{},
+		"PACKAGE_SAME_JAVA_PACKAGE":        &PackageSameJavaPackage{},
+		"PACKAGE_SAME_PHP_NAMESPACE":       &PackageSamePHPNamespace{},
+		"PACKAGE_SAME_RUBY_PACKAGE":        &PackageSameRubyPackage{},
+		"PACKAGE_SAME_SWIFT_PREFIX":        &PackageSameSwiftPrefix{},
+		"RPC_PASCAL_CASE":                  &RpcPascalCase{},
+		"SERVICE_PASCAL_CASE":              &ServicePascalCase{},
 
 		// Default
 		"ENUM_VALUE_PREFIX": &EnumValuePrefix{},
