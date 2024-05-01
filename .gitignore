@@ -4,3 +4,4 @@ certs
 bin
 easyp
 coverage.out
+easyp.lock
