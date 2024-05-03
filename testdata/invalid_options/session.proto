@@ -1,28 +1,23 @@
 syntax = "proto3";
 
-package api.session.v1;
+package same_package;
 
-import "google/api/annotations.proto";
-import "google/api/field_behavior.proto";
 import "google/protobuf/timestamp.proto";
+import "google/protobuf/some.proto";
+// 8 800 700 05 15
 
-option csharp_namespace = "ZergsLaw.BackTemplate.Api.Session.V1";
-option go_package = "github.com/ZergsLaw/back-template/api/session/v1;pb";
-option java_multiple_files = true;
-option java_package = "com.zergslaw.backtemplate.api.session.v1";
-option php_namespace = "ZergsLaw\\BackTemplate\\Api\\Session\\V1";
-option ruby_package = "ZergsLaw";
-option swift_prefix = "ZergsLaw.BackTemplate.Api.Session.V1";
+option csharp_namespace = "ZergsLaw.BackTemplate.Api.Session.V2";
+option go_package = "github.com/ZergsLaw/back-template/api/session/v2;pb";
+option java_multiple_files = false;
+option java_package = "com.zergslaw.backtemplate.api.session.v2";
+option php_namespace = "ZergsLaw\\BackTemplate\\Api\\Session\\V2";
+option ruby_package = "ZergsLaw-2";
+option swift_prefix = "ZergsLaw.BackTemplate.Api.Session.V2";
 
 // Internal service API for managing user session.
 service SessionInternalAPI {
   // Save new user's session and returns auth token.
-  rpc Save(SaveRequest) returns (SaveResponse) {
-    option (google.api.http) = {
-      post: "/api/v1/session"
-      body: "*"
-    };
-  }
+  rpc Save(SaveRequest) returns (SaveResponse) {}
 
   // Returns user's session info by token.
   rpc Get(GetRequest) returns (GetResponse) {}
@@ -40,7 +35,7 @@ message GetRequest {
 //---Must be filled out---
 message GetResponse {
   // Contains session's UUID.
-  string session_id = 1 [(google.api.field_behavior) = REQUIRED];
+  string session_id = 1;
   // Contains user's UUID.
   string user_id = 2;
   // Contains user's session start time.

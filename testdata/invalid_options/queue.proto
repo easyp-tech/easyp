@@ -1,7 +1,8 @@
 syntax = "proto3";
 
-package api.session.v1;
+package same_package;
 
+import "google/protobuf/empty.proto";
 import "google/rpc/code.proto";
 
 option csharp_namespace = "ZergsLaw.BackTemplate.Api.Session.V1";
@@ -12,5 +13,4 @@ option php_namespace = "ZergsLaw\\BackTemplate\\Api\\Session\\V1";
 option ruby_package = "ZergsLaw";
 option swift_prefix = "ZergsLaw.BackTemplate.Api.Session.V1";
 
-// Events, which can be sent by service.
-message Event {}
+message Queue {}
