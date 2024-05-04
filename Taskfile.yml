@@ -1,0 +1,52 @@
+version: '3'
+
+vars:
+  LINTER_VERSION: "1.57.2"
+  GOTESTSUM_VERSION: "1.11.0"
+  LOCAL_BIN: "{{.USER_WORKING_DIR}}/bin"
+
+tasks:
+
+  install_linters:
+    cmds:
+      - "curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b {{.LOCAL_BIN}} v{{.LINTER_VERSION}}"
+
+  install_gotestsum:
+    cmds:
+      - "GOBIN={{.LOCAL_BIN}} go install gotest.tools/gotestsum@v{{.GOTESTSUM_VERSION}}"
+
+  init:
+    deps:
+      - install_linters
+      - install_gotestsum
+    cmds:
+      - "go get -v ./..."
+
+  build:
+    cmds:
+      - "go build -o ./bin/easyp ./cmd/easyp"
+
+  test:
+    cmds:
+      - "gotestsum --format pkgname -- -coverprofile=cover.out -race -count=1 ./..."
+
+  lint:
+    deps:
+      - build
+      - test
+    cmds:
+      - "{{.LOCAL_BIN}}/golangci-lint run ./..."
+
+  coverage:
+    cmds:
+      - "go tool cover -html=cover.out"
+
+  install:
+    cmds:
+      - "go install ./cmd/easyp"
+
+  clean:
+    cmds:
+      - "rm -rf ./bin"
+      - "rm -rf ./cover.out"
+      - "go clean -cache"
