@@ -15,7 +15,8 @@ func NewMod() (*mod.Mod, error) {
 	}
 
 	moduleConfig := moduleconfig.New()
-	cmd := mod.New(store, moduleConfig)
+	lockFile := NewLockFile()
+	cmd := mod.New(store, moduleConfig, lockFile)
 
 	return cmd, nil
 }

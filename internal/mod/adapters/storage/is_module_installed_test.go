@@ -1,4 +1,4 @@
-package mod
+package storage
 
 import (
 	"testing"

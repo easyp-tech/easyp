@@ -1,7 +1,7 @@
 package storage
 
 import (
-	"path"
+	"github.com/easyp-tech/easyp/internal/mod/models"
 )
 
 const (
@@ -13,24 +13,26 @@ const (
 	installedDir = "mod"
 )
 
-// Storage implements workflows with directories
-type Storage struct {
-	rootDir string
-}
+type (
+	// LockFile should implement adapter for lock file workflow
+	LockFile interface {
+		Read(moduleName string) (models.LockFileInfo, error)
+	}
 
-func New(rootDir string) *Storage {
+	// Storage implements workflows with directories
+	Storage struct {
+		rootDir  string
+		lockFile LockFile
+	}
+)
+
+func New(rootDir string, lockFile LockFile) *Storage {
 	return &Storage{
-		rootDir: rootDir,
+		rootDir:  rootDir,
+		lockFile: lockFile,
 	}
 }
 
 const (
 	dirPerm = 0755
 )
-
-// getInstallDir returns dir to install package
-// rootDir + installedDir + module full remote path + module's version
-// eg: ~/.EASYP/mod/github.com/google/googleapis/v1.2.3
-func (s *Storage) getInstallDir(moduleName string, version string) string {
-	return path.Join(s.rootDir, installedDir, moduleName, version)
-}

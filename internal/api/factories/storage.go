@@ -20,12 +20,14 @@ const (
 )
 
 func NewStorage() (*storage.Storage, error) {
+	lockFile := NewLockFile()
+
 	easypPath, err := getEasypPath()
 	if err != nil {
 		return nil, fmt.Errorf("getEasypPath: %w", err)
 	}
 
-	store := storage.New(easypPath)
+	store := storage.New(easypPath, lockFile)
 	return store, nil
 }
 

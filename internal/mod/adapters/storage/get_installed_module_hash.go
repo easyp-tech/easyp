@@ -10,7 +10,7 @@ import (
 )
 
 func (s *Storage) GetInstalledModuleHash(moduleName string, revisionVersion string) (models.ModuleHash, error) {
-	installedDirPath := s.getInstallDir(moduleName, revisionVersion)
+	installedDirPath := s.GetInstallDir(moduleName, revisionVersion)
 	installedPackageHash, err := dirhash.HashDir(installedDirPath, "", dirhash.DefaultHash)
 	if err != nil {
 		if os.IsNotExist(err) {

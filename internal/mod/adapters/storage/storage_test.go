@@ -7,14 +7,16 @@ import (
 	"github.com/brianvoe/gofakeit/v6"
 	"github.com/stretchr/testify/suite"
 
+	"github.com/easyp-tech/easyp/internal/mod/adapters/storage/mocks"
 	"github.com/easyp-tech/easyp/internal/mod/models"
 )
 
 type storageSuite struct {
 	suite.Suite
 
-	rootDir string
-	storage *Storage
+	rootDir  string
+	lockFile *mocks.LockFile
+	storage  *Storage
 }
 
 func getFakeModule() models.Module {
@@ -35,17 +37,9 @@ func getFakeRevision() models.Revision {
 
 func (s *storageSuite) SetupTest() {
 	s.rootDir = "/" + path.Join(gofakeit.Word(), gofakeit.Word())
-	s.storage = New(s.rootDir)
-}
+	s.lockFile = mocks.NewLockFile(s.T())
 
-func (s *storageSuite) Test_getInstallDir() {
-	moduleName := getFakeModule().Name
-	version := getFakeRevision().Version
-
-	expectedResult := path.Join(s.rootDir, installedDir, moduleName, version)
-
-	res := s.storage.getInstallDir(moduleName, version)
-	s.Equal(expectedResult, res)
+	s.storage = New(s.rootDir, s.lockFile)
 }
 
 func TestRunSuite(t *testing.T) {
