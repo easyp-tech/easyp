@@ -3,6 +3,7 @@ package factories
 import (
 	"errors"
 	"fmt"
+	"log/slog"
 	"os"
 	"path/filepath"
 
@@ -13,9 +14,19 @@ var (
 	ErrPathNotAbsolute = errors.New("path is not absolute")
 )
 
+const (
+	envEasypPath     = "EASYPPATH"
+	defaultEasypPath = ".easyp"
+)
+
 func NewStorage() (*storage.Storage, error) {
-	// store := storage.New()
-	return nil, nil
+	easypPath, err := getEasypPath()
+	if err != nil {
+		return nil, fmt.Errorf("get easyp path: %w", err)
+	}
+
+	store := storage.New(easypPath)
+	return store, nil
 }
 
 // getEasypPath return path for cache, modules storage
@@ -33,6 +44,8 @@ func getEasypPath() (string, error) {
 	if err != nil {
 		return "", ErrPathNotAbsolute
 	}
+
+	slog.Info("Use storage", "path", easypPath)
 
 	return easypPath, nil
 }
