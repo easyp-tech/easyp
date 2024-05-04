@@ -15,12 +15,6 @@ var _ Handler = (*Mod)(nil)
 type Mod struct{}
 
 func (m Mod) Command() *cli.Command {
-	getCmd := &cli.Command{
-		Name:        "get",
-		Usage:       "download and install package",
-		UsageText:   "download and install package",
-		Description: "download and install package",
-	}
 	downloadCmd := &cli.Command{
 		Name:        "download",
 		Usage:       "download modules to local cache",
@@ -42,7 +36,7 @@ func (m Mod) Command() *cli.Command {
 		After:                  nil,
 		Action:                 nil,
 		OnUsageError:           nil,
-		Subcommands:            []*cli.Command{getCmd, downloadCmd},
+		Subcommands:            []*cli.Command{downloadCmd},
 		Flags:                  []cli.Flag{},
 		SkipFlagParsing:        false,
 		HideHelp:               false,
@@ -72,8 +66,4 @@ func (m Mod) Download(ctx *cli.Context) error {
 	}
 
 	return nil
-}
-
-func (m Mod) Get(ctx cli.Context) error {
-	return fmt.Errorf("not yet implemented")
 }
