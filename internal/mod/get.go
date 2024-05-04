@@ -2,7 +2,6 @@ package mod
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"log/slog"
 
@@ -16,7 +15,7 @@ import (
 func (c *Mod) Get(ctx context.Context, requestedDependency string) error {
 	module := models.NewModule(requestedDependency)
 
-	isInstalled, err := c.isModuleInstalled(module)
+	isInstalled, err := c.storage.IsModuleInstalled(module)
 	if err != nil {
 		return fmt.Errorf("c.isModuleInstalled: %w", err)
 	}
@@ -80,47 +79,4 @@ func (c *Mod) Get(ctx context.Context, requestedDependency string) error {
 	}
 
 	return nil
-}
-
-// isModuleInstalled check if requested module is installed
-// and its checksum is matched with check sum in lock file
-func (c *Mod) isModuleInstalled(module models.Module) (bool, error) {
-	lockFileInfo, err := c.lockFile.Read(module.Name)
-	if err != nil {
-		if errors.Is(err, models.ErrModuleNotFoundInLockFile) {
-			return false, nil
-		}
-
-		return false, fmt.Errorf("c.lockFile.Read: %w", err)
-	}
-
-	if !isVersionsMatched(module.Version, lockFileInfo.Version) {
-		return false, nil
-	}
-
-	moduleHash, err := c.storage.GetInstalledModuleHash(module.Name, lockFileInfo.Version)
-	if err != nil {
-		if errors.Is(err, models.ErrModuleNotInstalled) {
-			return false, nil
-		}
-
-		return false, fmt.Errorf("c.storage.GetInstalledModuleHash: %w", err)
-	}
-
-	if moduleHash != lockFileInfo.Hash {
-		slog.Warn("Hashes are not matched",
-			"LockFileHash", lockFileInfo.Hash,
-			"Installed module", moduleHash,
-		)
-
-		return false, nil
-	}
-
-	return true, nil
-}
-
-// isVersionsMatched check if passed versions are matched
-// or requested version is omitted -> int this case just use version from lockfile
-func isVersionsMatched(requestedVersion models.RequestedVersion, lockFileVersion string) bool {
-	return requestedVersion.IsOmitted() || string(requestedVersion) == lockFileVersion
 }

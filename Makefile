@@ -10,6 +10,16 @@ ifeq ($(wildcard $(GOLANGCI_BIN)),)
 GOLANGCI_BIN:=$(LOCAL_BIN)/golangci-lint
 endif
 
+.PHONY: bin-deps
+bin-deps:
+	$(info Installing binary dependencies...)
+	mkdir -p $(LOCAL_BIN)
+	GOBIN=$(LOCAL_BIN) go mod tidy && \
+	GOBIN=$(LOCAL_BIN) go install github.com/vektra/mockery/v2@v2.41.0
+
+.PHONY: install
+install: bin-deps install-lint
+
 .PHONY:
 tests:
 	go test -coverprofile=coverage.out ./...
@@ -32,3 +42,11 @@ clean_cache:
 .PHONY:
 build:
 	go build -o easyp ./cmd/easyp
+
+.PHONY:
+mockery:
+	$(LOCAL_BIN)/mockery --name $(name) --dir $(dir) --output $(dir)/mocks
+
+.PHONY:
+mock:
+	make mockery name=LockFile dir=./internal/mod/adapters/storage
