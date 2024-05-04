@@ -28,7 +28,7 @@ tasks:
 
   test:
     cmds:
-      - "gotestsum --format pkgname -- -coverprofile=cover.out -race -count=1 ./..."
+      - "gotestsum --format pkgname -- -coverprofile=coverage.out -race -count=1 ./..."
 
   lint:
     deps:
@@ -39,7 +39,7 @@ tasks:
 
   coverage:
     cmds:
-      - "go tool cover -html=cover.out"
+      - "go tool cover -html=coverage.out"
 
   install:
     cmds:
@@ -48,5 +48,5 @@ tasks:
   clean:
     cmds:
       - "rm -rf ./bin"
-      - "rm -rf ./cover.out"
+      - "rm -rf ./coverage.out"
       - "go clean -cache"
