@@ -100,5 +100,5 @@ func (m Mod) Download(ctx *cli.Context) error {
 }
 
 func (m Mod) Get(ctx cli.Context) error {
-	return nil
+	return fmt.Errorf("not yet implemented")
 }
