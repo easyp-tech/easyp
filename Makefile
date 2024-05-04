@@ -31,4 +31,4 @@ clean_cache:
 
 .PHONY:
 build:
-	go build -o easyp ./cmd
+	go build -o easyp ./cmd/easyp
