@@ -34,10 +34,10 @@ easyp lint -c example.easyp.yaml
 
 ### Usage
 
-To usage `easpy` as a package manager use `mod` command:
+To usage `easpy` as a package manager use `mod download` command:
 
 ```bash
-easyp mod -c example.easyp.yaml
+easyp -c example.easyp.yaml mod download
 ```
 
 Your config file has to contains `deps` section which is list of repositories with proto files and its version (optional).

@@ -2,16 +2,11 @@ package api
 
 import (
 	"fmt"
-	"log/slog"
-	"os"
-	"path/filepath"
 
 	"github.com/urfave/cli/v2"
 
 	"github.com/easyp-tech/easyp/internal/api/config"
-	"github.com/easyp-tech/easyp/internal/mod"
-	moduleconfig "github.com/easyp-tech/easyp/internal/mod/adapters/module_config"
-	"github.com/easyp-tech/easyp/internal/mod/adapters/storage"
+	"github.com/easyp-tech/easyp/internal/api/factories"
 )
 
 var _ Handler = (*Mod)(nil)
@@ -20,6 +15,14 @@ var _ Handler = (*Mod)(nil)
 type Mod struct{}
 
 func (m Mod) Command() *cli.Command {
+	downloadCmd := &cli.Command{
+		Name:        "download",
+		Usage:       "download modules to local cache",
+		UsageText:   "download modules to local cache",
+		Description: "download modules to local cache",
+		Action:      m.Download,
+	}
+
 	return &cli.Command{
 		Name:                   "mod",
 		Aliases:                []string{"m"},
@@ -31,9 +34,9 @@ func (m Mod) Command() *cli.Command {
 		BashComplete:           nil,
 		Before:                 nil,
 		After:                  nil,
-		Action:                 m.Action,
+		Action:                 nil,
 		OnUsageError:           nil,
-		Subcommands:            nil,
+		Subcommands:            []*cli.Command{downloadCmd},
 		Flags:                  []cli.Flag{},
 		SkipFlagParsing:        false,
 		HideHelp:               false,
@@ -45,36 +48,16 @@ func (m Mod) Command() *cli.Command {
 	}
 }
 
-const (
-	envEasypPath     = "EASYPPATH"
-	defaultEasypPath = ".easyp"
-)
-
-func (m Mod) Action(ctx *cli.Context) error {
+func (m Mod) Download(ctx *cli.Context) error {
 	cfg, err := config.ReadConfig(ctx)
 	if err != nil {
 		return fmt.Errorf("ReadConfig: %w", err)
 	}
 
-	easypPath := os.Getenv(envEasypPath)
-	if easypPath == "" {
-		userHomeDir, err := os.UserHomeDir()
-		if err != nil {
-			return fmt.Errorf("os.UserHomeDir: %w", err)
-		}
-		easypPath = filepath.Join(userHomeDir, defaultEasypPath)
-	}
-
-	easypPath, err = filepath.Abs(easypPath)
+	cmd, err := factories.NewMod()
 	if err != nil {
-		return fmt.Errorf("filepath.Abs: %w", err)
+		return fmt.Errorf("factories.NewMod: %w", err)
 	}
-
-	slog.Info("Use storage", "path", easypPath)
-
-	store := storage.New(easypPath)
-	moduleConfig := moduleconfig.New()
-	cmd := mod.New(store, moduleConfig)
 
 	for _, dependency := range cfg.Deps {
 		if err := cmd.Get(ctx.Context, dependency); err != nil {
