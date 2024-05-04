@@ -22,7 +22,7 @@ const (
 func NewStorage() (*storage.Storage, error) {
 	easypPath, err := getEasypPath()
 	if err != nil {
-		return nil, fmt.Errorf("get easyp path: %w", err)
+		return nil, fmt.Errorf("getEasypPath: %w", err)
 	}
 
 	store := storage.New(easypPath)
