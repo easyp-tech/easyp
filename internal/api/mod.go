@@ -20,6 +20,20 @@ var _ Handler = (*Mod)(nil)
 type Mod struct{}
 
 func (m Mod) Command() *cli.Command {
+	getCmd := &cli.Command{
+		Name:        "get",
+		Usage:       "download and install package",
+		UsageText:   "download and install package",
+		Description: "download and install package",
+	}
+	downloadCmd := &cli.Command{
+		Name:        "download",
+		Usage:       "download modules to local cache",
+		UsageText:   "download modules to local cache",
+		Description: "download modules to local cache",
+		Action:      m.Download,
+	}
+
 	return &cli.Command{
 		Name:                   "mod",
 		Aliases:                []string{"m"},
@@ -31,9 +45,9 @@ func (m Mod) Command() *cli.Command {
 		BashComplete:           nil,
 		Before:                 nil,
 		After:                  nil,
-		Action:                 m.Action,
+		Action:                 nil,
 		OnUsageError:           nil,
-		Subcommands:            nil,
+		Subcommands:            []*cli.Command{getCmd, downloadCmd},
 		Flags:                  []cli.Flag{},
 		SkipFlagParsing:        false,
 		HideHelp:               false,
@@ -50,7 +64,7 @@ const (
 	defaultEasypPath = ".easyp"
 )
 
-func (m Mod) Action(ctx *cli.Context) error {
+func (m Mod) Download(ctx *cli.Context) error {
 	cfg, err := config.ReadConfig(ctx)
 	if err != nil {
 		return fmt.Errorf("ReadConfig: %w", err)
@@ -82,5 +96,9 @@ func (m Mod) Action(ctx *cli.Context) error {
 		}
 	}
 
+	return nil
+}
+
+func (m Mod) Get(ctx cli.Context) error {
 	return nil
 }
