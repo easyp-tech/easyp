@@ -6,7 +6,7 @@ on:
       - 'main'
   pull_request:
     branches:
-      - 'main'
+      - '*'
 
 jobs:
 
@@ -22,5 +22,14 @@ jobs:
       - name: Checkout repository.
         uses: actions/checkout@v2
 
+      - name: Install Task
+        uses: arduino/setup-task@v1
+        with:
+          version: 3.x
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Prepare test.
+        run: task init
+
       - name: Start test.
-        run: go test -race -timeout=60s ./...
+        run: task test
