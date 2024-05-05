@@ -24,18 +24,22 @@ tasks:
 
   build:
     cmds:
-      - "go build -o ./bin/easyp ./cmd/easyp"
+      - "go build -o easyp ./cmd/easyp"
 
   test:
     cmds:
-      - "gotestsum --format pkgname -- -coverprofile=coverage.out -race -count=1 ./..."
+      - "{{.LOCAL_BIN}}/gotestsum --format pkgname -- -coverprofile=coverage.out -race -count=1 ./..."
 
   lint:
     deps:
       - build
-      - test
     cmds:
       - "{{.LOCAL_BIN}}/golangci-lint run ./..."
+
+  quality:
+    deps:
+      - test
+      - lint
 
   coverage:
     cmds:
