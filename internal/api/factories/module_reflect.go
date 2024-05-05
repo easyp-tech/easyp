@@ -3,14 +3,14 @@ package factories
 import (
 	"fmt"
 
+	modulereflect "github.com/easyp-tech/easyp/internal/api/shared/module_reflect"
 	"github.com/easyp-tech/easyp/internal/mod"
 	lockfile "github.com/easyp-tech/easyp/internal/mod/adapters/lock_file"
 	moduleconfig "github.com/easyp-tech/easyp/internal/mod/adapters/module_config"
 	"github.com/easyp-tech/easyp/internal/mod/adapters/storage"
 )
 
-// NewMod return mod.Mod instance for package manager workflows
-func NewMod() (*mod.Mod, error) {
+func NewModuleReflect() (*modulereflect.ModuleReflect, error) {
 	lockFile := lockfile.New()
 
 	easypPath, err := getEasypPath()
@@ -22,6 +22,9 @@ func NewMod() (*mod.Mod, error) {
 
 	moduleConfig := moduleconfig.New()
 
-	cmd := mod.New(store, moduleConfig, lockFile)
-	return cmd, nil
+	cmdMod := mod.New(store, moduleConfig, lockFile)
+
+	moduleReflect := modulereflect.New(cmdMod, store, lockFile)
+
+	return moduleReflect, nil
 }

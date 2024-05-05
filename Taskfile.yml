@@ -4,6 +4,7 @@ vars:
   LINTER_VERSION: "1.57.2"
   GOTESTSUM_VERSION: "1.11.0"
   LOCAL_BIN: "{{.USER_WORKING_DIR}}/bin"
+  MOCKERY_VERSION: "v2.41.0"
 
 tasks:
 
@@ -15,10 +16,15 @@ tasks:
     cmds:
       - "GOBIN={{.LOCAL_BIN}} go install gotest.tools/gotestsum@v{{.GOTESTSUM_VERSION}}"
 
+  install_mockery:
+    cmds:
+      - "GOBIN={{.LOCAL_BIN}} go install github.com/vektra/mockery/v2@{{.MOCKERY_VERSION}}"
+
   init:
     deps:
       - install_linters
       - install_gotestsum
+      - install_mockery
     cmds:
       - "go get -v ./..."
 
@@ -54,3 +60,19 @@ tasks:
       - "rm -rf ./bin"
       - "rm -rf ./coverage.out"
       - "go clean -cache"
+
+  mock:
+    cmds:
+      - "{{.LOCAL_BIN}}/mockery --name {{.NAME}} --dir {{.DIR}} --output {{.DIR}}/mocks"
+
+  mocks:
+    cmds:
+      - task: mock
+        vars: { NAME: 'LockFile', DIR: './internal/mod/adapters/storage' }
+
+      - task: mock
+        vars: {NAME: 'Mod', DIR: './internal/api/shared/module_reflect'}
+      - task: mock
+        vars: {NAME: 'Storage', DIR: './internal/api/shared/module_reflect'}
+      - task: mock
+        vars: {NAME: 'LockFile', DIR: './internal/api/shared/module_reflect'}
