@@ -3,6 +3,8 @@ package config
 import (
 	"fmt"
 
+	"github.com/samber/lo"
+
 	"github.com/easyp-tech/easyp/internal/lint"
 	"github.com/easyp-tech/easyp/internal/lint/rules"
 )
@@ -95,5 +97,5 @@ func (cfg *Config) unwrapLintGroups() {
 		}
 	}
 
-	cfg.Lint.Use = res
+	cfg.Lint.Use = lo.FindUniques(res)
 }
