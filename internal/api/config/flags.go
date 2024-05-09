@@ -11,7 +11,7 @@ var (
 		Required:   true,
 		HasBeenSet: true,
 		Value:      "easyp.yaml",
-		Aliases:    []string{"c"},
+		Aliases:    []string{"config"},
 		EnvVars:    []string{"EASYP_CFG"},
 	}
 
