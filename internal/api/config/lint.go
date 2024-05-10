@@ -51,7 +51,7 @@ const (
 )
 
 func (cfg *Config) unwrapLintGroups() {
-	var res []string
+	res := cfg.Lint.Use
 
 	for _, ruleName := range cfg.Lint.Use {
 		switch ruleName {
