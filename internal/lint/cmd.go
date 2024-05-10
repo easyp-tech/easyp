@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
-	"os"
 	"path/filepath"
 	"slices"
 
@@ -32,8 +31,8 @@ func (c *Lint) Lint(ctx context.Context, disk fs.FS) error {
 			return nil
 		}
 
+		f, err := disk.Open(path)
 		path = filepath.Join(c.rootPath, path)
-		f, err := os.Open(path)
 		if err != nil {
 			return fmt.Errorf("os.Open: %w", err)
 		}
