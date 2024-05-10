@@ -36,6 +36,7 @@ func main() {
 		Commands: buildCommand(
 			api.Lint{},
 			api.Mod{},
+			api.Completion{},
 		),
 		Flags: []cli.Flag{
 			config.FlagDebug,
@@ -45,7 +46,7 @@ func main() {
 			initLogger(ctx.Bool(config.FlagDebug.Name))
 			return nil
 		},
-		BashComplete: cli.DefaultAppComplete,
+		EnableBashCompletion: true,
 	}
 
 	if err := app.Run(os.Args); err != nil {
