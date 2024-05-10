@@ -31,7 +31,6 @@ func (c *Lint) Lint(ctx context.Context, disk fs.FS) error {
 			return nil
 		}
 
-		path = filepath.Join(c.rootPath, path)
 		f, err := disk.Open(path)
 		if err != nil {
 			return fmt.Errorf("disk.Open: %w", err)

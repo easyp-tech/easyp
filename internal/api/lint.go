@@ -87,6 +87,10 @@ func (l Lint) Action(ctx *cli.Context) error {
 		return nil
 	}
 
+	if err != nil {
+		return fmt.Errorf("c.Lint: %w", err)
+	}
+
 	return nil
 }
 
