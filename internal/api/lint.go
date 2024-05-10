@@ -73,7 +73,7 @@ func (l Lint) Action(ctx *cli.Context) error {
 	rootPath := ctx.String(flagLintDirectoryPath.Name)
 	dirFS := os.DirFS(rootPath)
 
-	c := lint.New(lintRules, rootPath, cfg.Lint.Ignore)
+	c := lint.New(lintRules, cfg.Lint.Ignore)
 
 	res := c.Lint(ctx.Context, dirFS)
 	if splitErr, ok := res.(interface{ Unwrap() []error }); ok {
