@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
-	"os"
 	"path/filepath"
 	"slices"
 
@@ -24,7 +23,7 @@ func (c *Lint) Lint(ctx context.Context, disk fs.FS) error {
 		case ctx.Err() != nil:
 			return ctx.Err()
 		case d.IsDir():
-			if slices.Contains(c.excludesDirs, d.Name()) {
+			if slices.Contains(c.ignoreDirs, d.Name()) {
 				return filepath.SkipDir
 			}
 			return nil
@@ -32,10 +31,9 @@ func (c *Lint) Lint(ctx context.Context, disk fs.FS) error {
 			return nil
 		}
 
-		path = filepath.Join(c.rootPath, path)
-		f, err := os.Open(path)
+		f, err := disk.Open(path)
 		if err != nil {
-			return fmt.Errorf("os.Open: %w", err)
+			return fmt.Errorf("disk.Open: %w", err)
 		}
 		defer func() {
 			err := f.Close()

@@ -7,9 +7,8 @@ import (
 
 // Lint is the core functionality of easyp lint.
 type Lint struct {
-	rules        []Rule
-	rootPath     string
-	excludesDirs []string
+	rules      []Rule
+	ignoreDirs []string
 }
 
 // ProtoInfo is the information of a proto file.
@@ -25,10 +24,9 @@ type Rule interface {
 }
 
 // New creates a new Lint.
-func New(rules []Rule, rootPath string, excludesDirs []string) *Lint {
+func New(rules []Rule, ignoreDirs []string) *Lint {
 	return &Lint{
-		rules:        rules,
-		rootPath:     rootPath,
-		excludesDirs: excludesDirs,
+		rules:      rules,
+		ignoreDirs: ignoreDirs,
 	}
 }

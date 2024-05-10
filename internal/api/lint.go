@@ -1,8 +1,9 @@
 package api
 
 import (
+	"bytes"
 	"fmt"
-	"log/slog"
+	"io"
 	"os"
 
 	"github.com/urfave/cli/v2"
@@ -72,18 +73,37 @@ func (l Lint) Action(ctx *cli.Context) error {
 	rootPath := ctx.String(flagLintDirectoryPath.Name)
 	dirFS := os.DirFS(rootPath)
 
-	c := lint.New(lintRules, rootPath, cfg.Lint.Excludes)
+	c := lint.New(lintRules, cfg.Lint.Ignore)
 
 	res := c.Lint(ctx.Context, dirFS)
 	if splitErr, ok := res.(interface{ Unwrap() []error }); ok {
 
-		for _, err := range splitErr.Unwrap() {
-			slog.Error(err.Error())
+		if err := printLintErrors(os.Stderr, splitErr.Unwrap()); err != nil {
+			return fmt.Errorf("printLintErrors: %w", err)
 		}
 
 		os.Exit(1)
 
 		return nil
+	}
+
+	if err != nil {
+		return fmt.Errorf("c.Lint: %w", err)
+	}
+
+	return nil
+}
+
+func printLintErrors(w io.Writer, errs []error) error {
+	buffer := bytes.NewBuffer(nil)
+	for _, err := range errs {
+		buffer.Reset()
+
+		_, _ = buffer.WriteString(err.Error())
+		_, _ = buffer.WriteString("\n")
+		if _, err := w.Write(buffer.Bytes()); err != nil {
+			return err
+		}
 	}
 
 	return nil
