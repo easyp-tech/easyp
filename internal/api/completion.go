@@ -71,8 +71,7 @@ _cli_zsh_autocomplete() {
   fi
 }
 
-compdef _cli_zsh_autocomplete easyp
-`)
+compdef _cli_zsh_autocomplete easyp`)
 	return nil
 }
 
@@ -112,7 +111,6 @@ _cli_bash_autocomplete() {
 }
 
 complete -o bashdefault -o default -o nospace -F _cli_bash_autocomplete $easyp
-unset easyp
-`)
+unset easyp`)
 	return nil
 }
