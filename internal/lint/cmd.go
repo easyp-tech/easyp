@@ -32,7 +32,6 @@ func (c *Lint) Lint(ctx context.Context, disk fs.FS) error {
 		}
 
 		f, err := disk.Open(path)
-		path = filepath.Join(c.rootPath, path)
 		if err != nil {
 			return fmt.Errorf("os.Open: %w", err)
 		}
@@ -42,6 +41,8 @@ func (c *Lint) Lint(ctx context.Context, disk fs.FS) error {
 				// TODO: Handle error
 			}
 		}()
+
+		path = filepath.Join(c.rootPath, path)
 
 		got, err := protoparser.Parse(f)
 		if err != nil {
