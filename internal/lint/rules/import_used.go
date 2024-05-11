@@ -18,6 +18,14 @@ type ImportUsed struct{}
 func (i ImportUsed) Validate(protoInfo lint.ProtoInfo) []error {
 	var res []error
 
+	var sourcePkgName string
+	if len(protoInfo.Info.ProtoBody.Packages) > 0 {
+		sourcePkgName = protoInfo.Info.ProtoBody.Packages[0].Name
+	}
+	instrParser := instructionParser{
+		sourcePkgName: sourcePkgName,
+	}
+
 	// collects flags if import was used
 	isImportUsed := make(map[lint.ImportPath]bool)
 
@@ -65,9 +73,41 @@ func (i ImportUsed) Validate(protoInfo lint.ProtoInfo) []error {
 
 	for _, service := range protoInfo.Info.ProtoBody.Services {
 		for _, rpc := range service.ServiceBody.RPCs {
+			// look for in request
+			{
+				requestType := rpc.RPCRequest.MessageType
+				instruction := instrParser.parse(requestType)
+				for _, importPath := range pkgToImport[instruction.pkgName] {
+					proto := protoInfo.ProtoFilesFromImport[importPath]
+					exist := existInProto(instruction.instruction, proto)
+
+					if exist {
+						if _, ok := isImportUsed[importPath]; ok {
+							isImportUsed[importPath] = true
+						}
+					}
+				}
+			}
+			// look for in response
+			{
+				responseType := rpc.RPCResponse.MessageType
+				instruction := instrParser.parse(responseType)
+				for _, importPath := range pkgToImport[instruction.pkgName] {
+					proto := protoInfo.ProtoFilesFromImport[importPath]
+					exist := existInProto(instruction.instruction, proto)
+
+					if exist {
+						if _, ok := isImportUsed[importPath]; ok {
+							isImportUsed[importPath] = true
+						}
+					}
+				}
+			}
+
+			// look for in options
 			for _, rpcOption := range rpc.Options {
 				optionName := formatOptionName(rpcOption.OptionName)
-				instruction := parseInstruction(optionName)
+				instruction := instrParser.parse(optionName)
 
 				// look for option in imported files
 				for _, importPath := range pkgToImport[instruction.pkgName] {
@@ -106,6 +146,27 @@ type instructionInfo struct {
 	instruction string
 }
 
+type instructionParser struct {
+	sourcePkgName string
+}
+
+// parseInstruction parse input string and return its package name
+// return empty string if passed input does not imported from another package
+func (p instructionParser) parse(input string) instructionInfo {
+	idx := strings.LastIndex(input, ".")
+	if idx <= 0 {
+		return instructionInfo{
+			pkgName:     p.sourcePkgName,
+			instruction: input,
+		}
+	}
+
+	return instructionInfo{
+		pkgName:     input[:idx],
+		instruction: input[idx+1:],
+	}
+}
+
 // formatOptionName trims '(' and ')' from option
 // long story short: convert '(google.api.http)' to 'google.api.http'
 func formatOptionName(input string) string {
@@ -116,28 +177,21 @@ func formatOptionName(input string) string {
 	return option
 }
 
-// parseInstruction parse input string and return its package name
-// return empty string if passed input does not imported from another package
-func parseInstruction(input string) instructionInfo {
-	idx := strings.LastIndex(input, ".")
-	if idx <= 0 {
-		return instructionInfo{instruction: input}
-	}
-
-	return instructionInfo{
-		pkgName:     input[:idx],
-		instruction: input[idx+1:],
-	}
-}
-
 // existInProto look for key in proto file
 func existInProto(key string, proto *unordered.Proto) bool {
-	// look for in extends
+	// look for key in extends
 	for _, extend := range proto.ProtoBody.Extends {
 		for _, field := range extend.ExtendBody.Fields {
 			if field.FieldName == key {
 				return true
 			}
+		}
+	}
+
+	// look for key in messages
+	for _, message := range proto.ProtoBody.Messages {
+		if message.MessageName == key {
+			return true
 		}
 	}
 
