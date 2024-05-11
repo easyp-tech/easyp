@@ -3,6 +3,7 @@ package rules
 import (
 	"strings"
 
+	"github.com/yoheimuta/go-protoparser/v4/interpret/unordered"
 	"github.com/yoheimuta/go-protoparser/v4/parser"
 
 	"github.com/easyp-tech/easyp/internal/lint"
@@ -12,6 +13,15 @@ var _ lint.Rule = (*ImportUsed)(nil)
 
 // ImportUsed this rule checks that all the imports declared across your Protobuf files are actually used.
 type ImportUsed struct{}
+
+// instructionInfo collects info about instruction in proto file
+// e.g `google.api.http`:
+// 		`google.api` - package name
+// 		'http' - instruction name
+type instructionInfo struct {
+	pkgName     string
+	instruction string
+}
 
 // Validate implements lint.Rule.
 func (i ImportUsed) Validate(protoInfo lint.ProtoInfo) []error {
@@ -35,7 +45,7 @@ func (i ImportUsed) Validate(protoInfo lint.ProtoInfo) []error {
 	// collects info about import in linted proto file
 	importInfo := make(map[lint.ImportPath]*parser.Import)
 	for _, imp := range protoInfo.Info.ProtoBody.Imports {
-		importPath := lint.ImportPath(imp.Location)
+		importPath := lint.ImportPath(strings.Trim(imp.Location, "\""))
 		isImportUsed[importPath] = false
 		importInfo[importPath] = imp
 	}
@@ -61,10 +71,18 @@ func (i ImportUsed) Validate(protoInfo lint.ProtoInfo) []error {
 		for _, rpc := range service.ServiceBody.RPCs {
 			for _, rpcOption := range rpc.Options {
 				optionName := formatOptionName(rpcOption.OptionName)
-				_ = optionName
-				key := lint.ImportPath(formatOptionName(rpcOption.OptionName))
-				if _, ok := isImportUsed[key]; ok {
-					isImportUsed[key] = true
+				instruction := parseInstruction(optionName)
+
+				// look for option in imported files
+				for _, importPath := range pkgToImport[instruction.pkgName] {
+					proto := protoInfo.ProtoFilesFromImport[importPath]
+					exist := existInProto(instruction.instruction, proto)
+
+					if exist {
+						if _, ok := isImportUsed[importPath]; ok {
+							isImportUsed[importPath] = true
+						}
+					}
 				}
 			}
 		}
@@ -101,13 +119,30 @@ func formatOptionName(input string) string {
 	return option
 }
 
-// parsePackageName parse input string and return its package name
-// return empty string if passed input does not imported from another pacakge
-func parsePackageName(input string) string {
+// parseInstruction parse input string and return its package name
+// return empty string if passed input does not imported from another package
+func parseInstruction(input string) instructionInfo {
 	idx := strings.LastIndex(input, ".")
 	if idx <= 0 {
-		return ""
+		return instructionInfo{instruction: input}
 	}
 
-	return input[:idx]
+	return instructionInfo{
+		pkgName:     input[:idx],
+		instruction: input[idx+1:],
+	}
+}
+
+// existInProto look for key in proto file
+func existInProto(key string, proto *unordered.Proto) bool {
+	// look for in extends
+	for _, extend := range proto.ProtoBody.Extends {
+		for _, field := range extend.ExtendBody.Fields {
+			if field.FieldName == key {
+				return true
+			}
+		}
+	}
+
+	return false
 }
