@@ -14,15 +14,6 @@ var _ lint.Rule = (*ImportUsed)(nil)
 // ImportUsed this rule checks that all the imports declared across your Protobuf files are actually used.
 type ImportUsed struct{}
 
-// instructionInfo collects info about instruction in proto file
-// e.g `google.api.http`:
-// 		`google.api` - package name
-// 		'http' - instruction name
-type instructionInfo struct {
-	pkgName     string
-	instruction string
-}
-
 // Validate implements lint.Rule.
 func (i ImportUsed) Validate(protoInfo lint.ProtoInfo) []error {
 	var res []error
@@ -54,7 +45,10 @@ func (i ImportUsed) Validate(protoInfo lint.ProtoInfo) []error {
 
 	for _, msg := range protoInfo.Info.ProtoBody.Messages {
 		for _, field := range msg.MessageBody.Fields {
-			key := lint.ImportPath(i.formatField(field.Type))
+			// fieldType := field.Type
+
+			// key := lint.ImportPath(i.formatField(field.Type))
+			key := lint.ImportPath(field.Type)
 			if _, ok := isImportUsed[key]; ok {
 				isImportUsed[key] = true
 			}
@@ -103,12 +97,13 @@ func (i ImportUsed) Validate(protoInfo lint.ProtoInfo) []error {
 	return res
 }
 
-func (i ImportUsed) formatField(input string) string {
-	// field := strings.Trim(input, "\"")
-	// field = strings.ToLower(field)
-
-	// return field
-	return input
+// instructionInfo collects info about instruction in proto file
+// e.g `google.api.http`:
+// 		`google.api` - package name
+// 		'http' - instruction name
+type instructionInfo struct {
+	pkgName     string
+	instruction string
 }
 
 // formatOptionName trims '(' and ')' from option
