@@ -18,6 +18,7 @@ type Lint struct {
 	moduleReflect *modulereflect.ModuleReflect
 }
 
+// ImportPath type alias for path import in proto file
 type ImportPath string
 
 // ProtoInfo is the information of a proto file.

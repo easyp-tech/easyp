@@ -1,73 +1,54 @@
 package rules
 
 import (
-	"context"
-	"os"
-	"path/filepath"
 	"strings"
 
-	"github.com/yoheimuta/go-protoparser/v4"
-	"github.com/yoheimuta/go-protoparser/v4/interpret/unordered"
 	"github.com/yoheimuta/go-protoparser/v4/parser"
 
-	"github.com/easyp-tech/easyp/internal/api/factories"
-	modulereflect "github.com/easyp-tech/easyp/internal/api/shared/module_reflect"
 	"github.com/easyp-tech/easyp/internal/lint"
 )
 
 var _ lint.Rule = (*ImportUsed)(nil)
 
 // ImportUsed this rule checks that all the imports declared across your Protobuf files are actually used.
-type ImportUsed struct {
-	deps          []string // FIXME: passed deps is tmp solution!
-	moduleReflect *modulereflect.ModuleReflect
-}
+type ImportUsed struct{}
 
 // Validate implements lint.Rule.
-func (i *ImportUsed) Validate(protoInfo lint.ProtoInfo) []error {
-	// TODO: tmp solution! only for PoC!
-	var err error
-	i.moduleReflect, err = factories.NewModuleReflect()
-	if err != nil {
-		panic(err)
-	}
-
+func (i ImportUsed) Validate(protoInfo lint.ProtoInfo) []error {
 	var res []error
 
 	// collects flags if import was used
-	isImportUsed := make(map[string]bool)
+	isImportUsed := make(map[lint.ImportPath]bool)
 
-	// information about imports (used for linter error message)
-	importsInfo := make(map[string]*parser.Import)
-
-	// imported proto files
-	importsProto := make(map[string]*unordered.Proto)
-
-	// package -> import name
-	pkgProto := make(map[string]string)
-
-	for _, imp := range protoInfo.Info.ProtoBody.Imports {
-		importName := i.formatImportName(imp.Location)
-		isImportUsed[importName] = false
-		importsInfo[importName] = imp
-		importedProto := i.readImportProtoFile(importName)
-		importsProto[importName] = importedProto
-		if len(importedProto.ProtoBody.Packages) == 0 {
+	// collects pkg name -> import path
+	pkgToImport := make(map[string][]lint.ImportPath)
+	for importPath, proto := range protoInfo.ProtoFilesFromImport {
+		if len(proto.ProtoBody.Packages) == 0 {
+			// skip if package is omitted
 			continue
 		}
-		pkgName := importedProto.ProtoBody.Packages[0].Name
-		pkgProto[pkgName] = importName
+
+		pkgName := proto.ProtoBody.Packages[0].Name
+		pkgToImport[pkgName] = append(pkgToImport[pkgName], importPath)
+	}
+
+	// collects info about import in linted proto file
+	importInfo := make(map[lint.ImportPath]*parser.Import)
+	for _, imp := range protoInfo.Info.ProtoBody.Imports {
+		importPath := lint.ImportPath(imp.Location)
+		isImportUsed[importPath] = false
+		importInfo[importPath] = imp
 	}
 
 	for _, msg := range protoInfo.Info.ProtoBody.Messages {
 		for _, field := range msg.MessageBody.Fields {
-			key := i.formatField(field.Type)
+			key := lint.ImportPath(i.formatField(field.Type))
 			if _, ok := isImportUsed[key]; ok {
 				isImportUsed[key] = true
 			}
 
 			for i2 := range field.FieldOptions {
-				key = i.formatOption(field.FieldOptions[i2].OptionName)
+				key = lint.ImportPath(formatOptionName(field.FieldOptions[i2].OptionName))
 				if _, ok := isImportUsed[key]; ok {
 					isImportUsed[key] = true
 				}
@@ -79,8 +60,9 @@ func (i *ImportUsed) Validate(protoInfo lint.ProtoInfo) []error {
 	for _, service := range protoInfo.Info.ProtoBody.Services {
 		for _, rpc := range service.ServiceBody.RPCs {
 			for _, rpcOption := range rpc.Options {
-				key := i.formatOption(rpcOption.OptionName)
-				key = i.rpcOptionExclusion(key, rpcOption.Constant)
+				optionName := formatOptionName(rpcOption.OptionName)
+				_ = optionName
+				key := lint.ImportPath(formatOptionName(rpcOption.OptionName))
 				if _, ok := isImportUsed[key]; ok {
 					isImportUsed[key] = true
 				}
@@ -90,7 +72,7 @@ func (i *ImportUsed) Validate(protoInfo lint.ProtoInfo) []error {
 
 	for imp, used := range isImportUsed {
 		if !used {
-			res = append(res, BuildError(importsInfo[imp].Meta.Pos, importsInfo[imp].Location, lint.ErrImportIsNotUsed))
+			res = append(res, BuildError(importInfo[imp].Meta.Pos, importInfo[imp].Location, lint.ErrImportIsNotUsed))
 		}
 	}
 
@@ -101,88 +83,20 @@ func (i *ImportUsed) Validate(protoInfo lint.ProtoInfo) []error {
 	return res
 }
 
-func (i ImportUsed) formatImportName(input string) string {
-	importName := strings.Trim(input, "\"")
-	importName = strings.ToLower(importName)
-
-	return importName
-}
-
 func (i ImportUsed) formatField(input string) string {
-	// replacing . with / to match the import name
-	field := strings.ReplaceAll(input, ".", "/")
-	field = strings.Trim(field, "\"")
-	field = strings.ToLower(field)
-	// adding .proto to match the import name file
-	field += ".proto"
+	// field := strings.Trim(input, "\"")
+	// field = strings.ToLower(field)
 
-	return field
+	// return field
+	return input
 }
 
-func (i ImportUsed) formatOption(input string) string {
+// formatOptionName trims '(' and ')' from option
+// long story short: convert '(google.api.http)' to 'google.api.http'
+func formatOptionName(input string) string {
 	// removing the parenthesis from option
 	option := strings.ReplaceAll(input, "(", "")
 	option = strings.ReplaceAll(option, ")", "")
-	// replacing . with / to match the import name
-	option = strings.ReplaceAll(option, ".", "/")
-	option = strings.Trim(option, "\"")
-	option = strings.ToLower(option)
-	// adding .proto to match the import name file
-	option += ".proto"
 
 	return option
-}
-
-func (i ImportUsed) rpcOptionExclusion(input string, constant string) string {
-	switch input {
-	case "google/api/http.proto":
-		for _, method := range []string{"get", "post", "put", "delete", "patch"} {
-			if strings.Contains(constant, method) {
-				return "google/api/annotations.proto"
-			}
-		}
-
-		return input
-	default:
-		return input
-	}
-}
-
-// readImportProtoFile reads imported proto file
-// TODO: need to read from local imports
-func (i ImportUsed) readImportProtoFile(importName string) *unordered.Proto {
-	ctx := context.TODO()
-
-	// try to find actual module
-	for _, dep := range i.deps {
-		modulepath, err := i.moduleReflect.GetModulePath(ctx, dep)
-		if err != nil {
-			panic(err)
-		}
-
-		// if file exists that it's the module that we are looking for
-		fullPath := filepath.Join(modulepath, importName)
-		fp, err := os.Open(fullPath)
-		if err != nil {
-			if os.IsNotExist(err) {
-				continue
-			}
-			panic(err)
-		}
-
-		got, err := protoparser.Parse(fp)
-		if err != nil {
-			panic(err)
-		}
-		_ = fp.Close()
-
-		proto, err := unordered.InterpretProto(got)
-		if err != nil {
-			panic(err)
-		}
-
-		return proto
-	}
-
-	return nil
 }
