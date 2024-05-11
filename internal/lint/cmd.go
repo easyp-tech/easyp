@@ -83,16 +83,17 @@ func (c *Lint) Lint(ctx context.Context, disk fs.FS) error {
 // readFilesFromImport reads all files that imported from scanning file
 func (c *Lint) readFilesFromImport(
 	ctx context.Context, disk fs.FS, scanProto *unordered.Proto,
-) ([]*unordered.Proto, error) {
-	protoFilesFromImport := make([]*unordered.Proto, 0, len(scanProto.ProtoBody.Imports))
+) (map[ImportPath]*unordered.Proto, error) {
+	protoFilesFromImport := make(map[ImportPath]*unordered.Proto, len(scanProto.ProtoBody.Imports))
 
 	for _, imp := range scanProto.ProtoBody.Imports {
-		fileFromImport, err := c.readFileFromImport(ctx, disk, strings.Trim(imp.Location, "\""))
+		importPath := strings.Trim(imp.Location, "\"")
+		fileFromImport, err := c.readFileFromImport(ctx, disk, importPath)
 		if err != nil {
 			return nil, fmt.Errorf("readFileFromImport: %w", err)
 		}
 
-		protoFilesFromImport = append(protoFilesFromImport, fileFromImport)
+		protoFilesFromImport[ImportPath(importPath)] = fileFromImport
 	}
 
 	return protoFilesFromImport, nil

@@ -18,11 +18,13 @@ type Lint struct {
 	moduleReflect *modulereflect.ModuleReflect
 }
 
+type ImportPath string
+
 // ProtoInfo is the information of a proto file.
 type ProtoInfo struct {
 	Path                 string
 	Info                 *unordered.Proto
-	ProtoFilesFromImport []*unordered.Proto
+	ProtoFilesFromImport map[ImportPath]*unordered.Proto
 }
 
 // Rule is an interface for a rule checking.
