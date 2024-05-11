@@ -53,20 +53,35 @@ func (i ImportUsed) Validate(protoInfo lint.ProtoInfo) []error {
 
 	for _, msg := range protoInfo.Info.ProtoBody.Messages {
 		for _, field := range msg.MessageBody.Fields {
-			// fieldType := field.Type
+			fieldType := field.Type
+			instruction := instrParser.parse(fieldType)
+			for _, importPath := range pkgToImport[instruction.pkgName] {
+				proto := protoInfo.ProtoFilesFromImport[importPath]
+				exist := existInProto(instruction.instruction, proto)
 
-			// key := lint.ImportPath(i.formatField(field.Type))
-			key := lint.ImportPath(field.Type)
-			if _, ok := isImportUsed[key]; ok {
-				isImportUsed[key] = true
+				if exist {
+					if _, ok := isImportUsed[importPath]; ok {
+						isImportUsed[importPath] = true
+					}
+				}
 			}
 
-			for i2 := range field.FieldOptions {
-				key = lint.ImportPath(formatOptionName(field.FieldOptions[i2].OptionName))
-				if _, ok := isImportUsed[key]; ok {
-					isImportUsed[key] = true
-				}
+			// look for in options
+			for _, rpcOption := range field.FieldOptions {
+				optionName := formatOptionName(rpcOption.OptionName)
+				instr := instrParser.parse(optionName)
 
+				// look for option in imported files
+				for _, importPath := range pkgToImport[instr.pkgName] {
+					proto := protoInfo.ProtoFilesFromImport[importPath]
+					exist := existInProto(instr.instruction, proto)
+
+					if exist {
+						if _, ok := isImportUsed[importPath]; ok {
+							isImportUsed[importPath] = true
+						}
+					}
+				}
 			}
 		}
 	}
@@ -153,6 +168,16 @@ type instructionParser struct {
 // parseInstruction parse input string and return its package name
 // return empty string if passed input does not imported from another package
 func (p instructionParser) parse(input string) instructionInfo {
+	// NOTE: giant hack for buf.validate package
+	if strings.HasPrefix(input, "buf.validate") {
+		res := strings.TrimPrefix(input, "buf.validate.")
+		idx := strings.Index(res, ".")
+		return instructionInfo{
+			pkgName:     "buf.validate",
+			instruction: res[:idx],
+		}
+	}
+
 	idx := strings.LastIndex(input, ".")
 	if idx <= 0 {
 		return instructionInfo{
