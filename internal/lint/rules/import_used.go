@@ -45,10 +45,12 @@ func (i ImportUsed) Validate(protoInfo lint.ProtoInfo) []error {
 	// collects info about import in linted proto file
 	importInfo := make(map[lint.ImportPath]*parser.Import)
 	for _, imp := range protoInfo.Info.ProtoBody.Imports {
-		importPath := lint.ImportPath(strings.Trim(imp.Location, "\""))
+		importPath := lint.ConvertImportPath(imp.Location)
 		isImportUsed[importPath] = false
 		importInfo[importPath] = imp
 	}
+
+	// look for import used
 
 	for _, msg := range protoInfo.Info.ProtoBody.Messages {
 		for _, field := range msg.MessageBody.Fields {
