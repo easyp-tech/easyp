@@ -100,3 +100,14 @@ func formatOptionName(input string) string {
 
 	return option
 }
+
+// parsePackageName parse input string and return its package name
+// return empty string if passed input does not imported from another pacakge
+func parsePackageName(input string) string {
+	idx := strings.LastIndex(input, ".")
+	if idx <= 0 {
+		return ""
+	}
+
+	return input[:idx]
+}
