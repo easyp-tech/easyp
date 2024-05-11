@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
+	"os"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -106,10 +107,34 @@ func (c *Lint) readFileFromImport(ctx context.Context, disk fs.FS, importName st
 		return proto, nil
 	}
 
-	_ = f
-	_ = err
+	for _, dep := range c.deps {
+		modulePath, err := c.moduleReflect.GetModulePath(ctx, dep)
+		if err != nil {
+			return nil, fmt.Errorf("c.moduleReflect.GetModulePath: %w", err)
+		}
 
-	return nil, nil
+		fullPath := filepath.Join(modulePath, importName)
+		f, err = os.Open(fullPath)
+		if err != nil {
+			if os.IsNotExist(err) {
+				continue
+			}
+
+			return nil, fmt.Errorf("os.Open: %w", err)
+		}
+		defer func() {
+			_ = f.Close()
+		}()
+
+		proto, err := readProtoFile(f)
+		if err != nil {
+			return nil, fmt.Errorf("readProtoFile: %w", err)
+		}
+
+		return proto, nil
+	}
+
+	return nil, fmt.Errorf("file %s not found", importName)
 }
 
 func readProtoFile(f fs.File) (*unordered.Proto, error) {
