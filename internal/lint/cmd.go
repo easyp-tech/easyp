@@ -49,14 +49,15 @@ func (c *Lint) Lint(ctx context.Context, disk fs.FS) error {
 			return fmt.Errorf("readProtoFile: %w", err)
 		}
 
-		// TODO:  read all imported proto files
-		if err := c.readFilesFromImport(ctx, disk, proto); err != nil {
+		protoFilesFromImport, err := c.readFilesFromImport(ctx, disk, proto)
+		if err != nil {
 			return fmt.Errorf("readFilesFromImport: %w", err)
 		}
 
 		protoInfo := ProtoInfo{
-			Path: path,
-			Info: proto,
+			Path:                 path,
+			Info:                 proto,
+			ProtoFilesFromImport: protoFilesFromImport,
 		}
 
 		for i := range c.rules {
@@ -80,17 +81,21 @@ func (c *Lint) Lint(ctx context.Context, disk fs.FS) error {
 }
 
 // readFilesFromImport reads all files that imported from scanning file
-func (c *Lint) readFilesFromImport(ctx context.Context, disk fs.FS, scanProto *unordered.Proto) error {
+func (c *Lint) readFilesFromImport(
+	ctx context.Context, disk fs.FS, scanProto *unordered.Proto,
+) ([]*unordered.Proto, error) {
+	protoFilesFromImport := make([]*unordered.Proto, 0, len(scanProto.ProtoBody.Imports))
+
 	for _, imp := range scanProto.ProtoBody.Imports {
 		fileFromImport, err := c.readFileFromImport(ctx, disk, strings.Trim(imp.Location, "\""))
 		if err != nil {
-			return fmt.Errorf("readFileFromImport: %w", err)
+			return nil, fmt.Errorf("readFileFromImport: %w", err)
 		}
 
-		_ = fileFromImport
+		protoFilesFromImport = append(protoFilesFromImport, fileFromImport)
 	}
 
-	return nil
+	return protoFilesFromImport, nil
 }
 
 func (c *Lint) readFileFromImport(ctx context.Context, disk fs.FS, importName string) (*unordered.Proto, error) {
