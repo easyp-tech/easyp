@@ -54,15 +54,17 @@ func (c *Lint) Lint(ctx context.Context, disk fs.FS) error {
 			return fmt.Errorf("readFilesFromImport: %w", err)
 		}
 
+		protoInfo := ProtoInfo{
+			Path: path,
+			Info: proto,
+		}
+
 		for i := range c.rules {
 			if ctx.Err() != nil {
 				return ctx.Err()
 			}
 
-			results := c.rules[i].Validate(ProtoInfo{
-				Path: path,
-				Info: proto,
-			})
+			results := c.rules[i].Validate(protoInfo)
 			for _, result := range results {
 				res = append(res, fmt.Errorf("%s:%w", path, result))
 			}
