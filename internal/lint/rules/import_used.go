@@ -68,7 +68,7 @@ func (i ImportUsed) Validate(protoInfo lint.ProtoInfo) []error {
 
 			// look for in options
 			for _, rpcOption := range field.FieldOptions {
-				optionName := formatOptionName(rpcOption.OptionName)
+				optionName := rpcOption.OptionName
 				instr := instrParser.parse(optionName)
 
 				// look for option in imported files
@@ -121,7 +121,7 @@ func (i ImportUsed) Validate(protoInfo lint.ProtoInfo) []error {
 
 			// look for in options
 			for _, rpcOption := range rpc.Options {
-				optionName := formatOptionName(rpcOption.OptionName)
+				optionName := rpcOption.OptionName
 				instruction := instrParser.parse(optionName)
 
 				// look for option in imported files
@@ -168,38 +168,25 @@ type instructionParser struct {
 // parseInstruction parse input string and return its package name
 // return empty string if passed input does not imported from another package
 func (p instructionParser) parse(input string) instructionInfo {
-	// NOTE: giant hack for buf.validate package
-	if strings.HasPrefix(input, "buf.validate") {
-		res := strings.TrimPrefix(input, "buf.validate.")
-		idx := strings.Index(res, ".")
-		return instructionInfo{
-			pkgName:     "buf.validate",
-			instruction: res[:idx],
-		}
+	// check if there is brackets, and extract
+	// (google.api.http) -> google.api.http
+	// (buf.validate.field).string.uuid -> buf.validate.field
+	// or pkg.FieldType -> pkg.FieldType
+	iStart := strings.Index(input, "(")
+	iEnd := strings.Index(input, ")")
+	if iStart != -1 && iEnd != -1 {
+		input = input[iStart+1 : iEnd]
 	}
 
 	idx := strings.LastIndex(input, ".")
 	if idx <= 0 {
-		return instructionInfo{
-			pkgName:     p.sourcePkgName,
-			instruction: input,
-		}
+		return instructionInfo{instruction: input}
 	}
 
 	return instructionInfo{
 		pkgName:     input[:idx],
 		instruction: input[idx+1:],
 	}
-}
-
-// formatOptionName trims '(' and ')' from option
-// long story short: convert '(google.api.http)' to 'google.api.http'
-func formatOptionName(input string) string {
-	// removing the parenthesis from option
-	option := strings.ReplaceAll(input, "(", "")
-	option = strings.ReplaceAll(option, ")", "")
-
-	return option
 }
 
 // existInProto look for key in proto file
