@@ -2,6 +2,7 @@ package rules_test
 
 import (
 	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -22,6 +23,8 @@ const (
 	invalidsSessionProto     = `./../../../testdata/invalid_pkg/session.proto`
 	validAuthProto           = `./../../../testdata/api/session/v1/session.proto`
 	validAuthProto2          = `./../../../testdata/api/session/v1/events.proto`
+	importUsed               = "./../../../testdata/import_used/used.proto"
+	importNotUsed            = "./../../../testdata/import_used/not_used.proto"
 )
 
 func start(t testing.TB) (*require.Assertions, map[string]lint.ProtoInfo) {
@@ -40,6 +43,8 @@ func start(t testing.TB) (*require.Assertions, map[string]lint.ProtoInfo) {
 		invalidsSessionProto:     parseFile(t, assert, invalidsSessionProto),
 		validAuthProto:           parseFile(t, assert, validAuthProto),
 		validAuthProto2:          parseFile(t, assert, validAuthProto2),
+		importUsed:               parseFile(t, assert, importUsed),
+		importNotUsed:            parseFile(t, assert, importNotUsed),
 	}
 
 	return assert, protos
@@ -58,8 +63,32 @@ func parseFile(t testing.TB, assert *require.Assertions, path string) lint.Proto
 	res, err := unordered.InterpretProto(got)
 	assert.NoError(err)
 
+	protoFilesFromImport := make(map[lint.ImportPath]*unordered.Proto)
+
+	// read imports files
+	for _, imp := range res.ProtoBody.Imports {
+		importPath := lint.ConvertImportPath(imp.Location)
+		fullPath := filepath.Join("./../../../testdata", string(importPath))
+
+		f, err := os.Open(fullPath)
+		if err != nil {
+			continue
+		}
+
+		t.Cleanup(func() { assert.NoError(f.Close()) })
+
+		got, err := protoparser.Parse(f)
+		assert.NoError(err)
+
+		res, err := unordered.InterpretProto(got)
+		assert.NoError(err)
+
+		protoFilesFromImport[importPath] = res
+	}
+
 	return lint.ProtoInfo{
-		Path: path,
-		Info: res,
+		Path:                 path,
+		Info:                 res,
+		ProtoFilesFromImport: protoFilesFromImport,
 	}
 }

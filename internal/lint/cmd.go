@@ -92,7 +92,7 @@ func (c *Lint) readFilesFromImport(
 			return nil, fmt.Errorf("readFileFromImport: %w", err)
 		}
 
-		protoFilesFromImport[ImportPath(importPath)] = fileFromImport
+		protoFilesFromImport[importPath] = fileFromImport
 	}
 
 	return protoFilesFromImport, nil
