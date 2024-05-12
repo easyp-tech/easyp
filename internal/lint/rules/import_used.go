@@ -49,39 +49,29 @@ func (i ImportUsed) Validate(protoInfo lint.ProtoInfo) []error {
 		importInfo[importPath] = imp
 	}
 
+	checkImportUsed := func(key string) {
+		instruction := instrParser.parse(key)
+		for _, importPath := range pkgToImport[instruction.pkgName] {
+			proto := protoInfo.ProtoFilesFromImport[importPath]
+			exist := existInProto(instruction.instruction, proto)
+
+			if exist {
+				if _, ok := isImportUsed[importPath]; ok {
+					isImportUsed[importPath] = true
+				}
+			}
+		}
+	}
+
 	// look for import used
 
 	for _, msg := range protoInfo.Info.ProtoBody.Messages {
 		for _, field := range msg.MessageBody.Fields {
-			fieldType := field.Type
-			instruction := instrParser.parse(fieldType)
-			for _, importPath := range pkgToImport[instruction.pkgName] {
-				proto := protoInfo.ProtoFilesFromImport[importPath]
-				exist := existInProto(instruction.instruction, proto)
-
-				if exist {
-					if _, ok := isImportUsed[importPath]; ok {
-						isImportUsed[importPath] = true
-					}
-				}
-			}
+			checkImportUsed(field.Type)
 
 			// look for in options
 			for _, rpcOption := range field.FieldOptions {
-				optionName := rpcOption.OptionName
-				instr := instrParser.parse(optionName)
-
-				// look for option in imported files
-				for _, importPath := range pkgToImport[instr.pkgName] {
-					proto := protoInfo.ProtoFilesFromImport[importPath]
-					exist := existInProto(instr.instruction, proto)
-
-					if exist {
-						if _, ok := isImportUsed[importPath]; ok {
-							isImportUsed[importPath] = true
-						}
-					}
-				}
+				checkImportUsed(rpcOption.OptionName)
 			}
 		}
 	}
@@ -89,52 +79,13 @@ func (i ImportUsed) Validate(protoInfo lint.ProtoInfo) []error {
 	for _, service := range protoInfo.Info.ProtoBody.Services {
 		for _, rpc := range service.ServiceBody.RPCs {
 			// look for in request
-			{
-				requestType := rpc.RPCRequest.MessageType
-				instruction := instrParser.parse(requestType)
-				for _, importPath := range pkgToImport[instruction.pkgName] {
-					proto := protoInfo.ProtoFilesFromImport[importPath]
-					exist := existInProto(instruction.instruction, proto)
-
-					if exist {
-						if _, ok := isImportUsed[importPath]; ok {
-							isImportUsed[importPath] = true
-						}
-					}
-				}
-			}
+			checkImportUsed(rpc.RPCRequest.MessageType)
 			// look for in response
-			{
-				responseType := rpc.RPCResponse.MessageType
-				instruction := instrParser.parse(responseType)
-				for _, importPath := range pkgToImport[instruction.pkgName] {
-					proto := protoInfo.ProtoFilesFromImport[importPath]
-					exist := existInProto(instruction.instruction, proto)
-
-					if exist {
-						if _, ok := isImportUsed[importPath]; ok {
-							isImportUsed[importPath] = true
-						}
-					}
-				}
-			}
+			checkImportUsed(rpc.RPCResponse.MessageType)
 
 			// look for in options
 			for _, rpcOption := range rpc.Options {
-				optionName := rpcOption.OptionName
-				instruction := instrParser.parse(optionName)
-
-				// look for option in imported files
-				for _, importPath := range pkgToImport[instruction.pkgName] {
-					proto := protoInfo.ProtoFilesFromImport[importPath]
-					exist := existInProto(instruction.instruction, proto)
-
-					if exist {
-						if _, ok := isImportUsed[importPath]; ok {
-							isImportUsed[importPath] = true
-						}
-					}
-				}
+				checkImportUsed(rpcOption.OptionName)
 			}
 		}
 	}
