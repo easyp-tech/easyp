@@ -55,12 +55,6 @@ deps:
 
 By default, `easyp` use `$HOME/.easyp` dir to storage cache and downloaded modules, you could override it with `EASYPPATH` env var.
 
-### Roadmap
-
-* [x] Implement support for `buf.work.yaml` config
-* [ ] Calc hash sum, store it and compare (i.e go.sum)
-* [ ] Buf's blob support (for IDE plugins)
-
 ## Auto-completion
 
 ### zsh auto-completion
@@ -91,3 +85,9 @@ source <(easyp completion bash)
 ```bash
 source ~/.bashrc
 ```
+
+### Roadmap
+
+* [x] Implement support for `buf.work.yaml` config
+* [ ] Calc hash sum, store it and compare (i.e go.sum)
+* [ ] Code generation
