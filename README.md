@@ -6,6 +6,16 @@ For now, it's just linter and package manager, but... who knows, who knows...
 
 Just testing
 
+## Community
+
+### Official site
+
+https://easyp.tech/
+
+### Telegram chat
+
+https://t.me/easyptech
+
 ## Install
 
 ### Build from source
@@ -29,7 +39,7 @@ go install github.com/easyp-tech/easyp/cmd/easyp@latest
 ### Usage
 
 ```bash
-easyp lint -c example.easyp.yaml
+easyp lint -cfg example.easyp.yaml
 ```
 
 ## Package manager
@@ -39,7 +49,7 @@ easyp lint -c example.easyp.yaml
 To usage `easpy` as a package manager use `mod download` command:
 
 ```bash
-easyp -c example.easyp.yaml mod download
+easyp -cfg example.easyp.yaml mod download
 ```
 
 Your config file has to contains `deps` section which is list of repositories with proto files and its version (optional).
