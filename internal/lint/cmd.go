@@ -8,7 +8,6 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
-	"strings"
 
 	"github.com/yoheimuta/go-protoparser/v4"
 	"github.com/yoheimuta/go-protoparser/v4/interpret/unordered"
@@ -87,13 +86,13 @@ func (c *Lint) readFilesFromImport(
 	protoFilesFromImport := make(map[ImportPath]*unordered.Proto, len(scanProto.ProtoBody.Imports))
 
 	for _, imp := range scanProto.ProtoBody.Imports {
-		importPath := strings.Trim(imp.Location, "\"")
-		fileFromImport, err := c.readFileFromImport(ctx, disk, importPath)
+		importPath := ConvertImportPath(imp.Location)
+		fileFromImport, err := c.readFileFromImport(ctx, disk, string(importPath))
 		if err != nil {
 			return nil, fmt.Errorf("readFileFromImport: %w", err)
 		}
 
-		protoFilesFromImport[ImportPath(importPath)] = fileFromImport
+		protoFilesFromImport[importPath] = fileFromImport
 	}
 
 	return protoFilesFromImport, nil

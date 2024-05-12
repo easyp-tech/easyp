@@ -3,6 +3,7 @@ package lint
 
 import (
 	"log"
+	"strings"
 
 	"github.com/yoheimuta/go-protoparser/v4/interpret/unordered"
 
@@ -18,7 +19,12 @@ type Lint struct {
 	moduleReflect *modulereflect.ModuleReflect
 }
 
+// ImportPath type alias for path import in proto file
 type ImportPath string
+
+func ConvertImportPath(source string) ImportPath {
+	return ImportPath(strings.Trim(source, "\""))
+}
 
 // ProtoInfo is the information of a proto file.
 type ProtoInfo struct {
