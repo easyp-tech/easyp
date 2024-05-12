@@ -2,10 +2,6 @@ syntax = "proto3";
 
 package import_used;
 
-message MessageRequest {
+message MessageRequest {}
 
-}
-
-message MessageResponse {
-
-}
+message MessageResponse {}

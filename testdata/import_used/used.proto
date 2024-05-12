@@ -2,15 +2,28 @@ syntax = "proto3";
 
 import "import_used/messages.proto";
 import "import_used/enums.proto";
-import "import_used/another_package.proto";
+import "import_used/options.proto";
+import "import_used/types.proto";
+import "import_used/thrd_party/messages.proto";
+import "import_used/thrd_party/enums.proto";
+import "import_used/thrd_party/options.proto";
+import "import_used/thrd_party/types.proto";
 
 package import_used;
 
 message SomeMessage {
-  SomeEnum field = 1;
+  SomeEnum field_1 = 1;
+  import_used.thrd_party.SomeEnum field_2 = 2;
+  MessageAsType field_3 = 3;
+  import_used.thrd_party.MessageAsType field_4 = 4;
 }
 
 service TestService {
-  rpc TestRPC(MessageRequest) returns(MessageResponse) {}
-  rpc TestRPC2(another_project.MessageFromAnotherPackage) returns(MessageResponse) {}
+  rpc TestRPCSamePackage(MessageRequest) returns(MessageResponse) {
+    option (Option) = {};
+  }
+
+  rpc TestRPCThrdPartyPackage(import_used.thrd_party.MessageRequest) returns(import_used.thrd_party.MessageResponse) {
+    option (import_used.thrd_party.Option) = {};
+  }
 }

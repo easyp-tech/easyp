@@ -1,7 +1,0 @@
-syntax = "proto3";
-
-package another_project;
-
-message MessageFromAnotherPackage {
-
-}
