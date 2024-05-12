@@ -67,9 +67,10 @@ func (i ImportUsed) Validate(protoInfo lint.ProtoInfo) []error {
 
 	for _, msg := range protoInfo.Info.ProtoBody.Messages {
 		for _, field := range msg.MessageBody.Fields {
+			// look for field's type in imported files
 			checkImportUsed(field.Type)
 
-			// look for in options
+			// look for field's options in imported files
 			for _, rpcOption := range field.FieldOptions {
 				checkImportUsed(rpcOption.OptionName)
 			}
@@ -117,7 +118,7 @@ type instructionParser struct {
 }
 
 // parseInstruction parse input string and return its package name
-// return empty string if passed input does not imported from another package
+// if passed input does not have package -> return pkgName as package name source proto file
 func (p instructionParser) parse(input string) instructionInfo {
 	// check if there is brackets, and extract
 	// (google.api.http) -> google.api.http
@@ -157,6 +158,13 @@ func existInProto(key string, proto *unordered.Proto) bool {
 	// look for key in messages
 	for _, message := range proto.ProtoBody.Messages {
 		if message.MessageName == key {
+			return true
+		}
+	}
+
+	// look for key in enum
+	for _, enum := range proto.ProtoBody.Enums {
+		if enum.EnumName == key {
 			return true
 		}
 	}

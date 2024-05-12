@@ -1,9 +1,16 @@
 syntax = "proto3";
 
 import "import_used/messages.proto";
+import "import_used/enums.proto";
+import "import_used/another_package.proto";
 
 package import_used;
 
+message SomeMessage {
+  SomeEnum field = 1;
+}
+
 service TestService {
   rpc TestRPC(MessageRequest) returns(MessageResponse) {}
+  rpc TestRPC2(another_project.MessageFromAnotherPackage) returns(MessageResponse) {}
 }
