@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"os"
 
 	"github.com/goccy/go-yaml"
@@ -20,8 +21,13 @@ type Config struct {
 }
 
 func ReadConfig(ctx *cli.Context) (*Config, error) {
-	cfgFile, err := os.Open(ctx.String(FlagCfg.Name))
+	cfgFileName := ctx.String(FlagCfg.Name)
+	cfgFile, err := os.Open(cfgFileName)
 	if err != nil {
+		if os.IsNotExist(err) {
+			log.Fatalf("Error open config file: %s", cfgFileName)
+		}
+
 		return nil, fmt.Errorf("os.Open: %w", err)
 	}
 
