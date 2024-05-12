@@ -180,7 +180,10 @@ func (p instructionParser) parse(input string) instructionInfo {
 
 	idx := strings.LastIndex(input, ".")
 	if idx <= 0 {
-		return instructionInfo{instruction: input}
+		return instructionInfo{
+			pkgName:     p.sourcePkgName,
+			instruction: input,
+		}
 	}
 
 	return instructionInfo{
