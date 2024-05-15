@@ -24,7 +24,7 @@ func (s *Storage) Install(
 	slog.Info(
 		"Install package",
 		"package", module.Name,
-		"version", module.Version,
+		"version", revision.Version,
 		"commit", revision.CommitHash,
 	)
 
