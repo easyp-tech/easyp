@@ -17,7 +17,7 @@ func (c *ServicePascalCase) Validate(protoInfo lint.ProtoInfo) []error {
 	pascalCase := regexp.MustCompile("^[A-Z][a-z]+([A-Z]|[a-z]+)*$")
 	for _, service := range protoInfo.Info.ProtoBody.Services {
 		if !pascalCase.MatchString(service.ServiceName) {
-			res = append(res, BuildError(service.Meta.Pos, service.ServiceName, lint.ErrServicePascalCase))
+			res = append(res, BuildError(service.Meta.Pos, service.ServiceName, ErrServicePascalCase))
 		}
 	}
 

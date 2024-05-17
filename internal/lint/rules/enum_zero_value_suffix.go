@@ -19,7 +19,7 @@ func (e EnumZeroValueSuffix) Validate(protoInfo lint.ProtoInfo) []error {
 	for _, enum := range protoInfo.Info.ProtoBody.Enums {
 		zeroValue := enum.EnumBody.EnumFields[0]
 		if zeroValue.Ident != pascalToUpperSnake(enum.EnumName)+"_"+e.Suffix {
-			res = append(res, BuildError(zeroValue.Meta.Pos, zeroValue.Ident, lint.ErrEnumZeroValueSuffix))
+			res = append(res, BuildError(zeroValue.Meta.Pos, zeroValue.Ident, ErrEnumZeroValueSuffix))
 		}
 	}
 

@@ -4,7 +4,6 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/easyp-tech/easyp/internal/lint"
 	"github.com/easyp-tech/easyp/internal/lint/rules"
 )
 
@@ -17,7 +16,7 @@ func TestEnumValueUpperSnakeCase_Validate(t *testing.T) {
 	}{
 		"check_enum_value_upper_snake_case_is_invalid": {
 			fileName: invalidAuthProto,
-			wantErr:  lint.ErrEnumValueUpperSnakeCase,
+			wantErr:  rules.ErrEnumValueUpperSnakeCase,
 		},
 		"check_enum_value_upper_snake_case_is_valid": {
 			fileName: validAuthProto,

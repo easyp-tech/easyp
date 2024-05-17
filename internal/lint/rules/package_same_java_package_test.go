@@ -4,7 +4,6 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/easyp-tech/easyp/internal/lint"
 	"github.com/easyp-tech/easyp/internal/lint/rules"
 )
 
@@ -17,7 +16,7 @@ func TestPackageSameJavaPackage_Validate(t *testing.T) {
 	}{
 		"valid": {
 			fileNames: []string{invalidAuthProto5, invalidAuthProto6},
-			wantErr:   lint.ErrPackageSameJavaPackage,
+			wantErr:   rules.ErrPackageSameJavaPackage,
 		},
 		"invalid": {
 			fileNames: []string{validAuthProto, validAuthProto2},

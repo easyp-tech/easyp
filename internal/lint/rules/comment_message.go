@@ -15,7 +15,7 @@ func (c *CommentMessage) Validate(protoInfo lint.ProtoInfo) []error {
 
 	for _, message := range protoInfo.Info.ProtoBody.Messages {
 		if len(message.Comments) == 0 {
-			res = append(res, BuildError(message.Meta.Pos, message.MessageName, lint.ErrMessageCommentIsEmpty))
+			res = append(res, BuildError(message.Meta.Pos, message.MessageName, ErrMessageCommentIsEmpty))
 		}
 	}
 

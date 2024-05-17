@@ -4,7 +4,6 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/easyp-tech/easyp/internal/lint"
 	"github.com/easyp-tech/easyp/internal/lint/rules"
 )
 
@@ -17,7 +16,7 @@ func TestPackageSameSwiftPrefix_Validate(t *testing.T) {
 	}{
 		"valid": {
 			fileNames: []string{invalidAuthProto5, invalidAuthProto6},
-			wantErr:   lint.ErrPackageSameSwiftPrefix,
+			wantErr:   rules.ErrPackageSameSwiftPrefix,
 		},
 		"invalid": {
 			fileNames: []string{validAuthProto, validAuthProto2},

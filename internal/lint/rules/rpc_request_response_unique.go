@@ -22,12 +22,12 @@ func (R RPCRequestResponseUnique) Validate(protoInfo lint.ProtoInfo) []error {
 			if !lo.Contains(messages, rpc.RPCRequest.MessageType) {
 				messages = append(messages, rpc.RPCRequest.MessageType)
 			} else {
-				res = append(res, BuildError(rpc.Meta.Pos, rpc.RPCRequest.MessageType, lint.ErrRPCRequestResponseUnique))
+				res = append(res, BuildError(rpc.Meta.Pos, rpc.RPCRequest.MessageType, ErrRPCRequestResponseUnique))
 			}
 			if !lo.Contains(messages, rpc.RPCResponse.MessageType) {
 				messages = append(messages, rpc.RPCResponse.MessageType)
 			} else {
-				res = append(res, BuildError(rpc.Meta.Pos, rpc.RPCResponse.MessageType, lint.ErrRPCRequestResponseUnique))
+				res = append(res, BuildError(rpc.Meta.Pos, rpc.RPCResponse.MessageType, ErrRPCRequestResponseUnique))
 			}
 		}
 	}

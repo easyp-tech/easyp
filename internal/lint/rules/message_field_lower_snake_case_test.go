@@ -4,7 +4,6 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/easyp-tech/easyp/internal/lint"
 	"github.com/easyp-tech/easyp/internal/lint/rules"
 )
 
@@ -17,7 +16,7 @@ func TestMessageFieldLowerSnakeCase_Validate(t *testing.T) {
 	}{
 		"check_message_field_lower_snake_case_is_invalid": {
 			fileName: invalidAuthProto,
-			wantErr:  lint.ErrMessageFieldLowerSnakeCase,
+			wantErr:  rules.ErrMessageFieldLowerSnakeCase,
 		},
 		"check_message_field_lower_snake_case_is_valid": {
 			fileName: validAuthProto,

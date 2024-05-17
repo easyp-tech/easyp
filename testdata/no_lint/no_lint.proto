@@ -1,0 +1,7 @@
+syntax = "proto3";
+
+package no_lint;
+
+// dafdsf
+// buf:lint:ignore ENUM_VALUE_PREFIX
+message some_message {}

@@ -93,7 +93,7 @@ func (i ImportUsed) Validate(protoInfo lint.ProtoInfo) []error {
 
 	for imp, used := range isImportUsed {
 		if !used {
-			res = append(res, BuildError(importInfo[imp].Meta.Pos, importInfo[imp].Location, lint.ErrImportIsNotUsed))
+			res = append(res, BuildError(importInfo[imp].Meta.Pos, importInfo[imp].Location, ErrImportIsNotUsed))
 		}
 	}
 
@@ -106,8 +106,9 @@ func (i ImportUsed) Validate(protoInfo lint.ProtoInfo) []error {
 
 // instructionInfo collects info about instruction in proto file
 // e.g `google.api.http`:
-// 		`google.api` - package name
-// 		'http' - instruction name
+//
+//	`google.api` - package name
+//	'http' - instruction name
 type instructionInfo struct {
 	pkgName     string
 	instruction string

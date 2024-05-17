@@ -4,7 +4,6 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/easyp-tech/easyp/internal/lint"
 	"github.com/easyp-tech/easyp/internal/lint/rules"
 )
 
@@ -17,7 +16,7 @@ func TestPackageSameCSharpNamespace_Validate(t *testing.T) {
 	}{
 		"invalid": {
 			fileNames: []string{invalidAuthProto5, invalidAuthProto6},
-			wantErr:   lint.ErrPackageSameCSharpNamespace,
+			wantErr:   rules.ErrPackageSameCSharpNamespace,
 		},
 		"valid": {
 			fileNames: []string{validAuthProto, validAuthProto2},

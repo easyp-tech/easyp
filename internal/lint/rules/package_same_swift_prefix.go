@@ -37,7 +37,7 @@ func (p *PackageSameSwiftPrefix) Validate(protoInfo lint.ProtoInfo) []error {
 			}
 
 			if p.cache[packageName] != option.Constant {
-				res = append(res, BuildError(option.Meta.Pos, option.Constant, lint.ErrPackageSameSwiftPrefix))
+				res = append(res, BuildError(option.Meta.Pos, option.Constant, ErrPackageSameSwiftPrefix))
 			}
 		}
 	}

@@ -37,7 +37,7 @@ func (p *PackageSameCSharpNamespace) Validate(protoInfo lint.ProtoInfo) []error 
 			}
 
 			if p.cache[packageName] != option.Constant {
-				res = append(res, BuildError(option.Meta.Pos, option.Constant, lint.ErrPackageSameCSharpNamespace))
+				res = append(res, BuildError(option.Meta.Pos, option.Constant, ErrPackageSameCSharpNamespace))
 			}
 		}
 	}

@@ -4,7 +4,6 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/easyp-tech/easyp/internal/lint"
 	"github.com/easyp-tech/easyp/internal/lint/rules"
 )
 
@@ -17,7 +16,7 @@ func TestPackageSameDirectory_Validate(t *testing.T) {
 	}{
 		"check_package_same_directory_is_invalid": {
 			fileNames: []string{invalidAuthProto2, invalidAuthProto4},
-			wantErr:   lint.ErrPackageSameDirectory,
+			wantErr:   rules.ErrPackageSameDirectory,
 		},
 		"check_package_package_same_is_valid": {
 			fileNames: []string{validAuthProto, validAuthProto2},

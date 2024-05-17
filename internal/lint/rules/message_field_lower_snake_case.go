@@ -18,7 +18,7 @@ func (c *FieldLowerSnakeCase) Validate(protoInfo lint.ProtoInfo) []error {
 	for _, message := range protoInfo.Info.ProtoBody.Messages {
 		for _, field := range message.MessageBody.Fields {
 			if !lowerSnakeCase.MatchString(field.FieldName) {
-				res = append(res, BuildError(field.Meta.Pos, field.FieldName, lint.ErrMessageFieldLowerSnakeCase))
+				res = append(res, BuildError(field.Meta.Pos, field.FieldName, ErrMessageFieldLowerSnakeCase))
 			}
 		}
 	}

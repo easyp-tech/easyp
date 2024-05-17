@@ -3,6 +3,7 @@ package rules
 import (
 	"fmt"
 
+	"github.com/yoheimuta/go-protoparser/v4/parser"
 	"github.com/yoheimuta/go-protoparser/v4/parser/meta"
 )
 
@@ -12,6 +13,7 @@ var _ error = (*Error)(nil)
 type Error struct {
 	position   meta.Position
 	sourceName string
+	comments   []parser.Comment
 	err        error
 }
 

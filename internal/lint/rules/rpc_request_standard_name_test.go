@@ -4,7 +4,6 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/easyp-tech/easyp/internal/lint"
 	"github.com/easyp-tech/easyp/internal/lint/rules"
 )
 
@@ -17,7 +16,7 @@ func TestRPCRequestStandardName_Validate(t *testing.T) {
 	}{
 		"invalid": {
 			fileName: invalidAuthProto,
-			wantErr:  lint.ErrRPCRequestStandardName,
+			wantErr:  rules.ErrRPCRequestStandardName,
 		},
 		"valid": {
 			fileName: validAuthProto,

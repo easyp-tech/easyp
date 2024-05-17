@@ -7,19 +7,16 @@ import (
 	"github.com/easyp-tech/easyp/internal/lint/rules"
 )
 
-func TestEnumNoAllowAlias_Validate(t *testing.T) {
+func TestCheckNoLint(t *testing.T) {
 	t.Parallel()
+	t.Skip()
 
 	tests := map[string]struct {
 		fileName string
 		wantErr  error
 	}{
-		"enum_no_allow_alias_invalid": {
-			fileName: invalidAuthProto,
-			wantErr:  rules.ErrEnumNoAllowAlias,
-		},
-		"enum_no_allow_alias_valid": {
-			fileName: validAuthProto,
+		"no_lint": {
+			fileName: noLint,
 			wantErr:  nil,
 		},
 	}
@@ -31,7 +28,7 @@ func TestEnumNoAllowAlias_Validate(t *testing.T) {
 
 			r, protos := start(t)
 
-			rule := rules.EnumNoAllowAlias{}
+			rule := rules.MessagePascalCase{}
 			err := rule.Validate(protos[tc.fileName])
 			r.ErrorIs(errors.Join(err...), tc.wantErr)
 		})

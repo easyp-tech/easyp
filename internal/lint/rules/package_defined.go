@@ -16,7 +16,7 @@ func (p *PackageDefined) Validate(protoInfo lint.ProtoInfo) []error {
 	var res []error
 
 	if len(protoInfo.Info.ProtoBody.Packages) == 0 {
-		res = append(res, BuildError(meta.Position{}, protoInfo.Path, lint.ErrPackageIsNotDefined))
+		res = append(res, BuildError(meta.Position{}, protoInfo.Path, ErrPackageIsNotDefined))
 	}
 
 	if len(res) == 0 {

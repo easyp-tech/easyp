@@ -17,7 +17,7 @@ func (c *PackageLowerSnakeCase) Validate(protoInfo lint.ProtoInfo) []error {
 	lowerSnakeCase := regexp.MustCompile("^[a-z]+([_|[.][a-z0-9]+)*$")
 	for _, pack := range protoInfo.Info.ProtoBody.Packages {
 		if !lowerSnakeCase.MatchString(pack.Name) {
-			res = append(res, BuildError(pack.Meta.Pos, pack.Name, lint.ErrPackageLowerSnakeCase))
+			res = append(res, BuildError(pack.Meta.Pos, pack.Name, ErrPackageLowerSnakeCase))
 		}
 	}
 

@@ -17,7 +17,7 @@ func (R RPCNoClientStreaming) Validate(protoInfo lint.ProtoInfo) []error {
 	for _, service := range protoInfo.Info.ProtoBody.Services {
 		for _, rpc := range service.ServiceBody.RPCs {
 			if rpc.RPCRequest.IsStream {
-				res = append(res, BuildError(rpc.Meta.Pos, rpc.RPCName, lint.ErrRPCClientStreaming))
+				res = append(res, BuildError(rpc.Meta.Pos, rpc.RPCName, ErrRPCClientStreaming))
 			}
 		}
 	}

@@ -17,7 +17,7 @@ func (R RPCRequestStandardName) Validate(protoInfo lint.ProtoInfo) []error {
 	for _, service := range protoInfo.Info.ProtoBody.Services {
 		for _, rpc := range service.ServiceBody.RPCs {
 			if rpc.RPCRequest.MessageType != rpc.RPCName+"Request" && rpc.RPCRequest.MessageType != service.ServiceName+rpc.RPCName+"Request" {
-				res = append(res, BuildError(rpc.Meta.Pos, rpc.RPCRequest.MessageType, lint.ErrRPCRequestStandardName))
+				res = append(res, BuildError(rpc.Meta.Pos, rpc.RPCRequest.MessageType, ErrRPCRequestStandardName))
 			}
 		}
 	}

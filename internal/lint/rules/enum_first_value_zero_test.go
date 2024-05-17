@@ -4,7 +4,6 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/easyp-tech/easyp/internal/lint"
 	"github.com/easyp-tech/easyp/internal/lint/rules"
 )
 
@@ -17,7 +16,7 @@ func TestEnumFirstValueZero_Validate(t *testing.T) {
 	}{
 		"check_enum_first_value_zero_is_invalid": {
 			fileName: invalidAuthProto,
-			wantErr:  lint.ErrEnumFirstValueZero,
+			wantErr:  rules.ErrEnumFirstValueZero,
 		},
 		"check_enum_first_value_zero_is_valid": {
 			fileName: validAuthProto,

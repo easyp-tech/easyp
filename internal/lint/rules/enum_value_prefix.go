@@ -22,7 +22,7 @@ func (e EnumValuePrefix) Validate(protoInfo lint.ProtoInfo) []error {
 
 		for _, enumValue := range enum.EnumBody.EnumFields {
 			if !strings.HasPrefix(enumValue.Ident, prefix) {
-				res = append(res, BuildError(enumValue.Meta.Pos, enumValue.Ident, lint.ErrEnumValuePrefix))
+				res = append(res, BuildError(enumValue.Meta.Pos, enumValue.Ident, ErrEnumValuePrefix))
 			}
 		}
 	}

@@ -27,7 +27,7 @@ func (f FileLowerSnakeCase) Validate(protoInfo lint.ProtoInfo) []error {
 			Offset:   0,
 			Line:     0,
 			Column:   0,
-		}, protoInfo.Path, lint.ErrFileLowerSnakeCase))
+		}, protoInfo.Path, ErrFileLowerSnakeCase))
 	}
 
 	if len(res) == 0 {
