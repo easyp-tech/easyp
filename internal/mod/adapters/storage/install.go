@@ -46,7 +46,6 @@ func (s *Storage) Install(
 
 	if err := extract.Archive(context.TODO(), fp, installedDirPath, renamer); err != nil {
 		return "", fmt.Errorf("extract.Archive: %w", err)
-
 	}
 
 	installedPackageHash, err := dirhash.HashDir(installedDirPath, "", dirhash.DefaultHash)

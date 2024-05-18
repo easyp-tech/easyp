@@ -26,6 +26,7 @@ var (
 	}
 )
 
+// Command implements Handler.
 func (i Init) Command() *cli.Command {
 	return &cli.Command{
 		Name:        "init",

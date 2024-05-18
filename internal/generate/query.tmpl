@@ -1,0 +1,17 @@
+{{ .Compiler }} \
+{{- range .Imports }}
+  -I {{ . }} \
+{{- end }}
+{{- range .Plugins }}
+  {{- $first := true -}}
+  --{{ .Name }}_out={{ .Out }} \
+  --{{ .Name }}_opt={{- range $k, $v := .Options }}
+    {{- if $first -}}
+      {{- $first = false -}}
+    {{- else -}}
+      ,
+    {{- end -}}
+    {{ $k }}={{ $v }}
+  {{- end }} \
+{{- end }}
+$(find {{ .Dir }} -name "*.proto")
