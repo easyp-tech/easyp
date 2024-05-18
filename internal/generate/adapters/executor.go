@@ -21,10 +21,7 @@ func (e RunError) Error() string {
 	return fmt.Sprintf("Command: %s; Err: %v; Stderr: %s", e.Command, e.Err, e.Stderr)
 }
 
-// RunCmd shell command. Running git mod, for example.
-// inspired by cmd/go/internal/modfetch/codehost/codehost.go:318:Run from go mod
-// But go mod function looks too complicated
-// so for PoC/MVP I decided to implement simpler solution
+// RunCmd shell command.
 func RunCmd(ctx context.Context, dir string, command string, commandParams ...string) (string, error) {
 	var stderr bytes.Buffer
 	var stdout bytes.Buffer
