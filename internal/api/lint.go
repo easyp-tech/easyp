@@ -78,7 +78,7 @@ func (l Lint) Action(ctx *cli.Context) error {
 	res := c.Lint(ctx.Context, dirFS)
 	if splitErr, ok := res.(interface{ Unwrap() []error }); ok {
 
-		if err := printLintErrors(os.Stderr, splitErr.Unwrap()); err != nil {
+		if err := printLintErrors(os.Stdout, splitErr.Unwrap()); err != nil {
 			return fmt.Errorf("printLintErrors: %w", err)
 		}
 
