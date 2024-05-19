@@ -1,12 +1,10 @@
 package generate
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"io/fs"
 	"path/filepath"
-	"text/template"
 
 	"github.com/easyp-tech/easyp/internal/generate/adapters"
 )
@@ -14,12 +12,11 @@ import (
 const defaultCompiler = "protoc"
 
 // Generate generates files.
-func (g *Generator) Generate(ctx context.Context, directory string, storage fs.FS) error {
+func (g *Generator) Generate(ctx context.Context, root, directory string) error {
 	q := Query{
 		Compiler: defaultCompiler,
-		Dir:      ".",
 		Imports: []string{
-			".",
+			root,
 		},
 		Plugins: g.plugins,
 	}
@@ -33,7 +30,7 @@ func (g *Generator) Generate(ctx context.Context, directory string, storage fs.F
 		q.Imports = append(q.Imports, modulePaths)
 	}
 
-	err := fs.WalkDir(storage, ".", func(path string, d fs.DirEntry, err error) error {
+	err := filepath.WalkDir(directory, func(path string, d fs.DirEntry, err error) error {
 		switch {
 		case err != nil:
 			return err
@@ -53,20 +50,7 @@ func (g *Generator) Generate(ctx context.Context, directory string, storage fs.F
 		return fmt.Errorf("fs.WalkDir: %w", err)
 	}
 
-	tmpl, err := template.New("query").Parse(queryTmpl)
-	if err != nil {
-		return fmt.Errorf("template.New: %w", err)
-	}
-
-	buffer := &bytes.Buffer{}
-	err = tmpl.Execute(buffer, q)
-	if err != nil {
-		return fmt.Errorf("tmpl.Execute: %w", err)
-	}
-
-	cmd := buffer.String()
-
-	_, err = adapters.RunCmd(ctx, directory, cmd)
+	_, err = adapters.RunCmd(ctx, root, q.build())
 	if err != nil {
 		return fmt.Errorf("adapters.RunCmd: %w", err)
 	}

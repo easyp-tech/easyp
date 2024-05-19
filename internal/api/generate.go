@@ -2,7 +2,6 @@ package api
 
 import (
 	"fmt"
-	"os"
 
 	"github.com/samber/lo"
 	"github.com/urfave/cli/v2"
@@ -71,7 +70,7 @@ func (g Generate) Action(ctx *cli.Context) error {
 
 	dir := ctx.String(flagGenerateDirectoryPath.Name)
 
-	err = generator.Generate(ctx.Context, dir, os.DirFS(dir))
+	err = generator.Generate(ctx.Context, ".", dir)
 	if err != nil {
 		return fmt.Errorf("generator.Generate: %w", err)
 	}
