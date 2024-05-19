@@ -15,17 +15,13 @@ func TestImportUsed_Validate(t *testing.T) {
 		fileName string
 		wantErr  error
 	}{
-		"invalid": {
-			fileName: invalidAuthProto,
-			wantErr:  lint.ErrImportIsNotUsed,
-		},
-		"invalid_partial_import": {
-			fileName: invalidsSessionProto,
-			wantErr:  lint.ErrImportIsNotUsed,
-		},
-		"valid": {
-			fileName: validAuthProto,
+		"all imports are used": {
+			fileName: importUsed,
 			wantErr:  nil,
+		},
+		"not used imports": {
+			fileName: importNotUsed,
+			wantErr:  lint.ErrImportIsNotUsed,
 		},
 	}
 

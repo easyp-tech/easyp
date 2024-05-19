@@ -1,5 +1,9 @@
 package storage
 
+import (
+	"github.com/easyp-tech/easyp/internal/mod/models"
+)
+
 const (
 	// root cache dir
 	cacheDir = "cache"
@@ -9,14 +13,23 @@ const (
 	installedDir = "mod"
 )
 
-// Storage implements workflows with directories
-type Storage struct {
-	rootDir string
-}
+type (
+	// LockFile should implement adapter for lock file workflow
+	LockFile interface {
+		Read(moduleName string) (models.LockFileInfo, error)
+	}
 
-func New(rootDir string) *Storage {
+	// Storage implements workflows with directories
+	Storage struct {
+		rootDir  string
+		lockFile LockFile
+	}
+)
+
+func New(rootDir string, lockFile LockFile) *Storage {
 	return &Storage{
-		rootDir: rootDir,
+		rootDir:  rootDir,
+		lockFile: lockFile,
 	}
 }
 

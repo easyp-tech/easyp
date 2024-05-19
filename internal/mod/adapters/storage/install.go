@@ -3,36 +3,57 @@ package storage
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"os"
-	"path/filepath"
 	"strings"
 
 	"github.com/codeclysm/extract/v3"
+	"golang.org/x/mod/sumdb/dirhash"
 
 	"github.com/easyp-tech/easyp/internal/mod/models"
 )
 
 // Install package from archive
-func (s *Storage) Install(archivePath string, moduleConfig models.ModuleConfig) error {
-	installedDirPath := filepath.Join(s.rootDir, installedDir)
+// and calculateds hash of installed package
+func (s *Storage) Install(
+	cacheDownloadPaths models.CacheDownloadPaths,
+	module models.Module,
+	revision models.Revision,
+	moduleConfig models.ModuleConfig,
+) (models.ModuleHash, error) {
+	slog.Info(
+		"Install package",
+		"package", module.Name,
+		"version", revision.Version,
+		"commit", revision.CommitHash,
+	)
+
+	installedDirPath := s.GetInstallDir(module.Name, revision.Version)
 
 	if err := os.MkdirAll(installedDirPath, dirPerm); err != nil {
-		return fmt.Errorf("os.MkdirAll: %w", err)
+		return "", fmt.Errorf("os.MkdirAll: %w", err)
 	}
 
-	fp, err := os.Open(archivePath)
+	fp, err := os.Open(cacheDownloadPaths.ArchiveFile)
 	if err != nil {
-		return fmt.Errorf("os.Open: %w", err)
+		return "", fmt.Errorf("os.Open: %w", err)
 	}
 	defer func() { _ = fp.Close() }()
 
 	renamer := getRenamer(moduleConfig)
 
+	slog.Debug("Starting extract", "installedDirPath", installedDirPath)
+
 	if err := extract.Archive(context.TODO(), fp, installedDirPath, renamer); err != nil {
-		return fmt.Errorf("extract.Archive: %w", err)
+		return "", fmt.Errorf("extract.Archive: %w", err)
 	}
 
-	return nil
+	installedPackageHash, err := dirhash.HashDir(installedDirPath, "", dirhash.DefaultHash)
+	if err != nil {
+		return "", fmt.Errorf("dirhash.HashDir: %w", err)
+	}
+
+	return models.ModuleHash(installedPackageHash), nil
 }
 
 // getRenamer return renamer function to convert result files path

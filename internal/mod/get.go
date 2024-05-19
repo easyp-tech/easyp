@@ -2,6 +2,7 @@ package mod
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 
@@ -10,26 +11,46 @@ import (
 )
 
 // Get download package.
-// module: string format: origin@version: github.com/company/repository@v1.2.3
-// if version is absent use the latest
-func (c *Mod) Get(ctx context.Context, dependency string) error {
-	slog.Info("Install", slog.String("package", dependency))
+// requestedDependency string format: origin@version: github.com/company/repository@v1.2.3
+// if version is absent use the latest commit
+func (c *Mod) Get(ctx context.Context, requestedDependency string) error {
+	module := models.NewModule(requestedDependency)
 
-	module := models.NewModule(dependency)
-
-	cacheDir, err := c.storage.CreateCacheDir(module.Name)
+	isInstalled, err := c.storage.IsModuleInstalled(module)
 	if err != nil {
-		return fmt.Errorf("c.storage.CreateCacheDir: %w", err)
+		return fmt.Errorf("c.isModuleInstalled: %w", err)
 	}
 
-	repository, err := git.New(ctx, module.Name, cacheDir)
+	if isInstalled {
+		slog.Info("Module is installed", "name", module.Name, "version", module.Version)
+		return nil
+	}
+
+	cacheRepositoryDir, err := c.storage.CreateCacheRepositoryDir(module.Name)
+	if err != nil {
+		return fmt.Errorf("c.storage.CreateCacheRepositoryDir: %w", err)
+	}
+
+	// TODO: use factory (git, svn etc)
+	repository, err := git.New(ctx, module.Name, cacheRepositoryDir)
 	if err != nil {
 		return fmt.Errorf("git.New: %w", err)
 	}
 
-	revision, err := repository.ReadRevision(ctx, module.Version)
+	versionToInstall, err := c.getVersionToInstall(module)
+	if err != nil {
+		return fmt.Errorf("c.getVersionToInstall: %w", err)
+	}
+
+	revision, err := repository.ReadRevision(ctx, versionToInstall)
 	if err != nil {
 		return fmt.Errorf("repository.ReadRevision: %w", err)
+	}
+
+	cacheDownloadPaths := c.storage.GetCacheDownloadPaths(module, revision)
+
+	if err := c.storage.CreateCacheDownloadDir(cacheDownloadPaths); err != nil {
+		return fmt.Errorf("c.storage.CreateCacheDownloadDir: %w", err)
 	}
 
 	if err := repository.Fetch(ctx, revision); err != nil {
@@ -41,10 +62,6 @@ func (c *Mod) Get(ctx context.Context, dependency string) error {
 		return fmt.Errorf("c.moduleConfig.Read: %w", err)
 	}
 
-	// TODO: lock file: cmd/go/internal/lockedfile/mutex.go:46
-	// TODO: read buf.work.yaml to determine dir with proto files and pass storage to GetFiles
-
-	// TODO: check that buf.yaml,buf.lock,LICENSE files are disappeared after read buf.work config
 	files, err := repository.GetFiles(ctx, revision, moduleConfig.Directories...)
 	if err != nil {
 		return fmt.Errorf("repository.GetFiles: %w", err)
@@ -52,23 +69,35 @@ func (c *Mod) Get(ctx context.Context, dependency string) error {
 
 	protoDirs := filterOnlyProtoDirs(files)
 
-	cacheDownloadPath, err := c.storage.CreateCacheDownloadDir(module)
-	if err != nil {
-		return fmt.Errorf("c.storage.CreateCacheDownloadDir: %w", err)
-	}
-
-	downloadArchivePath := c.storage.GetDownloadArchivePath(cacheDownloadPath, revision)
-
-	// TODO: check how buf index deps (depends on version in config file?)
-	if err := repository.Archive(ctx, revision, downloadArchivePath, protoDirs...); err != nil {
+	if err := repository.Archive(ctx, revision, cacheDownloadPaths, protoDirs...); err != nil {
 		return fmt.Errorf("repository.Archive: %w", err)
 	}
 
-	// TODO: save archive checksum like go mod: v1.0.1.ziphash
-	// TODO: pass to Install config from buf
-	if err := c.storage.Install(downloadArchivePath, moduleConfig); err != nil {
+	moduleHash, err := c.storage.Install(cacheDownloadPaths, module, revision, moduleConfig)
+	if err != nil {
 		return fmt.Errorf("c.storage.Install: %w", err)
 	}
 
+	slog.Debug("HASH", "hash", moduleHash)
+
+	if err := c.lockFile.Write(module.Name, revision.Version, moduleHash); err != nil {
+		return fmt.Errorf("c.lockFile.Write: %w", err)
+	}
+
 	return nil
+}
+
+// getVersionToInstall return version which has to be installed
+// version from lockfile is more important than version from easyp config
+func (c *Mod) getVersionToInstall(module models.Module) (models.RequestedVersion, error) {
+	lockFileInfo, err := c.lockFile.Read(module.Name)
+	if err == nil {
+		return models.RequestedVersion(lockFileInfo.Version), nil
+	}
+
+	if !errors.Is(err, models.ErrModuleNotFoundInLockFile) {
+		return "", fmt.Errorf("c.lockFile.Read: %w", err)
+	}
+
+	return module.Version, nil
 }

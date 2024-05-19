@@ -20,6 +20,13 @@ type gitRepo struct {
 	cacheDir string
 }
 
+const (
+	// for omitted package version. HEAD is git key word.
+	gitLatestVersionRef = "HEAD"
+	// tag prefix on output of ls-remote command
+	gitRefsTagPrefix = "refs/tags/"
+)
+
 // Some links from go mod:
 // cmd/go/internal/modfetch/codehost/git.go:65 - create work dir
 // cmd/go/internal/modfetch/codehost/git.go:137 - git's struct

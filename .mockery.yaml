@@ -1,0 +1,5 @@
+with-expecter: true
+quiet: false
+keeptree: false
+inpackage: false
+disable-version-string: true

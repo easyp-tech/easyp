@@ -1,0 +1,7 @@
+syntax = "proto3";
+
+package import_used;
+
+enum SomeEnum {
+  SOME_ENUM_VALUE = 0;
+}

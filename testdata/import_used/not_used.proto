@@ -1,0 +1,11 @@
+syntax = "proto3";
+
+import "import_used/messages.proto";
+
+package import_used;
+
+message Msg {}
+
+service TestService {
+  rpc TestRPC(Msg) returns(Msg) {}
+}

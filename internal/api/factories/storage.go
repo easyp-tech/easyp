@@ -6,8 +6,6 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
-
-	"github.com/easyp-tech/easyp/internal/mod/adapters/storage"
 )
 
 var (
@@ -18,16 +16,6 @@ const (
 	envEasypPath     = "EASYPPATH"
 	defaultEasypPath = ".easyp"
 )
-
-func NewStorage() (*storage.Storage, error) {
-	easypPath, err := getEasypPath()
-	if err != nil {
-		return nil, fmt.Errorf("getEasypPath: %w", err)
-	}
-
-	store := storage.New(easypPath)
-	return store, nil
-}
 
 // getEasypPath return path for cache, modules storage
 func getEasypPath() (string, error) {
