@@ -38,6 +38,7 @@ func main() {
 			api.Mod{},
 			api.Completion{},
 			api.Init{},
+			api.Generate{},
 		),
 		Flags: []cli.Flag{
 			config.FlagDebug,
