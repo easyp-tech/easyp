@@ -30,6 +30,7 @@ type (
 		Dir      string
 		Imports  []string
 		Plugins  []Plugin
+		Files    []string
 	}
 )
 

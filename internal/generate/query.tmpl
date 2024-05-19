@@ -14,4 +14,6 @@
     {{ $k }}={{ $v }}
   {{- end }} \
 {{- end }}
-$(find {{ .Dir }} -name "*.proto")
+{{- range .Files }}
+  {{ . }} \
+{{- end }}

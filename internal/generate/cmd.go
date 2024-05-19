@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"io/fs"
+	"path/filepath"
 	"text/template"
 
 	"github.com/easyp-tech/easyp/internal/generate/adapters"
@@ -12,10 +14,10 @@ import (
 const defaultCompiler = "protoc"
 
 // Generate generates files.
-func (g *Generator) Generate(ctx context.Context, directory string) error {
+func (g *Generator) Generate(ctx context.Context, directory string, storage fs.FS) error {
 	q := Query{
 		Compiler: defaultCompiler,
-		Dir:      directory,
+		Dir:      ".",
 		Imports: []string{
 			".",
 		},
@@ -29,6 +31,26 @@ func (g *Generator) Generate(ctx context.Context, directory string) error {
 		}
 
 		q.Imports = append(q.Imports, modulePaths)
+	}
+
+	err := fs.WalkDir(storage, ".", func(path string, d fs.DirEntry, err error) error {
+		switch {
+		case err != nil:
+			return err
+		case ctx.Err() != nil:
+			return ctx.Err()
+		case d.IsDir():
+			return nil
+		case filepath.Ext(path) != ".proto":
+			return nil
+		}
+
+		q.Files = append(q.Files, path)
+
+		return nil
+	})
+	if err != nil {
+		return fmt.Errorf("fs.WalkDir: %w", err)
 	}
 
 	tmpl, err := template.New("query").Parse(queryTmpl)
