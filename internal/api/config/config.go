@@ -17,9 +17,16 @@ type Plugin struct {
 	Opts map[string]string `json:"opts" yaml:"opts"`
 }
 
+// DependencyEntryPoint part for generate code from dep
+type DependencyEntryPoint struct {
+	Dep  string `json:"dep" yaml:"dep"`
+	Path string `json:"path" yaml:"path"`
+}
+
 // Generate is the configuration of the generate command.
 type Generate struct {
-	Plugins []Plugin `json:"plugins" yaml:"plugins"`
+	DependencyEntryPoint *DependencyEntryPoint `json:"dependency_entry_point" yaml:"dependency_entry_point"`
+	Plugins              []Plugin              `json:"plugins" yaml:"plugins"`
 }
 
 // Config is the configuration of easyp.

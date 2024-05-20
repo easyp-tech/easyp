@@ -2,6 +2,7 @@ package api
 
 import (
 	"fmt"
+	"path"
 
 	"github.com/samber/lo"
 	"github.com/urfave/cli/v2"
@@ -69,6 +70,13 @@ func (g Generate) Action(ctx *cli.Context) error {
 	})
 
 	dir := ctx.String(flagGenerateDirectoryPath.Name)
+	if cfg.Generate.DependencyEntryPoint != nil {
+		modulePaths, err := moduleReflect.GetModulePath(ctx.Context, cfg.Generate.DependencyEntryPoint.Dep)
+		if err != nil {
+			return fmt.Errorf("moduleReflect.GetModulePath: %w", err)
+		}
+		dir = path.Join(modulePaths, cfg.Generate.DependencyEntryPoint.Path)
+	}
 
 	err = generator.Generate(ctx.Context, ".", dir)
 	if err != nil {
