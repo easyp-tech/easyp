@@ -20,7 +20,7 @@ func TestMessageFieldLowerCamelCase_Validate(t *testing.T) {
 			wantErr:  lint.ErrMessageFieldLowerCamelCase,
 		},
 		"check_message_field_lower_camel_case_is_valid": {
-			fileName: validAuthProto3,
+			fileName: validCamelCaseSessionProto,
 			wantErr:  nil,
 		},
 	}

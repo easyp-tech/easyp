@@ -20,7 +20,7 @@ func TestOneofLowerCamelCase_Validate(t *testing.T) {
 			wantErr:  lint.ErrOneofLowerCamelCase,
 		},
 		"check_oneof_lower_camel_case_is_valid": {
-			fileName: validAuthProto3,
+			fileName: validCamelCaseSessionProto,
 			wantErr:  nil,
 		},
 	}

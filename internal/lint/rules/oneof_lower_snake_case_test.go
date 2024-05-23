@@ -16,7 +16,7 @@ func TestOneofLowerSnakeCase_Validate(t *testing.T) {
 		wantErr  error
 	}{
 		"check_oneof_lower_snake_case_is_invalid": {
-			fileName: validAuthProto3,
+			fileName: validCamelCaseSessionProto,
 			wantErr:  lint.ErrOneofLowerSnakeCase,
 		},
 		"check_oneof_lower_snake_case_is_valid": {
