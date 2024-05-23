@@ -23,6 +23,7 @@ const (
 	invalidsSessionProto     = `./../../../testdata/invalid_pkg/session.proto`
 	validAuthProto           = `./../../../testdata/api/session/v1/session.proto`
 	validAuthProto2          = `./../../../testdata/api/session/v1/events.proto`
+	validAuthProto3          = `./../../../testdata/api/session/v1/session_camel_case.proto`
 	importUsed               = "./../../../testdata/import_used/used.proto"
 	importNotUsed            = "./../../../testdata/import_used/not_used.proto"
 )
@@ -43,6 +44,7 @@ func start(t testing.TB) (*require.Assertions, map[string]lint.ProtoInfo) {
 		invalidsSessionProto:     parseFile(t, assert, invalidsSessionProto),
 		validAuthProto:           parseFile(t, assert, validAuthProto),
 		validAuthProto2:          parseFile(t, assert, validAuthProto2),
+		validAuthProto3:          parseFile(t, assert, validAuthProto3),
 		importUsed:               parseFile(t, assert, importUsed),
 		importNotUsed:            parseFile(t, assert, importNotUsed),
 	}

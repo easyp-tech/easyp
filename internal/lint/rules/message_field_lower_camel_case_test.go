@@ -8,19 +8,19 @@ import (
 	"github.com/easyp-tech/easyp/internal/lint/rules"
 )
 
-func TestOneofLowerSnakeCase_Validate(t *testing.T) {
+func TestMessageFieldLowerCamelCase_Validate(t *testing.T) {
 	t.Parallel()
 
 	tests := map[string]struct {
 		fileName string
 		wantErr  error
 	}{
-		"check_oneof_lower_snake_case_is_invalid": {
-			fileName: validAuthProto3,
-			wantErr:  lint.ErrOneofLowerSnakeCase,
-		},
-		"check_oneof_lower_snake_case_is_valid": {
+		"check_message_field_lower_camel_case_is_invalid": {
 			fileName: validAuthProto,
+			wantErr:  lint.ErrMessageFieldLowerCamelCase,
+		},
+		"check_message_field_lower_camel_case_is_valid": {
+			fileName: validAuthProto3,
 			wantErr:  nil,
 		},
 	}
@@ -32,7 +32,7 @@ func TestOneofLowerSnakeCase_Validate(t *testing.T) {
 
 			r, protos := start(t)
 
-			rule := rules.OneofLowerSnakeCase{}
+			rule := rules.FieldLowerCamelCase{}
 			err := rule.Validate(protos[tc.fileName])
 			r.ErrorIs(errors.Join(err...), tc.wantErr)
 		})
