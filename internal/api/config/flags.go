@@ -10,7 +10,7 @@ var (
 		Usage:      "set config file path",
 		Required:   true,
 		HasBeenSet: true,
-		Value:      "easyp.yaml",
+		Value:      DefaultConfigFileName,
 		Aliases:    []string{"config"},
 		EnvVars:    []string{"EASYP_CFG"},
 	}

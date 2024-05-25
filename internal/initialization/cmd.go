@@ -7,6 +7,8 @@ import (
 	"path/filepath"
 
 	"gopkg.in/yaml.v3"
+
+	configPkg "github.com/easyp-tech/easyp/internal/api/config"
 )
 
 // Initialize initializes the EasyP configuration.
@@ -40,7 +42,7 @@ func (i *Init) Initialize(ctx context.Context, disk FS, defaultLinters []string)
 	}
 
 	if !migrated {
-		filename := "easyp.yml"
+		filename := configPkg.DefaultConfigFileName
 		res, err := disk.Create(filename)
 		if err != nil {
 			return fmt.Errorf("disk.Create: %w", err)
@@ -93,7 +95,7 @@ func migrateFromBUF(disk FS, path string, defaultConfiguration EasyPConfig) erro
 
 	dir := filepath.Dir(path)
 
-	filename := filepath.Join(dir, "easyp.yml")
+	filename := filepath.Join(dir, configPkg.DefaultConfigFileName)
 	res, err := disk.Create(filename)
 	if err != nil {
 		return fmt.Errorf("disk.Create: %w", err)
