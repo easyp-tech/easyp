@@ -62,14 +62,7 @@ func (c *Mod) Get(ctx context.Context, requestedDependency string) error {
 		return fmt.Errorf("c.moduleConfig.Read: %w", err)
 	}
 
-	files, err := repository.GetFiles(ctx, revision, moduleConfig.Directories...)
-	if err != nil {
-		return fmt.Errorf("repository.GetFiles: %w", err)
-	}
-
-	protoDirs := filterOnlyProtoDirs(files)
-
-	if err := repository.Archive(ctx, revision, cacheDownloadPaths, protoDirs...); err != nil {
+	if err := repository.Archive(ctx, revision, cacheDownloadPaths); err != nil {
 		return fmt.Errorf("repository.Archive: %w", err)
 	}
 

@@ -9,12 +9,11 @@ import (
 )
 
 func (r *gitRepo) Archive(
-	ctx context.Context, revision models.Revision, cacheDownloadPaths models.CacheDownloadPaths, dirs ...string,
+	ctx context.Context, revision models.Revision, cacheDownloadPaths models.CacheDownloadPaths,
 ) error {
 	params := []string{
-		"archive", "--format=zip", revision.CommitHash, "-o", cacheDownloadPaths.ArchiveFile,
+		"archive", "--format=zip", revision.CommitHash, "-o", cacheDownloadPaths.ArchiveFile, "*.proto",
 	}
-	params = append(params, dirs...)
 
 	if _, err := adapters.RunCmd(ctx, r.cacheDir, "git", params...); err != nil {
 		return fmt.Errorf("utils.RunCmd: %w", err)
