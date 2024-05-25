@@ -33,7 +33,7 @@ func getEasypPath() (string, error) {
 		return "", ErrPathNotAbsolute
 	}
 
-	slog.Info("Use storage", "path", easypPath)
+	slog.Debug("Use storage", "path", easypPath)
 
 	return easypPath, nil
 }

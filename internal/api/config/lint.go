@@ -51,7 +51,7 @@ const (
 )
 
 func (cfg *Config) unwrapLintGroups() {
-	res := cfg.Lint.Use
+	var res []string
 
 	for _, ruleName := range cfg.Lint.Use {
 		switch ruleName {
@@ -65,6 +65,8 @@ func (cfg *Config) unwrapLintGroups() {
 			res = cfg.addComments(res)
 		case unaryRPCGroup:
 			res = cfg.addUnary(res)
+		default:
+			res = append(res, ruleName)
 		}
 	}
 
