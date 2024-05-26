@@ -5,8 +5,6 @@ vars:
   GOTESTSUM_VERSION: "1.11.0"
   LOCAL_BIN: "{{.USER_WORKING_DIR}}/bin"
   MOCKERY_VERSION: "v2.41.0"
-  GIT_TAG:
-    sh: "git describe --tags --abbrev=0"
 
 tasks:
 
@@ -108,7 +106,16 @@ tasks:
       - docker push easyp/lint:{{.GIT_TAG}}
 
   docker:
+    vars:
+      GIT_TAG:
+        sh: "git describe --tags --abbrev=0"
     cmds:
       - task: docker_base
+        vars:
+          GIT_TAG: "{{.GIT_TAG}}"
       - task: docker_lint
+        vars:
+          GIT_TAG: "{{.GIT_TAG}}"
       - task: docker_push
+        vars:
+          GIT_TAG: "{{.GIT_TAG}}"
