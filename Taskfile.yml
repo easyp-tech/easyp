@@ -5,6 +5,8 @@ vars:
   GOTESTSUM_VERSION: "1.11.0"
   LOCAL_BIN: "{{.USER_WORKING_DIR}}/bin"
   MOCKERY_VERSION: "v2.41.0"
+  GIT_TAG:
+    sh: "git describe --tags --abbrev=0"
 
 tasks:
 
@@ -78,8 +80,35 @@ tasks:
         vars: { NAME: 'LockFile', DIR: './internal/mod' }
 
       - task: mock
-        vars: {NAME: 'Mod', DIR: './internal/api/shared/module_reflect'}
+        vars: { NAME: 'Mod', DIR: './internal/api/shared/module_reflect' }
       - task: mock
-        vars: {NAME: 'Storage', DIR: './internal/api/shared/module_reflect'}
+        vars: { NAME: 'Storage', DIR: './internal/api/shared/module_reflect' }
       - task: mock
-        vars: {NAME: 'LockFile', DIR: './internal/api/shared/module_reflect'}
+        vars: { NAME: 'LockFile', DIR: './internal/api/shared/module_reflect' }
+
+  docker_base:
+    preconditions:
+      - test -f Docker/base/Dockerfile
+    cmds:
+      - docker build -f Docker/base/Dockerfile -t easyp/base:latest .
+      - docker tag easyp/base:latest easyp/base:{{.GIT_TAG}}
+
+  docker_lint:
+    preconditions:
+      - test -f Docker/lint/Dockerfile
+    cmds:
+      - docker build -f Docker/lint/Dockerfile --build-arg="EASYP_BASE_VERSION=latest" -t easyp/lint:latest .
+      - docker tag easyp/lint:latest easyp/lint:{{.GIT_TAG}}
+
+  docker_push:
+    cmds:
+      - docker push easyp/base:latest
+      - docker push easyp/base:{{.GIT_TAG}}
+      - docker push easyp/lint:latest
+      - docker push easyp/lint:{{.GIT_TAG}}
+
+  docker:
+    cmds:
+      - task: docker_base
+      - task: docker_lint
+      - task: docker_push
