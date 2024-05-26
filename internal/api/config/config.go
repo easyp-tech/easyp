@@ -10,6 +10,10 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+const (
+	DefaultConfigFileName = "easyp.yaml"
+)
+
 // Plugin is the configuration of the plugin.
 type Plugin struct {
 	Name string            `json:"name" yaml:"name"`
