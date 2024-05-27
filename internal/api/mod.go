@@ -1,12 +1,15 @@
 package api
 
 import (
+	"errors"
 	"fmt"
+	"log/slog"
 
 	"github.com/urfave/cli/v2"
 
 	"github.com/easyp-tech/easyp/internal/api/config"
 	"github.com/easyp-tech/easyp/internal/api/factories"
+	"github.com/easyp-tech/easyp/internal/mod/models"
 )
 
 var _ Handler = (*Mod)(nil)
@@ -60,7 +63,13 @@ func (m Mod) Download(ctx *cli.Context) error {
 	}
 
 	for _, dependency := range cfg.Deps {
-		if err := cmd.Get(ctx.Context, dependency); err != nil {
+		err := cmd.Get(ctx.Context, dependency)
+		if err != nil {
+			if errors.Is(err, models.ErrVersionNotFound) {
+				slog.Warn("Version not found", "dependency", dependency)
+				continue
+			}
+
 			return fmt.Errorf("cmd.Get: %w", err)
 		}
 	}
