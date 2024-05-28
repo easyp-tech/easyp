@@ -3,7 +3,7 @@ package api
 import (
 	"errors"
 	"fmt"
-	"log/slog"
+	"os"
 
 	"github.com/urfave/cli/v2"
 
@@ -62,17 +62,12 @@ func (m Mod) Download(ctx *cli.Context) error {
 		return fmt.Errorf("factories.NewMod: %w", err)
 	}
 
-	for _, dependency := range cfg.Deps {
-		err := cmd.Get(ctx.Context, dependency)
-		if err != nil {
-			if errors.Is(err, models.ErrVersionNotFound) {
-				slog.Warn("Version not found", "dependency", dependency)
-				continue
-			}
-
-			return fmt.Errorf("cmd.Get: %w", err)
+	if err := cmd.Download(ctx.Context, cfg.Deps); err != nil {
+		if errors.Is(err, models.ErrVersionNotFound) {
+			os.Exit(1)
 		}
-	}
 
+		return fmt.Errorf("cmd.Download: %w", err)
+	}
 	return nil
 }
