@@ -1,12 +1,15 @@
 package api
 
 import (
+	"errors"
 	"fmt"
+	"os"
 
 	"github.com/urfave/cli/v2"
 
 	"github.com/easyp-tech/easyp/internal/api/config"
 	"github.com/easyp-tech/easyp/internal/api/factories"
+	"github.com/easyp-tech/easyp/internal/mod/models"
 )
 
 var _ Handler = (*Mod)(nil)
@@ -59,11 +62,12 @@ func (m Mod) Download(ctx *cli.Context) error {
 		return fmt.Errorf("factories.NewMod: %w", err)
 	}
 
-	for _, dependency := range cfg.Deps {
-		if err := cmd.Get(ctx.Context, dependency); err != nil {
-			return fmt.Errorf("cmd.Get: %w", err)
+	if err := cmd.Download(ctx.Context, cfg.Deps); err != nil {
+		if errors.Is(err, models.ErrVersionNotFound) {
+			os.Exit(1)
 		}
-	}
 
+		return fmt.Errorf("cmd.Download: %w", err)
+	}
 	return nil
 }

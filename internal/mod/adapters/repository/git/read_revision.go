@@ -17,10 +17,10 @@ type revisionParts struct {
 
 // ReadRevision read actual revision from remote repository
 // Cases:
-// 1. requestedVersion is git tag: just get commit with this tag
-// 2. requestedVersion is omitted: get the latest commit, try to read its tag
-// 		if tag does not exist generate version
-// 3. requestedVersion is generated: get commit from its version
+//  1. requestedVersion is git tag: just get commit with this tag
+//  2. requestedVersion is omitted: get the latest commit, try to read its tag
+//     if tag does not exist generate version
+//  3. requestedVersion is generated: get commit from its version
 func (r *gitRepo) ReadRevision(ctx context.Context, requestedVersion models.RequestedVersion) (models.Revision, error) {
 	var revParts revisionParts
 	var err error
@@ -69,7 +69,7 @@ func (r *gitRepo) readRevisionByGitTagVersion(
 
 	res, err := adapters.RunCmd(ctx, r.cacheDir, "git", "ls-remote", "origin", gitTagVersion)
 	if err != nil {
-		return revisionParts{}, fmt.Errorf("adapters.RunCmd (ls-remote): %w", err)
+		return revisionParts{}, models.ErrVersionNotFound
 	}
 
 	commitHash := ""
@@ -104,7 +104,7 @@ func (r *gitRepo) readRevisionForLatestCommit(
 		ctx, r.cacheDir, "git", "ls-remote", "origin", gitLatestVersionRef,
 	)
 	if err != nil {
-		return revisionParts{}, fmt.Errorf("adapters.RunCmd (ls-remote headInfo): %w", err)
+		return revisionParts{}, models.ErrVersionNotFound
 	}
 
 	// got commit hash from result
