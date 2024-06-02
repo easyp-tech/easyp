@@ -11,8 +11,6 @@ import (
 )
 
 // Get download package.
-// requestedDependency string format: origin@version: github.com/company/repository@v1.2.3
-// if version is absent use the latest commit
 func (c *Mod) Get(ctx context.Context, requestedModule models.Module) error {
 	isInstalled, err := c.storage.IsModuleInstalled(requestedModule)
 	if err != nil {
