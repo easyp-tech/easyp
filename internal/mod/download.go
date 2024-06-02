@@ -12,7 +12,10 @@ import (
 // Download all packages from config
 func (c *Mod) Download(ctx context.Context, dependencies []string) error {
 	for _, dependency := range dependencies {
-		if err := c.Get(ctx, dependency); err != nil {
+
+		module := models.NewModule(dependency)
+
+		if err := c.Get(ctx, module); err != nil {
 			if errors.Is(err, models.ErrVersionNotFound) {
 				slog.Error("Version not found", "dependency", dependency)
 				return models.ErrVersionNotFound

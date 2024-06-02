@@ -18,7 +18,7 @@ func (h *ModuleReflect) GetModulePath(ctx context.Context, requestedDependency s
 	}
 
 	if !isInstalled {
-		if err := h.mod.Get(ctx, requestedDependency); err != nil {
+		if err := h.mod.Get(ctx, module); err != nil {
 			return "", fmt.Errorf("h.mod.Get: %w", err)
 		}
 	}
