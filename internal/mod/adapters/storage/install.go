@@ -28,7 +28,8 @@ func (s *Storage) Install(
 		"commit", revision.CommitHash,
 	)
 
-	installedDirPath := s.GetInstallDir(module.Name, revision.Version)
+	version := strings.Replace(revision.Version, "/", "-", -1)
+	installedDirPath := s.GetInstallDir(module.Name, version)
 
 	if err := os.MkdirAll(installedDirPath, dirPerm); err != nil {
 		return "", fmt.Errorf("os.MkdirAll: %w", err)

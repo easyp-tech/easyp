@@ -49,7 +49,7 @@ func (r *gitRepo) ReadRevision(ctx context.Context, requestedVersion models.Requ
 	}
 
 	// replace all `/` to '-' just to prevent create dir errors
-	revParts.Version = strings.Replace(revParts.Version, "/", "-", -1)
+	//revParts.Version = strings.Replace(revParts.Version, "/", "-", -1)
 
 	revision := models.Revision{
 		CommitHash: revParts.CommitHash,
