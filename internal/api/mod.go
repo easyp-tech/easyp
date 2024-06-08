@@ -27,9 +27,9 @@ func (m Mod) Command() *cli.Command {
 	}
 	updateCmd := &cli.Command{
 		Name:        "update",
-		Usage:       "update modules version",
-		UsageText:   "update modules version",
-		Description: "update modules version",
+		Usage:       "update modules version using version from config",
+		UsageText:   "update modules version using version from config",
+		Description: "update modules version using version from config",
 		Action:      m.Update,
 	}
 
@@ -90,7 +90,7 @@ func (m Mod) Update(ctx *cli.Context) error {
 		return fmt.Errorf("factories.NewMod: %w", err)
 	}
 
-	if err := cmd.Download(ctx.Context, cfg.Deps); err != nil {
+	if err := cmd.Update(ctx.Context, cfg.Deps); err != nil {
 		if errors.Is(err, models.ErrVersionNotFound) {
 			os.Exit(1)
 		}

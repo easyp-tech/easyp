@@ -11,6 +11,7 @@ import (
 
 // Get download package.
 func (c *Mod) Get(ctx context.Context, requestedModule models.Module) error {
+	return nil
 	isInstalled, err := c.storage.IsModuleInstalled(requestedModule)
 	if err != nil {
 		return fmt.Errorf("c.isModuleInstalled: %w", err)

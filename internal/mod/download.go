@@ -17,6 +17,12 @@ func (c *Mod) Download(ctx context.Context, dependencies []string) error {
 
 		module := models.NewModule(dependency)
 
+		version, err := c.getVersionToDownload(module)
+		if err != nil {
+			return fmt.Errorf("c.getVersionToDownload: %w", err)
+		}
+		module.Version = version
+
 		if err := c.Get(ctx, module); err != nil {
 			if errors.Is(err, models.ErrVersionNotFound) {
 				slog.Error("Version not found", "dependency", dependency)
