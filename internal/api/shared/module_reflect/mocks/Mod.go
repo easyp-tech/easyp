@@ -5,6 +5,7 @@ package mocks
 import (
 	context "context"
 
+	models "github.com/easyp-tech/easyp/internal/mod/models"
 	mock "github.com/stretchr/testify/mock"
 )
 
@@ -21,17 +22,17 @@ func (_m *Mod) EXPECT() *Mod_Expecter {
 	return &Mod_Expecter{mock: &_m.Mock}
 }
 
-// Get provides a mock function with given fields: ctx, requestedDependency
-func (_m *Mod) Get(ctx context.Context, requestedDependency string) error {
-	ret := _m.Called(ctx, requestedDependency)
+// Get provides a mock function with given fields: ctx, module
+func (_m *Mod) Get(ctx context.Context, module models.Module) error {
+	ret := _m.Called(ctx, module)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Get")
 	}
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, string) error); ok {
-		r0 = rf(ctx, requestedDependency)
+	if rf, ok := ret.Get(0).(func(context.Context, models.Module) error); ok {
+		r0 = rf(ctx, module)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -46,14 +47,14 @@ type Mod_Get_Call struct {
 
 // Get is a helper method to define mock.On call
 //   - ctx context.Context
-//   - requestedDependency string
-func (_e *Mod_Expecter) Get(ctx interface{}, requestedDependency interface{}) *Mod_Get_Call {
-	return &Mod_Get_Call{Call: _e.mock.On("Get", ctx, requestedDependency)}
+//   - module models.Module
+func (_e *Mod_Expecter) Get(ctx interface{}, module interface{}) *Mod_Get_Call {
+	return &Mod_Get_Call{Call: _e.mock.On("Get", ctx, module)}
 }
 
-func (_c *Mod_Get_Call) Run(run func(ctx context.Context, requestedDependency string)) *Mod_Get_Call {
+func (_c *Mod_Get_Call) Run(run func(ctx context.Context, module models.Module)) *Mod_Get_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(string))
+		run(args[0].(context.Context), args[1].(models.Module))
 	})
 	return _c
 }
@@ -63,7 +64,7 @@ func (_c *Mod_Get_Call) Return(_a0 error) *Mod_Get_Call {
 	return _c
 }
 
-func (_c *Mod_Get_Call) RunAndReturn(run func(context.Context, string) error) *Mod_Get_Call {
+func (_c *Mod_Get_Call) RunAndReturn(run func(context.Context, models.Module) error) *Mod_Get_Call {
 	_c.Call.Return(run)
 	return _c
 }

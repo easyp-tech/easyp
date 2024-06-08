@@ -42,6 +42,7 @@ type GeneratedVersionParts struct {
 }
 
 // NewModule create Module struct from raw dependency string: remote@version
+// dependency string format: origin@version: github.com/company/repository@v1.2.3
 func NewModule(dependency string) Module {
 	parts := strings.Split(dependency, "@")
 	name := parts[0]

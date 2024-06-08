@@ -9,7 +9,7 @@ import (
 // ModuleReflect helper for gettings information about modules
 type (
 	Mod interface {
-		Get(ctx context.Context, requestedDependency string) error
+		Get(ctx context.Context, module models.Module) error
 	}
 
 	Storage interface {

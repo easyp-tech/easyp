@@ -25,6 +25,13 @@ func (m Mod) Command() *cli.Command {
 		Description: "download modules to local cache",
 		Action:      m.Download,
 	}
+	updateCmd := &cli.Command{
+		Name:        "update",
+		Usage:       "update modules version using version from config",
+		UsageText:   "update modules version using version from config",
+		Description: "update modules version using version from config",
+		Action:      m.Update,
+	}
 
 	return &cli.Command{
 		Name:                   "mod",
@@ -39,7 +46,7 @@ func (m Mod) Command() *cli.Command {
 		After:                  nil,
 		Action:                 nil,
 		OnUsageError:           nil,
-		Subcommands:            []*cli.Command{downloadCmd},
+		Subcommands:            []*cli.Command{downloadCmd, updateCmd},
 		Flags:                  []cli.Flag{},
 		SkipFlagParsing:        false,
 		HideHelp:               false,
@@ -63,6 +70,27 @@ func (m Mod) Download(ctx *cli.Context) error {
 	}
 
 	if err := cmd.Download(ctx.Context, cfg.Deps); err != nil {
+		if errors.Is(err, models.ErrVersionNotFound) {
+			os.Exit(1)
+		}
+
+		return fmt.Errorf("cmd.Download: %w", err)
+	}
+	return nil
+}
+
+func (m Mod) Update(ctx *cli.Context) error {
+	cfg, err := config.ReadConfig(ctx)
+	if err != nil {
+		return fmt.Errorf("ReadConfig: %w", err)
+	}
+
+	cmd, err := factories.NewMod()
+	if err != nil {
+		return fmt.Errorf("factories.NewMod: %w", err)
+	}
+
+	if err := cmd.Update(ctx.Context, cfg.Deps); err != nil {
 		if errors.Is(err, models.ErrVersionNotFound) {
 			os.Exit(1)
 		}
