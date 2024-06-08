@@ -2,7 +2,6 @@ package mod
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"log/slog"
 
@@ -33,9 +32,9 @@ func (c *Mod) Get(ctx context.Context, requestedModule models.Module) error {
 		return fmt.Errorf("git.New: %w", err)
 	}
 
-	versionToInstall, err := c.getVersionToInstall(requestedModule)
+	versionToInstall, err := c.getVersionToDownload(requestedModule)
 	if err != nil {
-		return fmt.Errorf("c.getVersionToInstall: %w", err)
+		return fmt.Errorf("c.getVersionToDownload: %w", err)
 	}
 
 	revision, err := repository.ReadRevision(ctx, versionToInstall)
@@ -74,19 +73,4 @@ func (c *Mod) Get(ctx context.Context, requestedModule models.Module) error {
 	}
 
 	return nil
-}
-
-// getVersionToInstall return version which has to be installed
-// version from lockfile is more important than version from easyp config
-func (c *Mod) getVersionToInstall(module models.Module) (models.RequestedVersion, error) {
-	lockFileInfo, err := c.lockFile.Read(module.Name)
-	if err == nil {
-		return models.RequestedVersion(lockFileInfo.Version), nil
-	}
-
-	if !errors.Is(err, models.ErrModuleNotFoundInLockFile) {
-		return "", fmt.Errorf("c.lockFile.Read: %w", err)
-	}
-
-	return module.Version, nil
 }

@@ -29,3 +29,18 @@ func (c *Mod) Download(ctx context.Context, dependencies []string) error {
 
 	return nil
 }
+
+// getVersionToDownload return version which has to be installed by `download` command
+// version from lockfile is more important than version from easyp config
+func (c *Mod) getVersionToDownload(module models.Module) (models.RequestedVersion, error) {
+	lockFileInfo, err := c.lockFile.Read(module.Name)
+	if err == nil {
+		return models.RequestedVersion(lockFileInfo.Version), nil
+	}
+
+	if !errors.Is(err, models.ErrModuleNotFoundInLockFile) {
+		return "", fmt.Errorf("c.lockFile.Read: %w", err)
+	}
+
+	return module.Version, nil
+}

@@ -18,7 +18,7 @@ func (s *modSuite) Test_getVersionToInstall_NoInLockFile() {
 
 	s.lockFile.EXPECT().Read(module.Name).Return(models.LockFileInfo{}, models.ErrModuleNotFoundInLockFile)
 
-	res, err := s.mod.getVersionToInstall(module)
+	res, err := s.mod.getVersionToDownload(module)
 
 	s.NoError(err)
 	s.Equal(module.Version, res)
@@ -31,7 +31,7 @@ func (s *modSuite) Test_getVersionToInstall_InLockFile() {
 
 	s.lockFile.EXPECT().Read(module.Name).Return(lockFileInfo, nil)
 
-	res, err := s.mod.getVersionToInstall(module)
+	res, err := s.mod.getVersionToDownload(module)
 
 	s.NoError(err)
 	s.Equal(models.RequestedVersion(lockFileInfo.Version), res)
@@ -43,7 +43,7 @@ func (s *modSuite) Test_getVersionToInstall_ErrorReadLockFile() {
 
 	s.lockFile.EXPECT().Read(module.Name).Return(models.LockFileInfo{}, rErr)
 
-	res, err := s.mod.getVersionToInstall(module)
+	res, err := s.mod.getVersionToDownload(module)
 
 	s.Empty(res)
 	s.ErrorIs(err, rErr)

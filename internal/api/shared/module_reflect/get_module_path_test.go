@@ -35,7 +35,7 @@ func (s *codeGenSuite) Test_GetModulePath_ModuleInstalled() {
 	installedPath := gofakeit.Word()
 	s.storage.EXPECT().GetInstallDir(expectedModule.Name, lockFileInfo.Version).Return(installedPath)
 
-	result, err := s.codeGen.GetModulePath(params.ctx, params.requestedDependency)
+	result, err := s.moduleReflect.GetModulePath(params.ctx, params.requestedDependency)
 
 	s.NoError(err)
 	s.Equal(installedPath, result)
@@ -48,7 +48,7 @@ func (s *codeGenSuite) Test_GetModulePath_ModuleNotInstalled() {
 
 	s.storage.EXPECT().IsModuleInstalled(expectedModule).Return(false, nil)
 
-	s.mod.EXPECT().Get(params.ctx, params.requestedDependency).Return(nil)
+	s.mod.EXPECT().Get(params.ctx, expectedModule).Return(nil)
 
 	lockFileInfo := models.LockFileInfo{}
 	_ = gofakeit.Struct(&lockFileInfo)
@@ -58,7 +58,7 @@ func (s *codeGenSuite) Test_GetModulePath_ModuleNotInstalled() {
 	installedPath := gofakeit.Word()
 	s.storage.EXPECT().GetInstallDir(expectedModule.Name, lockFileInfo.Version).Return(installedPath)
 
-	result, err := s.codeGen.GetModulePath(params.ctx, params.requestedDependency)
+	result, err := s.moduleReflect.GetModulePath(params.ctx, params.requestedDependency)
 
 	s.NoError(err)
 	s.Equal(installedPath, result)

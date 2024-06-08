@@ -15,7 +15,7 @@ type codeGenSuite struct {
 	storage  *mocks.Storage
 	lockFile *mocks.LockFile
 
-	codeGen *ModuleReflect
+	moduleReflect *ModuleReflect
 }
 
 func (s *codeGenSuite) SetupSuite() {
@@ -25,7 +25,7 @@ func (s *codeGenSuite) SetupSuite() {
 	s.storage = mocks.NewStorage(t)
 	s.lockFile = mocks.NewLockFile(t)
 
-	s.codeGen = New(s.mod, s.storage, s.lockFile)
+	s.moduleReflect = New(s.mod, s.storage, s.lockFile)
 }
 
 func TestRunSuite(t *testing.T) {
