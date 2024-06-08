@@ -10,6 +10,7 @@ import (
 	"github.com/codeclysm/extract/v3"
 	"golang.org/x/mod/sumdb/dirhash"
 
+	"github.com/easyp-tech/easyp/internal/mod/adapters"
 	"github.com/easyp-tech/easyp/internal/mod/models"
 )
 
@@ -28,7 +29,8 @@ func (s *Storage) Install(
 		"commit", revision.CommitHash,
 	)
 
-	installedDirPath := s.GetInstallDir(module.Name, revision.Version)
+	version := adapters.SanitizePath(revision.Version)
+	installedDirPath := s.GetInstallDir(module.Name, version)
 
 	if err := os.MkdirAll(installedDirPath, dirPerm); err != nil {
 		return "", fmt.Errorf("os.MkdirAll: %w", err)
