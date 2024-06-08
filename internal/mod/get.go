@@ -11,7 +11,6 @@ import (
 
 // Get download package.
 func (c *Mod) Get(ctx context.Context, requestedModule models.Module) error {
-	return nil
 	isInstalled, err := c.storage.IsModuleInstalled(requestedModule)
 	if err != nil {
 		return fmt.Errorf("c.isModuleInstalled: %w", err)
@@ -33,12 +32,7 @@ func (c *Mod) Get(ctx context.Context, requestedModule models.Module) error {
 		return fmt.Errorf("git.New: %w", err)
 	}
 
-	versionToInstall, err := c.getVersionToDownload(requestedModule)
-	if err != nil {
-		return fmt.Errorf("c.getVersionToDownload: %w", err)
-	}
-
-	revision, err := repository.ReadRevision(ctx, versionToInstall)
+	revision, err := repository.ReadRevision(ctx, requestedModule.Version)
 	if err != nil {
 		return fmt.Errorf("repository.ReadRevision: %w", err)
 	}
