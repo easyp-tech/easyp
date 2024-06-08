@@ -2,8 +2,8 @@ package storage
 
 import (
 	"path/filepath"
-	"strings"
 
+	"github.com/easyp-tech/easyp/internal/mod/adapters"
 	"github.com/easyp-tech/easyp/internal/mod/models"
 )
 
@@ -11,11 +11,11 @@ import (
 func (s *Storage) GetCacheDownloadPaths(module models.Module, revision models.Revision) models.CacheDownloadPaths {
 	cacheDownloadDir := filepath.Join(s.rootDir, cacheDir, cacheDownloadDir, module.Name)
 
-	version := strings.Replace(revision.Version, "/", "-", -1)
+	fileName := adapters.SanitizePath(revision.Version)
 
-	archiveFile := filepath.Join(cacheDownloadDir, version) + ".zip"
-	archiveHashFile := filepath.Join(cacheDownloadDir, version) + ".ziphash"
-	moduleInfoFile := filepath.Join(cacheDownloadDir, version) + ".info"
+	archiveFile := filepath.Join(cacheDownloadDir, fileName) + ".zip"
+	archiveHashFile := filepath.Join(cacheDownloadDir, fileName) + ".ziphash"
+	moduleInfoFile := filepath.Join(cacheDownloadDir, fileName) + ".info"
 
 	return models.CacheDownloadPaths{
 		CacheDownloadDir: cacheDownloadDir,
