@@ -17,6 +17,16 @@ func (c *Mod) Update(ctx context.Context, dependencies []string) error {
 
 		module := models.NewModule(dependency)
 
+		isInstalled, err := c.storage.IsModuleInstalled(module)
+		if err != nil {
+			return fmt.Errorf("c.isModuleInstalled: %w", err)
+		}
+
+		if isInstalled {
+			slog.Info("Module is installed", "name", module.Name, "version", module.Version)
+			continue
+		}
+
 		if err := c.Get(ctx, module); err != nil {
 			if errors.Is(err, models.ErrVersionNotFound) {
 				slog.Error("Version not found", "dependency", dependency)

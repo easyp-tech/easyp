@@ -11,16 +11,6 @@ import (
 
 // Get download package.
 func (c *Mod) Get(ctx context.Context, requestedModule models.Module) error {
-	isInstalled, err := c.storage.IsModuleInstalled(requestedModule)
-	if err != nil {
-		return fmt.Errorf("c.isModuleInstalled: %w", err)
-	}
-
-	if isInstalled {
-		slog.Info("Module is installed", "name", requestedModule.Name, "version", requestedModule.Version)
-		return nil
-	}
-
 	cacheRepositoryDir, err := c.storage.CreateCacheRepositoryDir(requestedModule.Name)
 	if err != nil {
 		return fmt.Errorf("c.storage.CreateCacheRepositoryDir: %w", err)
