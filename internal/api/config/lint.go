@@ -32,8 +32,8 @@ func (cfg *Config) buildFromUse() ([]lint.Rule, error) {
 	for _, ruleName := range cfg.Lint.Use {
 		rule, ok := rules.Rules(rules.Config{
 			PackageDirectoryMatchRoot: ".",
-			EnumZeroValueSuffixPrefix: cfg.Lint.EnumZeroValueSuffixPrefix,
-			ServiceSuffixSuffix:       cfg.Lint.ServiceSuffixSuffix,
+			EnumZeroValueSuffix:       cfg.Lint.EnumZeroValueSuffix,
+			ServiceSuffix:             cfg.Lint.ServiceSuffix,
 		})[ruleName]
 		if !ok {
 			return nil, fmt.Errorf("%w: %s", lint.ErrInvalidRule, ruleName)

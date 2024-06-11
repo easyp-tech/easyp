@@ -7,8 +7,8 @@ import (
 // Config is the configuration for the rules.
 type Config struct {
 	PackageDirectoryMatchRoot string
-	EnumZeroValueSuffixPrefix string
-	ServiceSuffixSuffix       string
+	EnumZeroValueSuffix       string
+	ServiceSuffix             string
 }
 
 // Rules returns all rules.
@@ -47,7 +47,7 @@ func Rules(cfg Config) map[string]lint.Rule {
 		// Default
 		"ENUM_VALUE_PREFIX": &EnumValuePrefix{},
 		"ENUM_ZERO_VALUE_SUFFIX": &EnumZeroValueSuffix{
-			Suffix: cfg.EnumZeroValueSuffixPrefix,
+			Suffix: cfg.EnumZeroValueSuffix,
 		},
 		"FILE_LOWER_SNAKE_CASE":       &FileLowerSnakeCase{},
 		"RPC_REQUEST_RESPONSE_UNIQUE": &RPCRequestResponseUnique{},
@@ -56,7 +56,7 @@ func Rules(cfg Config) map[string]lint.Rule {
 		"PACKAGE_VERSION_SUFFIX":      &PackageVersionSuffix{},
 		"PROTOVALIDATE":               &ProtoValidate{}, // TODO: This, rule, is not implemented yet
 		"SERVICE_SUFFIX": &ServiceSuffix{
-			Suffix: cfg.ServiceSuffixSuffix,
+			Suffix: cfg.ServiceSuffix,
 		},
 
 		// Comments
