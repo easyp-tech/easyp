@@ -15,10 +15,12 @@ type LintConfig struct {
 	EnumZeroValueSuffixPrefix string   `json:"enumZeroValueSuffixPrefix" yaml:"enumZeroValueSuffixPrefix" env:"ENUM_ZERO_VALUE_SUFFIX_PREFIX"` // Enum zero value suffix prefix.
 	ServiceSuffixSuffix       string   `json:"serviceSuffixSuffix" yaml:"serviceSuffixSuffix" env:"SERVICE_SUFFIX_SUFFIX"`                     // Service suffix suffix.
 	Ignore                    []string `json:"ignore" yaml:"ignore" env:"IGNORE"`                                                              // Ignore dirs with proto file.
+	Except                    []string `json:"except" yaml:"except" env:"EXCEPT"`                                                              // Except linter rules.
 }
 
 func (cfg *Config) BuildLinterRules() ([]lint.Rule, error) {
 	cfg.unwrapLintGroups()
+	cfg.removeExcept()
 
 	return cfg.buildFromUse()
 }
@@ -71,6 +73,12 @@ func (cfg *Config) unwrapLintGroups() {
 	}
 
 	cfg.Lint.Use = lo.FindUniques(res)
+}
+
+func (cfg *Config) removeExcept() {
+	cfg.Lint.Use = lo.Filter(cfg.Lint.Use, func(ruleName string, _ int) bool {
+		return !lo.Contains(cfg.Lint.Except, ruleName)
+	})
 }
 
 func (cfg *Config) addMinimal(res []string) []string {
