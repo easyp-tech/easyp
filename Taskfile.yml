@@ -3,6 +3,7 @@ version: '3'
 vars:
   LINTER_VERSION: "1.57.2"
   GOTESTSUM_VERSION: "1.11.0"
+  HADOLINT_VERSION: "v2.12.1-beta"
   LOCAL_BIN: "{{.USER_WORKING_DIR}}/bin"
   MOCKERY_VERSION: "v2.41.0"
 
@@ -19,6 +20,10 @@ tasks:
   install_mockery:
     cmds:
       - "GOBIN={{.LOCAL_BIN}} go install github.com/vektra/mockery/v2@{{.MOCKERY_VERSION}}"
+
+  install_hadolint:
+    cmds:
+      - "docker pull ghcr.io/hadolint/hadolint:{{.HADOLINT_VERSION}}"
 
   init:
     deps:
@@ -40,6 +45,8 @@ tasks:
     deps:
       - build
     cmds:
+      - "docker run --rm -i ghcr.io/hadolint/hadolint:{{.HADOLINT_VERSION}} < Docker/base/Dockerfile"
+      - "docker run --rm -i ghcr.io/hadolint/hadolint:{{.HADOLINT_VERSION}} < Docker/lint/Dockerfile"
       - "{{.LOCAL_BIN}}/golangci-lint run ./..."
 
   quality:

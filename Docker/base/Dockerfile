@@ -1,4 +1,4 @@
-FROM golang:alpine AS builder
+FROM golang:1.22.3-alpine3.19 AS builder
 
 LABEL stage=gobuilder
 
@@ -10,9 +10,9 @@ RUN apk update --no-cache
 
 WORKDIR /build
 
-ADD go.mod .
+COPY go.mod .
 
-ADD go.sum .
+COPY go.sum .
 
 RUN go mod download
 
@@ -20,8 +20,8 @@ COPY . .
 
 RUN go build -o /easyp  ./cmd/easyp
 
-FROM alpine
+FROM alpine:3.20.0
 
-RUN apk update --no-cache && apk add --no-cache ca-certificates
+RUN apk update --no-cache && apk add --no-cache ca-certificates=20240226-r0
 
 COPY --from=builder /easyp /easyp
