@@ -37,7 +37,8 @@ message GetRequest {
   string token = 1;
 }
 
-//---Must be filled out---
+//---the first comment---
+//---the second comment---
 message GetResponse {
   // Contains session's UUID.
   string session_id = 1 [(google.api.field_behavior) = REQUIRED];
