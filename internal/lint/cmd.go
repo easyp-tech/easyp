@@ -141,7 +141,28 @@ func (c *Lint) readFileFromImport(ctx context.Context, disk fs.FS, importName st
 		return proto, nil
 	}
 
-	return nil, fmt.Errorf("file %s not found", importName)
+	// try to reda from standrt
+	stdPath := "/usr/include"
+	fullPath := filepath.Join(stdPath, importName)
+	f, err = os.Open(fullPath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil, err
+		}
+
+		return nil, fmt.Errorf("os.Open: %w", err)
+	}
+	defer func() {
+		_ = f.Close()
+	}()
+
+	proto, err := readProtoFile(f)
+	if err != nil {
+		return nil, fmt.Errorf("readProtoFile: %w", err)
+	}
+
+	//return nil, fmt.Errorf("file %s not found", importName)
+	return proto, nil
 }
 
 func readProtoFile(f fs.File) (*unordered.Proto, error) {
