@@ -1,4 +1,4 @@
-package wac
+package wellknownimports
 
 import (
 	"embed"

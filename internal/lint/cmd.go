@@ -11,6 +11,8 @@ import (
 
 	"github.com/yoheimuta/go-protoparser/v4"
 	"github.com/yoheimuta/go-protoparser/v4/interpret/unordered"
+
+	"github.com/easyp-tech/easyp/wellknownimports"
 )
 
 // Lint lints the proto file.
@@ -141,10 +143,7 @@ func (c *Lint) readFileFromImport(ctx context.Context, disk fs.FS, importName st
 		return proto, nil
 	}
 
-	// try to reda from standrt
-	stdPath := "/usr/include"
-	fullPath := filepath.Join(stdPath, importName)
-	f, err = os.Open(fullPath)
+	f, err = wellknownimports.Content.Open(importName)
 	if err != nil {
 		if os.IsNotExist(err) {
 			return nil, err
@@ -161,7 +160,6 @@ func (c *Lint) readFileFromImport(ctx context.Context, disk fs.FS, importName st
 		return nil, fmt.Errorf("readProtoFile: %w", err)
 	}
 
-	//return nil, fmt.Errorf("file %s not found", importName)
 	return proto, nil
 }
 
