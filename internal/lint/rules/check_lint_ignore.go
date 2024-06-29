@@ -11,7 +11,7 @@ const (
 )
 
 // CheckIsIgnored check if passed ruleName has to be ignored due to ignore command in comments
-func CheckIsIgnored(comments []parser.Comment, ruleName string) bool {
+func CheckIsIgnored(comments []*parser.Comment, ruleName string) bool {
 	if len(comments) == 0 {
 		return false
 	}

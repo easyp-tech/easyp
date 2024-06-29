@@ -2,6 +2,6 @@ syntax = "proto3";
 
 package no_lint;
 
-// dafdsf
-// buf:lint:ignore ENUM_VALUE_PREFIX
+// some commenct
+// buf:lint:ignore MESSAGE_PASCAL_CASE
 message some_message {}
