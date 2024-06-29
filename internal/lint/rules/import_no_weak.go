@@ -18,7 +18,7 @@ func (i ImportNoWeak) Validate(protoInfo lint.ProtoInfo) []error {
 
 	for _, imp := range protoInfo.Info.ProtoBody.Imports {
 		if imp.Modifier == parser.ImportModifierWeak {
-			res = append(res, BuildError(imp.Meta.Pos, imp.Location, ErrImportIsWeak))
+			res = AppendError(res, IMPORT_NO_WEAK, imp.Meta.Pos, imp.Location, imp.Comments)
 		}
 	}
 

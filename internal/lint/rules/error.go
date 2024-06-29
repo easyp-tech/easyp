@@ -35,3 +35,20 @@ func BuildError(pos meta.Position, sourceName string, err error) error {
 		err:        err,
 	}
 }
+
+// AppendError check if lint error is ignored -> add new error to slice
+// otherwise ignore appending
+func AppendError(
+	err []error, ruleName string, pos meta.Position, sourceName string, comments []*parser.Comment,
+) []error {
+	if CheckIsIgnored(comments, ruleName) {
+		return err
+	}
+
+	lintRuleError, ok := errMapping[ruleName]
+	if !ok {
+		return err
+	}
+
+	return append(err, BuildError(pos, sourceName, lintRuleError))
+}

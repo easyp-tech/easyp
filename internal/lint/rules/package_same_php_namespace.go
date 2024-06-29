@@ -37,7 +37,7 @@ func (p *PackageSamePHPNamespace) Validate(protoInfo lint.ProtoInfo) []error {
 			}
 
 			if p.cache[packageName] != option.Constant {
-				res = append(res, BuildError(option.Meta.Pos, option.Constant, ErrPackageSamePhpNamespace))
+				res = AppendError(res, PACKAGE_SAME_PHP_NAMESPACE, option.Meta.Pos, option.Constant, option.Comments)
 			}
 		}
 	}

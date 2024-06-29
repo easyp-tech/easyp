@@ -93,7 +93,9 @@ func (i ImportUsed) Validate(protoInfo lint.ProtoInfo) []error {
 
 	for imp, used := range isImportUsed {
 		if !used {
-			res = append(res, BuildError(importInfo[imp].Meta.Pos, importInfo[imp].Location, ErrImportIsNotUsed))
+			res = AppendError(
+				res, IMPORT_USED, importInfo[imp].Meta.Pos, importInfo[imp].Location, importInfo[imp].Comments,
+			)
 		}
 	}
 

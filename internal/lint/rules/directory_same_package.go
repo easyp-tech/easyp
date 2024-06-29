@@ -33,7 +33,7 @@ func (d *DirectorySamePackage) Validate(protoInfo lint.ProtoInfo) []error {
 		}
 
 		if d.cache[directory] != pack.Name {
-			res = append(res, BuildError(pack.Meta.Pos, pack.Name, ErrDirectorySamePackage))
+			res = AppendError(res, DIRECTORY_SAME_PACKAGE, pack.Meta.Pos, pack.Name, pack.Comments)
 		}
 	}
 

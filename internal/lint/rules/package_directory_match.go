@@ -23,7 +23,7 @@ func (d *PackageDirectoryMatch) Validate(protoInfo lint.ProtoInfo) []error {
 
 	for _, pkgInfo := range protoInfo.Info.ProtoBody.Packages {
 		if pkgInfo.Name != expectedPackage {
-			res = append(res, BuildError(pkgInfo.Meta.Pos, protoInfo.Path, ErrPackageIsNotMatchedWithPath))
+			res = AppendError(res, PACKAGE_DIRECTORY_MATCH, pkgInfo.Meta.Pos, protoInfo.Path, pkgInfo.Comments)
 		}
 	}
 

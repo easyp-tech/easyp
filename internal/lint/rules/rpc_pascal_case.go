@@ -18,7 +18,7 @@ func (c *RpcPascalCase) Validate(protoInfo lint.ProtoInfo) []error {
 	for _, service := range protoInfo.Info.ProtoBody.Services {
 		for _, rpc := range service.ServiceBody.RPCs {
 			if !pascalCase.MatchString(rpc.RPCName) {
-				res = append(res, BuildError(rpc.Meta.Pos, rpc.RPCName, ErrRpcPascalCase))
+				res = AppendError(res, RPC_PASCAL_CASE, rpc.Meta.Pos, rpc.RPCName, rpc.Comments)
 			}
 		}
 	}

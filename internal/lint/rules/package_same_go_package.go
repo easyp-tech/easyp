@@ -37,7 +37,7 @@ func (p *PackageSameGoPackage) Validate(protoInfo lint.ProtoInfo) []error {
 			}
 
 			if p.cache[packageName] != option.Constant {
-				res = append(res, BuildError(option.Meta.Pos, option.Constant, ErrPackageSameGoPackage))
+				res = AppendError(res, PACKAGE_SAME_GO_PACKAGE, option.Meta.Pos, option.Constant, option.Comments)
 			}
 		}
 	}

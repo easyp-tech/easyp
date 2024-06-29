@@ -15,7 +15,7 @@ func (c *CommentEnum) Validate(protoInfo lint.ProtoInfo) []error {
 
 	for _, enum := range protoInfo.Info.ProtoBody.Enums {
 		if len(enum.Comments) == 0 {
-			res = append(res, BuildError(enum.Meta.Pos, enum.EnumName, ErrEnumCommentIsEmpty))
+			res = AppendError(res, COMMENT_ENUM, enum.Meta.Pos, enum.EnumName, enum.Comments)
 		}
 	}
 

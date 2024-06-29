@@ -20,7 +20,7 @@ func (p PackageVersionSuffix) Validate(protoInfo lint.ProtoInfo) []error {
 
 	for _, pkg := range protoInfo.Info.ProtoBody.Packages {
 		if !matchVersionSuffix.MatchString(pkg.Name) {
-			res = append(res, BuildError(pkg.Meta.Pos, pkg.Name, ErrPackageVersionSuffix))
+			res = AppendError(res, PACKAGE_VERSION_SUFFIX, pkg.Meta.Pos, pkg.Name, pkg.Comments)
 		}
 	}
 

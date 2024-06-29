@@ -15,7 +15,7 @@ func (c *CommentService) Validate(protoInfo lint.ProtoInfo) []error {
 
 	for _, service := range protoInfo.Info.ProtoBody.Services {
 		if len(service.Comments) == 0 {
-			res = append(res, BuildError(service.Meta.Pos, service.ServiceName, ErrServiceCommentIsEmpty))
+			res = AppendError(res, COMMENT_SERVICE, service.Meta.Pos, service.ServiceName, service.Comments)
 		}
 	}
 

@@ -80,7 +80,7 @@ var (
 		FIELD_LOWER_SNAKE_CASE:           ErrMessageFieldLowerSnakeCase,
 		IMPORT_NO_PUBLIC:                 ErrImportIsPublic,
 		IMPORT_NO_WEAK:                   ErrImportIsWeak,
-		IMPORT_USED:                      ErrMessagePascalCase,
+		IMPORT_USED:                      ErrImportIsNotUsed,
 		MESSAGE_PASCAL_CASE:              ErrMessagePascalCase,
 		ONEOF_LOWER_SNAKE_CASE:           ErrOneofLowerSnakeCase,
 		PACKAGE_LOWER_SNAKE_CASE:         ErrPackageLowerSnakeCase,
@@ -108,7 +108,7 @@ var (
 		// Comments
 		COMMENT_ENUM:       ErrEnumCommentIsEmpty,
 		COMMENT_ENUM_VALUE: ErrEnumValueCommentIsEmpty,
-		COMMENT_FIELD:      ErrMessageFieldLowerSnakeCase,
+		COMMENT_FIELD:      ErrMessageFieldCommentIsEmpty,
 		COMMENT_MESSAGE:    ErrMessageCommentIsEmpty,
 		COMMENT_ONEOF:      ErrOneOfCommentIsEmpty,
 		COMMENT_RPC:        ErrRPCCommentIsEmpty,

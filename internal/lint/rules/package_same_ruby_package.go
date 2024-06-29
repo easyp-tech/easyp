@@ -37,7 +37,7 @@ func (p *PackageSameRubyPackage) Validate(protoInfo lint.ProtoInfo) []error {
 			}
 
 			if p.cache[packageName] != option.Constant {
-				res = append(res, BuildError(option.Meta.Pos, option.Constant, ErrPackageSameRubyPackage))
+				res = AppendError(res, PACKAGE_SAME_RUBY_PACKAGE, option.Meta.Pos, option.Constant, option.Comments)
 			}
 		}
 	}

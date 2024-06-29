@@ -18,7 +18,7 @@ func (c *OneofLowerSnakeCase) Validate(protoInfo lint.ProtoInfo) []error {
 	for _, message := range protoInfo.Info.ProtoBody.Messages {
 		for _, oneof := range message.MessageBody.Oneofs {
 			if !lowerSnakeCase.MatchString(oneof.OneofName) {
-				res = append(res, BuildError(oneof.Meta.Pos, oneof.OneofName, ErrOneofLowerSnakeCase))
+				res = AppendError(res, ONEOF_LOWER_SNAKE_CASE, oneof.Meta.Pos, oneof.OneofName, oneof.Comments)
 			}
 		}
 	}

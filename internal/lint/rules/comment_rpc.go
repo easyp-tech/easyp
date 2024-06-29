@@ -16,7 +16,7 @@ func (c *CommentRPC) Validate(protoInfo lint.ProtoInfo) []error {
 	for _, service := range protoInfo.Info.ProtoBody.Services {
 		for _, rpc := range service.ServiceBody.RPCs {
 			if len(service.Comments) == 0 {
-				res = append(res, BuildError(rpc.Meta.Pos, rpc.RPCName, ErrRPCCommentIsEmpty))
+				res = AppendError(res, COMMENT_RPC, rpc.Meta.Pos, rpc.RPCName, rpc.Comments)
 			}
 		}
 	}

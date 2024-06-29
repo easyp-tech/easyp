@@ -18,9 +18,7 @@ func (c *MessagePascalCase) Validate(protoInfo lint.ProtoInfo) []error {
 	for _, message := range protoInfo.Info.ProtoBody.Messages {
 		if !pascalCase.MatchString(message.MessageName) {
 
-			if !CheckIsIgnored(message.Comments, MESSAGE_PASCAL_CASE) {
-				res = append(res, BuildError(message.Meta.Pos, message.MessageName, ErrMessagePascalCase))
-			}
+			res = AppendError(res, MESSAGE_PASCAL_CASE, message.Meta.Pos, message.MessageName, message.Comments)
 		}
 	}
 

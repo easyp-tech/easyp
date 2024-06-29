@@ -37,7 +37,7 @@ func (p *PackageSameJavaPackage) Validate(protoInfo lint.ProtoInfo) []error {
 			}
 
 			if p.cache[packageName] != option.Constant {
-				res = append(res, BuildError(option.Meta.Pos, option.Constant, ErrPackageSameJavaPackage))
+				res = AppendError(res, PACKAGE_SAME_JAVA_PACKAGE, option.Meta.Pos, option.Constant, option.Comments)
 			}
 		}
 	}

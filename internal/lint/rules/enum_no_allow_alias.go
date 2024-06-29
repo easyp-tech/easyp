@@ -13,7 +13,7 @@ func (e EnumNoAllowAlias) Validate(protoInfo lint.ProtoInfo) []error {
 	for _, enum := range protoInfo.Info.ProtoBody.Enums {
 		for _, opt := range enum.EnumBody.Options {
 			if opt.OptionName == "allow_alias" {
-				res = append(res, BuildError(enum.Meta.Pos, enum.EnumName, ErrEnumNoAllowAlias))
+				res = AppendError(res, ENUM_NO_ALLOW_ALIAS, enum.Meta.Pos, enum.EnumName, enum.Comments)
 			}
 		}
 	}
