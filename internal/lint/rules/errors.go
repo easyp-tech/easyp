@@ -64,4 +64,61 @@ var (
 
 	// Uncategorized
 	ErrPackageNoImportCycle = errors.New("package has import cycle") // TODO: This, rule, is not implemented yet
+
+	errMapping = map[string]error{
+		// Minimal
+		DIRECTORY_SAME_PACKAGE:  ErrDirectorySamePackage,
+		PACKAGE_DEFINED:         ErrPackageIsNotDefined,
+		PACKAGE_DIRECTORY_MATCH: ErrPackageIsNotMatchedWithPath,
+		PACKAGE_SAME_DIRECTORY:  ErrPackageSameDirectory,
+
+		// Basic
+		ENUM_FIRST_VALUE_ZERO:            ErrEnumFirstValueZero,
+		ENUM_NO_ALLOW_ALIAS:              ErrEnumNoAllowAlias,
+		ENUM_PASCAL_CASE:                 ErrEnumPascalCase,
+		ENUM_VALUE_UPPER_SNAKE_CASE:      ErrEnumValueUpperSnakeCase,
+		FIELD_LOWER_SNAKE_CASE:           ErrMessageFieldLowerSnakeCase,
+		IMPORT_NO_PUBLIC:                 ErrImportIsPublic,
+		IMPORT_NO_WEAK:                   ErrImportIsWeak,
+		IMPORT_USED:                      ErrMessagePascalCase,
+		MESSAGE_PASCAL_CASE:              ErrMessagePascalCase,
+		ONEOF_LOWER_SNAKE_CASE:           ErrOneofLowerSnakeCase,
+		PACKAGE_LOWER_SNAKE_CASE:         ErrPackageLowerSnakeCase,
+		PACKAGE_SAME_CSHARP_NAMESPACE:    ErrPackageSameCSharpNamespace,
+		PACKAGE_SAME_GO_PACKAGE:          ErrPackageSameGoPackage,
+		PACKAGE_SAME_JAVA_MULTIPLE_FILES: ErrPackageSameJavaMultipleFiles,
+		PACKAGE_SAME_JAVA_PACKAGE:        ErrPackageSameJavaPackage,
+		PACKAGE_SAME_PHP_NAMESPACE:       ErrPackageSamePhpNamespace,
+		PACKAGE_SAME_RUBY_PACKAGE:        ErrPackageSameRubyPackage,
+		PACKAGE_SAME_SWIFT_PREFIX:        ErrPackageSameSwiftPrefix,
+		RPC_PASCAL_CASE:                  ErrRpcPascalCase,
+		SERVICE_PASCAL_CASE:              ErrServicePascalCase,
+
+		// Default
+		ENUM_VALUE_PREFIX:           ErrEnumValuePrefix,
+		ENUM_ZERO_VALUE_SUFFIX:      ErrEnumZeroValueSuffix,
+		FILE_LOWER_SNAKE_CASE:       ErrFileLowerSnakeCase,
+		RPC_REQUEST_RESPONSE_UNIQUE: ErrRPCRequestResponseUnique,
+		RPC_REQUEST_STANDARD_NAME:   ErrRPCRequestStandardName,
+		RPC_RESPONSE_STANDARD_NAME:  ErrRPCResponseStandardName,
+		PACKAGE_VERSION_SUFFIX:      ErrPackageVersionSuffix,
+		PROTOVALIDATE:               ErrProtoValidate,
+		SERVICE_SUFFIX:              ErrServiceSuffix,
+
+		// Comments
+		COMMENT_ENUM:       ErrEnumCommentIsEmpty,
+		COMMENT_ENUM_VALUE: ErrEnumValueCommentIsEmpty,
+		COMMENT_FIELD:      ErrMessageFieldLowerSnakeCase,
+		COMMENT_MESSAGE:    ErrMessageCommentIsEmpty,
+		COMMENT_ONEOF:      ErrOneOfCommentIsEmpty,
+		COMMENT_RPC:        ErrRPCCommentIsEmpty,
+		COMMENT_SERVICE:    ErrServiceCommentIsEmpty,
+
+		// UNARY_RPC
+		RPC_NO_CLIENT_STREAMING: ErrRPCClientStreaming,
+		RPC_NO_SERVER_STREAMING: ErrRPCServerStreaming,
+
+		// Uncategorized
+		PACKAGE_NO_IMPORT_CYCLE: ErrPackageNoImportCycle,
+	}
 )
