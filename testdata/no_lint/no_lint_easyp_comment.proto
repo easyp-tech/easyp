@@ -1,0 +1,7 @@
+syntax = "proto3";
+
+package no_lint;
+
+// some commenct
+// nolint:MESSAGE_PASCAL_CASE
+message some_message {}

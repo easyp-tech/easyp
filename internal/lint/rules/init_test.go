@@ -25,7 +25,8 @@ const (
 	validAuthProto2          = `./../../../testdata/api/session/v1/events.proto`
 	importUsed               = "./../../../testdata/import_used/used.proto"
 	importNotUsed            = "./../../../testdata/import_used/not_used.proto"
-	noLint                   = "./../../../testdata/no_lint/no_lint.proto"
+	noLintBufComment         = "./../../../testdata/no_lint/no_lint_buf_comment.proto"
+	noLintEasypComment       = "./../../../testdata/no_lint/no_lint_easyp_comment.proto"
 )
 
 func start(t testing.TB) (*require.Assertions, map[string]lint.ProtoInfo) {
@@ -46,7 +47,8 @@ func start(t testing.TB) (*require.Assertions, map[string]lint.ProtoInfo) {
 		validAuthProto2:          parseFile(t, assert, validAuthProto2),
 		importUsed:               parseFile(t, assert, importUsed),
 		importNotUsed:            parseFile(t, assert, importNotUsed),
-		noLint:                   parseFile(t, assert, noLint),
+		noLintBufComment:         parseFile(t, assert, noLintBufComment),
+		noLintEasypComment:       parseFile(t, assert, noLintEasypComment),
 	}
 
 	return assert, protos

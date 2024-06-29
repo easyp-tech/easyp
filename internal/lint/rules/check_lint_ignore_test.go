@@ -12,14 +12,17 @@ import (
 
 func TestCheckNoLint(t *testing.T) {
 	t.Parallel()
-	//t.Skip()
 
 	tests := map[string]struct {
 		fileName string
 		wantErr  error
 	}{
-		"no_lint": {
-			fileName: noLint,
+		"no_lint_buf_comment": {
+			fileName: noLintBufComment,
+			wantErr:  nil,
+		},
+		"no_lint_easyp_comment": {
+			fileName: noLintEasypComment,
 			wantErr:  nil,
 		},
 	}
