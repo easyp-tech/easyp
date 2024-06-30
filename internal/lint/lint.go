@@ -66,6 +66,10 @@ func New(lp *LintParams) *Lint {
 	}
 }
 
+func SetLintParams(p *LintParams) {
+	lintParams = p
+}
+
 func GetLintParams() *LintParams {
 	return lintParams
 }
