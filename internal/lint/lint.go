@@ -11,6 +11,14 @@ import (
 	modulereflect "github.com/easyp-tech/easyp/internal/api/shared/module_reflect"
 )
 
+// LintParams stores params for linters
+type LintParams struct {
+	Rules               []Rule
+	IgnoreDirs          []string
+	Deps                []string
+	AllowCommentIgnores bool
+}
+
 // Lint is the core functionality of easyp lint.
 type Lint struct {
 	rules         []Rule
@@ -18,6 +26,8 @@ type Lint struct {
 	deps          []string
 	moduleReflect *modulereflect.ModuleReflect
 }
+
+var lintParams *LintParams
 
 // ImportPath type alias for path import in proto file
 type ImportPath string
@@ -40,16 +50,22 @@ type Rule interface {
 }
 
 // New creates a new Lint.
-func New(rules []Rule, ignoreDirs []string, deps []string) *Lint {
+func New(lp *LintParams) *Lint {
+	lintParams = lp
+
 	moduleReflect, err := factories.NewModuleReflect()
 	if err != nil {
-		log.Fatal(err) // TODO; return error
+		log.Fatal(err) // TODO: return error
 	}
 
 	return &Lint{
-		rules:         rules,
-		ignoreDirs:    ignoreDirs,
-		deps:          deps,
+		rules:         lp.Rules,
+		ignoreDirs:    lp.IgnoreDirs,
+		deps:          lp.Deps,
 		moduleReflect: moduleReflect,
 	}
+}
+
+func GetLintParams() *LintParams {
+	return lintParams
 }
