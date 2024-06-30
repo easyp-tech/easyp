@@ -6,7 +6,6 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/yoheimuta/go-protoparser/v4/parser/meta"
 
-	"github.com/easyp-tech/easyp/internal/lint"
 	"github.com/easyp-tech/easyp/internal/lint/rules"
 )
 
@@ -18,8 +17,8 @@ func TestError_Error(t *testing.T) {
 		exp string
 	}{
 		"success": {
-			err: lint.ErrServiceSuffix,
-			exp: "10:1:file_name: " + lint.ErrServiceSuffix.Error(),
+			err: rules.ErrServiceSuffix,
+			exp: "10:1:file_name: " + rules.ErrServiceSuffix.Error(),
 		},
 	}
 
@@ -50,8 +49,8 @@ func TestError_Unwrap(t *testing.T) {
 		exp error
 	}{
 		"success": {
-			err: lint.ErrServiceSuffix,
-			exp: lint.ErrServiceSuffix,
+			err: rules.ErrServiceSuffix,
+			exp: rules.ErrServiceSuffix,
 		},
 	}
 

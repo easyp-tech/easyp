@@ -4,7 +4,6 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/easyp-tech/easyp/internal/lint"
 	"github.com/easyp-tech/easyp/internal/lint/rules"
 )
 
@@ -17,7 +16,7 @@ func TestPackageDirectoryMatch_Validate(t *testing.T) {
 	}{
 		"check_package_directory_match_is_invalid": {
 			fileName: invalidAuthProto,
-			wantErr:  lint.ErrPackageIsNotMatchedWithPath,
+			wantErr:  rules.ErrPackageIsNotMatchedWithPath,
 		},
 		"check_package_directory_match_is_valid": {
 			fileName: validAuthProto,

@@ -4,7 +4,6 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/easyp-tech/easyp/internal/lint"
 	"github.com/easyp-tech/easyp/internal/lint/rules"
 )
 
@@ -17,7 +16,7 @@ func TestPackageDefined_Validate(t *testing.T) {
 	}{
 		"check_package_defined_is_invalid": {
 			fileName: invalidAuthProtoEmptyPkg,
-			wantErr:  lint.ErrPackageIsNotDefined,
+			wantErr:  rules.ErrPackageIsNotDefined,
 		},
 		"check_package_defined_is_valid": {
 			fileName: validAuthProto,

@@ -4,7 +4,6 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/easyp-tech/easyp/internal/lint"
 	"github.com/easyp-tech/easyp/internal/lint/rules"
 )
 
@@ -17,7 +16,7 @@ func TestEnumPascalCase_Validate(t *testing.T) {
 	}{
 		"check_enum_pascal_case_is_invalid": {
 			fileName: invalidAuthProto,
-			wantErr:  lint.ErrEnumPascalCase,
+			wantErr:  rules.ErrEnumPascalCase,
 		},
 		"check_enum_pascal_case_is_valid": {
 			fileName: validAuthProto,

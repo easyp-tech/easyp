@@ -4,7 +4,6 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/easyp-tech/easyp/internal/lint"
 	"github.com/easyp-tech/easyp/internal/lint/rules"
 )
 
@@ -17,7 +16,7 @@ func TestEnumNoAllowAlias_Validate(t *testing.T) {
 	}{
 		"enum_no_allow_alias_invalid": {
 			fileName: invalidAuthProto,
-			wantErr:  lint.ErrEnumNoAllowAlias,
+			wantErr:  rules.ErrEnumNoAllowAlias,
 		},
 		"enum_no_allow_alias_valid": {
 			fileName: validAuthProto,

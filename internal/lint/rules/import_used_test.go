@@ -4,7 +4,6 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/easyp-tech/easyp/internal/lint"
 	"github.com/easyp-tech/easyp/internal/lint/rules"
 )
 
@@ -21,7 +20,7 @@ func TestImportUsed_Validate(t *testing.T) {
 		},
 		"not used imports": {
 			fileName: importNotUsed,
-			wantErr:  lint.ErrImportIsNotUsed,
+			wantErr:  rules.ErrImportIsNotUsed,
 		},
 	}
 

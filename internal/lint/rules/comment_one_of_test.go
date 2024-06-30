@@ -5,8 +5,6 @@ import (
 	"testing"
 
 	"github.com/easyp-tech/easyp/internal/lint/rules"
-
-	"github.com/easyp-tech/easyp/internal/lint"
 )
 
 func TestCommentOneOf_Validate(t *testing.T) {
@@ -18,7 +16,7 @@ func TestCommentOneOf_Validate(t *testing.T) {
 	}{
 		"auth_oneof_comment_is_empty": {
 			fileName: invalidAuthProto,
-			wantErr:  lint.ErrOneOfCommentIsEmpty,
+			wantErr:  rules.ErrOneOfCommentIsEmpty,
 		},
 		"auth_oneof_comment_is_not_empty": {
 			fileName: validAuthProto,

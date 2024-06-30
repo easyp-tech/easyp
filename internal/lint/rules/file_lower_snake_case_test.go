@@ -4,7 +4,6 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/easyp-tech/easyp/internal/lint"
 	"github.com/easyp-tech/easyp/internal/lint/rules"
 )
 
@@ -17,7 +16,7 @@ func TestFileLowerSnakeCase_Validate(t *testing.T) {
 	}{
 		"invalid": {
 			fileName: invalidAuthProto3,
-			wantErr:  lint.ErrFileLowerSnakeCase,
+			wantErr:  rules.ErrFileLowerSnakeCase,
 		},
 		"valid": {
 			fileName: validAuthProto,

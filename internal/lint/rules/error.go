@@ -3,6 +3,7 @@ package rules
 import (
 	"fmt"
 
+	"github.com/yoheimuta/go-protoparser/v4/parser"
 	"github.com/yoheimuta/go-protoparser/v4/parser/meta"
 )
 
@@ -12,6 +13,7 @@ var _ error = (*Error)(nil)
 type Error struct {
 	position   meta.Position
 	sourceName string
+	comments   []parser.Comment
 	err        error
 }
 
@@ -32,4 +34,21 @@ func BuildError(pos meta.Position, sourceName string, err error) error {
 		sourceName: sourceName,
 		err:        err,
 	}
+}
+
+// AppendError check if lint error is ignored -> add new error to slice
+// otherwise ignore appending
+func AppendError(
+	err []error, ruleName string, pos meta.Position, sourceName string, comments []*parser.Comment,
+) []error {
+	if CheckIsIgnored(comments, ruleName) {
+		return err
+	}
+
+	lintRuleError, ok := errMapping[ruleName]
+	if !ok {
+		return err
+	}
+
+	return append(err, BuildError(pos, sourceName, lintRuleError))
 }

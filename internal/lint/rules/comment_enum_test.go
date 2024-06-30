@@ -4,7 +4,6 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/easyp-tech/easyp/internal/lint"
 	"github.com/easyp-tech/easyp/internal/lint/rules"
 )
 
@@ -17,7 +16,7 @@ func TestCommentEnum_Validate(t *testing.T) {
 	}{
 		"auth_enum_comment_is_empty": {
 			fileName: invalidAuthProto,
-			wantErr:  lint.ErrEnumCommentIsEmpty,
+			wantErr:  rules.ErrEnumCommentIsEmpty,
 		},
 		"auth_enum_comment_is_not_empty": {
 			fileName: validAuthProto,
