@@ -2,7 +2,6 @@ package lint
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"io/fs"
 	"os"
@@ -16,8 +15,8 @@ import (
 )
 
 // Lint lints the proto file.
-func (c *Lint) Lint(ctx context.Context, disk fs.FS) error {
-	var res []error
+func (c *Lint) Lint(ctx context.Context, disk fs.FS) ([]*LinterError, error) {
+	var res []*LinterError
 
 	err := fs.WalkDir(disk, ".", func(path string, d fs.DirEntry, err error) error {
 		switch {
@@ -68,17 +67,18 @@ func (c *Lint) Lint(ctx context.Context, disk fs.FS) error {
 
 			results := c.rules[i].Validate(protoInfo)
 			for _, result := range results {
-				res = append(res, fmt.Errorf("%s:%w", path, result))
+				linterError := NewLinterError(path, result)
+				res = append(res, linterError)
 			}
 		}
 
 		return nil
 	})
 	if err != nil {
-		return fmt.Errorf("fs.WalkDir: %w", err)
+		return nil, fmt.Errorf("fs.WalkDir: %w", err)
 	}
 
-	return errors.Join(res...)
+	return res, nil
 }
 
 // readFilesFromImport reads all files that imported from scanning file
