@@ -75,10 +75,13 @@ func (l Lint) Action(ctx *cli.Context) error {
 
 	c := lint.New(lintRules, cfg.Lint.Ignore, cfg.Deps)
 
-	res := c.Lint(ctx.Context, dirFS)
-	if splitErr, ok := res.(interface{ Unwrap() []error }); ok {
+	res, err := c.Lint(ctx.Context, dirFS)
+	if err != nil {
+		return fmt.Errorf("c.Lint: %w", err)
+	}
 
-		if err := printLintErrors(os.Stdout, splitErr.Unwrap()); err != nil {
+	if len(res) > 0 {
+		if err := printLintErrors(os.Stdout, res); err != nil {
 			return fmt.Errorf("printLintErrors: %w", err)
 		}
 
@@ -87,19 +90,15 @@ func (l Lint) Action(ctx *cli.Context) error {
 		return nil
 	}
 
-	if err != nil {
-		return fmt.Errorf("c.Lint: %w", err)
-	}
-
 	return nil
 }
 
-func printLintErrors(w io.Writer, errs []error) error {
+func printLintErrors(w io.Writer, errs []*lint.LinterError) error {
 	buffer := bytes.NewBuffer(nil)
 	for _, err := range errs {
 		buffer.Reset()
 
-		_, _ = buffer.WriteString(err.Error())
+		_, _ = buffer.WriteString(err.String())
 		_, _ = buffer.WriteString("\n")
 		if _, err := w.Write(buffer.Bytes()); err != nil {
 			return err
