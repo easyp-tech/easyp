@@ -4,9 +4,24 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/easyp-tech/easyp/internal/lint"
 	"github.com/easyp-tech/easyp/internal/lint/rules"
 )
+
+func TestImportNoPublic_Name(t *testing.T) {
+	t.Parallel()
+
+	assert := require.New(t)
+
+	const expName = "IMPORT_NO_PUBLIC"
+
+	rule := rules.ImportNoPublic{}
+	name := rule.Name()
+
+	assert.Equal(expName, name)
+}
 
 func TestImportNoPublic_Validate(t *testing.T) {
 	t.Parallel()

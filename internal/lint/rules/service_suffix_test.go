@@ -4,9 +4,24 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/easyp-tech/easyp/internal/lint"
 	"github.com/easyp-tech/easyp/internal/lint/rules"
 )
+
+func TestServiceSuffix_Name(t *testing.T) {
+	t.Parallel()
+
+	assert := require.New(t)
+
+	const expName = "SERVICE_SUFFIX"
+
+	rule := rules.ServiceSuffix{}
+	name := rule.Name()
+
+	assert.Equal(expName, name)
+}
 
 func TestServiceSuffix_Validate(t *testing.T) {
 	t.Parallel()

@@ -4,9 +4,24 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/easyp-tech/easyp/internal/lint"
 	"github.com/easyp-tech/easyp/internal/lint/rules"
 )
+
+func TestOneofLowerSnakeCase_Name(t *testing.T) {
+	t.Parallel()
+
+	assert := require.New(t)
+
+	const expName = "ONEOF_LOWER_SNAKE_CASE"
+
+	rule := rules.OneofLowerSnakeCase{}
+	name := rule.Name()
+
+	assert.Equal(expName, name)
+}
 
 func TestOneofLowerSnakeCase_Validate(t *testing.T) {
 	t.Parallel()

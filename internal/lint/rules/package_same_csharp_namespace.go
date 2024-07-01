@@ -1,25 +1,32 @@
 package rules
 
 import (
+	"reflect"
+
 	"github.com/easyp-tech/easyp/internal/lint"
 )
 
-var _ lint.Rule = (*PackageSameCSharpNamespace)(nil)
+var _ lint.Rule = (*PackageSameCsharpNamespace)(nil)
 
-// PackageSameCSharpNamespace checks that all files with a given package have the same value for the csharp_namespace option.
-type PackageSameCSharpNamespace struct {
+// PackageSameCsharpNamespace checks that all files with a given package have the same value for the csharp_namespace option.
+type PackageSameCsharpNamespace struct {
 	// dir => package
 	cache map[string]string
 }
 
-func (p *PackageSameCSharpNamespace) lazyInit() {
+// Name implements lint.Rule.
+func (p *PackageSameCsharpNamespace) Name() string {
+	return toUpperSnakeCase(reflect.TypeOf(p).Elem().Name())
+}
+
+func (p *PackageSameCsharpNamespace) lazyInit() {
 	if p.cache == nil {
 		p.cache = make(map[string]string)
 	}
 }
 
 // Validate implements lint.Rule.
-func (p *PackageSameCSharpNamespace) Validate(protoInfo lint.ProtoInfo) []error {
+func (p *PackageSameCsharpNamespace) Validate(protoInfo lint.ProtoInfo) []error {
 	p.lazyInit()
 
 	var res []error
@@ -37,7 +44,7 @@ func (p *PackageSameCSharpNamespace) Validate(protoInfo lint.ProtoInfo) []error 
 			}
 
 			if p.cache[packageName] != option.Constant {
-				res = append(res, BuildError(option.Meta.Pos, option.Constant, lint.ErrPackageSameCSharpNamespace))
+				res = append(res, BuildError(protoInfo.Path, option.Meta.Pos, option.Constant, lint.ErrPackageSameCSharpNamespace))
 			}
 		}
 	}

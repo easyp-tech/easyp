@@ -1,6 +1,7 @@
 package rules
 
 import (
+	"reflect"
 	"strings"
 	"unicode"
 
@@ -13,8 +14,13 @@ var _ lint.Rule = (*EnumValuePrefix)(nil)
 type EnumValuePrefix struct {
 }
 
+// Name implements lint.Rule.
+func (e *EnumValuePrefix) Name() string {
+	return toUpperSnakeCase(reflect.TypeOf(e).Elem().Name())
+}
+
 // Validate implements lint.Rule.
-func (e EnumValuePrefix) Validate(protoInfo lint.ProtoInfo) []error {
+func (e *EnumValuePrefix) Validate(protoInfo lint.ProtoInfo) []error {
 	var res []error
 
 	for _, enum := range protoInfo.Info.ProtoBody.Enums {
@@ -22,7 +28,7 @@ func (e EnumValuePrefix) Validate(protoInfo lint.ProtoInfo) []error {
 
 		for _, enumValue := range enum.EnumBody.EnumFields {
 			if !strings.HasPrefix(enumValue.Ident, prefix) {
-				res = append(res, BuildError(enumValue.Meta.Pos, enumValue.Ident, lint.ErrEnumValuePrefix))
+				res = append(res, BuildError(protoInfo.Path, enumValue.Meta.Pos, enumValue.Ident, lint.ErrEnumValuePrefix))
 			}
 		}
 	}

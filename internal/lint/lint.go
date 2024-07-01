@@ -17,6 +17,7 @@ type Lint struct {
 	ignoreDirs    []string
 	deps          []string
 	moduleReflect *modulereflect.ModuleReflect
+	ignoreOnly    map[string][]string
 }
 
 // ImportPath type alias for path import in proto file
@@ -35,12 +36,14 @@ type ProtoInfo struct {
 
 // Rule is an interface for a rule checking.
 type Rule interface {
+	// Name returns Rule name.
+	Name() string
 	// Validate validates the proto rule.
 	Validate(ProtoInfo) []error
 }
 
 // New creates a new Lint.
-func New(rules []Rule, ignoreDirs []string, deps []string) *Lint {
+func New(rules []Rule, ignoreDirs []string, ignoreOnly map[string][]string, deps []string) *Lint {
 	moduleReflect, err := factories.NewModuleReflect()
 	if err != nil {
 		log.Fatal(err) // TODO; return error
@@ -51,5 +54,6 @@ func New(rules []Rule, ignoreDirs []string, deps []string) *Lint {
 		ignoreDirs:    ignoreDirs,
 		deps:          deps,
 		moduleReflect: moduleReflect,
+		ignoreOnly:    ignoreOnly,
 	}
 }

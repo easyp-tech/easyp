@@ -1,6 +1,8 @@
 package rules
 
 import (
+	"reflect"
+
 	"github.com/easyp-tech/easyp/internal/lint"
 )
 
@@ -10,6 +12,11 @@ var _ lint.Rule = (*PackageSameRubyPackage)(nil)
 type PackageSameRubyPackage struct {
 	// dir => package
 	cache map[string]string
+}
+
+// Name implements lint.Rule.
+func (p *PackageSameRubyPackage) Name() string {
+	return toUpperSnakeCase(reflect.TypeOf(p).Elem().Name())
 }
 
 func (p *PackageSameRubyPackage) lazyInit() {
@@ -37,7 +44,7 @@ func (p *PackageSameRubyPackage) Validate(protoInfo lint.ProtoInfo) []error {
 			}
 
 			if p.cache[packageName] != option.Constant {
-				res = append(res, BuildError(option.Meta.Pos, option.Constant, lint.ErrPackageSameRubyPackage))
+				res = append(res, BuildError(protoInfo.Path, option.Meta.Pos, option.Constant, lint.ErrPackageSameRubyPackage))
 			}
 		}
 	}

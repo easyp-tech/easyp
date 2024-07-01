@@ -4,9 +4,24 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/easyp-tech/easyp/internal/lint"
 	"github.com/easyp-tech/easyp/internal/lint/rules"
 )
+
+func TestImportUsed_Name(t *testing.T) {
+	t.Parallel()
+
+	assert := require.New(t)
+
+	const expName = "IMPORT_USED"
+
+	rule := rules.ImportUsed{}
+	name := rule.Name()
+
+	assert.Equal(expName, name)
+}
 
 func TestImportUsed_Validate(t *testing.T) {
 	t.Parallel()

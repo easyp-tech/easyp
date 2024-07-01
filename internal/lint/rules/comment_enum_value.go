@@ -1,6 +1,8 @@
 package rules
 
 import (
+	"reflect"
+
 	"github.com/easyp-tech/easyp/internal/lint"
 )
 
@@ -9,6 +11,11 @@ var _ lint.Rule = (*CommentEnumValue)(nil)
 // CommentEnumValue this rule checks that enum values have non-empty comments.
 type CommentEnumValue struct{}
 
+// Name implements lint.Rule.
+func (c *CommentEnumValue) Name() string {
+	return toUpperSnakeCase(reflect.TypeOf(c).Elem().Name())
+}
+
 // Validate implements lint.Rule.
 func (c *CommentEnumValue) Validate(protoInfo lint.ProtoInfo) []error {
 	var res []error
@@ -16,7 +23,12 @@ func (c *CommentEnumValue) Validate(protoInfo lint.ProtoInfo) []error {
 	for _, enum := range protoInfo.Info.ProtoBody.Enums {
 		for _, field := range enum.EnumBody.EnumFields {
 			if len(field.Comments) == 0 {
-				res = append(res, BuildError(field.Meta.Pos, field.Ident, lint.ErrEnumValueCommentIsEmpty))
+				res = append(res, BuildError(
+					protoInfo.Path,
+					field.Meta.Pos,
+					field.Ident,
+					lint.ErrEnumValueCommentIsEmpty,
+				))
 			}
 		}
 	}

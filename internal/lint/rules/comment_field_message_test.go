@@ -4,11 +4,26 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/easyp-tech/easyp/internal/lint"
 	"github.com/easyp-tech/easyp/internal/lint/rules"
 )
 
-func TestCommentMessageField_Validate(t *testing.T) {
+func TestCommentField_Name(t *testing.T) {
+	t.Parallel()
+
+	assert := require.New(t)
+
+	const expName = "COMMENT_FIELD"
+
+	rule := rules.CommentField{}
+	name := rule.Name()
+
+	assert.Equal(expName, name)
+}
+
+func TestCommentField_Validate(t *testing.T) {
 	t.Parallel()
 
 	tests := map[string]struct {

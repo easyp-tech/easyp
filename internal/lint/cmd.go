@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"strings"
 
 	"github.com/yoheimuta/go-protoparser/v4"
 	"github.com/yoheimuta/go-protoparser/v4/interpret/unordered"
@@ -64,9 +65,13 @@ func (c *Lint) Lint(ctx context.Context, disk fs.FS) error {
 				return ctx.Err()
 			}
 
+			if c.shouldIgnore(c.rules[i], path) {
+				continue
+			}
+
 			results := c.rules[i].Validate(protoInfo)
 			for _, result := range results {
-				res = append(res, fmt.Errorf("%s:%w", path, result))
+				res = append(res, result)
 			}
 		}
 
@@ -156,4 +161,19 @@ func readProtoFile(f fs.File) (*unordered.Proto, error) {
 	}
 
 	return proto, nil
+}
+
+func (c *Lint) shouldIgnore(rule Rule, path string) bool {
+	ignoreFilesOrDirs := c.ignoreOnly[rule.Name()]
+
+	for _, fileOrDir := range ignoreFilesOrDirs {
+		switch {
+		case fileOrDir == path:
+			return true
+		case strings.HasPrefix(path, fileOrDir):
+			return true
+		}
+	}
+
+	return false
 }

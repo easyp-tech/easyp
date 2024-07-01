@@ -1,6 +1,8 @@
 package rules
 
 import (
+	"reflect"
+
 	"github.com/easyp-tech/easyp/internal/lint"
 )
 
@@ -12,14 +14,19 @@ type EnumZeroValueSuffix struct {
 	Suffix string `json:"suffix" yaml:"suffix" ENV:"ENUM_ZERO_VALUE_SUFFIX"`
 }
 
+// Name implements lint.Rule.
+func (e *EnumZeroValueSuffix) Name() string {
+	return toUpperSnakeCase(reflect.TypeOf(e).Elem().Name())
+}
+
 // Validate implements lint.Rule.
-func (e EnumZeroValueSuffix) Validate(protoInfo lint.ProtoInfo) []error {
+func (e *EnumZeroValueSuffix) Validate(protoInfo lint.ProtoInfo) []error {
 	var res []error
 
 	for _, enum := range protoInfo.Info.ProtoBody.Enums {
 		zeroValue := enum.EnumBody.EnumFields[0]
 		if zeroValue.Ident != pascalToUpperSnake(enum.EnumName)+"_"+e.Suffix {
-			res = append(res, BuildError(zeroValue.Meta.Pos, zeroValue.Ident, lint.ErrEnumZeroValueSuffix))
+			res = append(res, BuildError(protoInfo.Path, zeroValue.Meta.Pos, zeroValue.Ident, lint.ErrEnumZeroValueSuffix))
 		}
 	}
 

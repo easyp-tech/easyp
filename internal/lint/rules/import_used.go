@@ -1,6 +1,7 @@
 package rules
 
 import (
+	"reflect"
 	"strings"
 
 	"github.com/yoheimuta/go-protoparser/v4/interpret/unordered"
@@ -14,8 +15,13 @@ var _ lint.Rule = (*ImportUsed)(nil)
 // ImportUsed this rule checks that all the imports declared across your Protobuf files are actually used.
 type ImportUsed struct{}
 
+// Name implements lint.Rule.
+func (i *ImportUsed) Name() string {
+	return toUpperSnakeCase(reflect.TypeOf(i).Elem().Name())
+}
+
 // Validate implements lint.Rule.
-func (i ImportUsed) Validate(protoInfo lint.ProtoInfo) []error {
+func (i *ImportUsed) Validate(protoInfo lint.ProtoInfo) []error {
 	var res []error
 
 	var sourcePkgName string
@@ -93,7 +99,7 @@ func (i ImportUsed) Validate(protoInfo lint.ProtoInfo) []error {
 
 	for imp, used := range isImportUsed {
 		if !used {
-			res = append(res, BuildError(importInfo[imp].Meta.Pos, importInfo[imp].Location, lint.ErrImportIsNotUsed))
+			res = append(res, BuildError(protoInfo.Path, importInfo[imp].Meta.Pos, importInfo[imp].Location, lint.ErrImportIsNotUsed))
 		}
 	}
 
@@ -106,8 +112,9 @@ func (i ImportUsed) Validate(protoInfo lint.ProtoInfo) []error {
 
 // instructionInfo collects info about instruction in proto file
 // e.g `google.api.http`:
-// 		`google.api` - package name
-// 		'http' - instruction name
+//
+//	`google.api` - package name
+//	'http' - instruction name
 type instructionInfo struct {
 	pkgName     string
 	instruction string

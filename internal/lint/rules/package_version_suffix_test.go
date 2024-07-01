@@ -4,9 +4,24 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/easyp-tech/easyp/internal/lint"
 	"github.com/easyp-tech/easyp/internal/lint/rules"
 )
+
+func TestPackageVersionSuffix_Name(t *testing.T) {
+	t.Parallel()
+
+	assert := require.New(t)
+
+	const expName = "PACKAGE_VERSION_SUFFIX"
+
+	rule := rules.PackageVersionSuffix{}
+	name := rule.Name()
+
+	assert.Equal(expName, name)
+}
 
 func TestPackageVersionSuffix_Validate(t *testing.T) {
 	t.Parallel()
