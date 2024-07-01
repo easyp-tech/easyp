@@ -4,11 +4,26 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/easyp-tech/easyp/internal/lint"
 	"github.com/easyp-tech/easyp/internal/lint/rules"
 )
 
-func TestRpcPascalCase_Validate(t *testing.T) {
+func TestRPCPascalCase_Name(t *testing.T) {
+	t.Parallel()
+
+	assert := require.New(t)
+
+	const expName = "RPC_PASCAL_CASE"
+
+	rule := rules.RPCPascalCase{}
+	name := rule.Name()
+
+	assert.Equal(expName, name)
+}
+
+func TestRPCPascalCase_Validate(t *testing.T) {
 	t.Parallel()
 
 	tests := map[string]struct {
@@ -32,7 +47,7 @@ func TestRpcPascalCase_Validate(t *testing.T) {
 
 			r, protos := start(t)
 
-			rule := rules.RpcPascalCase{}
+			rule := rules.RPCPascalCase{}
 			err := rule.Validate(protos[tc.fileName])
 			r.ErrorIs(errors.Join(err...), tc.wantErr)
 		})

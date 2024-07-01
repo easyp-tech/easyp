@@ -2,6 +2,7 @@ package rules
 
 import (
 	"path/filepath"
+	"reflect"
 	"strings"
 
 	"github.com/easyp-tech/easyp/internal/lint"
@@ -14,6 +15,11 @@ type PackageDirectoryMatch struct {
 	Root string `json:"root" yaml:"root" env:"PACKAGE_DIRECTORY_MATCH_ROOT"`
 }
 
+// Name implements lint.Rule.
+func (d *PackageDirectoryMatch) Name() string {
+	return toUpperSnakeCase(reflect.TypeOf(d).Elem().Name())
+}
+
 // Validate implements lint.Rule.
 func (d *PackageDirectoryMatch) Validate(protoInfo lint.ProtoInfo) []error {
 	var res []error
@@ -23,7 +29,7 @@ func (d *PackageDirectoryMatch) Validate(protoInfo lint.ProtoInfo) []error {
 
 	for _, pkgInfo := range protoInfo.Info.ProtoBody.Packages {
 		if pkgInfo.Name != expectedPackage {
-			res = append(res, BuildError(pkgInfo.Meta.Pos, protoInfo.Path, lint.ErrPackageIsNotMatchedWithPath))
+			res = append(res, BuildError(protoInfo.Path, pkgInfo.Meta.Pos, protoInfo.Path, lint.ErrPackageIsNotMatchedWithPath))
 		}
 	}
 

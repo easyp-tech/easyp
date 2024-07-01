@@ -4,9 +4,24 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/easyp-tech/easyp/internal/lint"
 	"github.com/easyp-tech/easyp/internal/lint/rules"
 )
+
+func TestRPCRequestStandardName_Name(t *testing.T) {
+	t.Parallel()
+
+	assert := require.New(t)
+
+	const expName = "RPC_REQUEST_STANDARD_NAME"
+
+	rule := rules.RPCRequestStandardName{}
+	name := rule.Name()
+
+	assert.Equal(expName, name)
+}
 
 func TestRPCRequestStandardName_Validate(t *testing.T) {
 	t.Parallel()

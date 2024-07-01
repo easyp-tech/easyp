@@ -4,9 +4,24 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/easyp-tech/easyp/internal/lint"
 	"github.com/easyp-tech/easyp/internal/lint/rules"
 )
+
+func TestMessagePascalCase_Name(t *testing.T) {
+	t.Parallel()
+
+	assert := require.New(t)
+
+	const expName = "MESSAGE_PASCAL_CASE"
+
+	rule := rules.MessagePascalCase{}
+	name := rule.Name()
+
+	assert.Equal(expName, name)
+}
 
 func TestMessagePascalCase_Validate(t *testing.T) {
 	t.Parallel()

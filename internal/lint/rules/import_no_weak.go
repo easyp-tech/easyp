@@ -1,6 +1,8 @@
 package rules
 
 import (
+	"reflect"
+
 	"github.com/yoheimuta/go-protoparser/v4/parser"
 
 	"github.com/easyp-tech/easyp/internal/lint"
@@ -12,13 +14,18 @@ var _ lint.Rule = (*ImportNoWeak)(nil)
 // If you didn't know that was possible, forget what you just learned in this sentence.
 type ImportNoWeak struct{}
 
+// Name implements lint.Rule.
+func (i *ImportNoWeak) Name() string {
+	return toUpperSnakeCase(reflect.TypeOf(i).Elem().Name())
+}
+
 // Validate implements lint.Rule.
-func (i ImportNoWeak) Validate(protoInfo lint.ProtoInfo) []error {
+func (i *ImportNoWeak) Validate(protoInfo lint.ProtoInfo) []error {
 	var res []error
 
 	for _, imp := range protoInfo.Info.ProtoBody.Imports {
 		if imp.Modifier == parser.ImportModifierWeak {
-			res = append(res, BuildError(imp.Meta.Pos, imp.Location, lint.ErrImportIsWeak))
+			res = append(res, BuildError(protoInfo.Path, imp.Meta.Pos, imp.Location, lint.ErrImportIsWeak))
 		}
 	}
 

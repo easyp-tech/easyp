@@ -1,6 +1,8 @@
 package rules
 
 import (
+	"reflect"
+
 	"github.com/samber/lo"
 
 	"github.com/easyp-tech/easyp/internal/lint"
@@ -12,8 +14,13 @@ var _ lint.Rule = (*RPCRequestResponseUnique)(nil)
 type RPCRequestResponseUnique struct {
 }
 
+// Name implements lint.Rule.
+func (r *RPCRequestResponseUnique) Name() string {
+	return toUpperSnakeCase(reflect.TypeOf(r).Elem().Name())
+}
+
 // Validate implements lint.Rule.
-func (R RPCRequestResponseUnique) Validate(protoInfo lint.ProtoInfo) []error {
+func (r RPCRequestResponseUnique) Validate(protoInfo lint.ProtoInfo) []error {
 	var res []error
 	var messages []string
 
@@ -22,12 +29,12 @@ func (R RPCRequestResponseUnique) Validate(protoInfo lint.ProtoInfo) []error {
 			if !lo.Contains(messages, rpc.RPCRequest.MessageType) {
 				messages = append(messages, rpc.RPCRequest.MessageType)
 			} else {
-				res = append(res, BuildError(rpc.Meta.Pos, rpc.RPCRequest.MessageType, lint.ErrRPCRequestResponseUnique))
+				res = append(res, BuildError(protoInfo.Path, rpc.Meta.Pos, rpc.RPCRequest.MessageType, lint.ErrRPCRequestResponseUnique))
 			}
 			if !lo.Contains(messages, rpc.RPCResponse.MessageType) {
 				messages = append(messages, rpc.RPCResponse.MessageType)
 			} else {
-				res = append(res, BuildError(rpc.Meta.Pos, rpc.RPCResponse.MessageType, lint.ErrRPCRequestResponseUnique))
+				res = append(res, BuildError(protoInfo.Path, rpc.Meta.Pos, rpc.RPCResponse.MessageType, lint.ErrRPCRequestResponseUnique))
 			}
 		}
 	}

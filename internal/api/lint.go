@@ -2,6 +2,7 @@ package api
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"io"
 	"os"
@@ -17,6 +18,12 @@ var _ Handler = (*Lint)(nil)
 // Lint is a handler for lint command.
 type Lint struct{}
 
+// Format is the format of output.
+const (
+	TextFormat = "text"
+	JSONFormat = "json"
+)
+
 var (
 	flagLintDirectoryPath = &cli.StringFlag{
 		Name:       "path",
@@ -26,6 +33,16 @@ var (
 		Value:      ".",
 		Aliases:    []string{"p"},
 		EnvVars:    []string{"EASYP_PATH"},
+	}
+
+	flagFormat = &cli.StringFlag{
+		Name:       "format",
+		Usage:      "set format of output",
+		Required:   false,
+		HasBeenSet: false,
+		Value:      TextFormat,
+		Aliases:    []string{"f"},
+		EnvVars:    []string{"EASYP_FORMAT"},
 	}
 )
 
@@ -47,6 +64,7 @@ func (l Lint) Command() *cli.Command {
 		Subcommands:  nil,
 		Flags: []cli.Flag{
 			flagLintDirectoryPath,
+			flagFormat,
 		},
 		SkipFlagParsing:        false,
 		HideHelp:               false,
@@ -62,23 +80,28 @@ func (l Lint) Command() *cli.Command {
 func (l Lint) Action(ctx *cli.Context) error {
 	cfg, err := config.ReadConfig(ctx)
 	if err != nil {
-		return fmt.Errorf("ReadConfig: %w", err)
+		return fmt.Errorf("config.ReadConfig: %w", err)
 	}
 
 	lintRules, err := cfg.BuildLinterRules()
 	if err != nil {
-		return fmt.Errorf("cfg.buildLinterRules: %w", err)
+		return fmt.Errorf("cfg.BuildLinterRules: %w", err)
 	}
 
 	rootPath := ctx.String(flagLintDirectoryPath.Name)
 	dirFS := os.DirFS(rootPath)
 
-	c := lint.New(lintRules, cfg.Lint.Ignore, cfg.Deps)
+	c := lint.New(lintRules, cfg.Lint.Ignore, cfg.Lint.IgnoreOnly, cfg.Deps)
 
 	res := c.Lint(ctx.Context, dirFS)
 	if splitErr, ok := res.(interface{ Unwrap() []error }); ok {
 
-		if err := printLintErrors(os.Stdout, splitErr.Unwrap()); err != nil {
+		format := ctx.String(flagFormat.Name)
+		if err := printLintErrors(
+			format,
+			os.Stdout,
+			splitErr.Unwrap(),
+		); err != nil {
 			return fmt.Errorf("printLintErrors: %w", err)
 		}
 
@@ -94,7 +117,19 @@ func (l Lint) Action(ctx *cli.Context) error {
 	return nil
 }
 
-func printLintErrors(w io.Writer, errs []error) error {
+func printLintErrors(format string, w io.Writer, errs []error) error {
+	switch format {
+	case TextFormat:
+		return textPrinter(w, errs)
+	case JSONFormat:
+		return jsonPrinter(w, errs)
+	default:
+		return fmt.Errorf("unsupported format: %s", format)
+	}
+}
+
+// textPrinter prints the error in text format.
+func textPrinter(w io.Writer, errs []error) error {
 	buffer := bytes.NewBuffer(nil)
 	for _, err := range errs {
 		buffer.Reset()
@@ -102,7 +137,19 @@ func printLintErrors(w io.Writer, errs []error) error {
 		_, _ = buffer.WriteString(err.Error())
 		_, _ = buffer.WriteString("\n")
 		if _, err := w.Write(buffer.Bytes()); err != nil {
-			return err
+			return fmt.Errorf("w.Write: %w", err)
+		}
+	}
+
+	return nil
+}
+
+// jsonPrinter prints the error in json format.
+func jsonPrinter(w io.Writer, errs []error) error {
+	for _, err := range errs {
+		marshalErr := json.NewEncoder(w).Encode(err)
+		if marshalErr != nil {
+			return fmt.Errorf("json.NewEncoder.Encode: %w", marshalErr)
 		}
 	}
 

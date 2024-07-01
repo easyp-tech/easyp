@@ -4,10 +4,25 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/easyp-tech/easyp/internal/lint/rules"
 
 	"github.com/easyp-tech/easyp/internal/lint"
 )
+
+func TestCommentOneof_Name(t *testing.T) {
+	t.Parallel()
+
+	assert := require.New(t)
+
+	const expName = "COMMENT_ONEOF"
+
+	rule := rules.CommentOneof{}
+	name := rule.Name()
+
+	assert.Equal(expName, name)
+}
 
 func TestCommentOneOf_Validate(t *testing.T) {
 	t.Parallel()
@@ -33,7 +48,7 @@ func TestCommentOneOf_Validate(t *testing.T) {
 
 			r, protos := start(t)
 
-			rule := rules.CommentOneOf{}
+			rule := rules.CommentOneof{}
 			err := rule.Validate(protos[tc.fileName])
 			r.ErrorIs(errors.Join(err...), tc.wantErr)
 		})

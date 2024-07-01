@@ -1,6 +1,8 @@
 package rules
 
 import (
+	"reflect"
+
 	"github.com/easyp-tech/easyp/internal/lint"
 )
 
@@ -11,6 +13,11 @@ var _ lint.Rule = (*PackageNoImportCycle)(nil)
 type PackageNoImportCycle struct {
 	// cache is a map of package name to a slice of package names that it imports
 	cache map[string][]string
+}
+
+// Name implements lint.Rule.
+func (p *PackageNoImportCycle) Name() string {
+	return toUpperSnakeCase(reflect.TypeOf(p).Elem().Name())
 }
 
 func (p *PackageNoImportCycle) lazyInit() {

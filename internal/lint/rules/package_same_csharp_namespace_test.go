@@ -4,9 +4,24 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/easyp-tech/easyp/internal/lint"
 	"github.com/easyp-tech/easyp/internal/lint/rules"
 )
+
+func TestPackageSameCSharpNamespace_Name(t *testing.T) {
+	t.Parallel()
+
+	assert := require.New(t)
+
+	const expName = "PACKAGE_SAME_CSHARP_NAMESPACE"
+
+	rule := rules.PackageSameCsharpNamespace{}
+	name := rule.Name()
+
+	assert.Equal(expName, name)
+}
 
 func TestPackageSameCSharpNamespace_Validate(t *testing.T) {
 	t.Parallel()
@@ -32,7 +47,7 @@ func TestPackageSameCSharpNamespace_Validate(t *testing.T) {
 
 			r, protos := start(t)
 
-			rule := rules.PackageSameCSharpNamespace{}
+			rule := rules.PackageSameCsharpNamespace{}
 			var got []error
 			for _, fileName := range tc.fileNames {
 				err := rule.Validate(protos[fileName])

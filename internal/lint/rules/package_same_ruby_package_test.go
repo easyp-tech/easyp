@@ -4,9 +4,24 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/easyp-tech/easyp/internal/lint"
 	"github.com/easyp-tech/easyp/internal/lint/rules"
 )
+
+func TestPackageSameRubyPackage_Name(t *testing.T) {
+	t.Parallel()
+
+	assert := require.New(t)
+
+	const expName = "PACKAGE_SAME_RUBY_PACKAGE"
+
+	rule := rules.PackageSameRubyPackage{}
+	name := rule.Name()
+
+	assert.Equal(expName, name)
+}
 
 func TestPackageSameRubyPackage_Validate(t *testing.T) {
 	t.Parallel()

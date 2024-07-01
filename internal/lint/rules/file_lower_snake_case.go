@@ -2,6 +2,7 @@ package rules
 
 import (
 	"path/filepath"
+	"reflect"
 	"regexp"
 
 	"github.com/yoheimuta/go-protoparser/v4/parser/meta"
@@ -16,13 +17,18 @@ var _ lint.Rule = (*FileLowerSnakeCase)(nil)
 type FileLowerSnakeCase struct {
 }
 
+// Name implements lint.Rule.
+func (f *FileLowerSnakeCase) Name() string {
+	return toUpperSnakeCase(reflect.TypeOf(f).Elem().Name())
+}
+
 // Validate implements lint.Rule.
-func (f FileLowerSnakeCase) Validate(protoInfo lint.ProtoInfo) []error {
+func (f *FileLowerSnakeCase) Validate(protoInfo lint.ProtoInfo) []error {
 	var res []error
 
 	fileName := filepath.Base(protoInfo.Path)
 	if !isLowerSnakeCase(fileName) {
-		res = append(res, BuildError(meta.Position{
+		res = append(res, BuildError(protoInfo.Path, meta.Position{
 			Filename: protoInfo.Path,
 			Offset:   0,
 			Line:     0,

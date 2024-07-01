@@ -4,9 +4,24 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/easyp-tech/easyp/internal/lint"
 	"github.com/easyp-tech/easyp/internal/lint/rules"
 )
+
+func TestEnumNoAllowAlias_Name(t *testing.T) {
+	t.Parallel()
+
+	assert := require.New(t)
+
+	const expName = "ENUM_NO_ALLOW_ALIAS"
+
+	rule := rules.EnumNoAllowAlias{}
+	name := rule.Name()
+
+	assert.Equal(expName, name)
+}
 
 func TestEnumNoAllowAlias_Validate(t *testing.T) {
 	t.Parallel()

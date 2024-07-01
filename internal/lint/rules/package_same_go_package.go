@@ -1,6 +1,8 @@
 package rules
 
 import (
+	"reflect"
+
 	"github.com/easyp-tech/easyp/internal/lint"
 )
 
@@ -10,6 +12,11 @@ var _ lint.Rule = (*PackageSameGoPackage)(nil)
 type PackageSameGoPackage struct {
 	// dir => package
 	cache map[string]string
+}
+
+// Name implements lint.Rule.
+func (p *PackageSameGoPackage) Name() string {
+	return toUpperSnakeCase(reflect.TypeOf(p).Elem().Name())
 }
 
 func (p *PackageSameGoPackage) lazyInit() {
@@ -37,7 +44,7 @@ func (p *PackageSameGoPackage) Validate(protoInfo lint.ProtoInfo) []error {
 			}
 
 			if p.cache[packageName] != option.Constant {
-				res = append(res, BuildError(option.Meta.Pos, option.Constant, lint.ErrPackageSameGoPackage))
+				res = append(res, BuildError(protoInfo.Path, option.Meta.Pos, option.Constant, lint.ErrPackageSameGoPackage))
 			}
 		}
 	}

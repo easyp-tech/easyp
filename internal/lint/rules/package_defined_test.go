@@ -4,9 +4,24 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/easyp-tech/easyp/internal/lint"
 	"github.com/easyp-tech/easyp/internal/lint/rules"
 )
+
+func TestPackageDefined_Name(t *testing.T) {
+	t.Parallel()
+
+	assert := require.New(t)
+
+	const expName = "PACKAGE_DEFINED"
+
+	rule := rules.PackageDefined{}
+	name := rule.Name()
+
+	assert.Equal(expName, name)
+}
 
 func TestPackageDefined_Validate(t *testing.T) {
 	t.Parallel()

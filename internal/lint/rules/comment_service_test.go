@@ -4,9 +4,24 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/easyp-tech/easyp/internal/lint"
 	"github.com/easyp-tech/easyp/internal/lint/rules"
 )
+
+func TestCommentService_Name(t *testing.T) {
+	t.Parallel()
+
+	assert := require.New(t)
+
+	const expName = "COMMENT_SERVICE"
+
+	rule := rules.CommentService{}
+	name := rule.Name()
+
+	assert.Equal(expName, name)
+}
 
 func TestCommentService_Validate(t *testing.T) {
 	t.Parallel()

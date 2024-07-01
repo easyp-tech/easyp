@@ -26,7 +26,7 @@ func initLogger(isDebug bool) {
 
 func main() {
 	app := &cli.App{
-		Name:        "easyp info",
+		Name:        "easyp",
 		HelpName:    "easyp",
 		Usage:       "usage info",
 		UsageText:   "usage text info",

@@ -1,6 +1,8 @@
 package rules
 
 import (
+	"reflect"
+
 	"github.com/easyp-tech/easyp/internal/lint"
 )
 
@@ -10,6 +12,11 @@ var _ lint.Rule = (*PackageSameSwiftPrefix)(nil)
 type PackageSameSwiftPrefix struct {
 	// dir => package
 	cache map[string]string
+}
+
+// Name implements lint.Rule.
+func (p *PackageSameSwiftPrefix) Name() string {
+	return toUpperSnakeCase(reflect.TypeOf(p).Elem().Name())
 }
 
 func (p *PackageSameSwiftPrefix) lazyInit() {
@@ -37,7 +44,7 @@ func (p *PackageSameSwiftPrefix) Validate(protoInfo lint.ProtoInfo) []error {
 			}
 
 			if p.cache[packageName] != option.Constant {
-				res = append(res, BuildError(option.Meta.Pos, option.Constant, lint.ErrPackageSameSwiftPrefix))
+				res = append(res, BuildError(protoInfo.Path, option.Meta.Pos, option.Constant, lint.ErrPackageSameSwiftPrefix))
 			}
 		}
 	}

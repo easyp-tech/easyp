@@ -4,9 +4,24 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/easyp-tech/easyp/internal/lint"
 	"github.com/easyp-tech/easyp/internal/lint/rules"
 )
+
+func TestImportNoWeak_Name(t *testing.T) {
+	t.Parallel()
+
+	assert := require.New(t)
+
+	const expName = "IMPORT_NO_WEAK"
+
+	rule := rules.ImportNoWeak{}
+	name := rule.Name()
+
+	assert.Equal(expName, name)
+}
 
 func TestImportNoWeak_Validate(t *testing.T) {
 	t.Parallel()
