@@ -13,18 +13,19 @@ import (
 )
 
 const (
-	invalidAuthProto         = `./../../../testdata/auth/service.proto`
-	invalidAuthProto2        = `./../../../testdata/auth/queue.proto`
-	invalidAuthProto3        = `./../../../testdata/auth/InvalidName.proto`
-	invalidAuthProto4        = `./../../../testdata/invalid_pkg/queue.proto`
-	invalidAuthProto5        = `./../../../testdata/invalid_options/queue.proto`
-	invalidAuthProto6        = `./../../../testdata/invalid_options/session.proto`
-	invalidAuthProtoEmptyPkg = `./../../../testdata/auth/empty_pkg.proto`
-	invalidsSessionProto     = `./../../../testdata/invalid_pkg/session.proto`
-	validAuthProto           = `./../../../testdata/api/session/v1/session.proto`
-	validAuthProto2          = `./../../../testdata/api/session/v1/events.proto`
-	importUsed               = "./../../../testdata/import_used/used.proto"
-	importNotUsed            = "./../../../testdata/import_used/not_used.proto"
+	invalidAuthProto           = `./../../../testdata/auth/service.proto`
+	invalidAuthProto2          = `./../../../testdata/auth/queue.proto`
+	invalidAuthProto3          = `./../../../testdata/auth/InvalidName.proto`
+	invalidAuthProto4          = `./../../../testdata/invalid_pkg/queue.proto`
+	invalidAuthProto5          = `./../../../testdata/invalid_options/queue.proto`
+	invalidAuthProto6          = `./../../../testdata/invalid_options/session.proto`
+	invalidAuthProtoEmptyPkg   = `./../../../testdata/auth/empty_pkg.proto`
+	invalidsSessionProto       = `./../../../testdata/invalid_pkg/session.proto`
+	validAuthProto             = `./../../../testdata/api/session/v1/session.proto`
+	validAuthProto2            = `./../../../testdata/api/session/v1/events.proto`
+	validCamelCaseSessionProto = `./../../../testdata/api/session/v1/session_camel_case.proto`
+	importUsed                 = "./../../../testdata/import_used/used.proto"
+	importNotUsed              = "./../../../testdata/import_used/not_used.proto"
 )
 
 func start(t testing.TB) (*require.Assertions, map[string]lint.ProtoInfo) {
@@ -33,18 +34,19 @@ func start(t testing.TB) (*require.Assertions, map[string]lint.ProtoInfo) {
 	assert := require.New(t)
 
 	protos := map[string]lint.ProtoInfo{
-		invalidAuthProto:         parseFile(t, assert, invalidAuthProto),
-		invalidAuthProto2:        parseFile(t, assert, invalidAuthProto2),
-		invalidAuthProto3:        parseFile(t, assert, invalidAuthProto3),
-		invalidAuthProto4:        parseFile(t, assert, invalidAuthProto4),
-		invalidAuthProto5:        parseFile(t, assert, invalidAuthProto5),
-		invalidAuthProto6:        parseFile(t, assert, invalidAuthProto6),
-		invalidAuthProtoEmptyPkg: parseFile(t, assert, invalidAuthProtoEmptyPkg),
-		invalidsSessionProto:     parseFile(t, assert, invalidsSessionProto),
-		validAuthProto:           parseFile(t, assert, validAuthProto),
-		validAuthProto2:          parseFile(t, assert, validAuthProto2),
-		importUsed:               parseFile(t, assert, importUsed),
-		importNotUsed:            parseFile(t, assert, importNotUsed),
+		invalidAuthProto:           parseFile(t, assert, invalidAuthProto),
+		invalidAuthProto2:          parseFile(t, assert, invalidAuthProto2),
+		invalidAuthProto3:          parseFile(t, assert, invalidAuthProto3),
+		invalidAuthProto4:          parseFile(t, assert, invalidAuthProto4),
+		invalidAuthProto5:          parseFile(t, assert, invalidAuthProto5),
+		invalidAuthProto6:          parseFile(t, assert, invalidAuthProto6),
+		invalidAuthProtoEmptyPkg:   parseFile(t, assert, invalidAuthProtoEmptyPkg),
+		invalidsSessionProto:       parseFile(t, assert, invalidsSessionProto),
+		validAuthProto:             parseFile(t, assert, validAuthProto),
+		validAuthProto2:            parseFile(t, assert, validAuthProto2),
+		validCamelCaseSessionProto: parseFile(t, assert, validCamelCaseSessionProto),
+		importUsed:                 parseFile(t, assert, importUsed),
+		importNotUsed:              parseFile(t, assert, importNotUsed),
 	}
 
 	return assert, protos
