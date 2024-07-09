@@ -157,7 +157,7 @@ func (c *Lint) readFileFromImport(ctx context.Context, disk fs.FS, importName st
 	f, err = wellknownimports.Content.Open(importName)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return nil, err
+			return nil, fmt.Errorf("wellknownimports.Content.Open: %w", err)
 		}
 
 		return nil, fmt.Errorf("os.Open: %w", err)
