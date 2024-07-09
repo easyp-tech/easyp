@@ -15,19 +15,24 @@ type PackageNoImportCycle struct {
 	cache map[string][]string
 }
 
-// Name implements lint.Rule.
-func (p *PackageNoImportCycle) Name() string {
-	return toUpperSnakeCase(reflect.TypeOf(p).Elem().Name())
-}
-
 func (p *PackageNoImportCycle) lazyInit() {
 	if p.cache == nil {
 		p.cache = make(map[string][]string)
 	}
 }
 
+// Name implements lint.Rule.
+func (p *PackageNoImportCycle) Name() string {
+	return toUpperSnakeCase(reflect.TypeOf(p).Elem().Name())
+}
+
+// Message implements lint.Rule.
+func (p *PackageNoImportCycle) Message() string {
+	return "package should not have import cycles"
+}
+
 // Validate implements lint.Rule.
-func (p *PackageNoImportCycle) Validate(protoInfo lint.ProtoInfo) []error {
+func (p *PackageNoImportCycle) Validate(protoInfo lint.ProtoInfo) ([]lint.Issue, error) {
 	p.lazyInit()
 	panic("implement me")
 }

@@ -19,9 +19,14 @@ func (r *RPCRequestResponseUnique) Name() string {
 	return toUpperSnakeCase(reflect.TypeOf(r).Elem().Name())
 }
 
+// Message implements lint.Rule.
+func (r *RPCRequestResponseUnique) Message() string {
+	return "request and response types must be unique across all RPCs"
+}
+
 // Validate implements lint.Rule.
-func (r RPCRequestResponseUnique) Validate(protoInfo lint.ProtoInfo) []error {
-	var res []error
+func (r *RPCRequestResponseUnique) Validate(protoInfo lint.ProtoInfo) ([]lint.Issue, error) {
+	var res []lint.Issue
 	var messages []string
 
 	for _, service := range protoInfo.Info.ProtoBody.Services {
@@ -29,19 +34,15 @@ func (r RPCRequestResponseUnique) Validate(protoInfo lint.ProtoInfo) []error {
 			if !lo.Contains(messages, rpc.RPCRequest.MessageType) {
 				messages = append(messages, rpc.RPCRequest.MessageType)
 			} else {
-				res = append(res, BuildError(protoInfo.Path, rpc.Meta.Pos, rpc.RPCRequest.MessageType, lint.ErrRPCRequestResponseUnique))
+				res = append(res, lint.BuildError(rpc.Meta.Pos, rpc.RPCRequest.MessageType, r.Message()))
 			}
 			if !lo.Contains(messages, rpc.RPCResponse.MessageType) {
 				messages = append(messages, rpc.RPCResponse.MessageType)
 			} else {
-				res = append(res, BuildError(protoInfo.Path, rpc.Meta.Pos, rpc.RPCResponse.MessageType, lint.ErrRPCRequestResponseUnique))
+				res = append(res, lint.BuildError(rpc.Meta.Pos, rpc.RPCResponse.MessageType, r.Message()))
 			}
 		}
 	}
 
-	if len(res) == 0 {
-		return nil
-	}
-
-	return res
+	return res, nil
 }

@@ -1,10 +1,10 @@
 package rules_test
 
 import (
-	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"github.com/yoheimuta/go-protoparser/v4/parser/meta"
 
 	"github.com/easyp-tech/easyp/internal/lint"
 	"github.com/easyp-tech/easyp/internal/lint/rules"
@@ -23,16 +23,39 @@ func TestRPCPascalCase_Name(t *testing.T) {
 	assert.Equal(expName, name)
 }
 
+func TestRPCPascalCase_Message(t *testing.T) {
+	t.Parallel()
+
+	assert := require.New(t)
+
+	const expMessage = "RPC names should be PascalCase"
+
+	rule := rules.RPCPascalCase{}
+	message := rule.Message()
+
+	assert.Equal(expMessage, message)
+}
+
 func TestRPCPascalCase_Validate(t *testing.T) {
 	t.Parallel()
 
 	tests := map[string]struct {
-		fileName string
-		wantErr  error
+		fileName   string
+		wantIssues *lint.Issue
+		wantErr    error
 	}{
 		"invalid": {
 			fileName: invalidAuthProto,
-			wantErr:  lint.ErrRpcPascalCase,
+			wantIssues: &lint.Issue{
+				Position: meta.Position{
+					Filename: "",
+					Offset:   300,
+					Line:     13,
+					Column:   3,
+				},
+				SourceName: "delete",
+				Message:    "RPC names should be PascalCase",
+			},
 		},
 		"valid": {
 			fileName: validAuthProto,
@@ -48,8 +71,11 @@ func TestRPCPascalCase_Validate(t *testing.T) {
 			r, protos := start(t)
 
 			rule := rules.RPCPascalCase{}
-			err := rule.Validate(protos[tc.fileName])
-			r.ErrorIs(errors.Join(err...), tc.wantErr)
+			issues, err := rule.Validate(protos[tc.fileName])
+			r.ErrorIs(err, tc.wantErr)
+			if tc.wantIssues != nil {
+				r.Contains(issues, *tc.wantIssues)
+			}
 		})
 	}
 }

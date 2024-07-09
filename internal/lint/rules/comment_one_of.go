@@ -16,21 +16,22 @@ func (c *CommentOneof) Name() string {
 	return toUpperSnakeCase(reflect.TypeOf(c).Elem().Name())
 }
 
+// Message implements lint.Rule.
+func (c *CommentOneof) Message() string {
+	return "oneof comments must not be empty"
+}
+
 // Validate implements lint.Rule.
-func (c *CommentOneof) Validate(protoInfo lint.ProtoInfo) []error {
-	var res []error
+func (c *CommentOneof) Validate(protoInfo lint.ProtoInfo) ([]lint.Issue, error) {
+	var res []lint.Issue
 
 	for _, msg := range protoInfo.Info.ProtoBody.Messages {
 		for _, oneof := range msg.MessageBody.Oneofs {
 			if len(oneof.Comments) == 0 {
-				res = append(res, BuildError(protoInfo.Path, oneof.Meta.Pos, oneof.OneofName, lint.ErrOneOfCommentIsEmpty))
+				res = append(res, lint.BuildError(oneof.Meta.Pos, oneof.OneofName, c.Message()))
 			}
 		}
 	}
 
-	if len(res) == 0 {
-		return nil
-	}
-
-	return res
+	return res, nil
 }

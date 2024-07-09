@@ -16,26 +16,26 @@ func (c *CommentEnumValue) Name() string {
 	return toUpperSnakeCase(reflect.TypeOf(c).Elem().Name())
 }
 
+// Message implements lint.Rule.
+func (c *CommentEnumValue) Message() string {
+	return "enum value comments must not be empty"
+}
+
 // Validate implements lint.Rule.
-func (c *CommentEnumValue) Validate(protoInfo lint.ProtoInfo) []error {
-	var res []error
+func (c *CommentEnumValue) Validate(protoInfo lint.ProtoInfo) ([]lint.Issue, error) {
+	var res []lint.Issue
 
 	for _, enum := range protoInfo.Info.ProtoBody.Enums {
 		for _, field := range enum.EnumBody.EnumFields {
 			if len(field.Comments) == 0 {
-				res = append(res, BuildError(
-					protoInfo.Path,
+				res = append(res, lint.BuildError(
 					field.Meta.Pos,
 					field.Ident,
-					lint.ErrEnumValueCommentIsEmpty,
+					c.Message(),
 				))
 			}
 		}
 	}
 
-	if len(res) == 0 {
-		return nil
-	}
-
-	return res
+	return res, nil
 }

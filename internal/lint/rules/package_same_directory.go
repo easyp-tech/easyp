@@ -15,22 +15,27 @@ type PackageSameDirectory struct {
 	cache map[string]string
 }
 
-// Name implements lint.Rule.
-func (d *PackageSameDirectory) Name() string {
-	return toUpperSnakeCase(reflect.TypeOf(d).Elem().Name())
-}
-
 func (d *PackageSameDirectory) lazyInit() {
 	if d.cache == nil {
 		d.cache = make(map[string]string)
 	}
 }
 
+// Name implements lint.Rule.
+func (d *PackageSameDirectory) Name() string {
+	return toUpperSnakeCase(reflect.TypeOf(d).Elem().Name())
+}
+
+// Message implements lint.Rule.
+func (d *PackageSameDirectory) Message() string {
+	return "different proto files in the same package should be in the same directory"
+}
+
 // Validate implements lint.Rule.
-func (d *PackageSameDirectory) Validate(protoInfo lint.ProtoInfo) []error {
+func (d *PackageSameDirectory) Validate(protoInfo lint.ProtoInfo) ([]lint.Issue, error) {
 	d.lazyInit()
 
-	var res []error
+	var res []lint.Issue
 
 	directory := filepath.Dir(protoInfo.Path)
 	for _, packageInfo := range protoInfo.Info.ProtoBody.Packages {
@@ -40,13 +45,9 @@ func (d *PackageSameDirectory) Validate(protoInfo lint.ProtoInfo) []error {
 		}
 
 		if d.cache[packageInfo.Name] != directory {
-			res = append(res, BuildError(protoInfo.Path, packageInfo.Meta.Pos, packageInfo.Name, lint.ErrPackageSameDirectory))
+			res = append(res, lint.BuildError(packageInfo.Meta.Pos, packageInfo.Name, d.Message()))
 		}
 	}
 
-	if len(res) == 0 {
-		return nil
-	}
-
-	return res
+	return res, nil
 }

@@ -14,25 +14,30 @@ type PackageSameJavaPackage struct {
 	cache map[string]string
 }
 
-// Name implements lint.Rule.
-func (p *PackageSameJavaPackage) Name() string {
-	return toUpperSnakeCase(reflect.TypeOf(p).Elem().Name())
-}
-
 func (p *PackageSameJavaPackage) lazyInit() {
 	if p.cache == nil {
 		p.cache = make(map[string]string)
 	}
 }
 
+// Name implements lint.Rule.
+func (p *PackageSameJavaPackage) Name() string {
+	return toUpperSnakeCase(reflect.TypeOf(p).Elem().Name())
+}
+
+// Message implements lint.Rule.
+func (p *PackageSameJavaPackage) Message() string {
+	return "all files in the same package must have the same java_package option"
+}
+
 // Validate implements lint.Rule.
-func (p *PackageSameJavaPackage) Validate(protoInfo lint.ProtoInfo) []error {
+func (p *PackageSameJavaPackage) Validate(protoInfo lint.ProtoInfo) ([]lint.Issue, error) {
 	p.lazyInit()
 
-	var res []error
+	var res []lint.Issue
 
 	if len(protoInfo.Info.ProtoBody.Packages) == 0 {
-		return nil
+		return res, nil
 	}
 
 	packageName := protoInfo.Info.ProtoBody.Packages[0].Name
@@ -44,14 +49,10 @@ func (p *PackageSameJavaPackage) Validate(protoInfo lint.ProtoInfo) []error {
 			}
 
 			if p.cache[packageName] != option.Constant {
-				res = append(res, BuildError(protoInfo.Path, option.Meta.Pos, option.Constant, lint.ErrPackageSameJavaPackage))
+				res = append(res, lint.BuildError(option.Meta.Pos, option.Constant, p.Message()))
 			}
 		}
 	}
 
-	if len(res) == 0 {
-		return nil
-	}
-
-	return res
+	return res, nil
 }

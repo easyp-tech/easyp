@@ -14,25 +14,30 @@ type PackageSameSwiftPrefix struct {
 	cache map[string]string
 }
 
-// Name implements lint.Rule.
-func (p *PackageSameSwiftPrefix) Name() string {
-	return toUpperSnakeCase(reflect.TypeOf(p).Elem().Name())
-}
-
 func (p *PackageSameSwiftPrefix) lazyInit() {
 	if p.cache == nil {
 		p.cache = make(map[string]string)
 	}
 }
 
+// Name implements lint.Rule.
+func (p *PackageSameSwiftPrefix) Name() string {
+	return toUpperSnakeCase(reflect.TypeOf(p).Elem().Name())
+}
+
+// Message implements lint.Rule.
+func (p *PackageSameSwiftPrefix) Message() string {
+	return "all files in the same package must have the same swift_prefix option"
+}
+
 // Validate implements lint.Rule.
-func (p *PackageSameSwiftPrefix) Validate(protoInfo lint.ProtoInfo) []error {
+func (p *PackageSameSwiftPrefix) Validate(protoInfo lint.ProtoInfo) ([]lint.Issue, error) {
 	p.lazyInit()
 
-	var res []error
+	var res []lint.Issue
 
 	if len(protoInfo.Info.ProtoBody.Packages) == 0 {
-		return nil
+		return res, nil
 	}
 
 	packageName := protoInfo.Info.ProtoBody.Packages[0].Name
@@ -44,14 +49,10 @@ func (p *PackageSameSwiftPrefix) Validate(protoInfo lint.ProtoInfo) []error {
 			}
 
 			if p.cache[packageName] != option.Constant {
-				res = append(res, BuildError(protoInfo.Path, option.Meta.Pos, option.Constant, lint.ErrPackageSameSwiftPrefix))
+				res = append(res, lint.BuildError(option.Meta.Pos, option.Constant, p.Message()))
 			}
 		}
 	}
 
-	if len(res) == 0 {
-		return nil
-	}
-
-	return res
+	return res, nil
 }

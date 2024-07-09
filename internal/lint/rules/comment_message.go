@@ -16,19 +16,20 @@ func (c *CommentMessage) Name() string {
 	return toUpperSnakeCase(reflect.TypeOf(c).Elem().Name())
 }
 
+// Message implements lint.Rule.
+func (c *CommentMessage) Message() string {
+	return "message comment is empty"
+}
+
 // Validate implements lint.Rule.
-func (c *CommentMessage) Validate(protoInfo lint.ProtoInfo) []error {
-	var res []error
+func (c *CommentMessage) Validate(protoInfo lint.ProtoInfo) ([]lint.Issue, error) {
+	var res []lint.Issue
 
 	for _, message := range protoInfo.Info.ProtoBody.Messages {
 		if len(message.Comments) == 0 {
-			res = append(res, BuildError(protoInfo.Path, message.Meta.Pos, message.MessageName, lint.ErrMessageCommentIsEmpty))
+			res = append(res, lint.BuildError(message.Meta.Pos, message.MessageName, c.Message()))
 		}
 	}
 
-	if len(res) == 0 {
-		return nil
-	}
-
-	return res
+	return res, nil
 }

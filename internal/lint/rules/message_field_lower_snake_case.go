@@ -17,20 +17,22 @@ func (c *FieldLowerSnakeCase) Name() string {
 	return toUpperSnakeCase(reflect.TypeOf(c).Elem().Name())
 }
 
+// Message implements lint.Rule.
+func (c *FieldLowerSnakeCase) Message() string {
+	return "message field should be lower_snake_case"
+}
+
 // Validate implements lint.Rule.
-func (c *FieldLowerSnakeCase) Validate(protoInfo lint.ProtoInfo) []error {
-	var res []error
+func (c *FieldLowerSnakeCase) Validate(protoInfo lint.ProtoInfo) ([]lint.Issue, error) {
+	var res []lint.Issue
 	lowerSnakeCase := regexp.MustCompile("^[a-z]+(_[a-z]+)*$")
 	for _, message := range protoInfo.Info.ProtoBody.Messages {
 		for _, field := range message.MessageBody.Fields {
 			if !lowerSnakeCase.MatchString(field.FieldName) {
-				res = append(res, BuildError(protoInfo.Path, field.Meta.Pos, field.FieldName, lint.ErrMessageFieldLowerSnakeCase))
+				res = append(res, lint.BuildError(field.Meta.Pos, field.FieldName, c.Message()))
 			}
 		}
 	}
 
-	if len(res) == 0 {
-		return nil
-	}
-	return res
+	return res, nil
 }

@@ -38,8 +38,10 @@ type ProtoInfo struct {
 type Rule interface {
 	// Name returns Rule name.
 	Name() string
+	// Message returns the message of the rule.
+	Message() string
 	// Validate validates the proto rule.
-	Validate(ProtoInfo) []error
+	Validate(ProtoInfo) ([]Issue, error)
 }
 
 // New creates a new Lint.

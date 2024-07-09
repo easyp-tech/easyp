@@ -19,25 +19,32 @@ func (e *EnumValuePrefix) Name() string {
 	return toUpperSnakeCase(reflect.TypeOf(e).Elem().Name())
 }
 
+// Message implements lint.Rule.
+func (e *EnumValuePrefix) Message() string {
+	return "enum value prefix is not valid"
+}
+
 // Validate implements lint.Rule.
-func (e *EnumValuePrefix) Validate(protoInfo lint.ProtoInfo) []error {
-	var res []error
+func (e *EnumValuePrefix) Validate(protoInfo lint.ProtoInfo) ([]lint.Issue, error) {
+	var res []lint.Issue
+
+	// c.Message()EnumValuePrefix = enum value prefix is not valid
 
 	for _, enum := range protoInfo.Info.ProtoBody.Enums {
 		prefix := pascalToUpperSnake(enum.EnumName)
 
 		for _, enumValue := range enum.EnumBody.EnumFields {
 			if !strings.HasPrefix(enumValue.Ident, prefix) {
-				res = append(res, BuildError(protoInfo.Path, enumValue.Meta.Pos, enumValue.Ident, lint.ErrEnumValuePrefix))
+				res = append(res, lint.BuildError(
+					enumValue.Meta.Pos,
+					enumValue.Ident,
+					e.Message(),
+				))
 			}
 		}
 	}
 
-	if len(res) == 0 {
-		return nil
-	}
-
-	return res
+	return res, nil
 }
 
 func pascalToUpperSnake(s string) string {

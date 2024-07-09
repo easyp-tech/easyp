@@ -1,10 +1,10 @@
 package rules_test
 
 import (
-	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"github.com/yoheimuta/go-protoparser/v4/parser/meta"
 
 	"github.com/easyp-tech/easyp/internal/lint"
 	"github.com/easyp-tech/easyp/internal/lint/rules"
@@ -23,18 +23,42 @@ func TestPackageDirectoryMatch_Name(t *testing.T) {
 	assert.Equal(expName, name)
 }
 
+func TestPackageDirectoryMatch_Message(t *testing.T) {
+	t.Parallel()
+
+	assert := require.New(t)
+
+	const expMessage = "package is not matched with path"
+
+	rule := rules.PackageDirectoryMatch{}
+	message := rule.Message()
+
+	assert.Equal(expMessage, message)
+}
+
 func TestPackageDirectoryMatch_Validate(t *testing.T) {
 	t.Parallel()
 
 	tests := map[string]struct {
-		fileName string
-		wantErr  error
+		fileName   string
+		wantIssues *lint.Issue
+		wantErr    error
 	}{
-		"check_package_directory_match_is_invalid": {
+		"invalid": {
 			fileName: invalidAuthProto,
-			wantErr:  lint.ErrPackageIsNotMatchedWithPath,
+			wantIssues: &lint.Issue{
+				Position: meta.Position{
+					Filename: "",
+					Offset:   20,
+					Line:     3,
+					Column:   1,
+				},
+				SourceName: "./../../../testdata/auth/service.proto",
+				Message:    "package is not matched with path",
+			},
+			wantErr: nil,
 		},
-		"check_package_directory_match_is_valid": {
+		"valid": {
 			fileName: validAuthProto,
 			wantErr:  nil,
 		},
@@ -50,8 +74,11 @@ func TestPackageDirectoryMatch_Validate(t *testing.T) {
 			rule := rules.PackageDirectoryMatch{
 				Root: "./../../../testdata/",
 			}
-			err := rule.Validate(protos[tc.fileName])
-			r.ErrorIs(errors.Join(err...), tc.wantErr)
+			issues, err := rule.Validate(protos[tc.fileName])
+			r.ErrorIs(err, tc.wantErr)
+			if tc.wantIssues != nil {
+				r.Contains(issues, *tc.wantIssues)
+			}
 		})
 	}
 }

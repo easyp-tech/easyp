@@ -20,22 +20,23 @@ func (d *PackageDirectoryMatch) Name() string {
 	return toUpperSnakeCase(reflect.TypeOf(d).Elem().Name())
 }
 
+// Message implements lint.Rule.
+func (d *PackageDirectoryMatch) Message() string {
+	return "package is not matched with path"
+}
+
 // Validate implements lint.Rule.
-func (d *PackageDirectoryMatch) Validate(protoInfo lint.ProtoInfo) []error {
-	var res []error
+func (d *PackageDirectoryMatch) Validate(protoInfo lint.ProtoInfo) ([]lint.Issue, error) {
+	var res []lint.Issue
 
 	preparePath := filepath.Dir(strings.TrimPrefix(protoInfo.Path, d.Root))
 	expectedPackage := strings.Replace(preparePath, "/", ".", -1)
 
 	for _, pkgInfo := range protoInfo.Info.ProtoBody.Packages {
 		if pkgInfo.Name != expectedPackage {
-			res = append(res, BuildError(protoInfo.Path, pkgInfo.Meta.Pos, protoInfo.Path, lint.ErrPackageIsNotMatchedWithPath))
+			res = append(res, lint.BuildError(pkgInfo.Meta.Pos, protoInfo.Path, d.Message()))
 		}
 	}
 
-	if len(res) == 0 {
-		return nil
-	}
-
-	return res
+	return res, nil
 }

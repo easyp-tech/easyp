@@ -18,17 +18,20 @@ func (p *PackageDefined) Name() string {
 	return toUpperSnakeCase(reflect.TypeOf(p).Elem().Name())
 }
 
+// Message implements lint.Rule.
+func (p *PackageDefined) Message() string {
+	return "package should be defined"
+}
+
 // Validate implements lint.Rule.
-func (p *PackageDefined) Validate(protoInfo lint.ProtoInfo) []error {
-	var res []error
+func (p *PackageDefined) Validate(protoInfo lint.ProtoInfo) ([]lint.Issue, error) {
+	var res []lint.Issue
 
 	if len(protoInfo.Info.ProtoBody.Packages) == 0 {
-		res = append(res, BuildError(protoInfo.Path, meta.Position{}, protoInfo.Path, lint.ErrPackageIsNotDefined))
+		res = append(res, lint.BuildError(meta.Position{
+			Filename: protoInfo.Path,
+		}, protoInfo.Path, p.Message()))
 	}
 
-	if len(res) == 0 {
-		return nil
-	}
-
-	return res
+	return res, nil
 }

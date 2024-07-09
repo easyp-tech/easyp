@@ -18,18 +18,20 @@ func (c *EnumFirstValueZero) Name() string {
 	return toUpperSnakeCase(reflect.TypeOf(c).Elem().Name())
 }
 
+// Message implements lint.Rule.
+func (c *EnumFirstValueZero) Message() string {
+	return "enum first value must be zero"
+}
+
 // Validate implements lint.Rule.
-func (c *EnumFirstValueZero) Validate(protoInfo lint.ProtoInfo) []error {
-	var res []error
+func (c *EnumFirstValueZero) Validate(protoInfo lint.ProtoInfo) ([]lint.Issue, error) {
+	var res []lint.Issue
 	for _, enum := range protoInfo.Info.ProtoBody.Enums {
 		if val := enum.EnumBody.EnumFields[0]; val.Number != "0" {
-			res = append(res, BuildError(protoInfo.Path, val.Meta.Pos, val.Number, lint.ErrEnumFirstValueZero))
+			res = append(res, lint.BuildError(val.Meta.Pos, val.Number, c.Message()))
 		}
 
 	}
 
-	if len(res) == 0 {
-		return nil
-	}
-	return res
+	return res, nil
 }

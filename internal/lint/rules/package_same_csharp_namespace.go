@@ -25,14 +25,19 @@ func (p *PackageSameCsharpNamespace) lazyInit() {
 	}
 }
 
+// Message implements lint.Rule.
+func (p *PackageSameCsharpNamespace) Message() string {
+	return "different proto files in the same package should have the same csharp_namespace"
+}
+
 // Validate implements lint.Rule.
-func (p *PackageSameCsharpNamespace) Validate(protoInfo lint.ProtoInfo) []error {
+func (p *PackageSameCsharpNamespace) Validate(protoInfo lint.ProtoInfo) ([]lint.Issue, error) {
 	p.lazyInit()
 
-	var res []error
+	var res []lint.Issue
 
 	if len(protoInfo.Info.ProtoBody.Packages) == 0 {
-		return nil
+		return res, nil
 	}
 
 	packageName := protoInfo.Info.ProtoBody.Packages[0].Name
@@ -44,14 +49,10 @@ func (p *PackageSameCsharpNamespace) Validate(protoInfo lint.ProtoInfo) []error 
 			}
 
 			if p.cache[packageName] != option.Constant {
-				res = append(res, BuildError(protoInfo.Path, option.Meta.Pos, option.Constant, lint.ErrPackageSameCSharpNamespace))
+				res = append(res, lint.BuildError(option.Meta.Pos, option.Constant, p.Message()))
 			}
 		}
 	}
 
-	if len(res) == 0 {
-		return nil
-	}
-
-	return res
+	return res, nil
 }

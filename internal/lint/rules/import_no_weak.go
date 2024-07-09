@@ -19,19 +19,20 @@ func (i *ImportNoWeak) Name() string {
 	return toUpperSnakeCase(reflect.TypeOf(i).Elem().Name())
 }
 
+// Message implements lint.Rule.
+func (i *ImportNoWeak) Message() string {
+	return "import should not be weak"
+}
+
 // Validate implements lint.Rule.
-func (i *ImportNoWeak) Validate(protoInfo lint.ProtoInfo) []error {
-	var res []error
+func (i *ImportNoWeak) Validate(protoInfo lint.ProtoInfo) ([]lint.Issue, error) {
+	var res []lint.Issue
 
 	for _, imp := range protoInfo.Info.ProtoBody.Imports {
 		if imp.Modifier == parser.ImportModifierWeak {
-			res = append(res, BuildError(protoInfo.Path, imp.Meta.Pos, imp.Location, lint.ErrImportIsWeak))
+			res = append(res, lint.BuildError(imp.Meta.Pos, imp.Location, i.Message()))
 		}
 	}
 
-	if len(res) == 0 {
-		return nil
-	}
-
-	return res
+	return res, nil
 }

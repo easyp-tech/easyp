@@ -1,10 +1,10 @@
 package rules_test
 
 import (
-	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"github.com/yoheimuta/go-protoparser/v4/parser/meta"
 
 	"github.com/easyp-tech/easyp/internal/lint"
 	"github.com/easyp-tech/easyp/internal/lint/rules"
@@ -23,18 +23,42 @@ func TestCommentRPC_Name(t *testing.T) {
 	assert.Equal(expName, name)
 }
 
+func TestCommentRPC_Message(t *testing.T) {
+	t.Parallel()
+
+	assert := require.New(t)
+
+	const expMessage = "rpc comments must not be empty"
+
+	rule := rules.CommentRPC{}
+	message := rule.Message()
+
+	assert.Equal(expMessage, message)
+}
+
 func TestCommentRPC_Validate(t *testing.T) {
 	t.Parallel()
 
 	tests := map[string]struct {
-		fileName string
-		wantErr  error
+		fileName   string
+		wantIssues *lint.Issue
+		wantErr    error
 	}{
-		"auth_rpc_comment_is_empty": {
+		"invalid": {
 			fileName: invalidAuthProto,
-			wantErr:  lint.ErrRPCCommentIsEmpty,
+			wantIssues: &lint.Issue{
+				Position: meta.Position{
+					Filename: "",
+					Offset:   214,
+					Line:     11,
+					Column:   3,
+				},
+				SourceName: "Save",
+				Message:    "rpc comments must not be empty",
+			},
+			wantErr: nil,
 		},
-		"auth_rpc_comment_is_not_empty": {
+		"valid": {
 			fileName: validAuthProto,
 			wantErr:  nil,
 		},
@@ -48,8 +72,11 @@ func TestCommentRPC_Validate(t *testing.T) {
 			r, protos := start(t)
 
 			rule := rules.CommentRPC{}
-			err := rule.Validate(protos[tc.fileName])
-			r.ErrorIs(errors.Join(err...), tc.wantErr)
+			issues, err := rule.Validate(protos[tc.fileName])
+			r.ErrorIs(err, tc.wantErr)
+			if tc.wantIssues != nil {
+				r.Contains(issues, *tc.wantIssues)
+			}
 		})
 	}
 }

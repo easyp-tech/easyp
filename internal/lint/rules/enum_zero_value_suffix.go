@@ -19,20 +19,25 @@ func (e *EnumZeroValueSuffix) Name() string {
 	return toUpperSnakeCase(reflect.TypeOf(e).Elem().Name())
 }
 
+// Message implements lint.Rule.
+func (e *EnumZeroValueSuffix) Message() string {
+	return "enum zero value suffix is not valid"
+}
+
 // Validate implements lint.Rule.
-func (e *EnumZeroValueSuffix) Validate(protoInfo lint.ProtoInfo) []error {
-	var res []error
+func (e *EnumZeroValueSuffix) Validate(protoInfo lint.ProtoInfo) ([]lint.Issue, error) {
+	var res []lint.Issue
 
 	for _, enum := range protoInfo.Info.ProtoBody.Enums {
 		zeroValue := enum.EnumBody.EnumFields[0]
 		if zeroValue.Ident != pascalToUpperSnake(enum.EnumName)+"_"+e.Suffix {
-			res = append(res, BuildError(protoInfo.Path, zeroValue.Meta.Pos, zeroValue.Ident, lint.ErrEnumZeroValueSuffix))
+			res = append(res, lint.BuildError(
+				zeroValue.Meta.Pos,
+				zeroValue.Ident,
+				e.Message(),
+			))
 		}
 	}
 
-	if len(res) == 0 {
-		return nil
-	}
-
-	return res
+	return res, nil
 }

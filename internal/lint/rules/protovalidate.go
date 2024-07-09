@@ -75,7 +75,12 @@ func (p *ProtoValidate) Name() string {
 //If unique is set to true, the field must be a scalar or a wrapper type.
 
 // Validate checks that all protovalidate constraints specified are valid.
-func (p *ProtoValidate) Validate(protoInfo lint.ProtoInfo) []error {
+func (p *ProtoValidate) Validate(protoInfo lint.ProtoInfo) ([]lint.Issue, error) {
 	//TODO implement me
+	panic("implement me")
+}
+
+// Message implements lint.Rule.
+func (p *ProtoValidate) Message() string {
 	panic("implement me")
 }

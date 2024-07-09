@@ -14,25 +14,30 @@ type PackageSameRubyPackage struct {
 	cache map[string]string
 }
 
-// Name implements lint.Rule.
-func (p *PackageSameRubyPackage) Name() string {
-	return toUpperSnakeCase(reflect.TypeOf(p).Elem().Name())
-}
-
 func (p *PackageSameRubyPackage) lazyInit() {
 	if p.cache == nil {
 		p.cache = make(map[string]string)
 	}
 }
 
+// Name implements lint.Rule.
+func (p *PackageSameRubyPackage) Name() string {
+	return toUpperSnakeCase(reflect.TypeOf(p).Elem().Name())
+}
+
+// Message implements lint.Rule.
+func (p *PackageSameRubyPackage) Message() string {
+	return "all files in the same package must have the same ruby_package option"
+}
+
 // Validate implements lint.Rule.
-func (p *PackageSameRubyPackage) Validate(protoInfo lint.ProtoInfo) []error {
+func (p *PackageSameRubyPackage) Validate(protoInfo lint.ProtoInfo) ([]lint.Issue, error) {
 	p.lazyInit()
 
-	var res []error
+	var res []lint.Issue
 
 	if len(protoInfo.Info.ProtoBody.Packages) == 0 {
-		return nil
+		return res, nil
 	}
 
 	packageName := protoInfo.Info.ProtoBody.Packages[0].Name
@@ -44,14 +49,10 @@ func (p *PackageSameRubyPackage) Validate(protoInfo lint.ProtoInfo) []error {
 			}
 
 			if p.cache[packageName] != option.Constant {
-				res = append(res, BuildError(protoInfo.Path, option.Meta.Pos, option.Constant, lint.ErrPackageSameRubyPackage))
+				res = append(res, lint.BuildError(option.Meta.Pos, option.Constant, p.Message()))
 			}
 		}
 	}
 
-	if len(res) == 0 {
-		return nil
-	}
-
-	return res
+	return res, nil
 }

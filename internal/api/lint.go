@@ -93,48 +93,49 @@ func (l Lint) Action(ctx *cli.Context) error {
 
 	c := lint.New(lintRules, cfg.Lint.Ignore, cfg.Lint.IgnoreOnly, cfg.Deps)
 
-	res := c.Lint(ctx.Context, dirFS)
-	if splitErr, ok := res.(interface{ Unwrap() []error }); ok {
+	issues, err := c.Lint(ctx.Context, dirFS)
+	if err != nil {
+		return fmt.Errorf("c.Lint: %w", err)
+	}
 
-		format := ctx.String(flagFormat.Name)
-		if err := printLintErrors(
-			format,
-			os.Stdout,
-			splitErr.Unwrap(),
-		); err != nil {
-			return fmt.Errorf("printLintErrors: %w", err)
-		}
-
-		os.Exit(1)
-
+	if len(issues) == 0 {
 		return nil
 	}
 
-	if err != nil {
-		return fmt.Errorf("c.Lint: %w", err)
+	format := ctx.String(flagFormat.Name)
+	if err := printIssues(
+		format,
+		os.Stdout,
+		issues,
+	); err != nil {
+		return fmt.Errorf("printLintErrors: %w", err)
 	}
 
 	return nil
 }
 
-func printLintErrors(format string, w io.Writer, errs []error) error {
+func printIssues(format string, w io.Writer, issues []lint.IssueInfo) error {
 	switch format {
 	case TextFormat:
-		return textPrinter(w, errs)
+		return textPrinter(w, issues)
 	case JSONFormat:
-		return jsonPrinter(w, errs)
+		return jsonPrinter(w, issues)
 	default:
 		return fmt.Errorf("unsupported format: %s", format)
 	}
 }
 
 // textPrinter prints the error in text format.
-func textPrinter(w io.Writer, errs []error) error {
+func textPrinter(w io.Writer, issues []lint.IssueInfo) error {
 	buffer := bytes.NewBuffer(nil)
-	for _, err := range errs {
+	for _, issue := range issues {
 		buffer.Reset()
 
-		_, _ = buffer.WriteString(err.Error())
+		_, _ = buffer.WriteString(fmt.Sprintf("%d:%d: %s",
+			issue.Position.Line,
+			issue.Position.Column,
+			issue.Message,
+		))
 		_, _ = buffer.WriteString("\n")
 		if _, err := w.Write(buffer.Bytes()); err != nil {
 			return fmt.Errorf("w.Write: %w", err)
@@ -145,9 +146,9 @@ func textPrinter(w io.Writer, errs []error) error {
 }
 
 // jsonPrinter prints the error in json format.
-func jsonPrinter(w io.Writer, errs []error) error {
-	for _, err := range errs {
-		marshalErr := json.NewEncoder(w).Encode(err)
+func jsonPrinter(w io.Writer, issues []lint.IssueInfo) error {
+	for _, issue := range issues {
+		marshalErr := json.NewEncoder(w).Encode(issue)
 		if marshalErr != nil {
 			return fmt.Errorf("json.NewEncoder.Encode: %w", marshalErr)
 		}

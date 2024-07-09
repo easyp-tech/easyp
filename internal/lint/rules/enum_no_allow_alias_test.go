@@ -1,10 +1,10 @@
 package rules_test
 
 import (
-	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"github.com/yoheimuta/go-protoparser/v4/parser/meta"
 
 	"github.com/easyp-tech/easyp/internal/lint"
 	"github.com/easyp-tech/easyp/internal/lint/rules"
@@ -23,18 +23,42 @@ func TestEnumNoAllowAlias_Name(t *testing.T) {
 	assert.Equal(expName, name)
 }
 
+func TestEnumNoAllowAlias_Message(t *testing.T) {
+	t.Parallel()
+
+	assert := require.New(t)
+
+	const expMessage = "enum must not allow alias"
+
+	rule := rules.EnumNoAllowAlias{}
+	message := rule.Message()
+
+	assert.Equal(expMessage, message)
+}
+
 func TestEnumNoAllowAlias_Validate(t *testing.T) {
 	t.Parallel()
 
 	tests := map[string]struct {
-		fileName string
-		wantErr  error
+		fileName   string
+		wantIssues *lint.Issue
+		wantErr    error
 	}{
-		"enum_no_allow_alias_invalid": {
+		"invalid": {
 			fileName: invalidAuthProto,
-			wantErr:  lint.ErrEnumNoAllowAlias,
+			wantIssues: &lint.Issue{
+				Position: meta.Position{
+					Filename: "",
+					Offset:   790,
+					Line:     44,
+					Column:   1,
+				},
+				SourceName: "social_network",
+				Message:    "enum must not allow alias",
+			},
+			wantErr: nil,
 		},
-		"enum_no_allow_alias_valid": {
+		"valid": {
 			fileName: validAuthProto,
 			wantErr:  nil,
 		},
@@ -48,8 +72,11 @@ func TestEnumNoAllowAlias_Validate(t *testing.T) {
 			r, protos := start(t)
 
 			rule := rules.EnumNoAllowAlias{}
-			err := rule.Validate(protos[tc.fileName])
-			r.ErrorIs(errors.Join(err...), tc.wantErr)
+			issues, err := rule.Validate(protos[tc.fileName])
+			r.ErrorIs(err, tc.wantErr)
+			if tc.wantIssues != nil {
+				r.Contains(issues, *tc.wantIssues)
+			}
 		})
 	}
 }

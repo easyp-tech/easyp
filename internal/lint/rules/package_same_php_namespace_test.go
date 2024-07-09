@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"github.com/yoheimuta/go-protoparser/v4/parser/meta"
 
 	"github.com/easyp-tech/easyp/internal/lint"
 	"github.com/easyp-tech/easyp/internal/lint/rules"
@@ -23,18 +24,41 @@ func TestPackageSamePHPNamespace_Name(t *testing.T) {
 	assert.Equal(expName, name)
 }
 
+func TestPackageSamePHPNamespace_Message(t *testing.T) {
+	t.Parallel()
+
+	assert := require.New(t)
+
+	const expMessage = "all files in the same package must have the same php_namespace option"
+
+	rule := rules.PackageSamePHPNamespace{}
+	message := rule.Message()
+
+	assert.Equal(expMessage, message)
+}
+
 func TestPackageSamePHPNamespace_Validate(t *testing.T) {
 	t.Parallel()
 
 	tests := map[string]struct {
-		fileNames []string
-		wantErr   error
+		fileNames  []string
+		wantIssues *lint.Issue
+		wantErr    error
 	}{
-		"valid": {
-			fileNames: []string{invalidAuthProto5, invalidAuthProto6},
-			wantErr:   lint.ErrPackageSamePhpNamespace,
-		},
 		"invalid": {
+			fileNames: []string{invalidAuthProto5, invalidAuthProto6},
+			wantIssues: &lint.Issue{
+				Position: meta.Position{
+					Filename: "",
+					Offset:   0,
+					Line:     0,
+					Column:   0,
+				},
+				SourceName: "",
+				Message:    "",
+			},
+		},
+		"valid": {
 			fileNames: []string{validAuthProto, validAuthProto2},
 			wantErr:   nil,
 		},
@@ -50,10 +74,8 @@ func TestPackageSamePHPNamespace_Validate(t *testing.T) {
 			rule := rules.PackageSamePHPNamespace{}
 			var got []error
 			for _, fileName := range tc.fileNames {
-				err := rule.Validate(protos[fileName])
-				if len(err) > 0 {
-					got = append(got, err...)
-				}
+				_, err := rule.Validate(protos[fileName])
+				got = append(got, err)
 			}
 
 			r.ErrorIs(errors.Join(got...), tc.wantErr)

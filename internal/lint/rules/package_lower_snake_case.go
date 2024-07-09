@@ -17,18 +17,20 @@ func (c *PackageLowerSnakeCase) Name() string {
 	return toUpperSnakeCase(reflect.TypeOf(c).Elem().Name())
 }
 
+// Message implements lint.Rule.
+func (c *PackageLowerSnakeCase) Message() string {
+	return "package name should be lower_snake_case"
+}
+
 // Validate implements lint.Rule.
-func (c *PackageLowerSnakeCase) Validate(protoInfo lint.ProtoInfo) []error {
-	var res []error
+func (c *PackageLowerSnakeCase) Validate(protoInfo lint.ProtoInfo) ([]lint.Issue, error) {
+	var res []lint.Issue
 	lowerSnakeCase := regexp.MustCompile("^[a-z]+([_|[.][a-z0-9]+)*$")
 	for _, pack := range protoInfo.Info.ProtoBody.Packages {
 		if !lowerSnakeCase.MatchString(pack.Name) {
-			res = append(res, BuildError(protoInfo.Path, pack.Meta.Pos, pack.Name, lint.ErrPackageLowerSnakeCase))
+			res = append(res, lint.BuildError(pack.Meta.Pos, pack.Name, c.Message()))
 		}
 	}
 
-	if len(res) == 0 {
-		return nil
-	}
-	return res
+	return res, nil
 }

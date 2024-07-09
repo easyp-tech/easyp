@@ -17,21 +17,22 @@ func (r *RPCRequestStandardName) Name() string {
 	return toUpperSnakeCase(reflect.TypeOf(r).Elem().Name())
 }
 
+// Message implements lint.Rule.
+func (r *RPCRequestStandardName) Message() string {
+	return "rpc request should have suffix 'Request'"
+}
+
 // Validate implements lint.Rule.
-func (r *RPCRequestStandardName) Validate(protoInfo lint.ProtoInfo) []error {
-	var res []error
+func (r *RPCRequestStandardName) Validate(protoInfo lint.ProtoInfo) ([]lint.Issue, error) {
+	var res []lint.Issue
 
 	for _, service := range protoInfo.Info.ProtoBody.Services {
 		for _, rpc := range service.ServiceBody.RPCs {
 			if rpc.RPCRequest.MessageType != rpc.RPCName+"Request" && rpc.RPCRequest.MessageType != service.ServiceName+rpc.RPCName+"Request" {
-				res = append(res, BuildError(protoInfo.Path, rpc.Meta.Pos, rpc.RPCRequest.MessageType, lint.ErrRPCRequestStandardName))
+				res = append(res, lint.BuildError(rpc.Meta.Pos, rpc.RPCRequest.MessageType, r.Message()))
 			}
 		}
 	}
 
-	if len(res) == 0 {
-		return nil
-	}
-
-	return res
+	return res, nil
 }
