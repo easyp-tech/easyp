@@ -131,9 +131,11 @@ func textPrinter(w io.Writer, issues []lint.IssueInfo) error {
 	for _, issue := range issues {
 		buffer.Reset()
 
-		_, _ = buffer.WriteString(fmt.Sprintf("%d:%d: %s",
+		_, _ = buffer.WriteString(fmt.Sprintf("%s:%d:%d:%s %s",
+			issue.Path,
 			issue.Position.Line,
 			issue.Position.Column,
+			issue.SourceName,
 			issue.Message,
 		))
 		_, _ = buffer.WriteString("\n")
