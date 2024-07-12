@@ -21,7 +21,7 @@ func (c *CommentOneof) Validate(protoInfo lint.ProtoInfo) ([]lint.Issue, error) 
 	for _, msg := range protoInfo.Info.ProtoBody.Messages {
 		for _, oneof := range msg.MessageBody.Oneofs {
 			if len(oneof.Comments) == 0 {
-				res = append(res, lint.BuildError(oneof.Meta.Pos, oneof.OneofName, c.Message()))
+				res = append(res, lint.BuildError(c, oneof.Meta.Pos, oneof.OneofName))
 			}
 		}
 	}

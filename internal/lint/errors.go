@@ -24,10 +24,10 @@ type Issue struct {
 }
 
 // BuildError creates an Issue.
-func BuildError(pos meta.Position, sourceName string, message string) Issue {
+func BuildError(lintRule Rule, pos meta.Position, sourceName string) Issue {
 	return Issue{
 		Position:   pos,
 		SourceName: sourceName,
-		Message:    message,
+		Message:    lintRule.Message(),
 	}
 }

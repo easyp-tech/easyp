@@ -42,7 +42,7 @@ func (p *PackageSameJavaMultipleFiles) Validate(protoInfo lint.ProtoInfo) ([]lin
 			}
 
 			if p.cache[packageName] != option.Constant {
-				res = append(res, lint.BuildError(option.Meta.Pos, option.Constant, p.Message()))
+				res = append(res, lint.BuildError(p, option.Meta.Pos, option.Constant))
 			}
 		}
 	}

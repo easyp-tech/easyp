@@ -23,7 +23,7 @@ func (c *OneofLowerSnakeCase) Validate(protoInfo lint.ProtoInfo) ([]lint.Issue, 
 	for _, message := range protoInfo.Info.ProtoBody.Messages {
 		for _, oneof := range message.MessageBody.Oneofs {
 			if !lowerSnakeCase.MatchString(oneof.OneofName) {
-				res = append(res, lint.BuildError(oneof.Meta.Pos, oneof.OneofName, c.Message()))
+				res = append(res, lint.BuildError(c, oneof.Meta.Pos, oneof.OneofName))
 			}
 		}
 	}

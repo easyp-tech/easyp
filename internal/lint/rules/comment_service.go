@@ -20,7 +20,7 @@ func (c *CommentService) Validate(protoInfo lint.ProtoInfo) ([]lint.Issue, error
 
 	for _, service := range protoInfo.Info.ProtoBody.Services {
 		if len(service.Comments) == 0 {
-			res = append(res, lint.BuildError(service.Meta.Pos, service.ServiceName, c.Message()))
+			res = append(res, lint.BuildError(c, service.Meta.Pos, service.ServiceName))
 		}
 	}
 

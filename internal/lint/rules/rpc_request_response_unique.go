@@ -27,12 +27,12 @@ func (r *RPCRequestResponseUnique) Validate(protoInfo lint.ProtoInfo) ([]lint.Is
 			if !lo.Contains(messages, rpc.RPCRequest.MessageType) {
 				messages = append(messages, rpc.RPCRequest.MessageType)
 			} else {
-				res = append(res, lint.BuildError(rpc.Meta.Pos, rpc.RPCRequest.MessageType, r.Message()))
+				res = append(res, lint.BuildError(r, rpc.Meta.Pos, rpc.RPCRequest.MessageType))
 			}
 			if !lo.Contains(messages, rpc.RPCResponse.MessageType) {
 				messages = append(messages, rpc.RPCResponse.MessageType)
 			} else {
-				res = append(res, lint.BuildError(rpc.Meta.Pos, rpc.RPCResponse.MessageType, r.Message()))
+				res = append(res, lint.BuildError(r, rpc.Meta.Pos, rpc.RPCResponse.MessageType))
 			}
 		}
 	}

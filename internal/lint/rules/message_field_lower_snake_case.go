@@ -23,7 +23,7 @@ func (c *FieldLowerSnakeCase) Validate(protoInfo lint.ProtoInfo) ([]lint.Issue, 
 	for _, message := range protoInfo.Info.ProtoBody.Messages {
 		for _, field := range message.MessageBody.Fields {
 			if !lowerSnakeCase.MatchString(field.FieldName) {
-				res = append(res, lint.BuildError(field.Meta.Pos, field.FieldName, c.Message()))
+				res = append(res, lint.BuildError(c, field.Meta.Pos, field.FieldName))
 			}
 		}
 	}

@@ -23,7 +23,7 @@ func (i *ImportNoPublic) Validate(protoInfo lint.ProtoInfo) ([]lint.Issue, error
 
 	for _, imp := range protoInfo.Info.ProtoBody.Imports {
 		if imp.Modifier == parser.ImportModifierPublic {
-			res = append(res, lint.BuildError(imp.Meta.Pos, imp.Location, i.Message()))
+			res = append(res, lint.BuildError(i, imp.Meta.Pos, imp.Location))
 		}
 	}
 

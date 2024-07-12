@@ -27,12 +27,12 @@ func (f *FileLowerSnakeCase) Validate(protoInfo lint.ProtoInfo) ([]lint.Issue, e
 
 	fileName := filepath.Base(protoInfo.Path)
 	if !isLowerSnakeCase(fileName) {
-		res = append(res, lint.BuildError(meta.Position{
+		res = append(res, lint.BuildError(f, meta.Position{
 			Filename: protoInfo.Path,
 			Offset:   0,
 			Line:     0,
 			Column:   0,
-		}, protoInfo.Path, f.Message()))
+		}, protoInfo.Path))
 	}
 
 	return res, nil

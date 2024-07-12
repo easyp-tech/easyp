@@ -22,9 +22,9 @@ func (c *CommentEnumValue) Validate(protoInfo lint.ProtoInfo) ([]lint.Issue, err
 		for _, field := range enum.EnumBody.EnumFields {
 			if len(field.Comments) == 0 {
 				res = append(res, lint.BuildError(
+					c,
 					field.Meta.Pos,
 					field.Ident,
-					c.Message(),
 				))
 			}
 		}

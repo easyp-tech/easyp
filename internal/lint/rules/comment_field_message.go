@@ -21,7 +21,7 @@ func (c *CommentField) Validate(protoInfo lint.ProtoInfo) ([]lint.Issue, error) 
 	for _, message := range protoInfo.Info.ProtoBody.Messages {
 		for _, field := range message.MessageBody.Fields {
 			if len(field.Comments) == 0 {
-				res = append(res, lint.BuildError(field.Meta.Pos, field.FieldName, c.Message()))
+				res = append(res, lint.BuildError(c, field.Meta.Pos, field.FieldName))
 			}
 		}
 	}
