@@ -34,11 +34,11 @@ func AppendIssue(
 		return issues
 	}
 
-	return append(issues, BuildError(lintRule, pos, sourceName))
+	return append(issues, buildError(lintRule, pos, sourceName))
 }
 
-// BuildError creates an Issue.
-func BuildError(lintRule Rule, pos meta.Position, sourceName string) Issue {
+// buildError creates an Issue.
+func buildError(lintRule Rule, pos meta.Position, sourceName string) Issue {
 	return Issue{
 		Position:   pos,
 		SourceName: sourceName,
