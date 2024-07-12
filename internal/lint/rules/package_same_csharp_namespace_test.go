@@ -42,6 +42,7 @@ func TestPackageSameCSharpNamespace_Validate(t *testing.T) {
 				},
 				SourceName: `"ZergsLaw.BackTemplate.Api.Session.V2"`,
 				Message:    "different proto files in the same package should have the same csharp_namespace",
+				RuleName:   "PACKAGE_SAME_CSHARP_NAMESPACE",
 			},
 			wantErr: nil,
 		},

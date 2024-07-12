@@ -42,6 +42,7 @@ func TestPackageVersionSuffix_Validate(t *testing.T) {
 				},
 				SourceName: "Session",
 				Message:    "package name should have a version suffix",
+				RuleName:   "PACKAGE_VERSION_SUFFIX",
 			},
 		},
 		"valid": {

@@ -42,6 +42,7 @@ func TestEnumValueUpperSnakeCase_Validate(t *testing.T) {
 				},
 				SourceName: "none",
 				Message:    "enum value must be in UPPER_SNAKE_CASE",
+				RuleName:   "ENUM_VALUE_UPPER_SNAKE_CASE",
 			},
 			wantErr: nil,
 		},

@@ -42,6 +42,7 @@ func TestMessageFieldLowerSnakeCase_Validate(t *testing.T) {
 				},
 				SourceName: "Session_id",
 				Message:    "message field should be lower_snake_case",
+				RuleName:   "FIELD_LOWER_SNAKE_CASE",
 			},
 			wantErr: nil,
 		},

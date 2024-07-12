@@ -42,6 +42,7 @@ func TestImportUsed_Validate(t *testing.T) {
 				},
 				SourceName: `"import_used/messages.proto"`,
 				Message:    "import is not used",
+				RuleName:   "IMPORT_USED",
 			},
 			wantErr: nil,
 		},

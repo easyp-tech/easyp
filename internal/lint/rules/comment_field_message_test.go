@@ -43,6 +43,7 @@ func TestCommentField_Validate(t *testing.T) {
 				},
 				SourceName: "token",
 				Message:    "field comments must not be empty",
+				RuleName:   "COMMENT_FIELD",
 			},
 			wantErr: nil,
 		},

@@ -42,6 +42,7 @@ func TestServicePascalCase_Validate(t *testing.T) {
 				},
 				SourceName: "auth",
 				Message:    "service names must be PascalCase",
+				RuleName:   "SERVICE_PASCAL_CASE",
 			},
 		},
 		"valid": {

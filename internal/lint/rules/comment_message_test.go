@@ -43,6 +43,7 @@ func TestCommentMessage_Validate(t *testing.T) {
 				},
 				SourceName: "TokenData",
 				Message:    "message comment is empty",
+				RuleName:   "COMMENT_MESSAGE",
 			},
 			wantErr: nil,
 		},

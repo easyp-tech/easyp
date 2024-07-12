@@ -42,6 +42,7 @@ func TestEnumPascalCase_Validate(t *testing.T) {
 				},
 				SourceName: "social_network",
 				Message:    "enum name must be in PascalCase",
+				RuleName:   "ENUM_PASCAL_CASE",
 			},
 			wantErr: nil,
 		},

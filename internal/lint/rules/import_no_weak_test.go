@@ -43,6 +43,7 @@ func TestImportNoWeak_Validate(t *testing.T) {
 				},
 				SourceName: `"google/protobuf/empty.proto"`,
 				Message:    "import should not be weak",
+				RuleName:   "IMPORT_NO_WEAK",
 			},
 			wantErr: nil,
 		},

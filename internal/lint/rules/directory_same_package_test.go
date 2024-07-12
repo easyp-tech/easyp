@@ -42,6 +42,7 @@ func TestDirectorySamePackage_Validate(t *testing.T) {
 				},
 				SourceName: "Queue",
 				Message:    "all files in the same directory must have the same package name",
+				RuleName:   "DIRECTORY_SAME_PACKAGE",
 			},
 			wantErr: nil,
 		},

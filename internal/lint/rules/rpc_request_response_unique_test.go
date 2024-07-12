@@ -42,6 +42,7 @@ func TestRPCRequestResponseUnique_Validate(t *testing.T) {
 				},
 				SourceName: "TokenData",
 				Message:    "request and response types must be unique across all RPCs",
+				RuleName:   "RPC_REQUEST_RESPONSE_UNIQUE",
 			},
 		},
 		"valid": {

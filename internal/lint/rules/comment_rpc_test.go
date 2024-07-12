@@ -42,6 +42,7 @@ func TestCommentRPC_Validate(t *testing.T) {
 				},
 				SourceName: "Save",
 				Message:    "rpc comments must not be empty",
+				RuleName:   "COMMENT_RPC",
 			},
 			wantErr: nil,
 		},

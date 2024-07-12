@@ -43,6 +43,7 @@ func TestCommentOneOf_Validate(t *testing.T) {
 				},
 				SourceName: "SocialNetwork",
 				Message:    "oneof comments must not be empty",
+				RuleName:   "COMMENT_ONEOF",
 			},
 			wantErr: nil,
 		},

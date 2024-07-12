@@ -42,6 +42,7 @@ func TestEnumFirstValueZero_Validate(t *testing.T) {
 				},
 				SourceName: "4",
 				Message:    "enum first value must be zero",
+				RuleName:   "ENUM_FIRST_VALUE_ZERO",
 			},
 			wantErr: nil,
 		},

@@ -42,6 +42,7 @@ func TestRPCNoServerStreaming_Validate(t *testing.T) {
 				},
 				SourceName: "delete",
 				Message:    "server streaming RPCs are not allowed",
+				RuleName:   "RPC_NO_SERVER_STREAMING",
 			},
 		},
 		"valid": {

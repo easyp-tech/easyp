@@ -42,6 +42,7 @@ func TestRPCResponseStandardName_Validate(t *testing.T) {
 				},
 				SourceName: "Result",
 				Message:    "rpc response should have suffix 'Response'",
+				RuleName:   "RPC_RESPONSE_STANDARD_NAME",
 			},
 		},
 		"valid": {

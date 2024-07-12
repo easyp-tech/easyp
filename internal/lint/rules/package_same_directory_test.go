@@ -43,6 +43,7 @@ func TestPackageSameDirectory_Validate(t *testing.T) {
 				},
 				SourceName: "",
 				Message:    "",
+				RuleName:   "PACKAGE_SAME_DIRECTORY",
 			},
 			wantErr: nil,
 		},
