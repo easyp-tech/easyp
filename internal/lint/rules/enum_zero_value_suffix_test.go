@@ -42,6 +42,7 @@ func TestEnumZeroValueSuffix_Validate(t *testing.T) {
 				},
 				SourceName: "none",
 				Message:    "enum zero value suffix is not valid",
+				RuleName:   "ENUM_ZERO_VALUE_SUFFIX",
 			},
 			wantErr: nil,
 		},

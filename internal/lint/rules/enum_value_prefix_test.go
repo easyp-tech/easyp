@@ -42,6 +42,7 @@ func TestEnumValuePrefix_Validate(t *testing.T) {
 				},
 				SourceName: "none",
 				Message:    "enum value prefix is not valid",
+				RuleName:   "ENUM_VALUE_PREFIX",
 			},
 			wantErr: nil,
 		},

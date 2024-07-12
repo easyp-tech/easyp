@@ -42,6 +42,7 @@ func TestMessagePascalCase_Validate(t *testing.T) {
 				},
 				SourceName: "Delete_Info",
 				Message:    "message name should be PascalCase",
+				RuleName:   "MESSAGE_PASCAL_CASE",
 			},
 			wantErr: nil,
 		},

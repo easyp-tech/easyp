@@ -41,6 +41,7 @@ func TestCommentEnum_Validate(t *testing.T) {
 				},
 				SourceName: "social_network",
 				Message:    "enum comments must not be empty",
+				RuleName:   "COMMENT_ENUM",
 			},
 			wantErr: nil,
 		},

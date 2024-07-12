@@ -42,6 +42,7 @@ func TestCommentService_Validate(t *testing.T) {
 				},
 				SourceName: "auth",
 				Message:    "service comments must not be empty",
+				RuleName:   "COMMENT_SERVICE",
 			},
 			wantErr: nil,
 		},

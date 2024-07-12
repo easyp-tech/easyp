@@ -42,6 +42,7 @@ func TestServiceSuffix_Validate(t *testing.T) {
 				},
 				SourceName: "auth",
 				Message:    "service name should have suffix",
+				RuleName:   "SERVICE_SUFFIX",
 			},
 		},
 		"valid": {

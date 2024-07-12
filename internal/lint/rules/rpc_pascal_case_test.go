@@ -42,6 +42,7 @@ func TestRPCPascalCase_Validate(t *testing.T) {
 				},
 				SourceName: "delete",
 				Message:    "RPC names should be PascalCase",
+				RuleName:   "RPC_PASCAL_CASE",
 			},
 		},
 		"valid": {

@@ -42,6 +42,7 @@ func TestPackageDirectoryMatch_Validate(t *testing.T) {
 				},
 				SourceName: "./../../../testdata/auth/service.proto",
 				Message:    "package is not matched with path",
+				RuleName:   "PACKAGE_DIRECTORY_MATCH",
 			},
 			wantErr: nil,
 		},

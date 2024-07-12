@@ -42,6 +42,7 @@ func TestPackageDefined_Validate(t *testing.T) {
 				},
 				SourceName: "./../../../testdata/auth/empty_pkg.proto",
 				Message:    "package should be defined",
+				RuleName:   "PACKAGE_DEFINED",
 			},
 			wantErr: nil,
 		},

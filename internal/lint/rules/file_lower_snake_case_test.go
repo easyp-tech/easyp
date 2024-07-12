@@ -42,6 +42,7 @@ func TestFileLowerSnakeCase_Validate(t *testing.T) {
 				},
 				SourceName: "./../../../testdata/auth/InvalidName.proto",
 				Message:    "file name should be lower_snake_case.proto",
+				RuleName:   "FILE_LOWER_SNAKE_CASE",
 			},
 			wantErr: nil,
 		},

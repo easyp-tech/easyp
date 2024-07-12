@@ -42,6 +42,7 @@ func TestPackageLowerSnakeCase_Validate(t *testing.T) {
 				},
 				SourceName: "Session",
 				Message:    "package name should be lower_snake_case",
+				RuleName:   "PACKAGE_LOWER_SNAKE_CASE",
 			},
 			wantErr: nil,
 		},

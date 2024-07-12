@@ -42,6 +42,7 @@ func TestImportNoPublic_Validate(t *testing.T) {
 				},
 				SourceName: `"google/rpc/code.proto"`,
 				Message:    "import should not be public",
+				RuleName:   "IMPORT_NO_PUBLIC",
 			},
 			wantErr: nil,
 		},

@@ -42,6 +42,7 @@ func TestEnumNoAllowAlias_Validate(t *testing.T) {
 				},
 				SourceName: "social_network",
 				Message:    "enum must not allow alias",
+				RuleName:   "ENUM_NO_ALLOW_ALIAS",
 			},
 			wantErr: nil,
 		},

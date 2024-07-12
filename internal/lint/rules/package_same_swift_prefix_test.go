@@ -43,6 +43,7 @@ func TestPackageSameSwiftPrefix_Validate(t *testing.T) {
 				},
 				SourceName: "",
 				Message:    "",
+				RuleName:   "PACKAGE_SAME_SWIFT_PREFIX",
 			},
 		},
 		"invalid": {

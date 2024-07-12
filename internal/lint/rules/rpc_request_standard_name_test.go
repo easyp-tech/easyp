@@ -42,6 +42,7 @@ func TestRPCRequestStandardName_Validate(t *testing.T) {
 				},
 				SourceName: "SessionInfo",
 				Message:    "rpc request should have suffix 'Request'",
+				RuleName:   "RPC_REQUEST_STANDARD_NAME",
 			},
 		},
 		"valid": {

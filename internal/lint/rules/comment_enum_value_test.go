@@ -42,6 +42,7 @@ func TestCommentEnumValue_Validate(t *testing.T) {
 				},
 				SourceName: "none",
 				Message:    "enum value comments must not be empty",
+				RuleName:   "COMMENT_ENUM_VALUE",
 			},
 			wantErr: nil,
 		},

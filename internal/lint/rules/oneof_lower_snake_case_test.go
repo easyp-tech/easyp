@@ -42,6 +42,7 @@ func TestOneofLowerSnakeCase_Validate(t *testing.T) {
 				},
 				SourceName: "SocialNetwork",
 				Message:    "oneof name should be lower_snake_case",
+				RuleName:   "ONEOF_LOWER_SNAKE_CASE",
 			},
 			wantErr: nil,
 		},
