@@ -25,9 +25,9 @@ type Issue struct {
 	RuleName   string
 }
 
-// AppendError check if lint error is ignored -> add new error to slice
+// AppendIssue check if lint error is ignored -> add new error to slice
 // otherwise ignore appending
-func AppendError(
+func AppendIssue(
 	issues []Issue, lintRule Rule, pos meta.Position, sourceName string, comments []*parser.Comment,
 ) []Issue {
 	if CheckIsIgnored(comments, GetRuleName(lintRule)) {
