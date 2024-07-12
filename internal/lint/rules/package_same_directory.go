@@ -20,11 +20,16 @@ func (d *PackageSameDirectory) lazyInit() {
 	}
 }
 
+// Message implements lint.Rule.
+func (d *PackageSameDirectory) Message() string {
+	return "different proto files in the same package should be in the same directory"
+}
+
 // Validate implements lint.Rule.
-func (d *PackageSameDirectory) Validate(protoInfo lint.ProtoInfo) []error {
+func (d *PackageSameDirectory) Validate(protoInfo lint.ProtoInfo) ([]lint.Issue, error) {
 	d.lazyInit()
 
-	var res []error
+	var res []lint.Issue
 
 	directory := filepath.Dir(protoInfo.Path)
 	for _, packageInfo := range protoInfo.Info.ProtoBody.Packages {
@@ -34,13 +39,9 @@ func (d *PackageSameDirectory) Validate(protoInfo lint.ProtoInfo) []error {
 		}
 
 		if d.cache[packageInfo.Name] != directory {
-			res = append(res, BuildError(packageInfo.Meta.Pos, packageInfo.Name, lint.ErrPackageSameDirectory))
+			res = append(res, lint.BuildError(d, packageInfo.Meta.Pos, packageInfo.Name))
 		}
 	}
 
-	if len(res) == 0 {
-		return nil
-	}
-
-	return res
+	return res, nil
 }

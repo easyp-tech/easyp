@@ -1,25 +1,50 @@
 package rules_test
 
 import (
-	"errors"
 	"testing"
+
+	"github.com/stretchr/testify/require"
+	"github.com/yoheimuta/go-protoparser/v4/parser/meta"
 
 	"github.com/easyp-tech/easyp/internal/lint"
 	"github.com/easyp-tech/easyp/internal/lint/rules"
 )
 
+func TestServicePascalCase_Message(t *testing.T) {
+	t.Parallel()
+
+	assert := require.New(t)
+
+	const expMessage = "service names must be PascalCase"
+
+	rule := rules.ServicePascalCase{}
+	message := rule.Message()
+
+	assert.Equal(expMessage, message)
+}
+
 func TestServicePascalCase_Validate(t *testing.T) {
 	t.Parallel()
 
 	tests := map[string]struct {
-		fileName string
-		wantErr  error
+		fileName   string
+		wantIssues *lint.Issue
+		wantErr    error
 	}{
-		"check_service_pascal_case_is_invalid": {
+		"invalid": {
 			fileName: invalidAuthProto,
-			wantErr:  lint.ErrServicePascalCase,
+			wantIssues: &lint.Issue{
+				Position: meta.Position{
+					Filename: "",
+					Offset:   197,
+					Line:     10,
+					Column:   1,
+				},
+				SourceName: "auth",
+				Message:    "service names must be PascalCase",
+			},
 		},
-		"check_service_pascal_case_is_valid": {
+		"valid": {
 			fileName: validAuthProto,
 			wantErr:  nil,
 		},
@@ -33,8 +58,11 @@ func TestServicePascalCase_Validate(t *testing.T) {
 			r, protos := start(t)
 
 			rule := rules.ServicePascalCase{}
-			err := rule.Validate(protos[tc.fileName])
-			r.ErrorIs(errors.Join(err...), tc.wantErr)
+			issues, err := rule.Validate(protos[tc.fileName])
+			r.ErrorIs(err, tc.wantErr)
+			if tc.wantIssues != nil {
+				r.Contains(issues, *tc.wantIssues)
+			}
 		})
 	}
 }

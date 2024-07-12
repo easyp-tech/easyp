@@ -13,25 +13,32 @@ var _ lint.Rule = (*EnumValuePrefix)(nil)
 type EnumValuePrefix struct {
 }
 
+// Message implements lint.Rule.
+func (e *EnumValuePrefix) Message() string {
+	return "enum value prefix is not valid"
+}
+
 // Validate implements lint.Rule.
-func (e EnumValuePrefix) Validate(protoInfo lint.ProtoInfo) []error {
-	var res []error
+func (e *EnumValuePrefix) Validate(protoInfo lint.ProtoInfo) ([]lint.Issue, error) {
+	var res []lint.Issue
+
+	// c.Message()EnumValuePrefix = enum value prefix is not valid
 
 	for _, enum := range protoInfo.Info.ProtoBody.Enums {
 		prefix := pascalToUpperSnake(enum.EnumName)
 
 		for _, enumValue := range enum.EnumBody.EnumFields {
 			if !strings.HasPrefix(enumValue.Ident, prefix) {
-				res = append(res, BuildError(enumValue.Meta.Pos, enumValue.Ident, lint.ErrEnumValuePrefix))
+				res = append(res, lint.BuildError(
+					e,
+					enumValue.Meta.Pos,
+					enumValue.Ident,
+				))
 			}
 		}
 	}
 
-	if len(res) == 0 {
-		return nil
-	}
-
-	return res
+	return res, nil
 }
 
 func pascalToUpperSnake(s string) string {

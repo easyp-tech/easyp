@@ -10,21 +10,22 @@ var _ lint.Rule = (*RPCNoServerStreaming)(nil)
 type RPCNoServerStreaming struct {
 }
 
+// Message implements lint.Rule.
+func (r *RPCNoServerStreaming) Message() string {
+	return "server streaming RPCs are not allowed"
+}
+
 // Validate implements lint.Rule.
-func (R RPCNoServerStreaming) Validate(protoInfo lint.ProtoInfo) []error {
-	var res []error
+func (r *RPCNoServerStreaming) Validate(protoInfo lint.ProtoInfo) ([]lint.Issue, error) {
+	var res []lint.Issue
 
 	for _, service := range protoInfo.Info.ProtoBody.Services {
 		for _, rpc := range service.ServiceBody.RPCs {
 			if rpc.RPCResponse.IsStream {
-				res = append(res, BuildError(rpc.Meta.Pos, rpc.RPCName, lint.ErrRPCServerStreaming))
+				res = append(res, lint.BuildError(r, rpc.Meta.Pos, rpc.RPCName))
 			}
 		}
 	}
 
-	if len(res) == 0 {
-		return nil
-	}
-
-	return res
+	return res, nil
 }

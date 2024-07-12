@@ -2,12 +2,12 @@ package lint
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"io/fs"
 	"os"
 	"path/filepath"
 	"slices"
+	"strings"
 
 	"github.com/yoheimuta/go-protoparser/v4"
 	"github.com/yoheimuta/go-protoparser/v4/interpret/unordered"
@@ -16,8 +16,8 @@ import (
 )
 
 // Lint lints the proto file.
-func (c *Lint) Lint(ctx context.Context, disk fs.FS) error {
-	var res []error
+func (c *Lint) Lint(ctx context.Context, disk fs.FS) ([]IssueInfo, error) {
+	var res []IssueInfo
 
 	err := fs.WalkDir(disk, ".", func(path string, d fs.DirEntry, err error) error {
 		switch {
@@ -66,19 +66,30 @@ func (c *Lint) Lint(ctx context.Context, disk fs.FS) error {
 				return ctx.Err()
 			}
 
-			results := c.rules[i].Validate(protoInfo)
+			if c.shouldIgnore(c.rules[i], path) {
+				continue
+			}
+
+			results, err := c.rules[i].Validate(protoInfo)
+			if err != nil {
+				return fmt.Errorf("rule.Validate: %w", err)
+			}
+
 			for _, result := range results {
-				res = append(res, fmt.Errorf("%s:%w", path, result))
+				res = append(res, IssueInfo{
+					Issue: result,
+					Path:  path,
+				})
 			}
 		}
 
 		return nil
 	})
 	if err != nil {
-		return fmt.Errorf("fs.WalkDir: %w", err)
+		return nil, fmt.Errorf("fs.WalkDir: %w", err)
 	}
 
-	return errors.Join(res...)
+	return res, nil
 }
 
 // readFilesFromImport reads all files that imported from scanning file
@@ -146,7 +157,7 @@ func (c *Lint) readFileFromImport(ctx context.Context, disk fs.FS, importName st
 	f, err = wellknownimports.Content.Open(importName)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return nil, err
+			return nil, fmt.Errorf("wellknownimports.Content.Open: %w", err)
 		}
 
 		return nil, fmt.Errorf("os.Open: %w", err)
@@ -175,4 +186,20 @@ func readProtoFile(f fs.File) (*unordered.Proto, error) {
 	}
 
 	return proto, nil
+}
+
+func (c *Lint) shouldIgnore(rule Rule, path string) bool {
+	ruleName := GetRuleName(rule)
+	ignoreFilesOrDirs := c.ignoreOnly[ruleName]
+
+	for _, fileOrDir := range ignoreFilesOrDirs {
+		switch {
+		case fileOrDir == path:
+			return true
+		case strings.HasPrefix(path, fileOrDir):
+			return true
+		}
+	}
+
+	return false
 }

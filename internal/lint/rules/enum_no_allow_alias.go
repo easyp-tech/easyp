@@ -7,20 +7,21 @@ import (
 // EnumNoAllowAlias this rule checks that enums are PascalCase.
 type EnumNoAllowAlias struct{}
 
+// Message implements lint.Rule.
+func (e *EnumNoAllowAlias) Message() string {
+	return "enum must not allow alias"
+}
+
 // Validate implements lint.Rule.
-func (e EnumNoAllowAlias) Validate(protoInfo lint.ProtoInfo) []error {
-	var res []error
+func (e *EnumNoAllowAlias) Validate(protoInfo lint.ProtoInfo) ([]lint.Issue, error) {
+	var res []lint.Issue
 	for _, enum := range protoInfo.Info.ProtoBody.Enums {
 		for _, opt := range enum.EnumBody.Options {
 			if opt.OptionName == "allow_alias" {
-				res = append(res, BuildError(enum.Meta.Pos, enum.EnumName, lint.ErrEnumNoAllowAlias))
+				res = append(res, lint.BuildError(e, enum.Meta.Pos, enum.EnumName))
 			}
 		}
 	}
 
-	if len(res) == 0 {
-		return nil
-	}
-
-	return res
+	return res, nil
 }

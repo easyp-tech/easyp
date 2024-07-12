@@ -44,8 +44,4 @@ message Result {
 enum social_network {
   option allow_alias = true;
   none = 4;
-  google = 1;
-  yahoo = 2;
-  facebook = 3;
-  meta = 3;
 }

@@ -14,9 +14,14 @@ var _ lint.Rule = (*ImportUsed)(nil)
 // ImportUsed this rule checks that all the imports declared across your Protobuf files are actually used.
 type ImportUsed struct{}
 
+// Message implements lint.Rule.
+func (i *ImportUsed) Message() string {
+	return "import is not used"
+}
+
 // Validate implements lint.Rule.
-func (i ImportUsed) Validate(protoInfo lint.ProtoInfo) []error {
-	var res []error
+func (i *ImportUsed) Validate(protoInfo lint.ProtoInfo) ([]lint.Issue, error) {
+	var res []lint.Issue
 
 	var sourcePkgName string
 	if len(protoInfo.Info.ProtoBody.Packages) > 0 {
@@ -93,21 +98,18 @@ func (i ImportUsed) Validate(protoInfo lint.ProtoInfo) []error {
 
 	for imp, used := range isImportUsed {
 		if !used {
-			res = append(res, BuildError(importInfo[imp].Meta.Pos, importInfo[imp].Location, lint.ErrImportIsNotUsed))
+			res = append(res, lint.BuildError(i, importInfo[imp].Meta.Pos, importInfo[imp].Location))
 		}
 	}
 
-	if len(res) == 0 {
-		return nil
-	}
-
-	return res
+	return res, nil
 }
 
 // instructionInfo collects info about instruction in proto file
 // e.g `google.api.http`:
-// 		`google.api` - package name
-// 		'http' - instruction name
+//
+//	`google.api` - package name
+//	'http' - instruction name
 type instructionInfo struct {
 	pkgName     string
 	instruction string

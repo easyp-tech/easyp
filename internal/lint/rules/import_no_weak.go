@@ -12,19 +12,20 @@ var _ lint.Rule = (*ImportNoWeak)(nil)
 // If you didn't know that was possible, forget what you just learned in this sentence.
 type ImportNoWeak struct{}
 
+// Message implements lint.Rule.
+func (i *ImportNoWeak) Message() string {
+	return "import should not be weak"
+}
+
 // Validate implements lint.Rule.
-func (i ImportNoWeak) Validate(protoInfo lint.ProtoInfo) []error {
-	var res []error
+func (i *ImportNoWeak) Validate(protoInfo lint.ProtoInfo) ([]lint.Issue, error) {
+	var res []lint.Issue
 
 	for _, imp := range protoInfo.Info.ProtoBody.Imports {
 		if imp.Modifier == parser.ImportModifierWeak {
-			res = append(res, BuildError(imp.Meta.Pos, imp.Location, lint.ErrImportIsWeak))
+			res = append(res, lint.BuildError(i, imp.Meta.Pos, imp.Location))
 		}
 	}
 
-	if len(res) == 0 {
-		return nil
-	}
-
-	return res
+	return res, nil
 }

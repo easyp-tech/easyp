@@ -12,21 +12,22 @@ var _ lint.Rule = (*PackageVersionSuffix)(nil)
 // v\d+, v\d+test.*, v\d+(alpha|beta)\d*, or v\d+p\d+(alpha|beta)\d*, where numbers are >=1.
 type PackageVersionSuffix struct{}
 
+// Message implements lint.Rule.
+func (p *PackageVersionSuffix) Message() string {
+	return "package name should have a version suffix"
+}
+
 var matchVersionSuffix = regexp.MustCompile(`.*v\d+|.*v\d+test.*|.*v\d+(alpha|beta)\d*|.*v\d+p\d+(alpha|beta)\d*$`)
 
 // Validate implements lint.Rule.
-func (p PackageVersionSuffix) Validate(protoInfo lint.ProtoInfo) []error {
-	var res []error
+func (p *PackageVersionSuffix) Validate(protoInfo lint.ProtoInfo) ([]lint.Issue, error) {
+	var res []lint.Issue
 
 	for _, pkg := range protoInfo.Info.ProtoBody.Packages {
 		if !matchVersionSuffix.MatchString(pkg.Name) {
-			res = append(res, BuildError(pkg.Meta.Pos, pkg.Name, lint.ErrPackageVersionSuffix))
+			res = append(res, lint.BuildError(p, pkg.Meta.Pos, pkg.Name))
 		}
 	}
 
-	if len(res) == 0 {
-		return nil
-	}
-
-	return res
+	return res, nil
 }

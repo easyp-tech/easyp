@@ -1,25 +1,51 @@
 package rules_test
 
 import (
-	"errors"
 	"testing"
+
+	"github.com/stretchr/testify/require"
+	"github.com/yoheimuta/go-protoparser/v4/parser/meta"
 
 	"github.com/easyp-tech/easyp/internal/lint"
 	"github.com/easyp-tech/easyp/internal/lint/rules"
 )
 
+func TestDirectorySamePackage_Message(t *testing.T) {
+	t.Parallel()
+
+	assert := require.New(t)
+
+	const expMessage = "all files in the same directory must have the same package name"
+
+	rule := rules.DirectorySamePackage{}
+	message := rule.Message()
+
+	assert.Equal(expMessage, message)
+
+}
 func TestDirectorySamePackage_Validate(t *testing.T) {
 	t.Parallel()
 
 	tests := map[string]struct {
-		fileNames []string
-		wantErr   error
+		fileNames  []string
+		wantIssues *lint.Issue
+		wantErr    error
 	}{
-		"check_directory_same_package_is_invalid": {
+		"invalid": {
 			fileNames: []string{invalidAuthProto, invalidAuthProto2},
-			wantErr:   lint.ErrDirectorySamePackage,
+			wantIssues: &lint.Issue{
+				Position: meta.Position{
+					Filename: "",
+					Offset:   20,
+					Line:     3,
+					Column:   1,
+				},
+				SourceName: "Queue",
+				Message:    "all files in the same directory must have the same package name",
+			},
+			wantErr: nil,
 		},
-		"check_directory_same_package_is_valid": {
+		"valid": {
 			fileNames: []string{validAuthProto, validAuthProto2},
 			wantErr:   nil,
 		},
@@ -33,11 +59,14 @@ func TestDirectorySamePackage_Validate(t *testing.T) {
 			r, protos := start(t)
 
 			rule := rules.DirectorySamePackage{}
+			var res []lint.Issue
 			for _, fileName := range tc.fileNames {
-				err := rule.Validate(protos[fileName])
-				if err != nil {
-					r.ErrorIs(errors.Join(err...), tc.wantErr)
-				}
+				issues, err := rule.Validate(protos[fileName])
+				r.ErrorIs(err, tc.wantErr)
+				res = append(res, issues...)
+			}
+			if len(res) > 0 {
+				r.Contains(res, *tc.wantIssues)
 			}
 		})
 	}

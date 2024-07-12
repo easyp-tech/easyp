@@ -11,17 +11,20 @@ var _ lint.Rule = (*PackageDefined)(nil)
 // PackageDefined this rule checks that all files have a package declaration.
 type PackageDefined struct{}
 
+// Message implements lint.Rule.
+func (p *PackageDefined) Message() string {
+	return "package should be defined"
+}
+
 // Validate implements lint.Rule.
-func (p *PackageDefined) Validate(protoInfo lint.ProtoInfo) []error {
-	var res []error
+func (p *PackageDefined) Validate(protoInfo lint.ProtoInfo) ([]lint.Issue, error) {
+	var res []lint.Issue
 
 	if len(protoInfo.Info.ProtoBody.Packages) == 0 {
-		res = append(res, BuildError(meta.Position{}, protoInfo.Path, lint.ErrPackageIsNotDefined))
+		res = append(res, lint.BuildError(p, meta.Position{
+			Filename: protoInfo.Path,
+		}, protoInfo.Path))
 	}
 
-	if len(res) == 0 {
-		return nil
-	}
-
-	return res
+	return res, nil
 }

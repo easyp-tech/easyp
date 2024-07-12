@@ -10,21 +10,22 @@ var _ lint.Rule = (*RPCRequestStandardName)(nil)
 type RPCRequestStandardName struct {
 }
 
+// Message implements lint.Rule.
+func (r *RPCRequestStandardName) Message() string {
+	return "rpc request should have suffix 'Request'"
+}
+
 // Validate implements lint.Rule.
-func (R RPCRequestStandardName) Validate(protoInfo lint.ProtoInfo) []error {
-	var res []error
+func (r *RPCRequestStandardName) Validate(protoInfo lint.ProtoInfo) ([]lint.Issue, error) {
+	var res []lint.Issue
 
 	for _, service := range protoInfo.Info.ProtoBody.Services {
 		for _, rpc := range service.ServiceBody.RPCs {
 			if rpc.RPCRequest.MessageType != rpc.RPCName+"Request" && rpc.RPCRequest.MessageType != service.ServiceName+rpc.RPCName+"Request" {
-				res = append(res, BuildError(rpc.Meta.Pos, rpc.RPCRequest.MessageType, lint.ErrRPCRequestStandardName))
+				res = append(res, lint.BuildError(r, rpc.Meta.Pos, rpc.RPCRequest.MessageType))
 			}
 		}
 	}
 
-	if len(res) == 0 {
-		return nil
-	}
-
-	return res
+	return res, nil
 }

@@ -20,10 +20,15 @@ func (d *DirectorySamePackage) lazyInit() {
 	}
 }
 
+// Message implements lint.Rule.
+func (d *DirectorySamePackage) Message() string {
+	return "all files in the same directory must have the same package name"
+}
+
 // Validate implements lint.Rule.
-func (d *DirectorySamePackage) Validate(protoInfo lint.ProtoInfo) []error {
+func (d *DirectorySamePackage) Validate(protoInfo lint.ProtoInfo) ([]lint.Issue, error) {
 	d.lazyInit()
-	var res []error
+	var res []lint.Issue
 
 	directory := filepath.Dir(protoInfo.Path)
 	for _, pack := range protoInfo.Info.ProtoBody.Packages {
@@ -33,13 +38,9 @@ func (d *DirectorySamePackage) Validate(protoInfo lint.ProtoInfo) []error {
 		}
 
 		if d.cache[directory] != pack.Name {
-			res = append(res, BuildError(pack.Meta.Pos, pack.Name, lint.ErrDirectorySamePackage))
+			res = append(res, lint.BuildError(d, pack.Meta.Pos, pack.Name))
 		}
 	}
 
-	if len(res) == 0 {
-		return nil
-	}
-
-	return res
+	return res, nil
 }

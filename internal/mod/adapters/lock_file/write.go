@@ -18,7 +18,7 @@ func (l *LockFile) Write(
 	l.cache[moduleName] = fileInfo
 
 	keys := make([]string, 0, len(l.cache))
-	for k, _ := range l.cache {
+	for k := range l.cache {
 		keys = append(keys, k)
 	}
 	sort.Strings(keys)

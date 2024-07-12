@@ -19,8 +19,13 @@ func (p *PackageNoImportCycle) lazyInit() {
 	}
 }
 
+// Message implements lint.Rule.
+func (p *PackageNoImportCycle) Message() string {
+	return "package should not have import cycles"
+}
+
 // Validate implements lint.Rule.
-func (p *PackageNoImportCycle) Validate(protoInfo lint.ProtoInfo) []error {
+func (p *PackageNoImportCycle) Validate(protoInfo lint.ProtoInfo) ([]lint.Issue, error) {
 	p.lazyInit()
 	panic("implement me")
 }

@@ -1,23 +1,48 @@
 package rules_test
 
 import (
-	"errors"
 	"testing"
+
+	"github.com/stretchr/testify/require"
+	"github.com/yoheimuta/go-protoparser/v4/parser/meta"
 
 	"github.com/easyp-tech/easyp/internal/lint"
 	"github.com/easyp-tech/easyp/internal/lint/rules"
 )
 
+func TestRPCRequestResponseUnique_Message(t *testing.T) {
+	t.Parallel()
+
+	assert := require.New(t)
+
+	const expMessage = "request and response types must be unique across all RPCs"
+
+	rule := rules.RPCRequestResponseUnique{}
+	message := rule.Message()
+
+	assert.Equal(expMessage, message)
+}
+
 func TestRPCRequestResponseUnique_Validate(t *testing.T) {
 	t.Parallel()
 
 	tests := map[string]struct {
-		fileName string
-		wantErr  error
+		fileName   string
+		wantIssues *lint.Issue
+		wantErr    error
 	}{
 		"invalid": {
 			fileName: invalidAuthProto,
-			wantErr:  lint.ErrRPCRequestResponseUnique,
+			wantIssues: &lint.Issue{
+				Position: meta.Position{
+					Filename: "",
+					Offset:   375,
+					Line:     14,
+					Column:   3,
+				},
+				SourceName: "TokenData",
+				Message:    "request and response types must be unique across all RPCs",
+			},
 		},
 		"valid": {
 			fileName: validAuthProto,
@@ -33,8 +58,11 @@ func TestRPCRequestResponseUnique_Validate(t *testing.T) {
 			r, protos := start(t)
 
 			rule := rules.RPCRequestResponseUnique{}
-			err := rule.Validate(protos[tc.fileName])
-			r.ErrorIs(errors.Join(err...), tc.wantErr)
+			issues, err := rule.Validate(protos[tc.fileName])
+			r.ErrorIs(err, tc.wantErr)
+			if tc.wantIssues != nil {
+				r.Contains(issues, *tc.wantIssues)
+			}
 		})
 	}
 }

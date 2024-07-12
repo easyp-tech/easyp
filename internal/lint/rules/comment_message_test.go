@@ -1,25 +1,52 @@
 package rules_test
 
 import (
-	"errors"
 	"testing"
+
+	"github.com/stretchr/testify/require"
+	"github.com/yoheimuta/go-protoparser/v4/parser/meta"
 
 	"github.com/easyp-tech/easyp/internal/lint"
 	"github.com/easyp-tech/easyp/internal/lint/rules"
 )
 
+func TestCommentMessage_Message(t *testing.T) {
+	t.Parallel()
+
+	assert := require.New(t)
+
+	const expMessage = "message comment is empty"
+
+	rule := rules.CommentMessage{}
+	message := rule.Message()
+
+	assert.Equal(expMessage, message)
+
+}
+
 func TestCommentMessage_Validate(t *testing.T) {
 	t.Parallel()
 
 	tests := map[string]struct {
-		fileName string
-		wantErr  error
+		fileName   string
+		wantIssues *lint.Issue
+		wantErr    error
 	}{
-		"auth_message_comment_is_empty": {
+		"invalid": {
 			fileName: invalidAuthProto,
-			wantErr:  lint.ErrMessageCommentIsEmpty,
+			wantIssues: &lint.Issue{
+				Position: meta.Position{
+					Filename: "",
+					Offset:   425,
+					Line:     17,
+					Column:   1,
+				},
+				SourceName: "TokenData",
+				Message:    "message comment is empty",
+			},
+			wantErr: nil,
 		},
-		"auth_message_comment_is_not_empty": {
+		"valid": {
 			fileName: validAuthProto,
 			wantErr:  nil,
 		},
@@ -33,8 +60,11 @@ func TestCommentMessage_Validate(t *testing.T) {
 			r, protos := start(t)
 
 			rule := rules.CommentMessage{}
-			err := rule.Validate(protos[tc.fileName])
-			r.ErrorIs(errors.Join(err...), tc.wantErr)
+			issues, err := rule.Validate(protos[tc.fileName])
+			r.ErrorIs(err, tc.wantErr)
+			if tc.wantIssues != nil {
+				r.Contains(issues, *tc.wantIssues)
+			}
 		})
 	}
 }

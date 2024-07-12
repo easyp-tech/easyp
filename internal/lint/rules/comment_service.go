@@ -9,19 +9,20 @@ var _ lint.Rule = (*CommentService)(nil)
 // CommentService this rule checks that services have non-empty comments.
 type CommentService struct{}
 
+// Message implements lint.Rule.
+func (c *CommentService) Message() string {
+	return "service comments must not be empty"
+}
+
 // Validate implements lint.Rule.
-func (c *CommentService) Validate(protoInfo lint.ProtoInfo) []error {
-	var res []error
+func (c *CommentService) Validate(protoInfo lint.ProtoInfo) ([]lint.Issue, error) {
+	var res []lint.Issue
 
 	for _, service := range protoInfo.Info.ProtoBody.Services {
 		if len(service.Comments) == 0 {
-			res = append(res, BuildError(service.Meta.Pos, service.ServiceName, lint.ErrServiceCommentIsEmpty))
+			res = append(res, lint.BuildError(c, service.Meta.Pos, service.ServiceName))
 		}
 	}
 
-	if len(res) == 0 {
-		return nil
-	}
-
-	return res
+	return res, nil
 }

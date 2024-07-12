@@ -3,7 +3,9 @@ package lint
 
 import (
 	"log"
+	"reflect"
 	"strings"
+	"unicode"
 
 	"github.com/yoheimuta/go-protoparser/v4/interpret/unordered"
 
@@ -17,6 +19,7 @@ type Lint struct {
 	ignoreDirs    []string
 	deps          []string
 	moduleReflect *modulereflect.ModuleReflect
+	ignoreOnly    map[string][]string
 }
 
 // ImportPath type alias for path import in proto file
@@ -35,12 +38,14 @@ type ProtoInfo struct {
 
 // Rule is an interface for a rule checking.
 type Rule interface {
+	// Message returns the message of the rule.
+	Message() string
 	// Validate validates the proto rule.
-	Validate(ProtoInfo) []error
+	Validate(ProtoInfo) ([]Issue, error)
 }
 
 // New creates a new Lint.
-func New(rules []Rule, ignoreDirs []string, deps []string) *Lint {
+func New(rules []Rule, ignoreDirs []string, ignoreOnly map[string][]string, deps []string) *Lint {
 	moduleReflect, err := factories.NewModuleReflect()
 	if err != nil {
 		log.Fatal(err) // TODO; return error
@@ -51,5 +56,30 @@ func New(rules []Rule, ignoreDirs []string, deps []string) *Lint {
 		ignoreDirs:    ignoreDirs,
 		deps:          deps,
 		moduleReflect: moduleReflect,
+		ignoreOnly:    ignoreOnly,
 	}
+}
+
+// GetRuleName returns rule name
+func GetRuleName(rule Rule) string {
+	return toUpperSnakeCase(reflect.TypeOf(rule).Elem().Name())
+}
+
+// toUpperSnakeCase converts a string from PascalCase or camelCase to UPPER_SNEAK_CASE.
+func toUpperSnakeCase(s string) string {
+	var result []rune
+
+	for i, r := range s {
+		if unicode.IsUpper(r) {
+			// Добавляем подчеркивание, когда:
+			// 1. Не первый символ.
+			// 2. Предыдущий символ не был заглавной буквой, либо следующий является прописной буквой.
+			if i > 0 && (unicode.IsLower(rune(s[i-1])) || (i+1 < len(s) && unicode.IsLower(rune(s[i+1])))) {
+				result = append(result, '_')
+			}
+		}
+		result = append(result, unicode.ToUpper(r))
+	}
+
+	return string(result)
 }
