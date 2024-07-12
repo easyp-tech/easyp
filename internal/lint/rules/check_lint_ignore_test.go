@@ -6,6 +6,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/yoheimuta/go-protoparser/v4/parser"
 
+	"github.com/easyp-tech/easyp/internal/lint"
 	"github.com/easyp-tech/easyp/internal/lint/rules"
 )
 
@@ -92,7 +93,7 @@ func TestIsIgnored(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			res := rules.CheckIsIgnored(tc.comments, tc.ruleName)
+			res := lint.CheckIsIgnored(tc.comments, tc.ruleName)
 
 			require.Equal(t, tc.expected, res)
 		})
