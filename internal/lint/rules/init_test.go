@@ -32,11 +32,6 @@ const (
 func start(t testing.TB) (*require.Assertions, map[string]lint.ProtoInfo) {
 	t.Helper()
 
-	lintParams := &lint.LintParams{
-		AllowCommentIgnores: true,
-	}
-	lint.SetLintParams(lintParams)
-
 	assert := require.New(t)
 
 	protos := map[string]lint.ProtoInfo{

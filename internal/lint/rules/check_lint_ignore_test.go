@@ -1,7 +1,6 @@
 package rules_test
 
 import (
-	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -35,8 +34,9 @@ func TestCheckNoLint(t *testing.T) {
 			r, protos := start(t)
 
 			rule := rules.MessagePascalCase{}
-			err := rule.Validate(protos[tc.fileName])
-			r.ErrorIs(errors.Join(err...), tc.wantErr)
+			issues, err := rule.Validate(protos[tc.fileName])
+			r.NoError(err)
+			r.Empty(issues)
 		})
 	}
 }
@@ -51,38 +51,38 @@ func TestIsIgnored(t *testing.T) {
 	}{
 		"no_comments": {
 			comments: nil,
-			ruleName: rules.DIRECTORY_SAME_PACKAGE,
+			ruleName: "DIRECTORY_SAME_PACKAGE",
 			expected: false,
 		},
 		"multiple_comments_without_ignore": {
 			comments: []*parser.Comment{
-				&parser.Comment{Raw: "// some message"},
-				&parser.Comment{Raw: "// another some message"},
+				{Raw: "// some message"},
+				{Raw: "// another some message"},
 			},
-			ruleName: rules.ENUM_VALUE_PREFIX,
+			ruleName: "ENUM_VALUE_PREFIX",
 			expected: false,
 		},
 		"single_ignore_comment": {
 			comments: []*parser.Comment{
-				&parser.Comment{Raw: "// buf:lint:ignore ENUM_VALUE_PREFIX"},
+				{Raw: "// buf:lint:ignore ENUM_VALUE_PREFIX"},
 			},
-			ruleName: rules.ENUM_VALUE_PREFIX,
+			ruleName: "ENUM_VALUE_PREFIX",
 			expected: true,
 		},
 		"multiple_ignore_comment": {
 			comments: []*parser.Comment{
-				&parser.Comment{Raw: "// buf:lint:ignore ENUM_VALUE_PREFIX"},
-				&parser.Comment{Raw: "// buf:lint:ignore DIRECTORY_SAME_PACKAGE"},
+				{Raw: "// buf:lint:ignore ENUM_VALUE_PREFIX"},
+				{Raw: "// buf:lint:ignore DIRECTORY_SAME_PACKAGE"},
 			},
-			ruleName: rules.ENUM_VALUE_PREFIX,
+			ruleName: "ENUM_VALUE_PREFIX",
 			expected: true,
 		},
 		"not_matched_ignore_rule_in_comments": {
 			comments: []*parser.Comment{
-				&parser.Comment{Raw: "// buf:lint:ignore ENUM_VALUE_PREFIX"},
-				&parser.Comment{Raw: "// buf:lint:ignore DIRECTORY_SAME_PACKAGE"},
+				{Raw: "// buf:lint:ignore ENUM_VALUE_PREFIX"},
+				{Raw: "// buf:lint:ignore DIRECTORY_SAME_PACKAGE"},
 			},
-			ruleName: rules.COMMENT_SERVICE,
+			ruleName: "COMMENT_SERVICE",
 			expected: false,
 		},
 	}

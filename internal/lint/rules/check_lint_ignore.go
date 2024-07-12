@@ -4,8 +4,6 @@ import (
 	"strings"
 
 	"github.com/yoheimuta/go-protoparser/v4/parser"
-
-	"github.com/easyp-tech/easyp/internal/lint"
 )
 
 const (
@@ -16,11 +14,6 @@ const (
 
 // CheckIsIgnored check if passed ruleName has to be ignored due to ignore command in comments
 func CheckIsIgnored(comments []*parser.Comment, ruleName string) bool {
-	lintParams := lint.GetLintParams()
-	if !lintParams.AllowCommentIgnores {
-		return false
-	}
-
 	if len(comments) == 0 {
 		return false
 	}
