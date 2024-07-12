@@ -10,19 +10,6 @@ import (
 	"github.com/easyp-tech/easyp/internal/lint/rules"
 )
 
-func TestEnumValueUpperSnakeCase_Name(t *testing.T) {
-	t.Parallel()
-
-	assert := require.New(t)
-
-	const expName = "ENUM_VALUE_UPPER_SNAKE_CASE"
-
-	rule := rules.EnumValueUpperSnakeCase{}
-	name := rule.Name()
-
-	assert.Equal(expName, name)
-}
-
 func TestEnumValueUpperSnakeCase_Message(t *testing.T) {
 	t.Parallel()
 

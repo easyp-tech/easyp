@@ -10,19 +10,6 @@ import (
 	"github.com/easyp-tech/easyp/internal/lint/rules"
 )
 
-func TestRPCNoClientStreaming_Name(t *testing.T) {
-	t.Parallel()
-
-	assert := require.New(t)
-
-	const expName = "RPC_NO_CLIENT_STREAMING"
-
-	rule := rules.RPCNoClientStreaming{}
-	name := rule.Name()
-
-	assert.Equal(expName, name)
-}
-
 func TestRPCNoClientStreaming_Message(t *testing.T) {
 	t.Parallel()
 

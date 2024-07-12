@@ -1,8 +1,6 @@
 package rules
 
 import (
-	"reflect"
-
 	"github.com/easyp-tech/easyp/internal/lint"
 )
 
@@ -12,11 +10,6 @@ var _ lint.Rule = (*EnumZeroValueSuffix)(nil)
 // By default, it verifies that the zero value of all enums ends in _UNSPECIFIED, but the suffix is configurable.
 type EnumZeroValueSuffix struct {
 	Suffix string `json:"suffix" yaml:"suffix" ENV:"ENUM_ZERO_VALUE_SUFFIX"`
-}
-
-// Name implements lint.Rule.
-func (e *EnumZeroValueSuffix) Name() string {
-	return toUpperSnakeCase(reflect.TypeOf(e).Elem().Name())
 }
 
 // Message implements lint.Rule.
@@ -32,9 +25,9 @@ func (e *EnumZeroValueSuffix) Validate(protoInfo lint.ProtoInfo) ([]lint.Issue, 
 		zeroValue := enum.EnumBody.EnumFields[0]
 		if zeroValue.Ident != pascalToUpperSnake(enum.EnumName)+"_"+e.Suffix {
 			res = append(res, lint.BuildError(
+				e,
 				zeroValue.Meta.Pos,
 				zeroValue.Ident,
-				e.Message(),
 			))
 		}
 	}

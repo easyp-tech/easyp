@@ -1,8 +1,6 @@
 package rules
 
 import (
-	"reflect"
-
 	"github.com/yoheimuta/go-protoparser/v4/parser/meta"
 
 	"github.com/easyp-tech/easyp/internal/lint"
@@ -12,11 +10,6 @@ var _ lint.Rule = (*PackageDefined)(nil)
 
 // PackageDefined this rule checks that all files have a package declaration.
 type PackageDefined struct{}
-
-// Name implements lint.Rule.
-func (p *PackageDefined) Name() string {
-	return toUpperSnakeCase(reflect.TypeOf(p).Elem().Name())
-}
 
 // Message implements lint.Rule.
 func (p *PackageDefined) Message() string {
@@ -28,9 +21,9 @@ func (p *PackageDefined) Validate(protoInfo lint.ProtoInfo) ([]lint.Issue, error
 	var res []lint.Issue
 
 	if len(protoInfo.Info.ProtoBody.Packages) == 0 {
-		res = append(res, lint.BuildError(meta.Position{
+		res = append(res, lint.BuildError(p, meta.Position{
 			Filename: protoInfo.Path,
-		}, protoInfo.Path, p.Message()))
+		}, protoInfo.Path))
 	}
 
 	return res, nil

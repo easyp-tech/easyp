@@ -1,7 +1,6 @@
 package rules
 
 import (
-	"reflect"
 	"strings"
 
 	"github.com/yoheimuta/go-protoparser/v4/interpret/unordered"
@@ -14,11 +13,6 @@ var _ lint.Rule = (*ImportUsed)(nil)
 
 // ImportUsed this rule checks that all the imports declared across your Protobuf files are actually used.
 type ImportUsed struct{}
-
-// Name implements lint.Rule.
-func (i *ImportUsed) Name() string {
-	return toUpperSnakeCase(reflect.TypeOf(i).Elem().Name())
-}
 
 // Message implements lint.Rule.
 func (i *ImportUsed) Message() string {
@@ -104,7 +98,7 @@ func (i *ImportUsed) Validate(protoInfo lint.ProtoInfo) ([]lint.Issue, error) {
 
 	for imp, used := range isImportUsed {
 		if !used {
-			res = append(res, lint.BuildError(importInfo[imp].Meta.Pos, importInfo[imp].Location, i.Message()))
+			res = append(res, lint.BuildError(i, importInfo[imp].Meta.Pos, importInfo[imp].Location))
 		}
 	}
 

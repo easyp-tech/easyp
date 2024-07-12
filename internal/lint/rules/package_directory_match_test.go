@@ -10,19 +10,6 @@ import (
 	"github.com/easyp-tech/easyp/internal/lint/rules"
 )
 
-func TestPackageDirectoryMatch_Name(t *testing.T) {
-	t.Parallel()
-
-	assert := require.New(t)
-
-	const expName = "PACKAGE_DIRECTORY_MATCH"
-
-	rule := rules.PackageDirectoryMatch{}
-	name := rule.Name()
-
-	assert.Equal(expName, name)
-}
-
 func TestPackageDirectoryMatch_Message(t *testing.T) {
 	t.Parallel()
 

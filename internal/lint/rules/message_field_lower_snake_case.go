@@ -1,7 +1,6 @@
 package rules
 
 import (
-	"reflect"
 	"regexp"
 
 	"github.com/easyp-tech/easyp/internal/lint"
@@ -11,11 +10,6 @@ var _ lint.Rule = (*FieldLowerSnakeCase)(nil)
 
 // FieldLowerSnakeCase this rule checks that field names are lower_snake_case.
 type FieldLowerSnakeCase struct{}
-
-// Name implements lint.Rule.
-func (c *FieldLowerSnakeCase) Name() string {
-	return toUpperSnakeCase(reflect.TypeOf(c).Elem().Name())
-}
 
 // Message implements lint.Rule.
 func (c *FieldLowerSnakeCase) Message() string {
@@ -29,7 +23,7 @@ func (c *FieldLowerSnakeCase) Validate(protoInfo lint.ProtoInfo) ([]lint.Issue, 
 	for _, message := range protoInfo.Info.ProtoBody.Messages {
 		for _, field := range message.MessageBody.Fields {
 			if !lowerSnakeCase.MatchString(field.FieldName) {
-				res = append(res, lint.BuildError(field.Meta.Pos, field.FieldName, c.Message()))
+				res = append(res, lint.BuildError(c, field.Meta.Pos, field.FieldName))
 			}
 		}
 	}

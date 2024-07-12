@@ -11,19 +11,6 @@ import (
 	"github.com/easyp-tech/easyp/internal/lint/rules"
 )
 
-func TestPackageSameJavaPackage_Name(t *testing.T) {
-	t.Parallel()
-
-	assert := require.New(t)
-
-	const expName = "PACKAGE_SAME_JAVA_PACKAGE"
-
-	rule := rules.PackageSameJavaPackage{}
-	name := rule.Name()
-
-	assert.Equal(expName, name)
-}
-
 func TestPackageSameJavaPackage_Message(t *testing.T) {
 	t.Parallel()
 

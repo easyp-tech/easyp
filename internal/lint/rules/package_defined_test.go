@@ -10,19 +10,6 @@ import (
 	"github.com/easyp-tech/easyp/internal/lint/rules"
 )
 
-func TestPackageDefined_Name(t *testing.T) {
-	t.Parallel()
-
-	assert := require.New(t)
-
-	const expName = "PACKAGE_DEFINED"
-
-	rule := rules.PackageDefined{}
-	name := rule.Name()
-
-	assert.Equal(expName, name)
-}
-
 func TestPackageDefined_Message(t *testing.T) {
 	t.Parallel()
 

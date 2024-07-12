@@ -1,8 +1,6 @@
 package rules
 
 import (
-	"reflect"
-
 	"github.com/easyp-tech/easyp/internal/lint"
 )
 
@@ -18,11 +16,6 @@ func (p *PackageSameJavaPackage) lazyInit() {
 	if p.cache == nil {
 		p.cache = make(map[string]string)
 	}
-}
-
-// Name implements lint.Rule.
-func (p *PackageSameJavaPackage) Name() string {
-	return toUpperSnakeCase(reflect.TypeOf(p).Elem().Name())
 }
 
 // Message implements lint.Rule.
@@ -49,7 +42,7 @@ func (p *PackageSameJavaPackage) Validate(protoInfo lint.ProtoInfo) ([]lint.Issu
 			}
 
 			if p.cache[packageName] != option.Constant {
-				res = append(res, lint.BuildError(option.Meta.Pos, option.Constant, p.Message()))
+				res = append(res, lint.BuildError(p, option.Meta.Pos, option.Constant))
 			}
 		}
 	}

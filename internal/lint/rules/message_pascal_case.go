@@ -1,7 +1,6 @@
 package rules
 
 import (
-	"reflect"
 	"regexp"
 
 	"github.com/easyp-tech/easyp/internal/lint"
@@ -11,11 +10,6 @@ var _ lint.Rule = (*MessagePascalCase)(nil)
 
 // MessagePascalCase this rule checks that messages are PascalCase.
 type MessagePascalCase struct{}
-
-// Name implements lint.Rule.
-func (c *MessagePascalCase) Name() string {
-	return toUpperSnakeCase(reflect.TypeOf(c).Elem().Name())
-}
 
 // Message implements lint.Rule.
 func (c *MessagePascalCase) Message() string {
@@ -28,7 +22,7 @@ func (c *MessagePascalCase) Validate(protoInfo lint.ProtoInfo) ([]lint.Issue, er
 	pascalCase := regexp.MustCompile("^[A-Z][a-z]+(?:[A-Z][a-z]+)*$")
 	for _, message := range protoInfo.Info.ProtoBody.Messages {
 		if !pascalCase.MatchString(message.MessageName) {
-			res = append(res, lint.BuildError(message.Meta.Pos, message.MessageName, c.Message()))
+			res = append(res, lint.BuildError(c, message.Meta.Pos, message.MessageName))
 		}
 	}
 

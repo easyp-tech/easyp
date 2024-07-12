@@ -1,8 +1,6 @@
 package rules
 
 import (
-	"reflect"
-
 	"github.com/easyp-tech/easyp/internal/lint"
 )
 
@@ -10,11 +8,6 @@ var _ lint.Rule = (*ProtoValidate)(nil)
 
 // ProtoValidate this rule requires that all protovalidate constraints specified are valid.
 type ProtoValidate struct{}
-
-// Name implements lint.Rule.
-func (p *ProtoValidate) Name() string {
-	return toUpperSnakeCase(reflect.TypeOf(p).Elem().Name())
-}
 
 //This rule requires that all protovalidate constraints specified are valid.
 //

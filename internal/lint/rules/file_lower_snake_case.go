@@ -2,7 +2,6 @@ package rules
 
 import (
 	"path/filepath"
-	"reflect"
 	"regexp"
 
 	"github.com/yoheimuta/go-protoparser/v4/parser/meta"
@@ -17,11 +16,6 @@ var _ lint.Rule = (*FileLowerSnakeCase)(nil)
 type FileLowerSnakeCase struct {
 }
 
-// Name implements lint.Rule.
-func (f *FileLowerSnakeCase) Name() string {
-	return toUpperSnakeCase(reflect.TypeOf(f).Elem().Name())
-}
-
 // Message implements lint.Rule.
 func (f *FileLowerSnakeCase) Message() string {
 	return "file name should be lower_snake_case.proto"
@@ -33,12 +27,12 @@ func (f *FileLowerSnakeCase) Validate(protoInfo lint.ProtoInfo) ([]lint.Issue, e
 
 	fileName := filepath.Base(protoInfo.Path)
 	if !isLowerSnakeCase(fileName) {
-		res = append(res, lint.BuildError(meta.Position{
+		res = append(res, lint.BuildError(f, meta.Position{
 			Filename: protoInfo.Path,
 			Offset:   0,
 			Line:     0,
 			Column:   0,
-		}, protoInfo.Path, f.Message()))
+		}, protoInfo.Path))
 	}
 
 	return res, nil

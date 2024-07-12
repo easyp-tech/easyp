@@ -10,19 +10,6 @@ import (
 	"github.com/easyp-tech/easyp/internal/lint/rules"
 )
 
-func TestImportNoWeak_Name(t *testing.T) {
-	t.Parallel()
-
-	assert := require.New(t)
-
-	const expName = "IMPORT_NO_WEAK"
-
-	rule := rules.ImportNoWeak{}
-	name := rule.Name()
-
-	assert.Equal(expName, name)
-}
-
 func TestImportNoWeak_Message(t *testing.T) {
 	t.Parallel()
 

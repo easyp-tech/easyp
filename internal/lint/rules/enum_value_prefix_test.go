@@ -10,19 +10,6 @@ import (
 	"github.com/easyp-tech/easyp/internal/lint/rules"
 )
 
-func TestEnumValuePrefix_Name(t *testing.T) {
-	t.Parallel()
-
-	assert := require.New(t)
-
-	const expName = "ENUM_VALUE_PREFIX"
-
-	rule := rules.EnumValuePrefix{}
-	name := rule.Name()
-
-	assert.Equal(expName, name)
-}
-
 func TestEnumValuePrefix_Message(t *testing.T) {
 	t.Parallel()
 

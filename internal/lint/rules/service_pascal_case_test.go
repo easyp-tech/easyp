@@ -10,19 +10,6 @@ import (
 	"github.com/easyp-tech/easyp/internal/lint/rules"
 )
 
-func TestServicePascalCase_Name(t *testing.T) {
-	t.Parallel()
-
-	assert := require.New(t)
-
-	const expName = "SERVICE_PASCAL_CASE"
-
-	rule := rules.ServicePascalCase{}
-	name := rule.Name()
-
-	assert.Equal(expName, name)
-}
-
 func TestServicePascalCase_Message(t *testing.T) {
 	t.Parallel()
 

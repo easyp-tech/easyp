@@ -10,19 +10,6 @@ import (
 	"github.com/easyp-tech/easyp/internal/lint/rules"
 )
 
-func TestRPCRequestResponseUnique_Name(t *testing.T) {
-	t.Parallel()
-
-	assert := require.New(t)
-
-	const expName = "RPC_REQUEST_RESPONSE_UNIQUE"
-
-	rule := rules.RPCRequestResponseUnique{}
-	name := rule.Name()
-
-	assert.Equal(expName, name)
-}
-
 func TestRPCRequestResponseUnique_Message(t *testing.T) {
 	t.Parallel()
 

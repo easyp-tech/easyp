@@ -3,7 +3,9 @@ package lint
 
 import (
 	"log"
+	"reflect"
 	"strings"
+	"unicode"
 
 	"github.com/yoheimuta/go-protoparser/v4/interpret/unordered"
 
@@ -36,8 +38,6 @@ type ProtoInfo struct {
 
 // Rule is an interface for a rule checking.
 type Rule interface {
-	// Name returns Rule name.
-	Name() string
 	// Message returns the message of the rule.
 	Message() string
 	// Validate validates the proto rule.
@@ -58,4 +58,28 @@ func New(rules []Rule, ignoreDirs []string, ignoreOnly map[string][]string, deps
 		moduleReflect: moduleReflect,
 		ignoreOnly:    ignoreOnly,
 	}
+}
+
+// GetRuleName returns rule name
+func GetRuleName(rule Rule) string {
+	return toUpperSnakeCase(reflect.TypeOf(rule).Elem().Name())
+}
+
+// toUpperSnakeCase converts a string from PascalCase or camelCase to UPPER_SNEAK_CASE.
+func toUpperSnakeCase(s string) string {
+	var result []rune
+
+	for i, r := range s {
+		if unicode.IsUpper(r) {
+			// Добавляем подчеркивание, когда:
+			// 1. Не первый символ.
+			// 2. Предыдущий символ не был заглавной буквой, либо следующий является прописной буквой.
+			if i > 0 && (unicode.IsLower(rune(s[i-1])) || (i+1 < len(s) && unicode.IsLower(rune(s[i+1])))) {
+				result = append(result, '_')
+			}
+		}
+		result = append(result, unicode.ToUpper(r))
+	}
+
+	return string(result)
 }

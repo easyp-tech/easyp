@@ -11,19 +11,6 @@ import (
 	"github.com/easyp-tech/easyp/internal/lint/rules"
 )
 
-func TestPackageSameJavaMultipleFiles_Name(t *testing.T) {
-	t.Parallel()
-
-	assert := require.New(t)
-
-	const expName = "PACKAGE_SAME_JAVA_MULTIPLE_FILES"
-
-	rule := rules.PackageSameJavaMultipleFiles{}
-	name := rule.Name()
-
-	assert.Equal(expName, name)
-}
-
 func TestPackageSameJavaMultipleFiles_Message(t *testing.T) {
 	t.Parallel()
 

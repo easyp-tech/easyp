@@ -10,19 +10,6 @@ import (
 	"github.com/easyp-tech/easyp/internal/lint/rules"
 )
 
-func TestRPCPascalCase_Name(t *testing.T) {
-	t.Parallel()
-
-	assert := require.New(t)
-
-	const expName = "RPC_PASCAL_CASE"
-
-	rule := rules.RPCPascalCase{}
-	name := rule.Name()
-
-	assert.Equal(expName, name)
-}
-
 func TestRPCPascalCase_Message(t *testing.T) {
 	t.Parallel()
 

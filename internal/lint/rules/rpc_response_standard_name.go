@@ -1,8 +1,6 @@
 package rules
 
 import (
-	"reflect"
-
 	"github.com/easyp-tech/easyp/internal/lint"
 )
 
@@ -10,11 +8,6 @@ var _ lint.Rule = (*RPCResponseStandardName)(nil)
 
 // RPCResponseStandardName checks that RPC response type names are RPCNameResponse or ServiceNameRPCNameResponse.
 type RPCResponseStandardName struct {
-}
-
-// Name implements lint.Rule.
-func (r *RPCResponseStandardName) Name() string {
-	return toUpperSnakeCase(reflect.TypeOf(r).Elem().Name())
 }
 
 // Message implements lint.Rule.
@@ -29,7 +22,7 @@ func (r *RPCResponseStandardName) Validate(protoInfo lint.ProtoInfo) ([]lint.Iss
 	for _, service := range protoInfo.Info.ProtoBody.Services {
 		for _, rpc := range service.ServiceBody.RPCs {
 			if rpc.RPCResponse.MessageType != rpc.RPCName+"Response" && rpc.RPCResponse.MessageType != service.ServiceName+rpc.RPCName+"Response" {
-				res = append(res, lint.BuildError(rpc.Meta.Pos, rpc.RPCResponse.MessageType, r.Message()))
+				res = append(res, lint.BuildError(r, rpc.Meta.Pos, rpc.RPCResponse.MessageType))
 			}
 		}
 	}
