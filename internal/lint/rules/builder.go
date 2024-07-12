@@ -78,7 +78,8 @@ func Rules(cfg Config) map[string]lint.Rule {
 	}
 
 	return lo.SliceToMap(rules, func(item lint.Rule) (string, lint.Rule) {
-		return item.Name(), item
+		ruleName := lint.GetRuleName(item)
+		return ruleName, item
 	})
 }
 
@@ -99,5 +100,4 @@ func toUpperSnakeCase(s string) string {
 	}
 
 	return string(result)
-
 }

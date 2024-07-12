@@ -189,7 +189,8 @@ func readProtoFile(f fs.File) (*unordered.Proto, error) {
 }
 
 func (c *Lint) shouldIgnore(rule Rule, path string) bool {
-	ignoreFilesOrDirs := c.ignoreOnly[rule.Name()]
+	ruleName := GetRuleName(rule)
+	ignoreFilesOrDirs := c.ignoreOnly[ruleName]
 
 	for _, fileOrDir := range ignoreFilesOrDirs {
 		switch {
