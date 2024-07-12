@@ -1,8 +1,6 @@
 package rules
 
 import (
-	"reflect"
-
 	"github.com/samber/lo"
 
 	"github.com/easyp-tech/easyp/internal/lint"
@@ -12,11 +10,6 @@ var _ lint.Rule = (*RPCRequestResponseUnique)(nil)
 
 // RPCRequestResponseUnique checks that RPCs request and response types are only used in one RPC.
 type RPCRequestResponseUnique struct {
-}
-
-// Name implements lint.Rule.
-func (r *RPCRequestResponseUnique) Name() string {
-	return toUpperSnakeCase(reflect.TypeOf(r).Elem().Name())
 }
 
 // Message implements lint.Rule.

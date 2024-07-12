@@ -10,19 +10,6 @@ import (
 	"github.com/easyp-tech/easyp/internal/lint/rules"
 )
 
-func TestEnumZeroValueSuffix_Name(t *testing.T) {
-	t.Parallel()
-
-	assert := require.New(t)
-
-	const expName = "ENUM_ZERO_VALUE_SUFFIX"
-
-	rule := rules.EnumZeroValueSuffix{}
-	name := rule.Name()
-
-	assert.Equal(expName, name)
-}
-
 func TestEnumZeroValueSuffix_Message(t *testing.T) {
 	t.Parallel()
 

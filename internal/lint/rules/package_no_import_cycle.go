@@ -1,8 +1,6 @@
 package rules
 
 import (
-	"reflect"
-
 	"github.com/easyp-tech/easyp/internal/lint"
 )
 
@@ -19,11 +17,6 @@ func (p *PackageNoImportCycle) lazyInit() {
 	if p.cache == nil {
 		p.cache = make(map[string][]string)
 	}
-}
-
-// Name implements lint.Rule.
-func (p *PackageNoImportCycle) Name() string {
-	return toUpperSnakeCase(reflect.TypeOf(p).Elem().Name())
 }
 
 // Message implements lint.Rule.

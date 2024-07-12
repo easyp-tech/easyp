@@ -1,8 +1,6 @@
 package rules
 
 import (
-	"reflect"
-
 	"github.com/easyp-tech/easyp/internal/lint"
 )
 
@@ -12,11 +10,6 @@ var _ lint.Rule = (*EnumFirstValueZero)(nil)
 // which is a proto3 requirement on build,
 // but isn't required in proto2 on build. The rule enforces that the requirement is also followed in proto2.
 type EnumFirstValueZero struct{}
-
-// Name implements lint.Rule.
-func (c *EnumFirstValueZero) Name() string {
-	return toUpperSnakeCase(reflect.TypeOf(c).Elem().Name())
-}
 
 // Message implements lint.Rule.
 func (c *EnumFirstValueZero) Message() string {

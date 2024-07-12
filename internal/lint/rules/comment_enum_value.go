@@ -1,8 +1,6 @@
 package rules
 
 import (
-	"reflect"
-
 	"github.com/easyp-tech/easyp/internal/lint"
 )
 
@@ -10,11 +8,6 @@ var _ lint.Rule = (*CommentEnumValue)(nil)
 
 // CommentEnumValue this rule checks that enum values have non-empty comments.
 type CommentEnumValue struct{}
-
-// Name implements lint.Rule.
-func (c *CommentEnumValue) Name() string {
-	return toUpperSnakeCase(reflect.TypeOf(c).Elem().Name())
-}
 
 // Message implements lint.Rule.
 func (c *CommentEnumValue) Message() string {

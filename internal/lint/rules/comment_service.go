@@ -1,8 +1,6 @@
 package rules
 
 import (
-	"reflect"
-
 	"github.com/easyp-tech/easyp/internal/lint"
 )
 
@@ -10,11 +8,6 @@ var _ lint.Rule = (*CommentService)(nil)
 
 // CommentService this rule checks that services have non-empty comments.
 type CommentService struct{}
-
-// Name implements lint.Rule.
-func (c *CommentService) Name() string {
-	return toUpperSnakeCase(reflect.TypeOf(c).Elem().Name())
-}
 
 // Message implements lint.Rule.
 func (c *CommentService) Message() string {

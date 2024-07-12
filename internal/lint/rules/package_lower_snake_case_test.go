@@ -10,19 +10,6 @@ import (
 	"github.com/easyp-tech/easyp/internal/lint/rules"
 )
 
-func TestPackageLowerSnakeCase_Name(t *testing.T) {
-	t.Parallel()
-
-	assert := require.New(t)
-
-	const expName = "PACKAGE_LOWER_SNAKE_CASE"
-
-	rule := rules.PackageLowerSnakeCase{}
-	name := rule.Name()
-
-	assert.Equal(expName, name)
-}
-
 func TestPackageLowerSnakeCase_Message(t *testing.T) {
 	t.Parallel()
 

@@ -1,7 +1,6 @@
 package rules
 
 import (
-	"reflect"
 	"regexp"
 
 	"github.com/easyp-tech/easyp/internal/lint"
@@ -11,11 +10,6 @@ var _ lint.Rule = (*EnumValueUpperSnakeCase)(nil)
 
 // EnumValueUpperSnakeCase this rule checks that enum values are UPPER_SNAKE_CASE.
 type EnumValueUpperSnakeCase struct{}
-
-// Name implements lint.Rule.
-func (c *EnumValueUpperSnakeCase) Name() string {
-	return toUpperSnakeCase(reflect.TypeOf(c).Elem().Name())
-}
 
 // Message implements lint.Rule.
 func (c *EnumValueUpperSnakeCase) Message() string {

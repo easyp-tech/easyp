@@ -1,8 +1,6 @@
 package rules
 
 import (
-	"reflect"
-
 	"github.com/easyp-tech/easyp/internal/lint"
 )
 
@@ -10,11 +8,6 @@ var _ lint.Rule = (*CommentOneof)(nil)
 
 // CommentOneof this rule checks that oneofs have non-empty comments.
 type CommentOneof struct{}
-
-// Name implements lint.Rule.
-func (c *CommentOneof) Name() string {
-	return toUpperSnakeCase(reflect.TypeOf(c).Elem().Name())
-}
 
 // Message implements lint.Rule.
 func (c *CommentOneof) Message() string {

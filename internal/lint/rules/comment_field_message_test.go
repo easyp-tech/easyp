@@ -10,19 +10,6 @@ import (
 	"github.com/easyp-tech/easyp/internal/lint/rules"
 )
 
-func TestCommentField_Name(t *testing.T) {
-	t.Parallel()
-
-	assert := require.New(t)
-
-	const expName = "COMMENT_FIELD"
-
-	rule := rules.CommentField{}
-	name := rule.Name()
-
-	assert.Equal(expName, name)
-}
-
 func TestCommentField_Message(t *testing.T) {
 	t.Parallel()
 

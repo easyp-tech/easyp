@@ -10,19 +10,6 @@ import (
 	"github.com/easyp-tech/easyp/internal/lint/rules"
 )
 
-func TestRPCResponseStandardName_Name(t *testing.T) {
-	t.Parallel()
-
-	assert := require.New(t)
-
-	const expName = "RPC_RESPONSE_STANDARD_NAME"
-
-	rule := rules.RPCResponseStandardName{}
-	name := rule.Name()
-
-	assert.Equal(expName, name)
-}
-
 func TestRPCResponseStandardName_Message(t *testing.T) {
 	t.Parallel()
 

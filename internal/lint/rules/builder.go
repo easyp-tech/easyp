@@ -1,8 +1,6 @@
 package rules
 
 import (
-	"unicode"
-
 	"github.com/samber/lo"
 
 	"github.com/easyp-tech/easyp/internal/lint"
@@ -81,23 +79,4 @@ func Rules(cfg Config) map[string]lint.Rule {
 		ruleName := lint.GetRuleName(item)
 		return ruleName, item
 	})
-}
-
-// toUpperSnakeCase converts a string from PascalCase or camelCase to UPPER_SNEAK_CASE.
-func toUpperSnakeCase(s string) string {
-	var result []rune
-
-	for i, r := range s {
-		if unicode.IsUpper(r) {
-			// Добавляем подчеркивание, когда:
-			// 1. Не первый символ.
-			// 2. Предыдущий символ не был заглавной буквой, либо следующий является прописной буквой.
-			if i > 0 && (unicode.IsLower(rune(s[i-1])) || (i+1 < len(s) && unicode.IsLower(rune(s[i+1])))) {
-				result = append(result, '_')
-			}
-		}
-		result = append(result, unicode.ToUpper(r))
-	}
-
-	return string(result)
 }

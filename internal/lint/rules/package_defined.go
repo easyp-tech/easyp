@@ -1,8 +1,6 @@
 package rules
 
 import (
-	"reflect"
-
 	"github.com/yoheimuta/go-protoparser/v4/parser/meta"
 
 	"github.com/easyp-tech/easyp/internal/lint"
@@ -12,11 +10,6 @@ var _ lint.Rule = (*PackageDefined)(nil)
 
 // PackageDefined this rule checks that all files have a package declaration.
 type PackageDefined struct{}
-
-// Name implements lint.Rule.
-func (p *PackageDefined) Name() string {
-	return toUpperSnakeCase(reflect.TypeOf(p).Elem().Name())
-}
 
 // Message implements lint.Rule.
 func (p *PackageDefined) Message() string {

@@ -1,8 +1,6 @@
 package rules
 
 import (
-	"reflect"
-
 	"github.com/easyp-tech/easyp/internal/lint"
 )
 
@@ -10,11 +8,6 @@ var _ lint.Rule = (*CommentField)(nil)
 
 // CommentField this rule checks that fields have non-empty comments.
 type CommentField struct{}
-
-// Name implements lint.Rule.
-func (c *CommentField) Name() string {
-	return toUpperSnakeCase(reflect.TypeOf(c).Elem().Name())
-}
 
 // Message implements lint.Rule.
 func (c *CommentField) Message() string {

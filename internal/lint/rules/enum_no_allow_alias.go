@@ -1,18 +1,11 @@
 package rules
 
 import (
-	"reflect"
-
 	"github.com/easyp-tech/easyp/internal/lint"
 )
 
 // EnumNoAllowAlias this rule checks that enums are PascalCase.
 type EnumNoAllowAlias struct{}
-
-// Name implements lint.Rule.
-func (e *EnumNoAllowAlias) Name() string {
-	return toUpperSnakeCase(reflect.TypeOf(e).Elem().Name())
-}
 
 // Message implements lint.Rule.
 func (e *EnumNoAllowAlias) Message() string {

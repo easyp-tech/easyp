@@ -10,19 +10,6 @@ import (
 	"github.com/easyp-tech/easyp/internal/lint/rules"
 )
 
-func TestDirectorySamePackage_Name(t *testing.T) {
-	t.Parallel()
-
-	assert := require.New(t)
-
-	const expName = "DIRECTORY_SAME_PACKAGE"
-
-	rule := rules.DirectorySamePackage{}
-	name := rule.Name()
-
-	assert.Equal(expName, name)
-}
-
 func TestDirectorySamePackage_Message(t *testing.T) {
 	t.Parallel()
 

@@ -11,19 +11,6 @@ import (
 	"github.com/easyp-tech/easyp/internal/lint"
 )
 
-func TestCommentOneof_Name(t *testing.T) {
-	t.Parallel()
-
-	assert := require.New(t)
-
-	const expName = "COMMENT_ONEOF"
-
-	rule := rules.CommentOneof{}
-	name := rule.Name()
-
-	assert.Equal(expName, name)
-}
-
 func TestCommentOneof_Message(t *testing.T) {
 	t.Parallel()
 

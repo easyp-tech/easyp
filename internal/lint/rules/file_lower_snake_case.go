@@ -2,7 +2,6 @@ package rules
 
 import (
 	"path/filepath"
-	"reflect"
 	"regexp"
 
 	"github.com/yoheimuta/go-protoparser/v4/parser/meta"
@@ -15,11 +14,6 @@ var _ lint.Rule = (*FileLowerSnakeCase)(nil)
 // FileLowerSnakeCase this rule says that all .proto files must be named as lower_snake_case.proto.
 // This is the widely accepted standard.
 type FileLowerSnakeCase struct {
-}
-
-// Name implements lint.Rule.
-func (f *FileLowerSnakeCase) Name() string {
-	return toUpperSnakeCase(reflect.TypeOf(f).Elem().Name())
 }
 
 // Message implements lint.Rule.

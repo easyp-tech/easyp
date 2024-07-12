@@ -1,7 +1,6 @@
 package rules
 
 import (
-	"reflect"
 	"regexp"
 
 	"github.com/easyp-tech/easyp/internal/lint"
@@ -12,11 +11,6 @@ var _ lint.Rule = (*PackageVersionSuffix)(nil)
 // PackageVersionSuffix this rule enforces that the last component of a package must be a version of the form
 // v\d+, v\d+test.*, v\d+(alpha|beta)\d*, or v\d+p\d+(alpha|beta)\d*, where numbers are >=1.
 type PackageVersionSuffix struct{}
-
-// Name implements lint.Rule.
-func (p *PackageVersionSuffix) Name() string {
-	return toUpperSnakeCase(reflect.TypeOf(p).Elem().Name())
-}
 
 // Message implements lint.Rule.
 func (p *PackageVersionSuffix) Message() string {

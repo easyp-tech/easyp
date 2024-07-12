@@ -10,19 +10,6 @@ import (
 	"github.com/easyp-tech/easyp/internal/lint/rules"
 )
 
-func TestServiceSuffix_Name(t *testing.T) {
-	t.Parallel()
-
-	assert := require.New(t)
-
-	const expName = "SERVICE_SUFFIX"
-
-	rule := rules.ServiceSuffix{}
-	name := rule.Name()
-
-	assert.Equal(expName, name)
-}
-
 func TestServiceSuffix_Message(t *testing.T) {
 	t.Parallel()
 

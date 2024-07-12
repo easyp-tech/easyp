@@ -1,7 +1,6 @@
 package rules
 
 import (
-	"reflect"
 	"strings"
 	"unicode"
 
@@ -12,11 +11,6 @@ var _ lint.Rule = (*EnumValuePrefix)(nil)
 
 // EnumValuePrefix this rule requires that all enum value names are prefixed with the enum name.
 type EnumValuePrefix struct {
-}
-
-// Name implements lint.Rule.
-func (e *EnumValuePrefix) Name() string {
-	return toUpperSnakeCase(reflect.TypeOf(e).Elem().Name())
 }
 
 // Message implements lint.Rule.

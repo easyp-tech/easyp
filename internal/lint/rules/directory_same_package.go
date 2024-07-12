@@ -2,7 +2,6 @@ package rules
 
 import (
 	"path/filepath"
-	"reflect"
 
 	"github.com/easyp-tech/easyp/internal/lint"
 )
@@ -19,11 +18,6 @@ func (d *DirectorySamePackage) lazyInit() {
 	if d.cache == nil {
 		d.cache = make(map[string]string)
 	}
-}
-
-// Name implements lint.Rule.
-func (d *DirectorySamePackage) Name() string {
-	return toUpperSnakeCase(reflect.TypeOf(d).Elem().Name())
 }
 
 // Message implements lint.Rule.

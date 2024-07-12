@@ -1,7 +1,6 @@
 package rules
 
 import (
-	"reflect"
 	"regexp"
 
 	"github.com/easyp-tech/easyp/internal/lint"
@@ -11,11 +10,6 @@ var _ lint.Rule = (*MessagePascalCase)(nil)
 
 // MessagePascalCase this rule checks that messages are PascalCase.
 type MessagePascalCase struct{}
-
-// Name implements lint.Rule.
-func (c *MessagePascalCase) Name() string {
-	return toUpperSnakeCase(reflect.TypeOf(c).Elem().Name())
-}
 
 // Message implements lint.Rule.
 func (c *MessagePascalCase) Message() string {

@@ -1,8 +1,6 @@
 package rules
 
 import (
-	"reflect"
-
 	"github.com/easyp-tech/easyp/internal/lint"
 )
 
@@ -10,11 +8,6 @@ var _ lint.Rule = (*RPCRequestStandardName)(nil)
 
 // RPCRequestStandardName checks that RPC request type names are RPCNameRequest or ServiceNameRPCNameRequest.
 type RPCRequestStandardName struct {
-}
-
-// Name implements lint.Rule.
-func (r *RPCRequestStandardName) Name() string {
-	return toUpperSnakeCase(reflect.TypeOf(r).Elem().Name())
 }
 
 // Message implements lint.Rule.

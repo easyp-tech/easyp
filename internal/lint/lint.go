@@ -38,8 +38,6 @@ type ProtoInfo struct {
 
 // Rule is an interface for a rule checking.
 type Rule interface {
-	// Name returns Rule name.
-	Name() string
 	// Message returns the message of the rule.
 	Message() string
 	// Validate validates the proto rule.

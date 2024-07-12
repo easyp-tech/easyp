@@ -1,8 +1,6 @@
 package rules
 
 import (
-	"reflect"
-
 	"github.com/easyp-tech/easyp/internal/lint"
 )
 
@@ -12,11 +10,6 @@ var _ lint.Rule = (*PackageSameCsharpNamespace)(nil)
 type PackageSameCsharpNamespace struct {
 	// dir => package
 	cache map[string]string
-}
-
-// Name implements lint.Rule.
-func (p *PackageSameCsharpNamespace) Name() string {
-	return toUpperSnakeCase(reflect.TypeOf(p).Elem().Name())
 }
 
 func (p *PackageSameCsharpNamespace) lazyInit() {

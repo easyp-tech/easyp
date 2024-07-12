@@ -1,7 +1,6 @@
 package rules
 
 import (
-	"reflect"
 	"regexp"
 
 	"github.com/easyp-tech/easyp/internal/lint"
@@ -11,11 +10,6 @@ var _ lint.Rule = (*EnumPascalCase)(nil)
 
 // EnumPascalCase this rule checks that enums are PascalCase.
 type EnumPascalCase struct{}
-
-// Name implements lint.Rule.
-func (c *EnumPascalCase) Name() string {
-	return toUpperSnakeCase(reflect.TypeOf(c).Elem().Name())
-}
 
 // Message implements lint.Rule.
 func (c *EnumPascalCase) Message() string {

@@ -10,19 +10,6 @@ import (
 	"github.com/easyp-tech/easyp/internal/lint/rules"
 )
 
-func TestCommentMessage_Name(t *testing.T) {
-	t.Parallel()
-
-	assert := require.New(t)
-
-	const expName = "COMMENT_MESSAGE"
-
-	rule := rules.CommentMessage{}
-	name := rule.Name()
-
-	assert.Equal(expName, name)
-}
-
 func TestCommentMessage_Message(t *testing.T) {
 	t.Parallel()
 

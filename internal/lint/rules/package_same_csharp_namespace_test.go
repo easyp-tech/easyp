@@ -10,19 +10,6 @@ import (
 	"github.com/easyp-tech/easyp/internal/lint/rules"
 )
 
-func TestPackageSameCSharpNamespace_Name(t *testing.T) {
-	t.Parallel()
-
-	assert := require.New(t)
-
-	const expName = "PACKAGE_SAME_CSHARP_NAMESPACE"
-
-	rule := rules.PackageSameCsharpNamespace{}
-	name := rule.Name()
-
-	assert.Equal(expName, name)
-}
-
 func TestPackageSameCSharpNamespace_Message(t *testing.T) {
 	t.Parallel()
 

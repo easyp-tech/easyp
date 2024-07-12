@@ -10,19 +10,6 @@ import (
 	"github.com/easyp-tech/easyp/internal/lint/rules"
 )
 
-func TestEnumFirstValueZero_Name(t *testing.T) {
-	t.Parallel()
-
-	assert := require.New(t)
-
-	const expName = "ENUM_FIRST_VALUE_ZERO"
-
-	rule := rules.EnumFirstValueZero{}
-	name := rule.Name()
-
-	assert.Equal(expName, name)
-}
-
 func TestEnumFirstValueZero_Message(t *testing.T) {
 	t.Parallel()
 

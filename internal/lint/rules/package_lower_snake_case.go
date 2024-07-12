@@ -1,7 +1,6 @@
 package rules
 
 import (
-	"reflect"
 	"regexp"
 
 	"github.com/easyp-tech/easyp/internal/lint"
@@ -11,11 +10,6 @@ var _ lint.Rule = (*PackageLowerSnakeCase)(nil)
 
 // PackageLowerSnakeCase his rule checks that packages are lower_snake_case.
 type PackageLowerSnakeCase struct{}
-
-// Name implements lint.Rule.
-func (c *PackageLowerSnakeCase) Name() string {
-	return toUpperSnakeCase(reflect.TypeOf(c).Elem().Name())
-}
 
 // Message implements lint.Rule.
 func (c *PackageLowerSnakeCase) Message() string {

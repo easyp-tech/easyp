@@ -1,8 +1,6 @@
 package rules
 
 import (
-	"reflect"
-
 	"github.com/easyp-tech/easyp/internal/lint"
 )
 
@@ -10,11 +8,6 @@ var _ lint.Rule = (*RPCNoServerStreaming)(nil)
 
 // RPCNoServerStreaming this rule checks that RPCs aren't server streaming.
 type RPCNoServerStreaming struct {
-}
-
-// Name implements lint.Rule.
-func (r *RPCNoServerStreaming) Name() string {
-	return toUpperSnakeCase(reflect.TypeOf(r).Elem().Name())
 }
 
 // Message implements lint.Rule.
