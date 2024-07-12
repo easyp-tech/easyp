@@ -21,6 +21,7 @@ type Issue struct {
 	Position   meta.Position
 	SourceName string
 	Message    string
+	RuleName   string
 }
 
 // BuildError creates an Issue.
@@ -29,5 +30,6 @@ func BuildError(lintRule Rule, pos meta.Position, sourceName string) Issue {
 		Position:   pos,
 		SourceName: sourceName,
 		Message:    lintRule.Message(),
+		RuleName:   GetRuleName(lintRule),
 	}
 }
