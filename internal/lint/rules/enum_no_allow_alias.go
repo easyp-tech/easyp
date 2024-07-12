@@ -18,7 +18,7 @@ func (e *EnumNoAllowAlias) Validate(protoInfo lint.ProtoInfo) ([]lint.Issue, err
 	for _, enum := range protoInfo.Info.ProtoBody.Enums {
 		for _, opt := range enum.EnumBody.Options {
 			if opt.OptionName == "allow_alias" {
-				res = append(res, lint.BuildError(e, enum.Meta.Pos, enum.EnumName))
+				res = lint.AppendIssue(res, e, enum.Meta.Pos, enum.EnumName, enum.Comments)
 			}
 		}
 	}

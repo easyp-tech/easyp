@@ -42,7 +42,7 @@ func (p *PackageSameGoPackage) Validate(protoInfo lint.ProtoInfo) ([]lint.Issue,
 			}
 
 			if p.cache[packageName] != option.Constant {
-				res = append(res, lint.BuildError(p, option.Meta.Pos, option.Constant))
+				res = lint.AppendIssue(res, p, option.Meta.Pos, option.Constant, option.Comments)
 			}
 		}
 	}

@@ -21,7 +21,7 @@ func (c *CommentRPC) Validate(protoInfo lint.ProtoInfo) ([]lint.Issue, error) {
 	for _, service := range protoInfo.Info.ProtoBody.Services {
 		for _, rpc := range service.ServiceBody.RPCs {
 			if len(service.Comments) == 0 {
-				res = append(res, lint.BuildError(c, rpc.Meta.Pos, rpc.RPCName))
+				res = lint.AppendIssue(res, c, rpc.Meta.Pos, rpc.RPCName, service.Comments)
 			}
 		}
 	}

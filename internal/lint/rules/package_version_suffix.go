@@ -25,7 +25,7 @@ func (p *PackageVersionSuffix) Validate(protoInfo lint.ProtoInfo) ([]lint.Issue,
 
 	for _, pkg := range protoInfo.Info.ProtoBody.Packages {
 		if !matchVersionSuffix.MatchString(pkg.Name) {
-			res = append(res, lint.BuildError(p, pkg.Meta.Pos, pkg.Name))
+			res = lint.AppendIssue(res, p, pkg.Meta.Pos, pkg.Name, pkg.Comments)
 		}
 	}
 
