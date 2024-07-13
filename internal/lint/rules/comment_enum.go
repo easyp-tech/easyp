@@ -20,11 +20,7 @@ func (c *CommentEnum) Validate(protoInfo lint.ProtoInfo) ([]lint.Issue, error) {
 
 	for _, enum := range protoInfo.Info.ProtoBody.Enums {
 		if len(enum.Comments) == 0 {
-			res = append(res, lint.BuildError(
-				c,
-				enum.Meta.Pos,
-				enum.EnumName,
-			))
+			res = lint.AppendIssue(res, c, enum.Meta.Pos, enum.EnumName, enum.Comments)
 		}
 	}
 

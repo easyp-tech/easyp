@@ -21,9 +21,9 @@ func (p *PackageDefined) Validate(protoInfo lint.ProtoInfo) ([]lint.Issue, error
 	var res []lint.Issue
 
 	if len(protoInfo.Info.ProtoBody.Packages) == 0 {
-		res = append(res, lint.BuildError(p, meta.Position{
+		res = lint.AppendIssue(res, p, meta.Position{
 			Filename: protoInfo.Path,
-		}, protoInfo.Path))
+		}, protoInfo.Path, nil)
 	}
 
 	return res, nil

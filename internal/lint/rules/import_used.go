@@ -98,7 +98,7 @@ func (i *ImportUsed) Validate(protoInfo lint.ProtoInfo) ([]lint.Issue, error) {
 
 	for imp, used := range isImportUsed {
 		if !used {
-			res = append(res, lint.BuildError(i, importInfo[imp].Meta.Pos, importInfo[imp].Location))
+			res = lint.AppendIssue(res, i, importInfo[imp].Meta.Pos, importInfo[imp].Location, importInfo[imp].Comments)
 		}
 	}
 

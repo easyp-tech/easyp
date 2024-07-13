@@ -29,11 +29,13 @@ func (e *EnumValuePrefix) Validate(protoInfo lint.ProtoInfo) ([]lint.Issue, erro
 
 		for _, enumValue := range enum.EnumBody.EnumFields {
 			if !strings.HasPrefix(enumValue.Ident, prefix) {
-				res = append(res, lint.BuildError(
+				res = lint.AppendIssue(
+					res,
 					e,
 					enumValue.Meta.Pos,
 					enumValue.Ident,
-				))
+					enumValue.Comments,
+				)
 			}
 		}
 	}

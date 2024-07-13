@@ -22,7 +22,7 @@ func (c *EnumPascalCase) Validate(protoInfo lint.ProtoInfo) ([]lint.Issue, error
 	pascalCase := regexp.MustCompile("^[A-Z][a-z]+(?:[A-Z][a-z]+)*$")
 	for _, enum := range protoInfo.Info.ProtoBody.Enums {
 		if !pascalCase.MatchString(enum.EnumName) {
-			res = append(res, lint.BuildError(c, enum.Meta.Pos, enum.EnumName))
+			res = lint.AppendIssue(res, c, enum.Meta.Pos, enum.EnumName, enum.Comments)
 		}
 	}
 

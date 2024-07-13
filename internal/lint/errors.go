@@ -3,6 +3,7 @@ package lint
 import (
 	"errors"
 
+	"github.com/yoheimuta/go-protoparser/v4/parser"
 	"github.com/yoheimuta/go-protoparser/v4/parser/meta"
 )
 
@@ -24,8 +25,20 @@ type Issue struct {
 	RuleName   string
 }
 
-// BuildError creates an Issue.
-func BuildError(lintRule Rule, pos meta.Position, sourceName string) Issue {
+// AppendIssue check if lint error is ignored -> add new error to slice
+// otherwise ignore appending
+func AppendIssue(
+	issues []Issue, lintRule Rule, pos meta.Position, sourceName string, comments []*parser.Comment,
+) []Issue {
+	if CheckIsIgnored(comments, GetRuleName(lintRule)) {
+		return issues
+	}
+
+	return append(issues, buildError(lintRule, pos, sourceName))
+}
+
+// buildError creates an Issue.
+func buildError(lintRule Rule, pos meta.Position, sourceName string) Issue {
 	return Issue{
 		Position:   pos,
 		SourceName: sourceName,

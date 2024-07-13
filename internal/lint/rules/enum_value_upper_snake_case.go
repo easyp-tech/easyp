@@ -23,7 +23,7 @@ func (c *EnumValueUpperSnakeCase) Validate(protoInfo lint.ProtoInfo) ([]lint.Iss
 	for _, enum := range protoInfo.Info.ProtoBody.Enums {
 		for _, field := range enum.EnumBody.EnumFields {
 			if !upperSnakeCase.MatchString(field.Ident) {
-				res = append(res, lint.BuildError(c, field.Meta.Pos, field.Ident))
+				res = lint.AppendIssue(res, c, field.Meta.Pos, field.Ident, field.Comments)
 			}
 		}
 	}

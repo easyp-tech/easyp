@@ -38,7 +38,7 @@ func (d *DirectorySamePackage) Validate(protoInfo lint.ProtoInfo) ([]lint.Issue,
 		}
 
 		if d.cache[directory] != pack.Name {
-			res = append(res, lint.BuildError(d, pack.Meta.Pos, pack.Name))
+			res = lint.AppendIssue(res, d, pack.Meta.Pos, pack.Name, pack.Comments)
 		}
 	}
 

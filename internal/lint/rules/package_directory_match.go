@@ -28,7 +28,7 @@ func (d *PackageDirectoryMatch) Validate(protoInfo lint.ProtoInfo) ([]lint.Issue
 
 	for _, pkgInfo := range protoInfo.Info.ProtoBody.Packages {
 		if pkgInfo.Name != expectedPackage {
-			res = append(res, lint.BuildError(d, pkgInfo.Meta.Pos, protoInfo.Path))
+			res = lint.AppendIssue(res, d, pkgInfo.Meta.Pos, protoInfo.Path, pkgInfo.Comments)
 		}
 	}
 

@@ -24,7 +24,7 @@ func (s *ServiceSuffix) Validate(protoInfo lint.ProtoInfo) ([]lint.Issue, error)
 
 	for _, service := range protoInfo.Info.ProtoBody.Services {
 		if !strings.HasSuffix(service.ServiceName, s.Suffix) {
-			res = append(res, lint.BuildError(s, service.Meta.Pos, service.ServiceName))
+			res = lint.AppendIssue(res, s, service.Meta.Pos, service.ServiceName, service.Comments)
 		}
 	}
 

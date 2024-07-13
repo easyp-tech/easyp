@@ -21,7 +21,7 @@ func (c *EnumFirstValueZero) Validate(protoInfo lint.ProtoInfo) ([]lint.Issue, e
 	var res []lint.Issue
 	for _, enum := range protoInfo.Info.ProtoBody.Enums {
 		if val := enum.EnumBody.EnumFields[0]; val.Number != "0" {
-			res = append(res, lint.BuildError(c, val.Meta.Pos, val.Number))
+			res = lint.AppendIssue(res, c, val.Meta.Pos, val.Number, val.Comments)
 		}
 
 	}

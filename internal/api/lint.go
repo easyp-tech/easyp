@@ -35,14 +35,17 @@ var (
 		EnvVars:    []string{"EASYP_PATH"},
 	}
 
-	flagFormat = &cli.StringFlag{
+	flagFormat = &cli.GenericFlag{
 		Name:       "format",
 		Usage:      "set format of output",
 		Required:   false,
 		HasBeenSet: false,
-		Value:      TextFormat,
-		Aliases:    []string{"f"},
-		EnvVars:    []string{"EASYP_FORMAT"},
+		Value: &EnumValue{
+			Enum:    []string{TextFormat, JSONFormat},
+			Default: TextFormat,
+		},
+		Aliases: []string{"f"},
+		EnvVars: []string{"EASYP_FORMAT"},
 	}
 )
 
@@ -82,6 +85,7 @@ func (l Lint) Action(ctx *cli.Context) error {
 	if err != nil {
 		return fmt.Errorf("config.ReadConfig: %w", err)
 	}
+	lint.SetAllowCommentIgnores(cfg.Lint.AllowCommentIgnores)
 
 	lintRules, err := cfg.BuildLinterRules()
 	if err != nil {
