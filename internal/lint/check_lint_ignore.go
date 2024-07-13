@@ -12,8 +12,15 @@ const (
 	lintIgnorePrefix    = "nolint:"
 )
 
+// NOTE: Try to not use global var
+var allowCommentIgnores = true
+
 // CheckIsIgnored check if passed ruleName has to be ignored due to ignore command in comments
 func CheckIsIgnored(comments []*parser.Comment, ruleName string) bool {
+	if !allowCommentIgnores {
+		return false
+	}
+
 	if len(comments) == 0 {
 		return false
 	}
@@ -31,4 +38,8 @@ func CheckIsIgnored(comments []*parser.Comment, ruleName string) bool {
 	}
 
 	return false
+}
+
+func SetAllowCommentIgnores(val bool) {
+	allowCommentIgnores = val
 }

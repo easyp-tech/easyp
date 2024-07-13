@@ -85,6 +85,7 @@ func (l Lint) Action(ctx *cli.Context) error {
 	if err != nil {
 		return fmt.Errorf("config.ReadConfig: %w", err)
 	}
+	lint.SetAllowCommentIgnores(cfg.Lint.AllowCommentIgnores)
 
 	lintRules, err := cfg.BuildLinterRules()
 	if err != nil {
