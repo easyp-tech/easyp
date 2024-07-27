@@ -19,7 +19,8 @@ func (c *MessagePascalCase) Message() string {
 // Validate implements lint.Rule.
 func (c *MessagePascalCase) Validate(protoInfo lint.ProtoInfo) ([]lint.Issue, error) {
 	var res []lint.Issue
-	pascalCase := regexp.MustCompile("^[A-Z][a-z]+(?:[A-Z][a-z]+)*$")
+
+	pascalCase := regexp.MustCompile("^[A-Z][a-zA-Z0-9]+(?:[A-Z][a-zA-Z0-9]+)*$")
 	for _, message := range protoInfo.Info.ProtoBody.Messages {
 		if !pascalCase.MatchString(message.MessageName) {
 			res = lint.AppendIssue(res, c, message.Meta.Pos, message.MessageName, message.Comments)
