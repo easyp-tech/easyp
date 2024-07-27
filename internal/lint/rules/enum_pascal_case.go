@@ -26,5 +26,13 @@ func (c *EnumPascalCase) Validate(protoInfo lint.ProtoInfo) ([]lint.Issue, error
 		}
 	}
 
+	for _, msg := range protoInfo.Info.ProtoBody.Messages {
+		for _, enum := range msg.MessageBody.Enums {
+			if !pascalCase.MatchString(enum.EnumName) {
+				res = lint.AppendIssue(res, c, enum.Meta.Pos, enum.EnumName, enum.Comments)
+			}
+		}
+	}
+
 	return res, nil
 }

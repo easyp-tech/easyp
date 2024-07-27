@@ -22,8 +22,6 @@ func (e *EnumValuePrefix) Message() string {
 func (e *EnumValuePrefix) Validate(protoInfo lint.ProtoInfo) ([]lint.Issue, error) {
 	var res []lint.Issue
 
-	// c.Message()EnumValuePrefix = enum value prefix is not valid
-
 	for _, enum := range protoInfo.Info.ProtoBody.Enums {
 		prefix := pascalToUpperSnake(enum.EnumName)
 
@@ -36,6 +34,24 @@ func (e *EnumValuePrefix) Validate(protoInfo lint.ProtoInfo) ([]lint.Issue, erro
 					enumValue.Ident,
 					enumValue.Comments,
 				)
+			}
+		}
+	}
+
+	for _, msg := range protoInfo.Info.ProtoBody.Messages {
+		for _, enum := range msg.MessageBody.Enums {
+			prefix := pascalToUpperSnake(enum.EnumName)
+
+			for _, enumValue := range enum.EnumBody.EnumFields {
+				if !strings.HasPrefix(enumValue.Ident, prefix) {
+					res = lint.AppendIssue(
+						res,
+						e,
+						enumValue.Meta.Pos,
+						enumValue.Ident,
+						enumValue.Comments,
+					)
+				}
 			}
 		}
 	}

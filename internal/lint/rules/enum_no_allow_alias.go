@@ -23,5 +23,15 @@ func (e *EnumNoAllowAlias) Validate(protoInfo lint.ProtoInfo) ([]lint.Issue, err
 		}
 	}
 
+	for _, msg := range protoInfo.Info.ProtoBody.Messages {
+		for _, enum := range msg.MessageBody.Enums {
+			for _, opt := range enum.EnumBody.Options {
+				if opt.OptionName == "allow_alias" {
+					res = lint.AppendIssue(res, e, enum.Meta.Pos, enum.EnumName, enum.Comments)
+				}
+			}
+		}
+	}
+
 	return res, nil
 }
