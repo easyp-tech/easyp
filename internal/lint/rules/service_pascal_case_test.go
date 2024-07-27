@@ -61,8 +61,11 @@ func TestServicePascalCase_Validate(t *testing.T) {
 			rule := rules.ServicePascalCase{}
 			issues, err := rule.Validate(protos[tc.fileName])
 			r.ErrorIs(err, tc.wantErr)
-			if tc.wantIssues != nil {
+			switch {
+			case tc.wantIssues != nil:
 				r.Contains(issues, *tc.wantIssues)
+			case len(issues) > 0:
+				r.Empty(issues)
 			}
 		})
 	}

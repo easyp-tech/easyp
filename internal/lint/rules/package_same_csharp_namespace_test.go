@@ -69,8 +69,11 @@ func TestPackageSameCSharpNamespace_Validate(t *testing.T) {
 				}
 			}
 
-			if tc.wantIssues != nil {
+			switch {
+			case tc.wantIssues != nil:
 				r.Contains(issues, *tc.wantIssues)
+			case len(issues) > 0:
+				r.Empty(issues)
 			}
 		})
 	}

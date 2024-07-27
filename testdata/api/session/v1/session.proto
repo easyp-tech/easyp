@@ -64,6 +64,8 @@ message SaveRequest {
   string ip = 2;
   // Contains user's client.
   string user_agent = 3;
+  // Contains user's system.
+  bool system_v3 = 4;
 }
 
 //---Must be filled out---
