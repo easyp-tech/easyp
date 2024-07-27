@@ -36,9 +36,24 @@ func TestEnumValuePrefix_Validate(t *testing.T) {
 			wantIssues: &lint.Issue{
 				Position: meta.Position{
 					Filename: "",
-					Offset:   843,
-					Line:     46,
+					Offset:   917,
+					Line:     51,
 					Column:   3,
+				},
+				SourceName: "none",
+				Message:    "enum value prefix is not valid",
+				RuleName:   "ENUM_VALUE_PREFIX",
+			},
+			wantErr: nil,
+		},
+		"invalid_nested": {
+			fileName: invalidAuthProto,
+			wantIssues: &lint.Issue{
+				Position: meta.Position{
+					Filename: "",
+					Offset:   667,
+					Line:     33,
+					Column:   5,
 				},
 				SourceName: "none",
 				Message:    "enum value prefix is not valid",

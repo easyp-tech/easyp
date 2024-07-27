@@ -36,9 +36,24 @@ func TestEnumZeroValueSuffix_Validate(t *testing.T) {
 			wantIssues: &lint.Issue{
 				Position: meta.Position{
 					Filename: "",
-					Offset:   843,
-					Line:     46,
+					Offset:   917,
+					Line:     51,
 					Column:   3,
+				},
+				SourceName: "none",
+				Message:    "enum zero value suffix is not valid",
+				RuleName:   "ENUM_ZERO_VALUE_SUFFIX",
+			},
+			wantErr: nil,
+		},
+		"invalid_nested": {
+			fileName: invalidAuthProto,
+			wantIssues: &lint.Issue{
+				Position: meta.Position{
+					Filename: "",
+					Offset:   667,
+					Line:     33,
+					Column:   5,
 				},
 				SourceName: "none",
 				Message:    "enum zero value suffix is not valid",

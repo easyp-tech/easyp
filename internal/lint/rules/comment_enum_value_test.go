@@ -36,9 +36,24 @@ func TestCommentEnumValue_Validate(t *testing.T) {
 			wantIssues: &lint.Issue{
 				Position: meta.Position{
 					Filename: "",
-					Offset:   843,
-					Line:     46,
+					Offset:   917,
+					Line:     51,
 					Column:   3,
+				},
+				SourceName: "none",
+				Message:    "enum value comments must not be empty",
+				RuleName:   "COMMENT_ENUM_VALUE",
+			},
+			wantErr: nil,
+		},
+		"invalid_nested": {
+			fileName: invalidAuthProto,
+			wantIssues: &lint.Issue{
+				Position: meta.Position{
+					Filename: "",
+					Offset:   667,
+					Line:     33,
+					Column:   5,
 				},
 				SourceName: "none",
 				Message:    "enum value comments must not be empty",

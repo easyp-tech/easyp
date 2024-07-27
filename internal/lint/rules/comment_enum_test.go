@@ -35,9 +35,24 @@ func TestCommentEnum_Validate(t *testing.T) {
 			fileName: invalidAuthProto,
 			wantIssues: &lint.Issue{
 				Position: meta.Position{
-					Offset: 790,
-					Line:   44,
+					Offset: 864,
+					Line:   49,
 					Column: 1,
+				},
+				SourceName: "social_network",
+				Message:    "enum comments must not be empty",
+				RuleName:   "COMMENT_ENUM",
+			},
+			wantErr: nil,
+		},
+		"invalid_nested": {
+			fileName: invalidAuthProto,
+			wantIssues: &lint.Issue{
+				Position: meta.Position{
+					Filename: "",
+					Offset:   610,
+					Line:     31,
+					Column:   3,
 				},
 				SourceName: "social_network",
 				Message:    "enum comments must not be empty",

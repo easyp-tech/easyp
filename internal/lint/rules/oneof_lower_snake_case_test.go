@@ -36,8 +36,8 @@ func TestOneofLowerSnakeCase_Validate(t *testing.T) {
 			wantIssues: &lint.Issue{
 				Position: meta.Position{
 					Filename: "",
-					Offset:   674,
-					Line:     34,
+					Offset:   748,
+					Line:     39,
 					Column:   3,
 				},
 				SourceName: "SocialNetwork",

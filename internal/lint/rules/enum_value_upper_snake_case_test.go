@@ -36,9 +36,24 @@ func TestEnumValueUpperSnakeCase_Validate(t *testing.T) {
 			wantIssues: &lint.Issue{
 				Position: meta.Position{
 					Filename: "",
-					Offset:   843,
-					Line:     46,
+					Offset:   917,
+					Line:     51,
 					Column:   3,
+				},
+				SourceName: "none",
+				Message:    "enum value must be in UPPER_SNAKE_CASE",
+				RuleName:   "ENUM_VALUE_UPPER_SNAKE_CASE",
+			},
+			wantErr: nil,
+		},
+		"invalid_nested": {
+			fileName: invalidAuthProto,
+			wantIssues: &lint.Issue{
+				Position: meta.Position{
+					Filename: "",
+					Offset:   667,
+					Line:     33,
+					Column:   5,
 				},
 				SourceName: "none",
 				Message:    "enum value must be in UPPER_SNAKE_CASE",

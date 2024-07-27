@@ -36,9 +36,24 @@ func TestEnumFirstValueZero_Validate(t *testing.T) {
 			wantIssues: &lint.Issue{
 				Position: meta.Position{
 					Filename: "",
-					Offset:   843,
-					Line:     46,
+					Offset:   917,
+					Line:     51,
 					Column:   3,
+				},
+				SourceName: "4",
+				Message:    "enum first value must be zero",
+				RuleName:   "ENUM_FIRST_VALUE_ZERO",
+			},
+			wantErr: nil,
+		},
+		"invalid_nested": {
+			fileName: invalidAuthProto,
+			wantIssues: &lint.Issue{
+				Position: meta.Position{
+					Filename: "",
+					Offset:   667,
+					Line:     33,
+					Column:   5,
 				},
 				SourceName: "4",
 				Message:    "enum first value must be zero",
