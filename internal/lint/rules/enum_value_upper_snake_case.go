@@ -28,5 +28,15 @@ func (c *EnumValueUpperSnakeCase) Validate(protoInfo lint.ProtoInfo) ([]lint.Iss
 		}
 	}
 
+	for _, msg := range protoInfo.Info.ProtoBody.Messages {
+		for _, enum := range msg.MessageBody.Enums {
+			for _, field := range enum.EnumBody.EnumFields {
+				if !upperSnakeCase.MatchString(field.Ident) {
+					res = lint.AppendIssue(res, c, field.Meta.Pos, field.Ident, field.Comments)
+				}
+			}
+		}
+	}
+
 	return res, nil
 }

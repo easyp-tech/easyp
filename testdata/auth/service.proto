@@ -28,6 +28,11 @@ message Delete_Info {
 }
 
 message SessionInfo {
+  enum social_network {
+    option allow_alias = true;
+    none = 4;
+  }
+
   string user_id = 1;
   string ip = 2;
   string user_agent = 3;

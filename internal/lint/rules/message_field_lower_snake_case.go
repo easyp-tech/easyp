@@ -19,7 +19,8 @@ func (c *FieldLowerSnakeCase) Message() string {
 // Validate implements lint.Rule.
 func (c *FieldLowerSnakeCase) Validate(protoInfo lint.ProtoInfo) ([]lint.Issue, error) {
 	var res []lint.Issue
-	lowerSnakeCase := regexp.MustCompile("^[a-z]+(_[a-z]+)*$")
+
+	lowerSnakeCase := regexp.MustCompile("^[a-z0-9]+(_[a-z0-9]+)*$")
 	for _, message := range protoInfo.Info.ProtoBody.Messages {
 		for _, field := range message.MessageBody.Fields {
 			if !lowerSnakeCase.MatchString(field.FieldName) {

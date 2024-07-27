@@ -36,8 +36,8 @@ func TestOneofLowerSnakeCase_Validate(t *testing.T) {
 			wantIssues: &lint.Issue{
 				Position: meta.Position{
 					Filename: "",
-					Offset:   674,
-					Line:     34,
+					Offset:   748,
+					Line:     39,
 					Column:   3,
 				},
 				SourceName: "SocialNetwork",
@@ -62,8 +62,11 @@ func TestOneofLowerSnakeCase_Validate(t *testing.T) {
 			rule := rules.OneofLowerSnakeCase{}
 			issues, err := rule.Validate(protos[tc.fileName])
 			r.ErrorIs(err, tc.wantErr)
-			if tc.wantIssues != nil {
+			switch {
+			case tc.wantIssues != nil:
 				r.Contains(issues, *tc.wantIssues)
+			case len(issues) > 0:
+				r.Empty(issues)
 			}
 		})
 	}

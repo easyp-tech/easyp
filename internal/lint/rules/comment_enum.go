@@ -24,5 +24,13 @@ func (c *CommentEnum) Validate(protoInfo lint.ProtoInfo) ([]lint.Issue, error) {
 		}
 	}
 
+	for _, msg := range protoInfo.Info.ProtoBody.Messages {
+		for _, enum := range msg.MessageBody.Enums {
+			if len(enum.Comments) == 0 {
+				res = lint.AppendIssue(res, c, enum.Meta.Pos, enum.EnumName, enum.Comments)
+			}
+		}
+	}
+
 	return res, nil
 }
