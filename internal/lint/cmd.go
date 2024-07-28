@@ -15,6 +15,14 @@ import (
 	"github.com/easyp-tech/easyp/wellknownimports"
 )
 
+type OpenImportFileError struct {
+	FileName string
+}
+
+func (e *OpenImportFileError) Error() string {
+	return fmt.Sprintf("open import file `%s`", e.FileName)
+}
+
 // Lint lints the proto file.
 func (c *Lint) Lint(ctx context.Context, disk fs.FS) ([]IssueInfo, error) {
 	var res []IssueInfo
@@ -157,7 +165,8 @@ func (c *Lint) readFileFromImport(ctx context.Context, disk fs.FS, importName st
 	f, err = wellknownimports.Content.Open(importName)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return nil, fmt.Errorf("wellknownimports.Content.Open: %w", err)
+			//return nil, ErrOpenImportFile
+			return nil, &OpenImportFileError{FileName: importName}
 		}
 
 		return nil, fmt.Errorf("os.Open: %w", err)
