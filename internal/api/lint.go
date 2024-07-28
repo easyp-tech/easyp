@@ -3,6 +3,7 @@ package api
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -47,6 +48,8 @@ var (
 		Aliases: []string{"f"},
 		EnvVars: []string{"EASYP_FORMAT"},
 	}
+
+	ErrHasLintIssue = errors.New("has lint issue")
 )
 
 // Command implements Handler.
@@ -81,6 +84,20 @@ func (l Lint) Command() *cli.Command {
 
 // Action implements Handler.
 func (l Lint) Action(ctx *cli.Context) error {
+	err := l.action(ctx)
+	if err != nil {
+		switch {
+		case errors.Is(err, ErrHasLintIssue):
+			os.Exit(1)
+		default:
+			return fmt.Errorf("unknown error: %w", err)
+		}
+	}
+
+	return nil
+}
+
+func (l Lint) action(ctx *cli.Context) error {
 	cfg, err := config.ReadConfig(ctx)
 	if err != nil {
 		return fmt.Errorf("config.ReadConfig: %w", err)
@@ -115,7 +132,7 @@ func (l Lint) Action(ctx *cli.Context) error {
 		return fmt.Errorf("printLintErrors: %w", err)
 	}
 
-	return nil
+	return ErrHasLintIssue
 }
 
 func printIssues(format string, w io.Writer, issues []lint.IssueInfo) error {
