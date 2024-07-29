@@ -55,7 +55,7 @@ func (c *Lint) Lint(ctx context.Context, disk fs.FS) ([]IssueInfo, error) {
 
 		proto, err := readProtoFile(f)
 		if err != nil {
-			return fmt.Errorf("readProtoFile: %w", err)
+			return fmt.Errorf("readProtoFile: %w: path: %s", err, path)
 		}
 
 		protoFilesFromImport, err := c.readFilesFromImport(ctx, disk, proto)
@@ -130,7 +130,7 @@ func (c *Lint) readFileFromImport(ctx context.Context, disk fs.FS, importName st
 
 		proto, err := readProtoFile(f)
 		if err != nil {
-			return nil, fmt.Errorf("readProtoFile: %w", err)
+			return nil, fmt.Errorf("readProtoFile: %w, path: %s", err, importName)
 		}
 		return proto, nil
 	}
@@ -156,7 +156,7 @@ func (c *Lint) readFileFromImport(ctx context.Context, disk fs.FS, importName st
 
 		proto, err := readProtoFile(f)
 		if err != nil {
-			return nil, fmt.Errorf("readProtoFile: %w", err)
+			return nil, fmt.Errorf("readProtoFile: %w, path: %s", err, importName)
 		}
 
 		return proto, nil
@@ -177,7 +177,7 @@ func (c *Lint) readFileFromImport(ctx context.Context, disk fs.FS, importName st
 
 	proto, err := readProtoFile(f)
 	if err != nil {
-		return nil, fmt.Errorf("readProtoFile: %w", err)
+		return nil, fmt.Errorf("readProtoFile: %w, path: %s", err, importName)
 	}
 
 	return proto, nil
