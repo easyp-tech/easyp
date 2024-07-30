@@ -9,19 +9,20 @@ var _ lint.Rule = (*CommentMessage)(nil)
 // CommentMessage this rule checks that messages have non-empty comments.
 type CommentMessage struct{}
 
+// Message implements lint.Rule.
+func (c *CommentMessage) Message() string {
+	return "message comment is empty"
+}
+
 // Validate implements lint.Rule.
-func (c *CommentMessage) Validate(protoInfo lint.ProtoInfo) []error {
-	var res []error
+func (c *CommentMessage) Validate(protoInfo lint.ProtoInfo) ([]lint.Issue, error) {
+	var res []lint.Issue
 
 	for _, message := range protoInfo.Info.ProtoBody.Messages {
 		if len(message.Comments) == 0 {
-			res = append(res, BuildError(message.Meta.Pos, message.MessageName, lint.ErrMessageCommentIsEmpty))
+			res = lint.AppendIssue(res, c, message.Meta.Pos, message.MessageName, message.Comments)
 		}
 	}
 
-	if len(res) == 0 {
-		return nil
-	}
-
-	return res
+	return res, nil
 }

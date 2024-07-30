@@ -1,25 +1,67 @@
 package rules_test
 
 import (
-	"errors"
 	"testing"
+
+	"github.com/stretchr/testify/require"
+	"github.com/yoheimuta/go-protoparser/v4/parser/meta"
 
 	"github.com/easyp-tech/easyp/internal/lint"
 	"github.com/easyp-tech/easyp/internal/lint/rules"
 )
 
+func TestCommentEnumValue_Message(t *testing.T) {
+	t.Parallel()
+
+	assert := require.New(t)
+
+	const expMessage = "enum value comments must not be empty"
+
+	rule := rules.CommentEnumValue{}
+	message := rule.Message()
+
+	assert.Equal(expMessage, message)
+}
+
 func TestCommentEnumValue_Validate(t *testing.T) {
 	t.Parallel()
 
 	tests := map[string]struct {
-		fileName string
-		wantErr  error
+		fileName   string
+		wantIssues *lint.Issue
+		wantErr    error
 	}{
-		"auth_enum_value_comment_is_empty": {
+		"invalid": {
 			fileName: invalidAuthProto,
-			wantErr:  lint.ErrEnumValueCommentIsEmpty,
+			wantIssues: &lint.Issue{
+				Position: meta.Position{
+					Filename: "",
+					Offset:   917,
+					Line:     51,
+					Column:   3,
+				},
+				SourceName: "none",
+				Message:    "enum value comments must not be empty",
+				RuleName:   "COMMENT_ENUM_VALUE",
+			},
+			wantErr: nil,
 		},
-		"auth_enum_value_comment_is_not_empty": {
+		"invalid_nested": {
+			fileName: invalidAuthProto,
+			wantIssues: &lint.Issue{
+				Position: meta.Position{
+					Filename: "",
+					Offset:   667,
+					Line:     33,
+					Column:   5,
+				},
+				SourceName: "none",
+				Message:    "enum value comments must not be empty",
+				RuleName:   "COMMENT_ENUM_VALUE",
+			},
+			wantErr: nil,
+		},
+		"valid": {
 			fileName: validAuthProto,
 			wantErr:  nil,
 		},
@@ -33,8 +75,14 @@ func TestCommentEnumValue_Validate(t *testing.T) {
 			r, protos := start(t)
 
 			rule := rules.CommentEnumValue{}
-			err := rule.Validate(protos[tc.fileName])
-			r.ErrorIs(errors.Join(err...), tc.wantErr)
+			issues, err := rule.Validate(protos[tc.fileName])
+			r.ErrorIs(err, tc.wantErr)
+			switch {
+			case tc.wantIssues != nil:
+				r.Contains(issues, *tc.wantIssues)
+			case len(issues) > 0:
+				r.Empty(issues)
+			}
 		})
 	}
 }

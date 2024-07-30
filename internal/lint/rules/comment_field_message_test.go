@@ -1,25 +1,53 @@
 package rules_test
 
 import (
-	"errors"
 	"testing"
+
+	"github.com/stretchr/testify/require"
+	"github.com/yoheimuta/go-protoparser/v4/parser/meta"
 
 	"github.com/easyp-tech/easyp/internal/lint"
 	"github.com/easyp-tech/easyp/internal/lint/rules"
 )
 
-func TestCommentMessageField_Validate(t *testing.T) {
+func TestCommentField_Message(t *testing.T) {
+	t.Parallel()
+
+	assert := require.New(t)
+
+	const expMessage = "field comments must not be empty"
+
+	rule := rules.CommentField{}
+	message := rule.Message()
+
+	assert.Equal(expMessage, message)
+
+}
+
+func TestCommentField_Validate(t *testing.T) {
 	t.Parallel()
 
 	tests := map[string]struct {
-		fileName string
-		wantErr  error
+		fileName   string
+		wantIssues *lint.Issue
+		wantErr    error
 	}{
-		"auth_field_message_comment_is_empty": {
+		"invalid": {
 			fileName: invalidAuthProto,
-			wantErr:  lint.ErrMessageFieldCommentIsEmpty,
+			wantIssues: &lint.Issue{
+				Position: meta.Position{
+					Filename: "",
+					Offset:   447,
+					Line:     18,
+					Column:   3,
+				},
+				SourceName: "token",
+				Message:    "field comments must not be empty",
+				RuleName:   "COMMENT_FIELD",
+			},
+			wantErr: nil,
 		},
-		"auth_field_message_comment_is_not_empty": {
+		"valid": {
 			fileName: validAuthProto,
 			wantErr:  nil,
 		},
@@ -33,8 +61,14 @@ func TestCommentMessageField_Validate(t *testing.T) {
 			r, protos := start(t)
 
 			rule := rules.CommentField{}
-			err := rule.Validate(protos[tc.fileName])
-			r.ErrorIs(errors.Join(err...), tc.wantErr)
+			issues, err := rule.Validate(protos[tc.fileName])
+			r.ErrorIs(err, tc.wantErr)
+			switch {
+			case tc.wantIssues != nil:
+				r.Contains(issues, *tc.wantIssues)
+			case len(issues) > 0:
+				r.Empty(issues)
+			}
 		})
 	}
 }

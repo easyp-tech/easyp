@@ -13,25 +13,50 @@ var _ lint.Rule = (*EnumValuePrefix)(nil)
 type EnumValuePrefix struct {
 }
 
+// Message implements lint.Rule.
+func (e *EnumValuePrefix) Message() string {
+	return "enum value prefix is not valid"
+}
+
 // Validate implements lint.Rule.
-func (e EnumValuePrefix) Validate(protoInfo lint.ProtoInfo) []error {
-	var res []error
+func (e *EnumValuePrefix) Validate(protoInfo lint.ProtoInfo) ([]lint.Issue, error) {
+	var res []lint.Issue
 
 	for _, enum := range protoInfo.Info.ProtoBody.Enums {
 		prefix := pascalToUpperSnake(enum.EnumName)
 
 		for _, enumValue := range enum.EnumBody.EnumFields {
 			if !strings.HasPrefix(enumValue.Ident, prefix) {
-				res = append(res, BuildError(enumValue.Meta.Pos, enumValue.Ident, lint.ErrEnumValuePrefix))
+				res = lint.AppendIssue(
+					res,
+					e,
+					enumValue.Meta.Pos,
+					enumValue.Ident,
+					enumValue.Comments,
+				)
 			}
 		}
 	}
 
-	if len(res) == 0 {
-		return nil
+	for _, msg := range protoInfo.Info.ProtoBody.Messages {
+		for _, enum := range msg.MessageBody.Enums {
+			prefix := pascalToUpperSnake(enum.EnumName)
+
+			for _, enumValue := range enum.EnumBody.EnumFields {
+				if !strings.HasPrefix(enumValue.Ident, prefix) {
+					res = lint.AppendIssue(
+						res,
+						e,
+						enumValue.Meta.Pos,
+						enumValue.Ident,
+						enumValue.Comments,
+					)
+				}
+			}
+		}
 	}
 
-	return res
+	return res, nil
 }
 
 func pascalToUpperSnake(s string) string {

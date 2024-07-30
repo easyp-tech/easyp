@@ -1,25 +1,67 @@
 package rules_test
 
 import (
-	"errors"
 	"testing"
+
+	"github.com/stretchr/testify/require"
+	"github.com/yoheimuta/go-protoparser/v4/parser/meta"
 
 	"github.com/easyp-tech/easyp/internal/lint"
 	"github.com/easyp-tech/easyp/internal/lint/rules"
 )
 
+func TestEnumFirstValueZero_Message(t *testing.T) {
+	t.Parallel()
+
+	assert := require.New(t)
+
+	const expMessage = "enum first value must be zero"
+
+	rule := rules.EnumFirstValueZero{}
+	message := rule.Message()
+
+	assert.Equal(expMessage, message)
+}
+
 func TestEnumFirstValueZero_Validate(t *testing.T) {
 	t.Parallel()
 
 	tests := map[string]struct {
-		fileName string
-		wantErr  error
+		fileName   string
+		wantIssues *lint.Issue
+		wantErr    error
 	}{
-		"check_enum_first_value_zero_is_invalid": {
+		"invalid": {
 			fileName: invalidAuthProto,
-			wantErr:  lint.ErrEnumFirstValueZero,
+			wantIssues: &lint.Issue{
+				Position: meta.Position{
+					Filename: "",
+					Offset:   917,
+					Line:     51,
+					Column:   3,
+				},
+				SourceName: "4",
+				Message:    "enum first value must be zero",
+				RuleName:   "ENUM_FIRST_VALUE_ZERO",
+			},
+			wantErr: nil,
 		},
-		"check_enum_first_value_zero_is_valid": {
+		"invalid_nested": {
+			fileName: invalidAuthProto,
+			wantIssues: &lint.Issue{
+				Position: meta.Position{
+					Filename: "",
+					Offset:   667,
+					Line:     33,
+					Column:   5,
+				},
+				SourceName: "4",
+				Message:    "enum first value must be zero",
+				RuleName:   "ENUM_FIRST_VALUE_ZERO",
+			},
+			wantErr: nil,
+		},
+		"valid": {
 			fileName: validAuthProto,
 			wantErr:  nil,
 		},
@@ -33,8 +75,14 @@ func TestEnumFirstValueZero_Validate(t *testing.T) {
 			r, protos := start(t)
 
 			rule := rules.EnumFirstValueZero{}
-			err := rule.Validate(protos[tc.fileName])
-			r.ErrorIs(errors.Join(err...), tc.wantErr)
+			issues, err := rule.Validate(protos[tc.fileName])
+			r.ErrorIs(err, tc.wantErr)
+			switch {
+			case tc.wantIssues != nil:
+				r.Contains(issues, *tc.wantIssues)
+			case len(issues) > 0:
+				r.Empty(issues)
+			}
 		})
 	}
 }

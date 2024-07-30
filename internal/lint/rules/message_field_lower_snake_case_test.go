@@ -1,25 +1,52 @@
 package rules_test
 
 import (
-	"errors"
 	"testing"
+
+	"github.com/stretchr/testify/require"
+	"github.com/yoheimuta/go-protoparser/v4/parser/meta"
 
 	"github.com/easyp-tech/easyp/internal/lint"
 	"github.com/easyp-tech/easyp/internal/lint/rules"
 )
 
+func TestFieldLowerSnakeCase_Message(t *testing.T) {
+	t.Parallel()
+
+	assert := require.New(t)
+
+	const expMessage = "message field should be lower_snake_case"
+
+	rule := rules.FieldLowerSnakeCase{}
+	message := rule.Message()
+
+	assert.Equal(expMessage, message)
+}
+
 func TestMessageFieldLowerSnakeCase_Validate(t *testing.T) {
 	t.Parallel()
 
 	tests := map[string]struct {
-		fileName string
-		wantErr  error
+		fileName   string
+		wantIssues *lint.Issue
+		wantErr    error
 	}{
-		"check_message_field_lower_snake_case_is_invalid": {
+		"invalid": {
 			fileName: invalidAuthProto,
-			wantErr:  lint.ErrMessageFieldLowerSnakeCase,
+			wantIssues: &lint.Issue{
+				Position: meta.Position{
+					Filename: "",
+					Offset:   560,
+					Line:     27,
+					Column:   3,
+				},
+				SourceName: "Session_id",
+				Message:    "message field should be lower_snake_case",
+				RuleName:   "FIELD_LOWER_SNAKE_CASE",
+			},
+			wantErr: nil,
 		},
-		"check_message_field_lower_snake_case_is_valid": {
+		"valid": {
 			fileName: validAuthProto,
 			wantErr:  nil,
 		},
@@ -33,8 +60,14 @@ func TestMessageFieldLowerSnakeCase_Validate(t *testing.T) {
 			r, protos := start(t)
 
 			rule := rules.FieldLowerSnakeCase{}
-			err := rule.Validate(protos[tc.fileName])
-			r.ErrorIs(errors.Join(err...), tc.wantErr)
+			issues, err := rule.Validate(protos[tc.fileName])
+			r.ErrorIs(err, tc.wantErr)
+			switch {
+			case tc.wantIssues != nil:
+				r.Contains(issues, *tc.wantIssues)
+			case len(issues) > 0:
+				r.Empty(issues)
+			}
 		})
 	}
 }

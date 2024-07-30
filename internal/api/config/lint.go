@@ -11,17 +11,19 @@ import (
 
 // LintConfig contains linter configuration.
 type LintConfig struct {
-	Use                 []string `json:"use" yaml:"use" env:"USE"`                                                          // Use rules for linter.
-	EnumZeroValueSuffix string   `json:"enum_zero_value_suffix" yaml:"enum_zero_value_suffix" env:"ENUM_ZERO_VALUE_SUFFIX"` // Enum zero value suffix prefix.
-	ServiceSuffix       string   `json:"service_suffix" yaml:"service_suffix" env:"SERVICE_SUFFIX"`                         // Service suffix suffix.
-	Ignore              []string `json:"ignore" yaml:"ignore" env:"IGNORE"`                                                 // Ignore dirs with proto file.
-	Except              []string `json:"except" yaml:"except" env:"EXCEPT"`                                                 // Except linter rules.
-	AllowCommentIgnores bool     `json:"allow_comment_ignores" yaml:"allow_comment_ignores" env:"ALLOW_COMMENT_IGNORES"`    // Allow comment ignore.
+	Use                 []string            `json:"use" yaml:"use" env:"USE"`                                                          // Use rules for linter.
+	EnumZeroValueSuffix string              `json:"enum_zero_value_suffix" yaml:"enum_zero_value_suffix" env:"ENUM_ZERO_VALUE_SUFFIX"` // Enum zero value suffix.
+	ServiceSuffix       string              `json:"service_suffix" yaml:"service_suffix" env:"SERVICE_SUFFIX"`                         // Service suffix.
+	Ignore              []string            `json:"ignore" yaml:"ignore" env:"IGNORE"`                                                 // Ignore dirs with proto file.
+	Except              []string            `json:"except" yaml:"except" env:"EXCEPT"`                                                 // Except linter rules.
+	AllowCommentIgnores bool                `json:"allow_comment_ignores" yaml:"allow_comment_ignores" env:"ALLOW_COMMENT_IGNORES"`    // Allow comment ignore.
+	IgnoreOnly          map[string][]string `json:"ignore_only" yaml:"ignore_only" env:"IGNORE_ONLY"`
 }
 
 func (cfg *Config) BuildLinterRules() ([]lint.Rule, error) {
 	cfg.unwrapLintGroups()
 	cfg.removeExcept()
+	cfg.unwrapIgnoreOnly()
 
 	return cfg.buildFromUse()
 }
@@ -74,6 +76,44 @@ func (cfg *Config) unwrapLintGroups() {
 	}
 
 	cfg.Lint.Use = lo.FindUniques(res)
+}
+
+func (cfg *Config) unwrapIgnoreOnly() {
+	res := make(map[string][]string)
+
+	for ruleName, fileOrDirs := range cfg.Lint.IgnoreOnly {
+		switch ruleName {
+		case minGroup:
+			ruleNames := cfg.addMinimal(nil)
+			for i := range ruleNames {
+				res[ruleNames[i]] = fileOrDirs
+			}
+		case basicGroup:
+			ruleNames := cfg.addBasic(nil)
+			for i := range ruleNames {
+				res[ruleNames[i]] = fileOrDirs
+			}
+		case defaultGroup:
+			ruleNames := cfg.addDefault(nil)
+			for i := range ruleNames {
+				res[ruleNames[i]] = fileOrDirs
+			}
+		case commentsGroup:
+			ruleNames := cfg.addComments(nil)
+			for i := range ruleNames {
+				res[ruleNames[i]] = fileOrDirs
+			}
+		case unaryRPCGroup:
+			ruleNames := cfg.addUnary(nil)
+			for i := range ruleNames {
+				res[ruleNames[i]] = fileOrDirs
+			}
+		default:
+			res[ruleName] = fileOrDirs
+		}
+	}
+
+	cfg.Lint.IgnoreOnly = res
 }
 
 func (cfg *Config) removeExcept() {

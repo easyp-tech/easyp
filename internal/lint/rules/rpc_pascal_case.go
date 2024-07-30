@@ -1,30 +1,34 @@
 package rules
 
 import (
+	"fmt"
 	"regexp"
 
 	"github.com/easyp-tech/easyp/internal/lint"
 )
 
-var _ lint.Rule = (*RpcPascalCase)(nil)
+var _ lint.Rule = (*RPCPascalCase)(nil)
 
-// RpcPascalCase this rule checks that RPCs are PascalCase.
-type RpcPascalCase struct{}
+// RPCPascalCase this rule checks that RPCs are PascalCase.
+type RPCPascalCase struct{}
+
+// Message implements lint.Rule.
+func (c *RPCPascalCase) Message() string {
+	return "RPC names should be PascalCase"
+}
 
 // Validate implements lint.Rule.
-func (c *RpcPascalCase) Validate(protoInfo lint.ProtoInfo) []error {
-	var res []error
-	pascalCase := regexp.MustCompile("^[A-Z][a-z]+([A-Z][a-z]+)*$")
+func (c *RPCPascalCase) Validate(protoInfo lint.ProtoInfo) ([]lint.Issue, error) {
+	var res []lint.Issue
+	pascalCase := regexp.MustCompile("^[A-Z][a-zA-Z0-9]*$")
 	for _, service := range protoInfo.Info.ProtoBody.Services {
 		for _, rpc := range service.ServiceBody.RPCs {
 			if !pascalCase.MatchString(rpc.RPCName) {
-				res = append(res, BuildError(rpc.Meta.Pos, rpc.RPCName, lint.ErrRpcPascalCase))
+				fmt.Println("RPC name: ", rpc.RPCName)
+				res = lint.AppendIssue(res, c, rpc.Meta.Pos, rpc.RPCName, rpc.Comments)
 			}
 		}
 	}
 
-	if len(res) == 0 {
-		return nil
-	}
-	return res
+	return res, nil
 }

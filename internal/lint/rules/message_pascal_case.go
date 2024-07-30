@@ -11,18 +11,21 @@ var _ lint.Rule = (*MessagePascalCase)(nil)
 // MessagePascalCase this rule checks that messages are PascalCase.
 type MessagePascalCase struct{}
 
+// Message implements lint.Rule.
+func (c *MessagePascalCase) Message() string {
+	return "message name should be PascalCase"
+}
+
 // Validate implements lint.Rule.
-func (c *MessagePascalCase) Validate(protoInfo lint.ProtoInfo) []error {
-	var res []error
-	pascalCase := regexp.MustCompile("^[A-Z][a-z]+(?:[A-Z][a-z]+)*$")
+func (c *MessagePascalCase) Validate(protoInfo lint.ProtoInfo) ([]lint.Issue, error) {
+	var res []lint.Issue
+
+	pascalCase := regexp.MustCompile("^[A-Z][a-zA-Z0-9]+(?:[A-Z][a-zA-Z0-9]+)*$")
 	for _, message := range protoInfo.Info.ProtoBody.Messages {
 		if !pascalCase.MatchString(message.MessageName) {
-			res = append(res, BuildError(message.Meta.Pos, message.MessageName, lint.ErrMessagePascalCase))
+			res = lint.AppendIssue(res, c, message.Meta.Pos, message.MessageName, message.Comments)
 		}
 	}
 
-	if len(res) == 0 {
-		return nil
-	}
-	return res
+	return res, nil
 }

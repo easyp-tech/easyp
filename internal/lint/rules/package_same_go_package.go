@@ -18,14 +18,19 @@ func (p *PackageSameGoPackage) lazyInit() {
 	}
 }
 
+// Message implements lint.Rule.
+func (p *PackageSameGoPackage) Message() string {
+	return "all files in the same package must have the same go_package name"
+}
+
 // Validate implements lint.Rule.
-func (p *PackageSameGoPackage) Validate(protoInfo lint.ProtoInfo) []error {
+func (p *PackageSameGoPackage) Validate(protoInfo lint.ProtoInfo) ([]lint.Issue, error) {
 	p.lazyInit()
 
-	var res []error
+	var res []lint.Issue
 
 	if len(protoInfo.Info.ProtoBody.Packages) == 0 {
-		return nil
+		return res, nil
 	}
 
 	packageName := protoInfo.Info.ProtoBody.Packages[0].Name
@@ -37,14 +42,10 @@ func (p *PackageSameGoPackage) Validate(protoInfo lint.ProtoInfo) []error {
 			}
 
 			if p.cache[packageName] != option.Constant {
-				res = append(res, BuildError(option.Meta.Pos, option.Constant, lint.ErrPackageSameGoPackage))
+				res = lint.AppendIssue(res, p, option.Meta.Pos, option.Constant, option.Comments)
 			}
 		}
 	}
 
-	if len(res) == 0 {
-		return nil
-	}
-
-	return res
+	return res, nil
 }

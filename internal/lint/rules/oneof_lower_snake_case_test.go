@@ -1,25 +1,52 @@
 package rules_test
 
 import (
-	"errors"
 	"testing"
+
+	"github.com/stretchr/testify/require"
+	"github.com/yoheimuta/go-protoparser/v4/parser/meta"
 
 	"github.com/easyp-tech/easyp/internal/lint"
 	"github.com/easyp-tech/easyp/internal/lint/rules"
 )
 
+func TestOneofLowerSnakeCase_Message(t *testing.T) {
+	t.Parallel()
+
+	assert := require.New(t)
+
+	const expMessage = "oneof name should be lower_snake_case"
+
+	rule := rules.OneofLowerSnakeCase{}
+	message := rule.Message()
+
+	assert.Equal(expMessage, message)
+}
+
 func TestOneofLowerSnakeCase_Validate(t *testing.T) {
 	t.Parallel()
 
 	tests := map[string]struct {
-		fileName string
-		wantErr  error
+		fileName   string
+		wantIssues *lint.Issue
+		wantErr    error
 	}{
-		"check_oneof_lower_snake_case_is_invalid": {
+		"invalid": {
 			fileName: invalidAuthProto,
-			wantErr:  lint.ErrOneofLowerSnakeCase,
+			wantIssues: &lint.Issue{
+				Position: meta.Position{
+					Filename: "",
+					Offset:   748,
+					Line:     39,
+					Column:   3,
+				},
+				SourceName: "SocialNetwork",
+				Message:    "oneof name should be lower_snake_case",
+				RuleName:   "ONEOF_LOWER_SNAKE_CASE",
+			},
+			wantErr: nil,
 		},
-		"check_oneof_lower_snake_case_is_valid": {
+		"valid": {
 			fileName: validAuthProto,
 			wantErr:  nil,
 		},
@@ -33,8 +60,14 @@ func TestOneofLowerSnakeCase_Validate(t *testing.T) {
 			r, protos := start(t)
 
 			rule := rules.OneofLowerSnakeCase{}
-			err := rule.Validate(protos[tc.fileName])
-			r.ErrorIs(errors.Join(err...), tc.wantErr)
+			issues, err := rule.Validate(protos[tc.fileName])
+			r.ErrorIs(err, tc.wantErr)
+			switch {
+			case tc.wantIssues != nil:
+				r.Contains(issues, *tc.wantIssues)
+			case len(issues) > 0:
+				r.Empty(issues)
+			}
 		})
 	}
 }

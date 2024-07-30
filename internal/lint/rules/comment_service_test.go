@@ -1,25 +1,52 @@
 package rules_test
 
 import (
-	"errors"
 	"testing"
+
+	"github.com/stretchr/testify/require"
+	"github.com/yoheimuta/go-protoparser/v4/parser/meta"
 
 	"github.com/easyp-tech/easyp/internal/lint"
 	"github.com/easyp-tech/easyp/internal/lint/rules"
 )
 
+func TestCommentService_Message(t *testing.T) {
+	t.Parallel()
+
+	assert := require.New(t)
+
+	const expMessage = "service comments must not be empty"
+
+	rule := rules.CommentService{}
+	message := rule.Message()
+
+	assert.Equal(expMessage, message)
+}
+
 func TestCommentService_Validate(t *testing.T) {
 	t.Parallel()
 
 	tests := map[string]struct {
-		fileName string
-		wantErr  error
+		fileName   string
+		wantIssues *lint.Issue
+		wantErr    error
 	}{
-		"auth_service_comment_is_empty": {
+		"invalid": {
 			fileName: invalidAuthProto,
-			wantErr:  lint.ErrServiceCommentIsEmpty,
+			wantIssues: &lint.Issue{
+				Position: meta.Position{
+					Filename: "",
+					Offset:   197,
+					Line:     10,
+					Column:   1,
+				},
+				SourceName: "auth",
+				Message:    "service comments must not be empty",
+				RuleName:   "COMMENT_SERVICE",
+			},
+			wantErr: nil,
 		},
-		"auth_service_comment_is_not_empty": {
+		"valid": {
 			fileName: validAuthProto,
 			wantErr:  nil,
 		},
@@ -33,8 +60,14 @@ func TestCommentService_Validate(t *testing.T) {
 			r, protos := start(t)
 
 			rule := rules.CommentService{}
-			err := rule.Validate(protos[tc.fileName])
-			r.ErrorIs(errors.Join(err...), tc.wantErr)
+			issues, err := rule.Validate(protos[tc.fileName])
+			r.ErrorIs(err, tc.wantErr)
+			switch {
+			case tc.wantIssues != nil:
+				r.Contains(issues, *tc.wantIssues)
+			case len(issues) > 0:
+				r.Empty(issues)
+			}
 		})
 	}
 }

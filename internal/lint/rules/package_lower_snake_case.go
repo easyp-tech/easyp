@@ -11,18 +11,20 @@ var _ lint.Rule = (*PackageLowerSnakeCase)(nil)
 // PackageLowerSnakeCase his rule checks that packages are lower_snake_case.
 type PackageLowerSnakeCase struct{}
 
+// Message implements lint.Rule.
+func (c *PackageLowerSnakeCase) Message() string {
+	return "package name should be lower_snake_case"
+}
+
 // Validate implements lint.Rule.
-func (c *PackageLowerSnakeCase) Validate(protoInfo lint.ProtoInfo) []error {
-	var res []error
+func (c *PackageLowerSnakeCase) Validate(protoInfo lint.ProtoInfo) ([]lint.Issue, error) {
+	var res []lint.Issue
 	lowerSnakeCase := regexp.MustCompile("^[a-z]+([_|[.][a-z0-9]+)*$")
 	for _, pack := range protoInfo.Info.ProtoBody.Packages {
 		if !lowerSnakeCase.MatchString(pack.Name) {
-			res = append(res, BuildError(pack.Meta.Pos, pack.Name, lint.ErrPackageLowerSnakeCase))
+			res = lint.AppendIssue(res, c, pack.Meta.Pos, pack.Name, pack.Comments)
 		}
 	}
 
-	if len(res) == 0 {
-		return nil
-	}
-	return res
+	return res, nil
 }

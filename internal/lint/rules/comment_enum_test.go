@@ -1,25 +1,66 @@
 package rules_test
 
 import (
-	"errors"
 	"testing"
+
+	"github.com/stretchr/testify/require"
+	"github.com/yoheimuta/go-protoparser/v4/parser/meta"
 
 	"github.com/easyp-tech/easyp/internal/lint"
 	"github.com/easyp-tech/easyp/internal/lint/rules"
 )
 
+func TestCommentEnum_Message(t *testing.T) {
+	t.Parallel()
+
+	assert := require.New(t)
+
+	const expMessage = "enum comments must not be empty"
+
+	rule := rules.CommentEnum{}
+	message := rule.Message()
+
+	assert.Equal(expMessage, message)
+}
+
 func TestCommentEnum_Validate(t *testing.T) {
 	t.Parallel()
 
 	tests := map[string]struct {
-		fileName string
-		wantErr  error
+		fileName   string
+		wantIssues *lint.Issue
+		wantErr    error
 	}{
-		"auth_enum_comment_is_empty": {
+		"invalid": {
 			fileName: invalidAuthProto,
-			wantErr:  lint.ErrEnumCommentIsEmpty,
+			wantIssues: &lint.Issue{
+				Position: meta.Position{
+					Offset: 864,
+					Line:   49,
+					Column: 1,
+				},
+				SourceName: "social_network",
+				Message:    "enum comments must not be empty",
+				RuleName:   "COMMENT_ENUM",
+			},
+			wantErr: nil,
 		},
-		"auth_enum_comment_is_not_empty": {
+		"invalid_nested": {
+			fileName: invalidAuthProto,
+			wantIssues: &lint.Issue{
+				Position: meta.Position{
+					Filename: "",
+					Offset:   610,
+					Line:     31,
+					Column:   3,
+				},
+				SourceName: "social_network",
+				Message:    "enum comments must not be empty",
+				RuleName:   "COMMENT_ENUM",
+			},
+			wantErr: nil,
+		},
+		"valid": {
 			fileName: validAuthProto,
 			wantErr:  nil,
 		},
@@ -33,8 +74,15 @@ func TestCommentEnum_Validate(t *testing.T) {
 			r, protos := start(t)
 
 			rule := rules.CommentEnum{}
-			err := rule.Validate(protos[tc.fileName])
-			r.ErrorIs(errors.Join(err...), tc.wantErr)
+
+			issues, err := rule.Validate(protos[tc.fileName])
+			r.ErrorIs(err, tc.wantErr)
+			switch {
+			case tc.wantIssues != nil:
+				r.Contains(issues, *tc.wantIssues)
+			case len(issues) > 0:
+				r.Empty(issues)
+			}
 		})
 	}
 }

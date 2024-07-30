@@ -13,19 +13,20 @@ type ServiceSuffix struct {
 	Suffix string
 }
 
+// Message implements lint.Rule.
+func (s *ServiceSuffix) Message() string {
+	return "service name should have suffix"
+}
+
 // Validate enforces that all services are suffixed with Service.
-func (s ServiceSuffix) Validate(protoInfo lint.ProtoInfo) []error {
-	var res []error
+func (s *ServiceSuffix) Validate(protoInfo lint.ProtoInfo) ([]lint.Issue, error) {
+	var res []lint.Issue
 
 	for _, service := range protoInfo.Info.ProtoBody.Services {
 		if !strings.HasSuffix(service.ServiceName, s.Suffix) {
-			res = append(res, BuildError(service.Meta.Pos, service.ServiceName, lint.ErrServiceSuffix))
+			res = lint.AppendIssue(res, s, service.Meta.Pos, service.ServiceName, service.Comments)
 		}
 	}
 
-	if len(res) == 0 {
-		return nil
-	}
-
-	return res
+	return res, nil
 }

@@ -11,20 +11,23 @@ var _ lint.Rule = (*FieldLowerSnakeCase)(nil)
 // FieldLowerSnakeCase this rule checks that field names are lower_snake_case.
 type FieldLowerSnakeCase struct{}
 
+// Message implements lint.Rule.
+func (c *FieldLowerSnakeCase) Message() string {
+	return "message field should be lower_snake_case"
+}
+
 // Validate implements lint.Rule.
-func (c *FieldLowerSnakeCase) Validate(protoInfo lint.ProtoInfo) []error {
-	var res []error
-	lowerSnakeCase := regexp.MustCompile("^[a-z]+(_[a-z]+)*$")
+func (c *FieldLowerSnakeCase) Validate(protoInfo lint.ProtoInfo) ([]lint.Issue, error) {
+	var res []lint.Issue
+
+	lowerSnakeCase := regexp.MustCompile("^[a-z0-9]+(_[a-z0-9]+)*$")
 	for _, message := range protoInfo.Info.ProtoBody.Messages {
 		for _, field := range message.MessageBody.Fields {
 			if !lowerSnakeCase.MatchString(field.FieldName) {
-				res = append(res, BuildError(field.Meta.Pos, field.FieldName, lint.ErrMessageFieldLowerSnakeCase))
+				res = lint.AppendIssue(res, c, field.Meta.Pos, field.FieldName, field.Comments)
 			}
 		}
 	}
 
-	if len(res) == 0 {
-		return nil
-	}
-	return res
+	return res, nil
 }

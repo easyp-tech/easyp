@@ -16,25 +16,26 @@ var _ lint.Rule = (*FileLowerSnakeCase)(nil)
 type FileLowerSnakeCase struct {
 }
 
+// Message implements lint.Rule.
+func (f *FileLowerSnakeCase) Message() string {
+	return "file name should be lower_snake_case.proto"
+}
+
 // Validate implements lint.Rule.
-func (f FileLowerSnakeCase) Validate(protoInfo lint.ProtoInfo) []error {
-	var res []error
+func (f *FileLowerSnakeCase) Validate(protoInfo lint.ProtoInfo) ([]lint.Issue, error) {
+	var res []lint.Issue
 
 	fileName := filepath.Base(protoInfo.Path)
 	if !isLowerSnakeCase(fileName) {
-		res = append(res, BuildError(meta.Position{
+		res = lint.AppendIssue(res, f, meta.Position{
 			Filename: protoInfo.Path,
 			Offset:   0,
 			Line:     0,
 			Column:   0,
-		}, protoInfo.Path, lint.ErrFileLowerSnakeCase))
+		}, protoInfo.Path, nil)
 	}
 
-	if len(res) == 0 {
-		return nil
-	}
-
-	return res
+	return res, nil
 }
 
 var matchLowerSnakeCase = regexp.MustCompile("^[a-z]+([_|[.][a-z0-9]+)*$")

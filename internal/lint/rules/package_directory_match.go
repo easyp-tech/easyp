@@ -14,22 +14,23 @@ type PackageDirectoryMatch struct {
 	Root string `json:"root" yaml:"root" env:"PACKAGE_DIRECTORY_MATCH_ROOT"`
 }
 
+// Message implements lint.Rule.
+func (d *PackageDirectoryMatch) Message() string {
+	return "package is not matched with path"
+}
+
 // Validate implements lint.Rule.
-func (d *PackageDirectoryMatch) Validate(protoInfo lint.ProtoInfo) []error {
-	var res []error
+func (d *PackageDirectoryMatch) Validate(protoInfo lint.ProtoInfo) ([]lint.Issue, error) {
+	var res []lint.Issue
 
 	preparePath := filepath.Dir(strings.TrimPrefix(protoInfo.Path, d.Root))
 	expectedPackage := strings.Replace(preparePath, "/", ".", -1)
 
 	for _, pkgInfo := range protoInfo.Info.ProtoBody.Packages {
 		if pkgInfo.Name != expectedPackage {
-			res = append(res, BuildError(pkgInfo.Meta.Pos, protoInfo.Path, lint.ErrPackageIsNotMatchedWithPath))
+			res = lint.AppendIssue(res, d, pkgInfo.Meta.Pos, protoInfo.Path, pkgInfo.Comments)
 		}
 	}
 
-	if len(res) == 0 {
-		return nil
-	}
-
-	return res
+	return res, nil
 }
