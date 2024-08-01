@@ -16,7 +16,7 @@ import (
 // Lint is the core functionality of easyp lint.
 type Lint struct {
 	rules         []Rule
-	ignoreDirs    []string
+	ignore        []string
 	deps          []string
 	moduleReflect *modulereflect.ModuleReflect
 	ignoreOnly    map[string][]string
@@ -45,7 +45,7 @@ type Rule interface {
 }
 
 // New creates a new Lint.
-func New(rules []Rule, ignoreDirs []string, ignoreOnly map[string][]string, deps []string) *Lint {
+func New(rules []Rule, ignore []string, ignoreOnly map[string][]string, deps []string) *Lint {
 	moduleReflect, err := factories.NewModuleReflect()
 	if err != nil {
 		log.Fatal(err) // TODO; return error
@@ -53,7 +53,7 @@ func New(rules []Rule, ignoreDirs []string, ignoreOnly map[string][]string, deps
 
 	return &Lint{
 		rules:         rules,
-		ignoreDirs:    ignoreDirs,
+		ignore:        ignore,
 		deps:          deps,
 		moduleReflect: moduleReflect,
 		ignoreOnly:    ignoreOnly,
