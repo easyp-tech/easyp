@@ -33,10 +33,11 @@ func (c *Lint) Lint(ctx context.Context, disk fs.FS) ([]IssueInfo, error) {
 			return err
 		case ctx.Err() != nil:
 			return ctx.Err()
-		case d.IsDir():
-			if slices.Contains(c.ignoreDirs, d.Name()) {
-				return filepath.SkipDir
+		case slices.Contains(c.ignore, path):
+			if d.IsDir() {
+				return fs.SkipDir
 			}
+
 			return nil
 		case filepath.Ext(path) != ".proto":
 			return nil
