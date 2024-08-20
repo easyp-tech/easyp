@@ -146,7 +146,8 @@ func (p instructionParser) parse(input string) instructionInfo {
 	}
 }
 
-// existInProto look for key in proto file
+// existInProto look for key in imported proto file
+// look for used instruction (key) in imported proto file
 func existInProto(key string, proto *unordered.Proto) bool {
 	// look for key in extends
 	for _, extend := range proto.ProtoBody.Extends {
