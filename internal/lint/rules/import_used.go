@@ -60,17 +60,7 @@ func (i *ImportUsed) Validate(checkingProto lint.ProtoInfo) ([]lint.Issue, error
 
 	// look for import used
 
-	for _, msg := range checkingProto.Info.ProtoBody.Messages {
-		for _, field := range msg.MessageBody.Fields {
-			// look for field's type in imported files
-			i.checkIsImportUsed(field.Type, checkingProto)
-
-			// look for field's options in imported files
-			for _, rpcOption := range field.FieldOptions {
-				i.checkIsImportUsed(rpcOption.OptionName, checkingProto)
-			}
-		}
-	}
+	i.checkMessages(checkingProto.Info.ProtoBody.Messages, checkingProto)
 
 	for _, service := range checkingProto.Info.ProtoBody.Services {
 		for _, rpc := range service.ServiceBody.RPCs {
@@ -106,6 +96,22 @@ func (i *ImportUsed) checkIsImportUsed(key string, checkingProto lint.ProtoInfo)
 		if exist {
 			if _, ok := i.isImportUsed[importPath]; ok {
 				i.isImportUsed[importPath] = true
+			}
+		}
+	}
+}
+
+func (i *ImportUsed) checkMessages(messages []*unordered.Message, checkingProto lint.ProtoInfo) {
+	for _, msg := range messages {
+		i.checkMessages(msg.MessageBody.Messages, checkingProto)
+
+		for _, field := range msg.MessageBody.Fields {
+			// look for field's type in imported files
+			i.checkIsImportUsed(field.Type, checkingProto)
+
+			// look for field's options in imported files
+			for _, rpcOption := range field.FieldOptions {
+				i.checkIsImportUsed(rpcOption.OptionName, checkingProto)
 			}
 		}
 	}
