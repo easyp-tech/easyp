@@ -4,11 +4,11 @@ import "import_used/messages.proto";
 import "import_used/enums.proto";
 import "import_used/options.proto";
 import "import_used/types.proto";
+import "import_used/field.proto";
 import "import_used/thrd_party/messages.proto";
 import "import_used/thrd_party/enums.proto";
 import "import_used/thrd_party/options.proto";
 import "import_used/thrd_party/types.proto";
-import "import_used/thrd_party/field.proto";
 
 package import_used;
 
