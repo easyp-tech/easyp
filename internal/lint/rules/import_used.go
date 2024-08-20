@@ -111,8 +111,8 @@ func (i *ImportUsed) checkMessages(messages []*unordered.Message, checkingProto 
 			i.checkIsImportUsed(field.Type, checkingProto)
 
 			// look for field's options in imported files
-			for _, rpcOption := range field.FieldOptions {
-				i.checkIsImportUsed(rpcOption.OptionName, checkingProto)
+			for _, fieldOption := range field.FieldOptions {
+				i.checkIsImportUsed(fieldOption.OptionName, checkingProto)
 			}
 		}
 	}

@@ -3,5 +3,5 @@ syntax = "proto3";
 package import_used;
 
 message SomeField {
-  string field = 0;
+  string field = 1;
 }
