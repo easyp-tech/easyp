@@ -19,7 +19,7 @@ message SomeMessage {
   import_used.thrd_party.MessageAsType field_4 = 4;
 
   message Nested {
-    SomeField in_nested = 0;
+    SomeField in_nested = 1;
   }
 }
 
