@@ -101,6 +101,7 @@ func (i *ImportUsed) checkIsImportUsed(key string, checkingProto lint.ProtoInfo)
 	}
 }
 
+// check used imports in messages
 func (i *ImportUsed) checkMessages(messages []*unordered.Message, checkingProto lint.ProtoInfo) {
 	for _, msg := range messages {
 		i.checkMessages(msg.MessageBody.Messages, checkingProto)
