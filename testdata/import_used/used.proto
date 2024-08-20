@@ -8,6 +8,7 @@ import "import_used/thrd_party/messages.proto";
 import "import_used/thrd_party/enums.proto";
 import "import_used/thrd_party/options.proto";
 import "import_used/thrd_party/types.proto";
+import "import_used/thrd_party/field.proto";
 
 package import_used;
 
@@ -16,6 +17,10 @@ message SomeMessage {
   import_used.thrd_party.SomeEnum field_2 = 2;
   MessageAsType field_3 = 3;
   import_used.thrd_party.MessageAsType field_4 = 4;
+
+  message Nested {
+    SomeField in_nested = 0;
+  }
 }
 
 service TestService {
