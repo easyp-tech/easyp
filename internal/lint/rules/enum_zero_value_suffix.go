@@ -23,7 +23,7 @@ func (e *EnumZeroValueSuffix) Validate(protoInfo lint.ProtoInfo) ([]lint.Issue, 
 
 	for _, enum := range protoInfo.Info.ProtoBody.Enums {
 		zeroValue := enum.EnumBody.EnumFields[0]
-		if zeroValue.Ident != pascalToUpperSnake(enum.EnumName)+e.Suffix {
+		if zeroValue.Ident != pascalToUpperSnake(enum.EnumName)+"_"+e.Suffix {
 			res = lint.AppendIssue(
 				res,
 				e,
