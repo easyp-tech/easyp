@@ -54,7 +54,7 @@ lint:
     - RPC_NO_CLIENT_STREAMING
     - RPC_NO_SERVER_STREAMING
 
-  enum_zero_value_suffix: _NONE
+  enum_zero_value_suffix: NONE
 
   service_suffix: API
 
