@@ -42,6 +42,9 @@ func (c *Mod) Get(ctx context.Context, requestedModule models.Module) error {
 		return fmt.Errorf("c.moduleConfig.Read: %w", err)
 	}
 
+	// check package deps (that was read from repo)
+	// compare versions
+
 	if err := repository.Archive(ctx, revision, cacheDownloadPaths); err != nil {
 		return fmt.Errorf("repository.Archive: %w", err)
 	}
