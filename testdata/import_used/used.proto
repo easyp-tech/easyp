@@ -4,6 +4,7 @@ import "import_used/messages.proto";
 import "import_used/enums.proto";
 import "import_used/options.proto";
 import "import_used/types.proto";
+import "import_used/field.proto";
 import "import_used/thrd_party/messages.proto";
 import "import_used/thrd_party/enums.proto";
 import "import_used/thrd_party/options.proto";
@@ -12,10 +13,17 @@ import "import_used/thrd_party/types.proto";
 package import_used;
 
 message SomeMessage {
+  // use import from the same package
   SomeEnum field_1 = 1;
-  import_used.thrd_party.SomeEnum field_2 = 2;
-  MessageAsType field_3 = 3;
+  MessageAsType field_2 = 2;
+
+  // from 3rd party
+  import_used.thrd_party.SomeEnum field_3 = 3;
   import_used.thrd_party.MessageAsType field_4 = 4;
+
+  message Nested {
+    SomeField in_nested = 1;
+  }
 }
 
 service TestService {
