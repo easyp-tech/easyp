@@ -30,7 +30,26 @@ type DependencyEntryPoint struct {
 // Generate is the configuration of the generate command.
 type Generate struct {
 	DependencyEntryPoint *DependencyEntryPoint `json:"dependency_entry_point" yaml:"dependency_entry_point"`
+	Inputs               []Input               `json:"inputs" yaml:"inputs"`
 	Plugins              []Plugin              `json:"plugins" yaml:"plugins"`
+}
+
+// Input source for generating code.
+type Input struct {
+	Directory string       `yaml:"directory"`
+	GitRepo   InputGitRepo `yaml:"git_repo"`
+}
+
+// InputGitRepo is the configuration of the git repository.
+type InputGitRepo struct {
+	URL          string `yaml:"url"`
+	Branch       string `yaml:"branch"`
+	SubDirectory string `yaml:"sub_directory"`
+}
+
+// InputDirectory is the configuration of the directory.
+type InputDirectory struct {
+	Path string `yaml:"path"`
 }
 
 // Config is the configuration of easyp.
@@ -68,10 +87,12 @@ func ReadConfig(ctx *cli.Context) (*Config, error) {
 		return nil, fmt.Errorf("io.ReadAll: %w", err)
 	}
 
+	//fmt.Println(string(buf))
+
 	cfg := &Config{}
 	err = yaml.Unmarshal(buf, &cfg)
 	if err != nil {
-		return nil, fmt.Errorf("json.Unmarshal: %w", err)
+		return nil, fmt.Errorf("yaml.Unmarshal: %w", err)
 	}
 
 	return cfg, nil
