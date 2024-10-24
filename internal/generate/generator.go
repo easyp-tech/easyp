@@ -17,16 +17,22 @@ type (
 		Out     string
 		Options map[string]string
 	}
+	// Inputs is the source for generating code.
+	Inputs struct {
+		Dirs []string
+	}
 	// Config is the configuration for EasyP generate.
 	Config struct {
 		Deps          []string
 		Plugins       []Plugin
+		Inputs        Inputs
 		ModuleReflect *modulereflect.ModuleReflect
 	}
 	// Generator is the core functionality of EasyP generate.
 	Generator struct {
 		deps          []string
 		plugins       []Plugin
+		inputs        Inputs
 		moduleReflect *modulereflect.ModuleReflect
 	}
 	// Query is a query for making sh command.
@@ -55,6 +61,7 @@ func New(cfg Config) *Generator {
 		deps:          cfg.Deps,
 		plugins:       cfg.Plugins,
 		moduleReflect: cfg.ModuleReflect,
+		inputs:        cfg.Inputs,
 	}
 }
 
