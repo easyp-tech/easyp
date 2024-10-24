@@ -60,6 +60,7 @@ func (i *ImportUsed) Validate(checkingProto lint.ProtoInfo) ([]lint.Issue, error
 
 	// look for import used
 
+	i.checkInExtends(checkingProto.Info.ProtoBody.Extends, checkingProto)
 	i.checkMessages(checkingProto.Info.ProtoBody.Messages, checkingProto)
 
 	for _, service := range checkingProto.Info.ProtoBody.Services {
@@ -115,6 +116,12 @@ func (i *ImportUsed) checkMessages(messages []*unordered.Message, checkingProto 
 				i.checkIsImportUsed(fieldOption.OptionName, checkingProto)
 			}
 		}
+	}
+}
+
+func (i *ImportUsed) checkInExtends(extends []*unordered.Extend, checkingProto lint.ProtoInfo) {
+	for _, extend := range extends {
+		i.checkIsImportUsed(extend.MessageType, checkingProto)
 	}
 }
 
