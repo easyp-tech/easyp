@@ -25,7 +25,7 @@ var (
 		HasBeenSet: true,
 		Value:      ".",
 		Aliases:    []string{"p"},
-		EnvVars:    []string{"EASYP_PATH"},
+		EnvVars:    []string{"EASYP_ROOT_GENERATE_PATH"},
 	}
 )
 
