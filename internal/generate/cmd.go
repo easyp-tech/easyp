@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/fs"
 	"path/filepath"
+	"strings"
 
 	"github.com/easyp-tech/easyp/internal/generate/adapters"
 )
@@ -40,6 +41,8 @@ func (g *Generator) Generate(ctx context.Context, root, directory string) error 
 			return nil
 		case filepath.Ext(path) != ".proto":
 			return nil
+		case shouldIgnore(path, g.inputs.Dirs):
+			return nil
 		}
 
 		q.Files = append(q.Files, path)
@@ -47,7 +50,7 @@ func (g *Generator) Generate(ctx context.Context, root, directory string) error 
 		return nil
 	})
 	if err != nil {
-		return fmt.Errorf("fs.WalkDir: %w", err)
+		return fmt.Errorf("filepath.WalkDir: %w", err)
 	}
 
 	_, err = adapters.RunCmd(ctx, root, q.build())
@@ -56,4 +59,14 @@ func (g *Generator) Generate(ctx context.Context, root, directory string) error 
 	}
 
 	return nil
+}
+
+func shouldIgnore(path string, dirs []string) bool {
+	for _, dir := range dirs {
+		if strings.HasPrefix(path, dir) {
+			return false
+		}
+	}
+
+	return true
 }

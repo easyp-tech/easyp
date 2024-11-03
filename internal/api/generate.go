@@ -25,7 +25,7 @@ var (
 		HasBeenSet: true,
 		Value:      ".",
 		Aliases:    []string{"p"},
-		EnvVars:    []string{"EASYP_PATH"},
+		EnvVars:    []string{"EASYP_ROOT_GENERATE_PATH"},
 	}
 )
 
@@ -67,6 +67,13 @@ func (g Generate) Action(ctx *cli.Context) error {
 			}
 		}),
 		ModuleReflect: moduleReflect,
+		Inputs: generate.Inputs{
+			Dirs: lo.Filter(lo.Map(cfg.Generate.Inputs, func(i config.Input, _ int) string {
+				return i.Directory
+			}), func(s string, _ int) bool {
+				return s != ""
+			}),
+		},
 	})
 
 	dir := ctx.String(flagGenerateDirectoryPath.Name)
