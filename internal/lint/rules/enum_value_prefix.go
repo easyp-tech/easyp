@@ -61,10 +61,11 @@ func (e *EnumValuePrefix) Validate(protoInfo lint.ProtoInfo) ([]lint.Issue, erro
 
 func pascalToUpperSnake(s string) string {
 	var result string
+	runes := []rune(s)
 
-	for _, char := range s {
+	for i, char := range runes {
 		if unicode.IsUpper(char) {
-			if len(result) > 0 {
+			if i > 0 && (unicode.IsLower(runes[i-1]) || (i < len(runes)-1 && unicode.IsLower(runes[i+1]))) {
 				result += "_"
 			}
 			result += string(char)
