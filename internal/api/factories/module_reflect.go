@@ -3,14 +3,14 @@ package factories
 import (
 	"fmt"
 
-	modulereflect "github.com/easyp-tech/easyp/internal/api/shared/module_reflect"
+	"github.com/easyp-tech/easyp/internal/api/shared/module_reflect"
 	"github.com/easyp-tech/easyp/internal/mod"
 	lockfile "github.com/easyp-tech/easyp/internal/mod/adapters/lock_file"
 	moduleconfig "github.com/easyp-tech/easyp/internal/mod/adapters/module_config"
 	"github.com/easyp-tech/easyp/internal/mod/adapters/storage"
 )
 
-func NewModuleReflect() (*modulereflect.ModuleReflect, error) {
+func NewModuleReflect() (*modulereflect.modulereflect, error) {
 	lockFile := lockfile.New()
 
 	easypPath, err := getEasypPath()
@@ -24,7 +24,7 @@ func NewModuleReflect() (*modulereflect.ModuleReflect, error) {
 
 	cmdMod := mod.New(store, moduleConfig, lockFile)
 
-	moduleReflect := modulereflect.New(cmdMod, store, lockFile)
+	moduleReflect := modulereflect.modulereflect.New(cmdMod, store, lockFile)
 
 	return moduleReflect, nil
 }

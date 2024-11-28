@@ -5,7 +5,7 @@ import (
 
 	"github.com/stretchr/testify/suite"
 
-	mocks2 "github.com/easyp-tech/easyp/internal/module_reflect/mocks"
+	mocks2 "github.com/easyp-tech/easyp/internal/api/shared/module_reflect/mocks"
 )
 
 type codeGenSuite struct {
