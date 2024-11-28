@@ -19,7 +19,8 @@ func (c *EnumPascalCase) Message() string {
 // Validate implements lint.Rule.
 func (c *EnumPascalCase) Validate(protoInfo lint.ProtoInfo) ([]lint.Issue, error) {
 	var res []lint.Issue
-	pascalCase := regexp.MustCompile("^[A-Z][a-z]+(?:[A-Z][a-z]+)*$")
+
+	pascalCase := regexp.MustCompile("^(?:[A-Z]+[a-z]*)+$")
 	for _, enum := range protoInfo.Info.ProtoBody.Enums {
 		if !pascalCase.MatchString(enum.EnumName) {
 			res = lint.AppendIssue(res, c, enum.Meta.Pos, enum.EnumName, enum.Comments)

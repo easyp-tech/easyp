@@ -19,7 +19,7 @@ func (c *EnumValueUpperSnakeCase) Message() string {
 // Validate implements lint.Rule.
 func (c *EnumValueUpperSnakeCase) Validate(protoInfo lint.ProtoInfo) ([]lint.Issue, error) {
 	var res []lint.Issue
-	upperSnakeCase := regexp.MustCompile("^[A-Z]+(_[A-Z]+)*$")
+	upperSnakeCase := regexp.MustCompile("^[A-Z0-9]+(_[A-Z0-9]+)*$")
 	for _, enum := range protoInfo.Info.ProtoBody.Enums {
 		for _, field := range enum.EnumBody.EnumFields {
 			if !upperSnakeCase.MatchString(field.Ident) {

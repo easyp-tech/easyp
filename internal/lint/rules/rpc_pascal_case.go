@@ -1,7 +1,6 @@
 package rules
 
 import (
-	"fmt"
 	"regexp"
 
 	"github.com/easyp-tech/easyp/internal/lint"
@@ -24,7 +23,6 @@ func (c *RPCPascalCase) Validate(protoInfo lint.ProtoInfo) ([]lint.Issue, error)
 	for _, service := range protoInfo.Info.ProtoBody.Services {
 		for _, rpc := range service.ServiceBody.RPCs {
 			if !pascalCase.MatchString(rpc.RPCName) {
-				fmt.Println("RPC name: ", rpc.RPCName)
 				res = lint.AppendIssue(res, c, rpc.Meta.Pos, rpc.RPCName, rpc.Comments)
 			}
 		}

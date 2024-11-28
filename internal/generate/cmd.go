@@ -62,6 +62,10 @@ func (g *Generator) Generate(ctx context.Context, root, directory string) error 
 }
 
 func shouldIgnore(path string, dirs []string) bool {
+	if len(dirs) == 0 {
+		return false
+	}
+
 	for _, dir := range dirs {
 		if strings.HasPrefix(path, dir) {
 			return false
