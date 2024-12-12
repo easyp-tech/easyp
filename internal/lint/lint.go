@@ -10,7 +10,7 @@ import (
 	"github.com/yoheimuta/go-protoparser/v4/interpret/unordered"
 
 	"github.com/easyp-tech/easyp/internal/api/factories"
-	modulereflect "github.com/easyp-tech/easyp/internal/api/shared/module_reflect"
+	"github.com/easyp-tech/easyp/internal/api/module_reflect"
 )
 
 // Lint is the core functionality of easyp lint.
@@ -18,7 +18,7 @@ type Lint struct {
 	rules         []Rule
 	ignore        []string
 	deps          []string
-	moduleReflect *modulereflect.ModuleReflect
+	moduleReflect *modulereflect.modulereflect
 	ignoreOnly    map[string][]string
 }
 

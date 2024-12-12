@@ -5,6 +5,7 @@ import (
 
 	"github.com/samber/lo"
 
+	"github.com/easyp-tech/easyp/internal/core"
 	"github.com/easyp-tech/easyp/internal/lint"
 	"github.com/easyp-tech/easyp/internal/lint/rules"
 )
@@ -20,7 +21,7 @@ type LintConfig struct {
 	IgnoreOnly          map[string][]string `json:"ignore_only" yaml:"ignore_only" env:"IGNORE_ONLY"`
 }
 
-func (cfg *Config) BuildLinterRules() ([]lint.Rule, error) {
+func (cfg *Config) BuildLinterRules() ([]core.Rule, error) {
 	cfg.unwrapLintGroups()
 	cfg.removeExcept()
 	cfg.unwrapIgnoreOnly()
@@ -28,8 +29,8 @@ func (cfg *Config) BuildLinterRules() ([]lint.Rule, error) {
 	return cfg.buildFromUse()
 }
 
-func (cfg *Config) buildFromUse() ([]lint.Rule, error) {
-	var useRule []lint.Rule
+func (cfg *Config) buildFromUse() ([]core.Rule, error) {
+	var useRule []core.Rule
 
 	for _, ruleName := range cfg.Lint.Use {
 		rule, ok := rules.Rules(rules.Config{

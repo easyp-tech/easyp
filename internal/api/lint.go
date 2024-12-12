@@ -9,9 +9,12 @@ import (
 	"log/slog"
 	"os"
 
+	"github.com/samber/lo"
 	"github.com/urfave/cli/v2"
 
 	"github.com/easyp-tech/easyp/internal/api/config"
+	"github.com/easyp-tech/easyp/internal/api/factories"
+	"github.com/easyp-tech/easyp/internal/core"
 	"github.com/easyp-tech/easyp/internal/lint"
 )
 
@@ -117,6 +120,35 @@ func (l Lint) action(ctx *cli.Context) error {
 
 	rootPath := ctx.String(flagLintDirectoryPath.Name)
 	dirFS := os.DirFS(rootPath)
+
+	moduleReflect, err := factories.NewModuleReflect()
+	if err != nil {
+		return fmt.Errorf("factories.NewModuleReflect: %w", err)
+	}
+
+	app := core.New(
+		lintRules,
+		cfg.Lint.Ignore,
+		cfg.Deps,
+		moduleReflect,
+		cfg.Lint.IgnoreOnly,
+		nil,
+		lo.Map(cfg.Generate.Plugins, func(p config.Plugin, _ int) core.Plugin {
+			return core.Plugin{
+				Name:    p.Name,
+				Out:     p.Out,
+				Options: p.Opts,
+			}
+		}),
+		core.Inputs{
+			Dirs: lo.Filter(lo.Map(cfg.Generate.Inputs, func(i config.Input, _ int) string {
+				return i.Directory
+			}), func(s string, _ int) bool {
+				return s != ""
+			}),
+		},
+		nil,
+	)
 
 	c := lint.New(lintRules, cfg.Lint.Ignore, cfg.Lint.IgnoreOnly, cfg.Deps)
 
