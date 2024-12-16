@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
-	"os"
 
 	cp "github.com/otiai10/copy"
 	"github.com/urfave/cli/v2"
@@ -29,10 +28,6 @@ func Run(cliCtx *cli.Context) error {
 	}
 
 	vendorPath := "easyp_vendor"
-	err = os.Mkdir(vendorPath, 0766)
-	if err != nil {
-		return fmt.Errorf("os.Create: %w", err)
-	}
 
 	for _, dep := range cfg.Deps {
 		modulePath, err := moduleReflect.GetModulePath(ctx, dep)
