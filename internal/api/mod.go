@@ -10,6 +10,7 @@ import (
 	"github.com/easyp-tech/easyp/internal/api/config"
 	"github.com/easyp-tech/easyp/internal/api/factories"
 	"github.com/easyp-tech/easyp/internal/mod/models"
+	"github.com/easyp-tech/easyp/internal/modvendor"
 )
 
 var _ Handler = (*Mod)(nil)
@@ -59,6 +60,10 @@ func (m Mod) Command() *cli.Command {
 }
 
 func (m Mod) Download(ctx *cli.Context) error {
+	if err := modvendor.Run(ctx); err != nil {
+		return fmt.Errorf("modules download failed: %w", err)
+	}
+	return nil
 	cfg, err := config.ReadConfig(ctx)
 	if err != nil {
 		return fmt.Errorf("ReadConfig: %w", err)
