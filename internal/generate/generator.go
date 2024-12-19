@@ -7,7 +7,7 @@ import (
 
 	"github.com/samber/lo"
 
-	modulereflect "github.com/easyp-tech/easyp/internal/api/shared/module_reflect"
+	"github.com/easyp-tech/easyp/internal/api/shared/module_reflect"
 )
 
 type (

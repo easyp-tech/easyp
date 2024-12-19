@@ -64,6 +64,16 @@ deps:
   - github.com/grpc-ecosystem/grpc-gateway@v2.19.1
 
 generate:
+  inputs:
+    - directory: "proto"
+    - git_repo:
+        url: "https://github.com/acme/weather.git"
+        branch: "main"
+        sub_directory: "proto"
+    - git_repo:
+        url: "https://github.com/acme/weather.git"
+        branch: "main"
+        sub_directory: "proto"
   plugins:
     - name: go
       out: .

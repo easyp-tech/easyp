@@ -87,8 +87,6 @@ func ReadConfig(ctx *cli.Context) (*Config, error) {
 		return nil, fmt.Errorf("io.ReadAll: %w", err)
 	}
 
-	//fmt.Println(string(buf))
-
 	cfg := &Config{}
 	err = yaml.Unmarshal(buf, &cfg)
 	if err != nil {

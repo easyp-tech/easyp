@@ -9,9 +9,13 @@ import (
 	"log/slog"
 	"os"
 
+	"github.com/samber/lo"
 	"github.com/urfave/cli/v2"
 
-	"github.com/easyp-tech/easyp/internal/api/config"
+	"github.com/easyp-tech/easyp/internal/adapters/console"
+	"github.com/easyp-tech/easyp/internal/api/factories"
+	"github.com/easyp-tech/easyp/internal/config"
+	"github.com/easyp-tech/easyp/internal/core"
 	"github.com/easyp-tech/easyp/internal/lint"
 )
 
@@ -118,9 +122,36 @@ func (l Lint) action(ctx *cli.Context) error {
 	rootPath := ctx.String(flagLintDirectoryPath.Name)
 	dirFS := os.DirFS(rootPath)
 
-	c := lint.New(lintRules, cfg.Lint.Ignore, cfg.Lint.IgnoreOnly, cfg.Deps)
+	moduleReflect, err := factories.NewModuleReflect()
+	if err != nil {
+		return fmt.Errorf("factories.NewModuleReflect: %w", err)
+	}
 
-	issues, err := c.Lint(ctx.Context, dirFS)
+	app := core.New(
+		lintRules,
+		cfg.Lint.Ignore,
+		cfg.Deps,
+		moduleReflect,
+		cfg.Lint.IgnoreOnly,
+		slog.Default(), // TODO: remove global state
+		lo.Map(cfg.Generate.Plugins, func(p config.Plugin, _ int) core.Plugin {
+			return core.Plugin{
+				Name:    p.Name,
+				Out:     p.Out,
+				Options: p.Opts,
+			}
+		}),
+		core.Inputs{
+			Dirs: lo.Filter(lo.Map(cfg.Generate.Inputs, func(i config.Input, _ int) string {
+				return i.Directory
+			}), func(s string, _ int) bool {
+				return s != ""
+			}),
+		},
+		console.New(),
+	)
+
+	issues, err := app.Lint(ctx.Context, dirFS)
 	if err != nil {
 		return fmt.Errorf("c.Lint: %w", err)
 	}
@@ -141,7 +172,7 @@ func (l Lint) action(ctx *cli.Context) error {
 	return ErrHasLintIssue
 }
 
-func printIssues(format string, w io.Writer, issues []lint.IssueInfo) error {
+func printIssues(format string, w io.Writer, issues []core.IssueInfo) error {
 	switch format {
 	case TextFormat:
 		return textPrinter(w, issues)
@@ -153,7 +184,7 @@ func printIssues(format string, w io.Writer, issues []lint.IssueInfo) error {
 }
 
 // textPrinter prints the error in text format.
-func textPrinter(w io.Writer, issues []lint.IssueInfo) error {
+func textPrinter(w io.Writer, issues []core.IssueInfo) error {
 	buffer := bytes.NewBuffer(nil)
 	for _, issue := range issues {
 		buffer.Reset()
@@ -176,7 +207,7 @@ func textPrinter(w io.Writer, issues []lint.IssueInfo) error {
 }
 
 // jsonPrinter prints the error in json format.
-func jsonPrinter(w io.Writer, issues []lint.IssueInfo) error {
+func jsonPrinter(w io.Writer, issues []core.IssueInfo) error {
 	for _, issue := range issues {
 		marshalErr := json.NewEncoder(w).Encode(issue)
 		if marshalErr != nil {
