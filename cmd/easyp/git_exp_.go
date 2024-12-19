@@ -10,9 +10,16 @@ import (
 	"github.com/go-git/go-git/v5/plumbing/object"
 )
 
+const (
+	//repoPath = "/Users/vbliznetsov/Projects/Hound/easyp/easyp"
+	//repoPath = "/var/folders/tj/vlxdlms938xdfmjl6b5y4vrc0000gn/T/tmp.bcQ1yKCkAM"
+	repoPath = "/Users/vbliznetsov/Projects/Hound/easyp/test_repos/proto-experiments"
+
+	branchToCompareName = "master"
+)
+
 func getRepository() *git.Repository {
-	//repository, err := git.PlainOpen("/Users/vbliznetsov/Projects/Hound/easyp/easyp")
-	repository, err := git.PlainOpen("/var/folders/tj/vlxdlms938xdfmjl6b5y4vrc0000gn/T/tmp.bcQ1yKCkAM")
+	repository, err := git.PlainOpen(repoPath)
 	if err != nil {
 		panic(fmt.Errorf("failed to open repository: %s", err))
 	}
@@ -40,7 +47,8 @@ func gitExpDiff() {
 	}
 	_ = treeCur
 
-	refMain, err := repository.Reference("refs/heads/main", false)
+	refName := plumbing.ReferenceName(fmt.Sprintf("refs/heads/%s", branchToCompareName))
+	refMain, err := repository.Reference(refName, false)
 	if err != nil {
 		panic(fmt.Errorf("failed to get reference: %s", err))
 	}
@@ -58,7 +66,7 @@ func gitExpDiff() {
 	}
 	_ = treeMain
 
-	diffs, err := object.DiffTree(treeCur, treeMain)
+	diffs, err := object.DiffTree(treeMain, treeCur)
 	if err != nil {
 		panic(fmt.Errorf("failed to get diff: %s", err))
 	}
