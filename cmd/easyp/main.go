@@ -25,6 +25,8 @@ func initLogger(isDebug bool) {
 }
 
 func main() {
+	gitExp()
+	return
 	app := &cli.App{
 		Name:        "easyp",
 		HelpName:    "easyp",
