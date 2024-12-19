@@ -34,6 +34,7 @@ type (
 		Write(
 			moduleName string, revisionVersion string, installedPackageHash models.ModuleHash,
 		) error
+		IsEmpty() bool
 	}
 
 	// Mod implement package manager's commands

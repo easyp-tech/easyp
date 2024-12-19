@@ -13,6 +13,13 @@ import (
 // dependencies slice of strings format: origin@version: github.com/company/repository@v1.2.3
 // if version is absent use the latest commit
 func (c *Mod) Download(ctx context.Context, dependencies []string) error {
+	if c.lockFile.IsEmpty() {
+		// if lock file is empty or doesn't exist install versions
+		// from easyp.yaml config and create lock file
+		slog.Debug("Lock file is empty")
+		return c.Update(ctx, dependencies)
+	}
+
 	for _, dependency := range dependencies {
 
 		module := models.NewModule(dependency)
