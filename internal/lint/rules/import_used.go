@@ -59,24 +59,9 @@ func (i *ImportUsed) Validate(checkingProto lint.ProtoInfo) ([]lint.Issue, error
 	}
 
 	// look for import used
-
+	i.checkInServices(checkingProto.Info.ProtoBody.Services, checkingProto)
+	i.checkInMessages(checkingProto.Info.ProtoBody.Messages, checkingProto)
 	i.checkInExtends(checkingProto.Info.ProtoBody.Extends, checkingProto)
-	i.checkMessages(checkingProto.Info.ProtoBody.Messages, checkingProto)
-
-	for _, service := range checkingProto.Info.ProtoBody.Services {
-		for _, rpc := range service.ServiceBody.RPCs {
-			// look for in request
-			i.checkIsImportUsed(rpc.RPCRequest.MessageType, checkingProto)
-
-			// look for in response
-			i.checkIsImportUsed(rpc.RPCResponse.MessageType, checkingProto)
-
-			// look for in options
-			for _, rpcOption := range rpc.Options {
-				i.checkIsImportUsed(rpcOption.OptionName, checkingProto)
-			}
-		}
-	}
 
 	for imp, used := range i.isImportUsed {
 		if !used {
@@ -102,10 +87,28 @@ func (i *ImportUsed) checkIsImportUsed(key string, checkingProto lint.ProtoInfo)
 	}
 }
 
+// check used imports in services
+func (i *ImportUsed) checkInServices(services []*unordered.Service, checkingProto lint.ProtoInfo) {
+	for _, service := range services {
+		for _, rpc := range service.ServiceBody.RPCs {
+			// look for in request
+			i.checkIsImportUsed(rpc.RPCRequest.MessageType, checkingProto)
+
+			// look for in response
+			i.checkIsImportUsed(rpc.RPCResponse.MessageType, checkingProto)
+
+			// look for in options
+			for _, rpcOption := range rpc.Options {
+				i.checkIsImportUsed(rpcOption.OptionName, checkingProto)
+			}
+		}
+	}
+}
+
 // check used imports in messages
-func (i *ImportUsed) checkMessages(messages []*unordered.Message, checkingProto lint.ProtoInfo) {
+func (i *ImportUsed) checkInMessages(messages []*unordered.Message, checkingProto lint.ProtoInfo) {
 	for _, msg := range messages {
-		i.checkMessages(msg.MessageBody.Messages, checkingProto)
+		i.checkInMessages(msg.MessageBody.Messages, checkingProto)
 
 		for _, field := range msg.MessageBody.Fields {
 			// look for field's type in imported files
