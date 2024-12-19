@@ -23,7 +23,8 @@ func gitExp() {
 	}
 
 	// 36c1bd4
-	hashCommitForCheckout := "36c1bd4"
+	//hashCommitForCheckout := "36c1bd4"
+	hashCommitForCheckout := "0362c4c53df82d409903992a2c085b54c8a3368d"
 	if err := worktree.Checkout(&git.CheckoutOptions{
 		Hash: plumbing.NewHash(hashCommitForCheckout),
 	}); err != nil {
