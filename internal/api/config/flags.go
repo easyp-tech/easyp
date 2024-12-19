@@ -2,6 +2,8 @@ package config
 
 import (
 	"github.com/urfave/cli/v2"
+
+	"github.com/easyp-tech/easyp/internal/api/config/default_consts"
 )
 
 var (
@@ -10,7 +12,7 @@ var (
 		Usage:      "set config file path",
 		Required:   true,
 		HasBeenSet: true,
-		Value:      DefaultConfigFileName,
+		Value:      default_consts.DefaultConfigFileName,
 		Aliases:    []string{"config"},
 		EnvVars:    []string{"EASYP_CFG"},
 	}
