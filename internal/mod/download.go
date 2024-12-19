@@ -13,15 +13,17 @@ import (
 // dependencies slice of strings format: origin@version: github.com/company/repository@v1.2.3
 // if version is absent use the latest commit
 func (c *Mod) Download(ctx context.Context, dependencies []string) error {
-	for _, dependency := range dependencies {
+	if c.lockFile.IsEmpty() {
+		// if lock file is empty or doesn't exist install versions
+		// from easyp.yaml config and create lock file
+		slog.Debug("Lock file is empty")
+		return c.Update(ctx, dependencies)
+	}
 
-		module := models.NewModule(dependency)
+	slog.Debug("Lock file is not empty. Install deps from it")
 
-		version, err := c.getVersionToDownload(module)
-		if err != nil {
-			return fmt.Errorf("c.getVersionToDownload: %w", err)
-		}
-		module.Version = version
+	for lockFileInfo := range c.lockFile.DepsIter() {
+		module := models.NewModuleFromLockFileInfo(lockFileInfo)
 
 		isInstalled, err := c.storage.IsModuleInstalled(module)
 		if err != nil {
@@ -35,7 +37,7 @@ func (c *Mod) Download(ctx context.Context, dependencies []string) error {
 
 		if err := c.Get(ctx, module); err != nil {
 			if errors.Is(err, models.ErrVersionNotFound) {
-				slog.Error("Version not found", "dependency", dependency)
+				slog.Error("Version not found", "name", module.Name, "version", module.Version)
 				return models.ErrVersionNotFound
 			}
 
@@ -44,19 +46,4 @@ func (c *Mod) Download(ctx context.Context, dependencies []string) error {
 	}
 
 	return nil
-}
-
-// getVersionToDownload return version which has to be installed by `download` command
-// version from lockfile is more important than version from easyp config
-func (c *Mod) getVersionToDownload(module models.Module) (models.RequestedVersion, error) {
-	lockFileInfo, err := c.lockFile.Read(module.Name)
-	if err == nil {
-		return models.RequestedVersion(lockFileInfo.Version), nil
-	}
-
-	if !errors.Is(err, models.ErrModuleNotFoundInLockFile) {
-		return "", fmt.Errorf("c.lockFile.Read: %w", err)
-	}
-
-	return module.Version, nil
 }

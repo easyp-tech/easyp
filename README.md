@@ -46,13 +46,29 @@ easyp lint -cfg example.easyp.yaml
 
 ### Usage
 
-To usage `easpy` as a package manager use `mod download` command:
+* download
 
 ```bash
 easyp -cfg example.easyp.yaml mod download
 ```
 
-Your config file has to contains `deps` section which is list of repositories with proto files and its version (optional).
+Read your dependencies from `easyp.lock` file and install them.
+
+
+If `easyp.lock` is empty or doesn't exist `easyp` read dependencies from `easyp.yaml` config file (`deps` section).
+
+* update
+```bash
+easyp -cfg example.easyp.yaml mod update
+```
+
+Read dependencies from `easyp.yaml` config file and ignore `easyp.lock` file.
+
+Could be used for update versions: set version in `easyp.yaml` file and run `update` command.
+
+### Configuration
+
+Write list of your dependencies in `easyp.yaml` config with in section `deps`.
 
 For example:
 
