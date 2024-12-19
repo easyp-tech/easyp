@@ -7,11 +7,11 @@ import (
 	"strings"
 )
 
-// Bash provide to bash terminal.
-type Bash struct{}
+// bash provide to bash terminal.
+type bash struct{}
 
 // RunCmd shell command.
-func (Bash) RunCmd(ctx context.Context, dir string, command string, commandParams ...string) (string, error) {
+func (bash) RunCmd(ctx context.Context, dir string, command string, commandParams ...string) (string, error) {
 	var stderr bytes.Buffer
 	var stdout bytes.Buffer
 

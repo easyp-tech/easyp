@@ -7,7 +7,7 @@ import (
 
 	"github.com/easyp-tech/easyp/internal/core"
 	"github.com/easyp-tech/easyp/internal/lint"
-	"github.com/easyp-tech/easyp/internal/lint/rules"
+	"github.com/easyp-tech/easyp/internal/rules"
 )
 
 // LintConfig contains linter configuration.

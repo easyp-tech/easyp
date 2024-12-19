@@ -12,8 +12,9 @@ import (
 	"github.com/samber/lo"
 	"github.com/urfave/cli/v2"
 
-	"github.com/easyp-tech/easyp/internal/api/config"
+	"github.com/easyp-tech/easyp/internal/adapters/console"
 	"github.com/easyp-tech/easyp/internal/api/factories"
+	"github.com/easyp-tech/easyp/internal/config"
 	"github.com/easyp-tech/easyp/internal/core"
 	"github.com/easyp-tech/easyp/internal/lint"
 )
@@ -132,7 +133,7 @@ func (l Lint) action(ctx *cli.Context) error {
 		cfg.Deps,
 		moduleReflect,
 		cfg.Lint.IgnoreOnly,
-		nil,
+		slog.Default(), // TODO: remove global state
 		lo.Map(cfg.Generate.Plugins, func(p config.Plugin, _ int) core.Plugin {
 			return core.Plugin{
 				Name:    p.Name,
@@ -147,12 +148,10 @@ func (l Lint) action(ctx *cli.Context) error {
 				return s != ""
 			}),
 		},
-		nil,
+		console.New(),
 	)
 
-	c := lint.New(lintRules, cfg.Lint.Ignore, cfg.Lint.IgnoreOnly, cfg.Deps)
-
-	issues, err := c.Lint(ctx.Context, dirFS)
+	issues, err := app.Lint(ctx.Context, dirFS)
 	if err != nil {
 		return fmt.Errorf("c.Lint: %w", err)
 	}
@@ -173,7 +172,7 @@ func (l Lint) action(ctx *cli.Context) error {
 	return ErrHasLintIssue
 }
 
-func printIssues(format string, w io.Writer, issues []lint.IssueInfo) error {
+func printIssues(format string, w io.Writer, issues []core.IssueInfo) error {
 	switch format {
 	case TextFormat:
 		return textPrinter(w, issues)
@@ -185,7 +184,7 @@ func printIssues(format string, w io.Writer, issues []lint.IssueInfo) error {
 }
 
 // textPrinter prints the error in text format.
-func textPrinter(w io.Writer, issues []lint.IssueInfo) error {
+func textPrinter(w io.Writer, issues []core.IssueInfo) error {
 	buffer := bytes.NewBuffer(nil)
 	for _, issue := range issues {
 		buffer.Reset()
@@ -208,7 +207,7 @@ func textPrinter(w io.Writer, issues []lint.IssueInfo) error {
 }
 
 // jsonPrinter prints the error in json format.
-func jsonPrinter(w io.Writer, issues []lint.IssueInfo) error {
+func jsonPrinter(w io.Writer, issues []core.IssueInfo) error {
 	for _, issue := range issues {
 		marshalErr := json.NewEncoder(w).Encode(issue)
 		if marshalErr != nil {

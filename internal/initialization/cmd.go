@@ -8,7 +8,7 @@ import (
 
 	"gopkg.in/yaml.v3"
 
-	configPkg "github.com/easyp-tech/easyp/internal/api/config"
+	configPkg "github.com/easyp-tech/easyp/internal/config"
 )
 
 // Initialize initializes the EasyP configuration.
