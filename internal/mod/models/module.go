@@ -56,6 +56,14 @@ func NewModule(dependency string) Module {
 	}
 }
 
+// NewModuleFromLockFileInfo create Module struct from LockFileInfo struct
+func NewModuleFromLockFileInfo(lockFileInfo LockFileInfo) Module {
+	return Module{
+		Name:    lockFileInfo.Name,
+		Version: RequestedVersion(lockFileInfo.Version),
+	}
+}
+
 // GetParts return parts of GeneratedVersion
 // if RequestedVersion is not generated return error
 func (v RequestedVersion) GetParts() (GeneratedVersionParts, error) {

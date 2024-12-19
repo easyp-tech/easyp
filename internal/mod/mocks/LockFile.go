@@ -3,6 +3,8 @@
 package mocks
 
 import (
+	iter "iter"
+
 	mock "github.com/stretchr/testify/mock"
 
 	models "github.com/easyp-tech/easyp/internal/mod/models"
@@ -19,6 +21,98 @@ type LockFile_Expecter struct {
 
 func (_m *LockFile) EXPECT() *LockFile_Expecter {
 	return &LockFile_Expecter{mock: &_m.Mock}
+}
+
+// DepsIter provides a mock function with given fields:
+func (_m *LockFile) DepsIter() iter.Seq[models.LockFileInfo] {
+	ret := _m.Called()
+
+	if len(ret) == 0 {
+		panic("no return value specified for DepsIter")
+	}
+
+	var r0 iter.Seq[models.LockFileInfo]
+	if rf, ok := ret.Get(0).(func() iter.Seq[models.LockFileInfo]); ok {
+		r0 = rf()
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(iter.Seq[models.LockFileInfo])
+		}
+	}
+
+	return r0
+}
+
+// LockFile_DepsIter_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'DepsIter'
+type LockFile_DepsIter_Call struct {
+	*mock.Call
+}
+
+// DepsIter is a helper method to define mock.On call
+func (_e *LockFile_Expecter) DepsIter() *LockFile_DepsIter_Call {
+	return &LockFile_DepsIter_Call{Call: _e.mock.On("DepsIter")}
+}
+
+func (_c *LockFile_DepsIter_Call) Run(run func()) *LockFile_DepsIter_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run()
+	})
+	return _c
+}
+
+func (_c *LockFile_DepsIter_Call) Return(_a0 iter.Seq[models.LockFileInfo]) *LockFile_DepsIter_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *LockFile_DepsIter_Call) RunAndReturn(run func() iter.Seq[models.LockFileInfo]) *LockFile_DepsIter_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// IsEmpty provides a mock function with given fields:
+func (_m *LockFile) IsEmpty() bool {
+	ret := _m.Called()
+
+	if len(ret) == 0 {
+		panic("no return value specified for IsEmpty")
+	}
+
+	var r0 bool
+	if rf, ok := ret.Get(0).(func() bool); ok {
+		r0 = rf()
+	} else {
+		r0 = ret.Get(0).(bool)
+	}
+
+	return r0
+}
+
+// LockFile_IsEmpty_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'IsEmpty'
+type LockFile_IsEmpty_Call struct {
+	*mock.Call
+}
+
+// IsEmpty is a helper method to define mock.On call
+func (_e *LockFile_Expecter) IsEmpty() *LockFile_IsEmpty_Call {
+	return &LockFile_IsEmpty_Call{Call: _e.mock.On("IsEmpty")}
+}
+
+func (_c *LockFile_IsEmpty_Call) Run(run func()) *LockFile_IsEmpty_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run()
+	})
+	return _c
+}
+
+func (_c *LockFile_IsEmpty_Call) Return(_a0 bool) *LockFile_IsEmpty_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *LockFile_IsEmpty_Call) RunAndReturn(run func() bool) *LockFile_IsEmpty_Call {
+	_c.Call.Return(run)
+	return _c
 }
 
 // Read provides a mock function with given fields: moduleName
