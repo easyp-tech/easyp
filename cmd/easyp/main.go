@@ -10,6 +10,7 @@ import (
 
 	"github.com/easyp-tech/easyp/internal/api"
 	"github.com/easyp-tech/easyp/internal/api/config"
+	breakingcheck "github.com/easyp-tech/easyp/internal/breaking_check"
 	"github.com/easyp-tech/easyp/internal/version"
 )
 
@@ -25,6 +26,10 @@ func initLogger(isDebug bool) {
 }
 
 func main() {
+	//gitExp()
+	//return
+	breakingcheck.EntryPoint()
+	return
 	app := &cli.App{
 		Name:        "easyp",
 		HelpName:    "easyp",
