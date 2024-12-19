@@ -20,15 +20,10 @@ func (c *Mod) Download(ctx context.Context, dependencies []string) error {
 		return c.Update(ctx, dependencies)
 	}
 
-	for _, dependency := range dependencies {
+	slog.Debug("Lock file is not empty. Install deps from it")
 
-		module := models.NewModule(dependency)
-
-		version, err := c.getVersionToDownload(module)
-		if err != nil {
-			return fmt.Errorf("c.getVersionToDownload: %w", err)
-		}
-		module.Version = version
+	for lockFileInfo := range c.lockFile.DepsIter() {
+		module := models.NewModuleFromLockFileInfo(lockFileInfo)
 
 		isInstalled, err := c.storage.IsModuleInstalled(module)
 		if err != nil {
@@ -42,7 +37,7 @@ func (c *Mod) Download(ctx context.Context, dependencies []string) error {
 
 		if err := c.Get(ctx, module); err != nil {
 			if errors.Is(err, models.ErrVersionNotFound) {
-				slog.Error("Version not found", "dependency", dependency)
+				slog.Error("Version not found", "name", module.Name, "version", module.Version)
 				return models.ErrVersionNotFound
 			}
 
