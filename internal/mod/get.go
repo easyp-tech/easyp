@@ -2,6 +2,7 @@ package mod
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 
@@ -41,6 +42,29 @@ func (c *Mod) Get(ctx context.Context, requestedModule models.Module) error {
 	if err != nil {
 		return fmt.Errorf("c.moduleConfig.Read: %w", err)
 	}
+
+	for _, indirectDep := range moduleConfig.Dependencies {
+		isInstalled, err := c.storage.IsModuleInstalled(indirectDep)
+		if err != nil {
+			return fmt.Errorf("c.storage.IsModuleInstalled: %w", err)
+		}
+
+		if isInstalled {
+			continue
+		}
+
+		if err := c.Get(ctx, indirectDep); err != nil {
+			if errors.Is(err, models.ErrVersionNotFound) {
+				slog.Error("Version not found", "dependency", indirectDep)
+				return models.ErrVersionNotFound
+			}
+
+			return fmt.Errorf("c.Get: %w", err)
+		}
+	}
+
+	// check package deps (that was read from repo)
+	// compare versions
 
 	if err := repository.Archive(ctx, revision, cacheDownloadPaths); err != nil {
 		return fmt.Errorf("repository.Archive: %w", err)

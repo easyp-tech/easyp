@@ -24,8 +24,8 @@ const (
 func readBufWork(ctx context.Context, repo repository.Repo, revision models.Revision) (bufWork, error) {
 	content, err := repo.ReadFile(ctx, revision, bufWorkFile)
 	if err != nil {
-		slog.Debug("buf config not found")
 		if errors.Is(err, models.ErrFileNotFound) {
+			slog.Debug("buf config not found")
 			return bufWork{}, nil
 		}
 		return bufWork{}, fmt.Errorf("repo.ReadFile: %w", err)
