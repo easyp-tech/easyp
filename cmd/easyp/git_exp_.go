@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"log/slog"
 
 	"github.com/go-git/go-git/v5"
@@ -10,7 +11,8 @@ import (
 )
 
 func getRepository() *git.Repository {
-	repository, err := git.PlainOpen("/Users/vbliznetsov/Projects/Hound/easyp/easyp")
+	//repository, err := git.PlainOpen("/Users/vbliznetsov/Projects/Hound/easyp/easyp")
+	repository, err := git.PlainOpen("/var/folders/tj/vlxdlms938xdfmjl6b5y4vrc0000gn/T/tmp.bcQ1yKCkAM")
 	if err != nil {
 		panic(fmt.Errorf("failed to open repository: %s", err))
 	}
@@ -38,9 +40,58 @@ func gitExpDiff() {
 	}
 	_ = treeCur
 
-	treeCur.Files().ForEach(func(f *object.File) error {
-		return nil
-	})
+	refMain, err := repository.Reference("refs/heads/main", false)
+	if err != nil {
+		panic(fmt.Errorf("failed to get reference: %s", err))
+	}
+	_ = refMain
+
+	commMain, err := repository.CommitObject(refMain.Hash())
+	if err != nil {
+		panic(fmt.Errorf("failed to get commit object: %s", err))
+	}
+	_ = commMain
+
+	treeMain, err := commMain.Tree()
+	if err != nil {
+		panic(fmt.Errorf("failed to get commit tree: %s", err))
+	}
+	_ = treeMain
+
+	diffs, err := object.DiffTree(treeCur, treeMain)
+	if err != nil {
+		panic(fmt.Errorf("failed to get diff: %s", err))
+	}
+	_ = diffs
+
+	for _, diff := range diffs {
+		currentFileName := diff.To.Name
+		oldFileName := diff.From.Name
+
+		currentFile, err := treeCur.File(currentFileName)
+		if err != nil {
+			panic(fmt.Errorf("failed to get file from tree: %s", err))
+		}
+		currentFileContent, err := currentFile.Contents()
+		if err != nil {
+			panic(fmt.Errorf("failed to get file content from tree: %s", err))
+		}
+
+		oldFile, err := treeMain.File(oldFileName)
+		if err != nil {
+			panic(fmt.Errorf("failed to get file from tree: %s", err))
+		}
+		oldFileContent, err := oldFile.Contents()
+		if err != nil {
+			panic(fmt.Errorf("failed to get file content from tree: %s", err))
+		}
+
+		log.Printf("Current file name: %s; old file name: %s", currentFileName, oldFileName)
+		log.Printf("current content: %v", currentFileContent)
+		log.Printf("old content: %v", oldFileContent)
+		log.Printf("===========================")
+	}
+
 }
 func gitExp() {
 	slog.Info("Git exp")
