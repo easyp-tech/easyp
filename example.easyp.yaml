@@ -5,6 +5,7 @@ lint:
     - COMMENT_ONEOF
     - COMMENT_RPC
     - COMMENT_SERVICE
+    - IMPORT_USED
 deps:
   - github.com/googleapis/googleapis
   - github.com/bufbuild/protovalidate@v0.3.1

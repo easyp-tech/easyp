@@ -5,11 +5,7 @@ import (
 	"io"
 
 	"github.com/go-git/go-git/v5/plumbing/object"
-
-	"github.com/easyp-tech/easyp/internal/core"
 )
-
-var _ core.FS = (*GitTreeDiskAdapter)(nil)
 
 type GitTreeDiskAdapter struct {
 	*object.Tree

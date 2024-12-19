@@ -41,6 +41,15 @@ go install github.com/easyp-tech/easyp/cmd/easyp@latest
 ```bash
 easyp lint -cfg example.easyp.yaml
 ```
+## Breaking check
+
+Checking your current API on backward compatibility with API from another branch.
+
+### Usage
+
+```bash
+easyp breaking --against $BRANCH_TO_COMPARE_WITH
+```
 
 ## Package manager
 
@@ -119,9 +128,3 @@ source <(easyp completion bash)
 ```bash
 source ~/.bashrc
 ```
-
-### Roadmap
-
-* [x] Implement support for `buf.work.yaml` config
-* [ ] Calc hash sum, store it and compare (i.e go.sum)
-* [ ] Code generation

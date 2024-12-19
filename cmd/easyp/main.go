@@ -51,6 +51,7 @@ func main() {
 			api.Completion{},
 			api.Init{},
 			api.Generate{},
+			api.BreakingCheck{},
 		),
 		Flags: []cli.Flag{
 			flags.Config,

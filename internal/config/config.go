@@ -24,6 +24,11 @@ type Generate struct {
 	Plugins []Plugin `json:"plugins" yaml:"plugins"`
 }
 
+// BreakingCheck is the configuration for `breaking` command
+type BreakingCheck struct {
+	AgainstBranch string `json:"against_branch" yaml:"against_branch"`
+}
+
 // Input source for generating code.
 type Input struct {
 	Directory string       `yaml:"directory"`
@@ -52,6 +57,9 @@ type Config struct {
 
 	// Generate is the generate configuration.
 	Generate Generate `json:"generate" yaml:"generate"`
+
+	// BreakingCheck `breaking` command's configuration
+	BreakingCheck BreakingCheck `json:"breaking" yaml:"breaking"`
 }
 
 var errFileNotFound = errors.New("config file not found")
