@@ -1,8 +1,6 @@
 package rules
 
 import (
-	"strings"
-
 	"github.com/yoheimuta/go-protoparser/v4/interpret/unordered"
 	"github.com/yoheimuta/go-protoparser/v4/parser"
 
@@ -13,7 +11,7 @@ var _ lint.Rule = (*ImportUsed)(nil)
 
 // ImportUsed this rule checks that all the imports declared across your Protobuf files are actually used.
 type ImportUsed struct {
-	instrParser  instructionParser
+	instrParser  lint.InstructionParser
 	isImportUsed map[lint.ImportPath]bool
 	pkgToImport  map[string][]lint.ImportPath
 }
@@ -27,8 +25,8 @@ func (i *ImportUsed) Message() string {
 func (i *ImportUsed) Validate(checkingProto lint.ProtoInfo) ([]lint.Issue, error) {
 	var res []lint.Issue
 
-	i.instrParser = instructionParser{
-		sourcePkgName: checkingProto.GetPackageName(),
+	i.instrParser = lint.InstructionParser{
+		SourcePkgName: checkingProto.GetPackageName(),
 	}
 
 	// collects flags if import was used
@@ -70,10 +68,10 @@ func (i *ImportUsed) Validate(checkingProto lint.ProtoInfo) ([]lint.Issue, error
 
 // checkIsImportUsed check if passed import is used in proto file
 func (i *ImportUsed) checkIsImportUsed(key string, checkingProto lint.ProtoInfo) {
-	instruction := i.instrParser.parse(key)
-	for _, importPath := range i.pkgToImport[instruction.pkgName] {
+	instruction := i.instrParser.Parse(key)
+	for _, importPath := range i.pkgToImport[instruction.PkgName] {
 		proto := checkingProto.ProtoFilesFromImport[importPath]
-		exist := existInProto(instruction.instruction, proto)
+		exist := existInProto(instruction.Instruction, proto)
 
 		if exist {
 			if _, ok := i.isImportUsed[importPath]; ok {
@@ -121,47 +119,6 @@ func (i *ImportUsed) checkInMessages(messages []*unordered.Message, checkingProt
 func (i *ImportUsed) checkInExtends(extends []*unordered.Extend, checkingProto lint.ProtoInfo) {
 	for _, extend := range extends {
 		i.checkIsImportUsed(extend.MessageType, checkingProto)
-	}
-}
-
-// instructionInfo collects info about instruction in proto file
-// e.g `google.api.http`:
-//
-//	`google.api` - package name
-//	'http' - instruction name
-type instructionInfo struct {
-	pkgName     string
-	instruction string
-}
-
-type instructionParser struct {
-	sourcePkgName string
-}
-
-// parseInstruction parse input string and return its package name
-// if passed input does not have package -> return pkgName as package name source proto file
-func (p instructionParser) parse(input string) instructionInfo {
-	// check if there is brackets, and extract
-	// (google.api.http) -> google.api.http
-	// (buf.validate.field).string.uuid -> buf.validate.field
-	// or pkg.FieldType -> pkg.FieldType
-	iStart := strings.Index(input, "(")
-	iEnd := strings.Index(input, ")")
-	if iStart != -1 && iEnd != -1 {
-		input = input[iStart+1 : iEnd]
-	}
-
-	idx := strings.LastIndex(input, ".")
-	if idx <= 0 {
-		return instructionInfo{
-			pkgName:     p.sourcePkgName,
-			instruction: input,
-		}
-	}
-
-	return instructionInfo{
-		pkgName:     input[:idx],
-		instruction: input[idx+1:],
 	}
 }
 
