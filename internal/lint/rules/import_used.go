@@ -27,12 +27,8 @@ func (i *ImportUsed) Message() string {
 func (i *ImportUsed) Validate(checkingProto lint.ProtoInfo) ([]lint.Issue, error) {
 	var res []lint.Issue
 
-	var sourcePkgName string
-	if len(checkingProto.Info.ProtoBody.Packages) > 0 {
-		sourcePkgName = checkingProto.Info.ProtoBody.Packages[0].Name
-	}
 	i.instrParser = instructionParser{
-		sourcePkgName: sourcePkgName,
+		sourcePkgName: checkingProto.GetPackageName(),
 	}
 
 	// collects flags if import was used

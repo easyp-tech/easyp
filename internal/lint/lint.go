@@ -36,6 +36,16 @@ type ProtoInfo struct {
 	ProtoFilesFromImport map[ImportPath]*unordered.Proto
 }
 
+// GetPackageName return package name of current proto file.
+// TODO: write unittest for it
+func (p *ProtoInfo) GetPackageName() string {
+	if len(p.Info.ProtoBody.Packages) == 0 {
+		return ""
+	}
+
+	return p.Info.ProtoBody.Packages[0].Name
+}
+
 // Rule is an interface for a rule checking.
 type Rule interface {
 	// Message returns the message of the rule.
