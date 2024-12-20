@@ -119,6 +119,12 @@ func (i *ImportUsed) checkInMessages(messages []*unordered.Message, checkingProt
 				i.checkIsImportUsed(fieldOption.OptionName, checkingProto)
 			}
 		}
+
+		for _, oneOf := range msg.MessageBody.Oneofs {
+			for _, field := range oneOf.OneofFields {
+				i.checkIsImportUsed(field.Type, checkingProto)
+			}
+		}
 	}
 }
 
