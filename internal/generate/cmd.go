@@ -4,22 +4,29 @@ import (
 	"context"
 	"fmt"
 	"io/fs"
+	"os"
+	stdpath "path"
 	"path/filepath"
 	"strings"
 
+	"github.com/easyp-tech/easyp/internal/api/config"
 	"github.com/easyp-tech/easyp/internal/generate/adapters"
 )
 
 const defaultCompiler = "protoc"
 
 // Generate generates files.
-func (g *Generator) Generate(ctx context.Context, root, directory string) error {
+func (g *Generator) Generate(ctx context.Context, root, directory string, cfg config.Generate) error {
 	q := Query{
 		Compiler: defaultCompiler,
 		Imports: []string{
 			root,
 		},
 		Plugins: g.plugins,
+	}
+
+	if cfg.ProtoRoot != "" {
+		q.Imports[0] = cfg.ProtoRoot
 	}
 
 	for _, dep := range g.deps {
@@ -29,6 +36,19 @@ func (g *Generator) Generate(ctx context.Context, root, directory string) error 
 		}
 
 		q.Imports = append(q.Imports, modulePaths)
+	}
+
+	if cfg.MakeOutDirs {
+		for _, plug := range q.Plugins {
+			if stdpath.IsAbs(plug.Out) {
+				continue
+			}
+
+			err := os.MkdirAll(plug.Out, 0777)
+			if err != nil {
+				return fmt.Errorf("os.MkdirAll: %w", err)
+			}
+		}
 	}
 
 	err := filepath.WalkDir(directory, func(path string, d fs.DirEntry, err error) error {
