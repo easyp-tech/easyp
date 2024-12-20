@@ -85,7 +85,7 @@ func (g Generate) Action(ctx *cli.Context) error {
 		dir = path.Join(modulePaths, cfg.Generate.DependencyEntryPoint.Path)
 	}
 
-	err = generator.Generate(ctx.Context, ".", dir)
+	err = generator.Generate(ctx.Context, ".", dir, cfg.Generate)
 	if err != nil {
 		return fmt.Errorf("generator.Generate: %w", err)
 	}
