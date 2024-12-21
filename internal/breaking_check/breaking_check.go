@@ -119,13 +119,13 @@ func (b *BreakingCheck) checkRootMessage(packageName PackageName, messageName Me
 		return res
 	}
 
-	issues := b.checkMessage(againstMessage, currentMessage)
+	issues := b.checkMessageOLD(againstMessage, currentMessage)
 	res = append(res, issues...)
 
 	return res
 }
 
-func (b *BreakingCheck) checkMessage(againstMessage, currentMessage Message) []lint.IssueInfo {
+func (b *BreakingCheck) checkMessageOLD(againstMessage, currentMessage Message) []lint.IssueInfo {
 	res := make([]lint.IssueInfo, 0)
 
 	// check fields
@@ -165,7 +165,7 @@ func (b *BreakingCheck) checkMessage(againstMessage, currentMessage Message) []l
 				continue
 			}
 
-			issues := b.checkMessage(againstMessageType, currentMessageType)
+			issues := b.checkMessageOLD(againstMessageType, currentMessageType)
 			res = append(res, issues...)
 			continue
 		}
