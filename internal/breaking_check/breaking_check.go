@@ -33,9 +33,10 @@ func (b *BreakingCheck) checkPackage(packageName PackageName, collection *Collec
 		res = append(res, issues...)
 	}
 
-	for messageName, _ := range collection.MessagesOLD {
-		issues := b.checkRootMessage(packageName, messageName)
+	for messagePath, _ := range collection.Messages {
+		issues := b.checkMessage(packageName, messagePath)
 		res = append(res, issues...)
+		//issues := b.checkRootMessage(packageName, messageName)
 	}
 
 	return res
@@ -100,6 +101,12 @@ func searchRPC(source []*parser.RPC, name string) (*parser.RPC, bool) {
 }
 
 // ===== MESSAGE =====
+
+func (b *BreakingCheck) checkMessage(packageName PackageName, messagePath string) []lint.IssueInfo {
+	res := make([]lint.IssueInfo, 0)
+
+	return res
+}
 
 // checkRootMessage check message from RPC (request or response) for breaking check
 func (b *BreakingCheck) checkRootMessage(packageName PackageName, messageName MessageName) []lint.IssueInfo {
