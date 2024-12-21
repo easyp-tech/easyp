@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/yoheimuta/go-protoparser/v4/interpret/unordered"
+	"github.com/yoheimuta/go-protoparser/v4/parser"
 
 	"github.com/easyp-tech/easyp/internal/lint"
 )
@@ -35,6 +36,13 @@ type (
 		*unordered.Message
 	}
 
+	OneOf struct {
+		OneOfPath     string
+		ProtoFilePath string
+		PackageName   PackageName
+		*parser.Oneof
+	}
+
 	// TODO: think about struct's name
 	Collection struct {
 		Services map[ServiceName]Service
@@ -44,6 +52,7 @@ type (
 		// };
 		// will be: MainMessage.NestedMessage
 		Messages map[string]Message
+		OneOfs   map[string]OneOf
 	}
 
 	// collects proto data collections
@@ -121,6 +130,23 @@ func readMessages(
 		collection.Messages[newMessagePath] = msg
 
 		readMessages(collection, newMessagePath, message.MessageBody.Messages, protoFilePath, packageName)
+		readOneOfs(collection, newMessagePath, message.MessageBody.Oneofs, protoFilePath, packageName)
+	}
+}
+
+func readOneOfs(
+	collection *Collection, messagePath string, oneOfs []*parser.Oneof, protoFilePath string, packageName PackageName,
+) {
+	for _, oneOf := range oneOfs {
+		newOneOfPath := getProtoEntityPath(messagePath, oneOf.OneofName)
+
+		res := OneOf{
+			OneOfPath:     newOneOfPath,
+			ProtoFilePath: protoFilePath,
+			PackageName:   packageName,
+			Oneof:         oneOf,
+		}
+		collection.OneOfs[newOneOfPath] = res
 	}
 }
 
@@ -136,6 +162,7 @@ func newCollection() *Collection {
 	collection := &Collection{
 		Services: make(map[ServiceName]Service),
 		Messages: make(map[string]Message),
+		OneOfs:   make(map[string]OneOf),
 	}
 	return collection
 }

@@ -95,3 +95,29 @@ func getFieldChangedTypeIssue(againstMessage Message, againstField, currentField
 	)
 	return buildIssue(againstMessage.ProtoFilePath, message, againstMessage.Meta.Pos, againstMessage.MessageName)
 }
+
+func getOneOfDeletedIssue(againstOneOf OneOf) lint.IssueInfo {
+	message := fmt.Sprintf("Previously present oneof \"%s\" was deleted.",
+		againstOneOf.OneOfPath,
+	)
+	return buildIssue(againstOneOf.ProtoFilePath, message, againstOneOf.Meta.Pos, againstOneOf.OneofName)
+}
+
+func getOneOfFieldDeletedIssue(againstOneOf OneOf, againstField *parser.OneofField) lint.IssueInfo {
+	message := fmt.Sprintf("Previously present field \"%s\" with name \"%s\" "+
+		"on OneOf \"%s\" was deleted.\n",
+		againstField.FieldNumber, againstField.FieldName, againstOneOf.OneOfPath,
+	)
+	return buildIssue(againstOneOf.ProtoFilePath, message, againstField.Meta.Pos, againstOneOf.OneofName)
+}
+
+func getOneOfFieldChangedTypeIssue(
+	againstOneOf OneOf, againstOneOfField, currentOneOfField *parser.OneofField,
+) lint.IssueInfo {
+	message := fmt.Sprintf("Field \"%s\" with name \"%s\" "+
+		"on OneOf \"%s\" changed type from \"%s\" to \"%s\".\n",
+		againstOneOfField.FieldNumber, againstOneOfField.FieldName, againstOneOf.OneOfPath,
+		againstOneOfField.Type, currentOneOfField.Type,
+	)
+	return buildIssue(againstOneOf.ProtoFilePath, message, againstOneOfField.Meta.Pos, againstOneOf.OneofName)
+}

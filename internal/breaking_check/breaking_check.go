@@ -38,6 +38,11 @@ func (b *BreakingCheck) checkPackage(packageName PackageName, collection *Collec
 		res = append(res, issues...)
 	}
 
+	for _, againstOneOf := range collection.OneOfs {
+		issues := b.checkOneOf(againstOneOf)
+		res = append(res, issues...)
+	}
+
 	return res
 }
 
@@ -131,20 +136,35 @@ func (b *BreakingCheck) checkMessage(againstMessage Message) []lint.IssueInfo {
 	return res
 }
 
-func checkOneOf() []lint.IssueInfo {
+// ===== OneOf =====
+
+func (b *BreakingCheck) checkOneOf(againstOneOf OneOf) []lint.IssueInfo {
 	res := make([]lint.IssueInfo, 0)
 
-	return res
-}
+	currentOneOf, ok := getOneOf(b.current, againstOneOf.PackageName, againstOneOf.OneOfPath)
+	if !ok {
+		issue := getOneOfDeletedIssue(againstOneOf)
+		res = append(res, issue)
+		return res
+	}
 
-func searchField(source []*parser.Field, number string) (*parser.Field, bool) {
-	for _, field := range source {
-		if field.FieldNumber == number {
-			return field, true
+	// check fields
+	for _, againstField := range againstOneOf.OneofFields {
+		currentField, ok := searchOneOfField(currentOneOf.OneofFields, againstField.FieldNumber)
+		if !ok {
+			issue := getOneOfFieldDeletedIssue(againstOneOf, againstField)
+			res = append(res, issue)
+			continue
+		}
+
+		if againstField.Type != currentField.Type {
+			issue := getOneOfFieldChangedTypeIssue(againstOneOf, againstField, currentField)
+			res = append(res, issue)
+			continue
 		}
 	}
 
-	return nil, false
+	return res
 }
 
 // ===== utils =====
@@ -161,4 +181,38 @@ func getMessage(source ProtoData, packageName PackageName, messagePath string) (
 	}
 
 	return message, true
+}
+
+func getOneOf(source ProtoData, packageName PackageName, oneOfPath string) (OneOf, bool) {
+	collection, ok := source[packageName]
+	if !ok {
+		return OneOf{}, false
+	}
+
+	oneOf, ok := collection.OneOfs[oneOfPath]
+	if !ok {
+		return OneOf{}, false
+	}
+
+	return oneOf, true
+}
+
+func searchField(source []*parser.Field, number string) (*parser.Field, bool) {
+	for _, field := range source {
+		if field.FieldNumber == number {
+			return field, true
+		}
+	}
+
+	return nil, false
+}
+
+func searchOneOfField(source []*parser.OneofField, number string) (*parser.OneofField, bool) {
+	for _, field := range source {
+		if field.FieldNumber == number {
+			return field, true
+		}
+	}
+
+	return nil, false
 }
