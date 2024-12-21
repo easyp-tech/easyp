@@ -121,3 +121,10 @@ func getOneOfFieldChangedTypeIssue(
 	)
 	return buildIssue(againstOneOf.ProtoFilePath, message, againstOneOfField.Meta.Pos, againstOneOf.OneofName)
 }
+
+func getEnumDeletedIssue(againstEnum Enum) lint.IssueInfo {
+	message := fmt.Sprintf("Previously present enum \"%s\" was deleted from file.\n",
+		againstEnum.EnumPath,
+	)
+	return buildIssue(againstEnum.ProtoFilePath, message, againstEnum.Meta.Pos, againstEnum.EnumName)
+}

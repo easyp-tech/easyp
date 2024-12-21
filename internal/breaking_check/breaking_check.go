@@ -43,6 +43,11 @@ func (b *BreakingCheck) checkPackage(packageName PackageName, collection *Collec
 		res = append(res, issues...)
 	}
 
+	for _, againstEnum := range collection.Enums {
+		issues := b.checkEnum(againstEnum)
+		res = append(res, issues...)
+	}
+
 	return res
 }
 
@@ -167,6 +172,22 @@ func (b *BreakingCheck) checkOneOf(againstOneOf OneOf) []lint.IssueInfo {
 	return res
 }
 
+// ===== ENUM =====
+
+func (b *BreakingCheck) checkEnum(againstEnum Enum) []lint.IssueInfo {
+	res := make([]lint.IssueInfo, 0)
+
+	currentEnum, ok := getEnum(b.current, againstEnum.PackageName, againstEnum.EnumPath)
+	if !ok {
+		issue := getEnumDeletedIssue(againstEnum)
+		res = append(res, issue)
+		return res
+	}
+	_ = currentEnum
+
+	return res
+}
+
 // ===== utils =====
 
 func getMessage(source ProtoData, packageName PackageName, messagePath string) (Message, bool) {
@@ -195,6 +216,20 @@ func getOneOf(source ProtoData, packageName PackageName, oneOfPath string) (OneO
 	}
 
 	return oneOf, true
+}
+
+func getEnum(source ProtoData, packageName PackageName, enumPath string) (Enum, bool) {
+	collection, ok := source[packageName]
+	if !ok {
+		return Enum{}, false
+	}
+
+	enum, ok := collection.Enums[enumPath]
+	if !ok {
+		return Enum{}, false
+	}
+
+	return enum, true
 }
 
 func searchField(source []*parser.Field, number string) (*parser.Field, bool) {

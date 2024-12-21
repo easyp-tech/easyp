@@ -43,6 +43,13 @@ type (
 		*parser.Oneof
 	}
 
+	Enum struct {
+		EnumPath      string
+		ProtoFilePath string
+		PackageName   PackageName
+		*unordered.Enum
+	}
+
 	// TODO: think about struct's name
 	Collection struct {
 		Services map[ServiceName]Service
@@ -53,6 +60,7 @@ type (
 		// will be: MainMessage.NestedMessage
 		Messages map[string]Message
 		OneOfs   map[string]OneOf
+		Enums    map[string]Enum
 	}
 
 	// collects proto data collections
@@ -105,6 +113,7 @@ func collectProtoFileInfo(protoData ProtoData, protoFile *unordered.Proto, pkgNa
 	}
 
 	readMessages(collection, "", protoFile.ProtoBody.Messages, protoFilePath, pkgName)
+	readEnums(collection, "", protoFile.ProtoBody.Enums, protoFilePath, pkgName)
 	protoData[pkgName] = collection
 }
 
@@ -131,6 +140,7 @@ func readMessages(
 
 		readMessages(collection, newMessagePath, message.MessageBody.Messages, protoFilePath, packageName)
 		readOneOfs(collection, newMessagePath, message.MessageBody.Oneofs, protoFilePath, packageName)
+		readEnums(collection, newMessagePath, message.MessageBody.Enums, protoFilePath, packageName)
 	}
 }
 
@@ -150,6 +160,22 @@ func readOneOfs(
 	}
 }
 
+func readEnums(
+	collection *Collection, messagePath string, enums []*unordered.Enum, protoFilePath string, packageName PackageName,
+) {
+	for _, enum := range enums {
+		newEnumPath := getProtoEntityPath(messagePath, enum.EnumName)
+
+		res := Enum{
+			EnumPath:      newEnumPath,
+			ProtoFilePath: protoFilePath,
+			PackageName:   packageName,
+			Enum:          enum,
+		}
+		collection.Enums[newEnumPath] = res
+	}
+}
+
 func getProtoEntityPath(rootPath, name string) string {
 	if rootPath == "" {
 		return name
@@ -163,6 +189,7 @@ func newCollection() *Collection {
 		Services: make(map[ServiceName]Service),
 		Messages: make(map[string]Message),
 		OneOfs:   make(map[string]OneOf),
+		Enums:    make(map[string]Enum),
 	}
 	return collection
 }
