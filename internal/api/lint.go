@@ -29,12 +29,11 @@ const (
 var (
 	flagLintDirectoryPath = &cli.StringFlag{
 		Name:       "path",
-		Usage:      "set path to directory with proto files",
+		Usage:      "set relative path to directory with proto files",
 		Required:   true,
 		HasBeenSet: true,
 		Value:      ".",
 		Aliases:    []string{"p"},
-		EnvVars:    []string{"EASYP_PATH"},
 	}
 
 	flagFormat = &cli.GenericFlag{
