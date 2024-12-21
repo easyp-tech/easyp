@@ -7,8 +7,8 @@ import (
 
 	"github.com/urfave/cli/v2"
 
-	"github.com/easyp-tech/easyp/internal/api/config"
 	"github.com/easyp-tech/easyp/internal/api/factories"
+	"github.com/easyp-tech/easyp/internal/config"
 	"github.com/easyp-tech/easyp/internal/mod/models"
 )
 

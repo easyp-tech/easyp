@@ -9,11 +9,11 @@ import (
 	"github.com/urfave/cli/v2"
 
 	"github.com/easyp-tech/easyp/internal/api"
-	"github.com/easyp-tech/easyp/internal/api/config"
+	"github.com/easyp-tech/easyp/internal/config"
 	"github.com/easyp-tech/easyp/internal/version"
 )
 
-func initLogger(isDebug bool) {
+func initLogger(isDebug bool) *slog.Logger {
 	// use info as default level
 	level := slog.LevelInfo
 
@@ -21,7 +21,19 @@ func initLogger(isDebug bool) {
 		level = slog.LevelDebug
 	}
 
-	slog.SetLogLoggerLevel(level)
+	logger := slog.New(
+		slog.NewTextHandler(
+			os.Stderr,
+			&slog.HandlerOptions{
+				AddSource: false,
+				Level:     level,
+			},
+		),
+	)
+
+	slog.SetDefault(logger) // TODO: remove global state
+
+	return logger
 }
 
 func main() {
