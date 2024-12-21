@@ -34,8 +34,8 @@ type (
 
 	// TODO: think about struct's name
 	Collection struct {
-		Services map[ServiceName]Service
-		Messages map[MessageName]Message
+		Services    map[ServiceName]Service
+		MessagesOLD map[MessageName]Message
 	}
 
 	// collects proto data collections
@@ -67,7 +67,7 @@ func Collect(protoInfos []lint.ProtoInfo) (ProtoData, error) {
 
 		// read all messages
 		for _, message := range protoFile.ProtoBody.Messages {
-			collection.Messages[MessageName(message.MessageName)] = Message{
+			collection.MessagesOLD[MessageName(message.MessageName)] = Message{
 				ProtoFilePath: protoInfo.Path,
 				PackageName:   pkgName,
 				Message:       message,
@@ -82,8 +82,8 @@ func Collect(protoInfos []lint.ProtoInfo) (ProtoData, error) {
 
 func newCollection() *Collection {
 	collection := &Collection{
-		Services: make(map[ServiceName]Service),
-		Messages: make(map[MessageName]Message),
+		Services:    make(map[ServiceName]Service),
+		MessagesOLD: make(map[MessageName]Message),
 	}
 	return collection
 }

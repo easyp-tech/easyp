@@ -33,7 +33,7 @@ func (b *BreakingCheck) checkPackage(packageName PackageName, collection *Collec
 		res = append(res, issues...)
 	}
 
-	for messageName, _ := range collection.Messages {
+	for messageName, _ := range collection.MessagesOLD {
 		issues := b.checkRootMessage(packageName, messageName)
 		res = append(res, issues...)
 	}
@@ -192,7 +192,7 @@ func getMessage(source ProtoData, packageName PackageName, messageName MessageNa
 		return Message{}, false
 	}
 
-	message, ok := collection.Messages[messageName]
+	message, ok := collection.MessagesOLD[messageName]
 	if !ok {
 		return Message{}, false
 	}
