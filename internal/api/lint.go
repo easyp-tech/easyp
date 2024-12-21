@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log"
 	"log/slog"
 	"os"
 
@@ -115,12 +116,20 @@ func (l Lint) action(ctx *cli.Context) error {
 		return fmt.Errorf("cfg.BuildLinterRules: %w", err)
 	}
 
-	rootPath := ctx.String(flagLintDirectoryPath.Name)
+	d, err := os.Getwd()
+	if err != nil {
+		panic(err)
+	}
+
+	dir := ctx.String(flagLintDirectoryPath.Name)
+
+	rootPath := d
 	dirFS := os.DirFS(rootPath)
+	log.Printf(d)
 
 	c := lint.New(lintRules, cfg.Lint.Ignore, cfg.Lint.IgnoreOnly, cfg.Deps)
 
-	issues, err := c.Lint(ctx.Context, dirFS)
+	issues, err := c.Lint(ctx.Context, dirFS, dir)
 	if err != nil {
 		return fmt.Errorf("c.Lint: %w", err)
 	}
