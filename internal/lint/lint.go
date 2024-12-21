@@ -46,6 +46,14 @@ func (p *ProtoInfo) GetPackageName() string {
 	return p.Info.ProtoBody.Packages[0].Name
 }
 
+func GetPackageName(protoFile *unordered.Proto) string {
+	if len(protoFile.ProtoBody.Packages) == 0 {
+		return ""
+	}
+
+	return protoFile.ProtoBody.Packages[0].Name
+}
+
 // Rule is an interface for a rule checking.
 type Rule interface {
 	// Message returns the message of the rule.

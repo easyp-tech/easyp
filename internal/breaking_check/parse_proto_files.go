@@ -55,40 +55,38 @@ func Collect(protoInfos []lint.ProtoInfo) (ProtoData, error) {
 	protoData := make(ProtoData)
 
 	for _, protoInfo := range protoInfos {
-		pkgName := PackageName(protoInfo.GetPackageName())
+		pkgName := PackageName(lint.GetPackageName(protoInfo.Info))
+		protoFilePath := protoInfo.Path
 
-		collection, ok := protoData[pkgName]
-		if !ok {
-			collection = newCollection()
+		collectProtoFileInfo(protoData, protoInfo.Info, pkgName, protoFilePath)
+
+		// collectes from imports
+		for importPath, protoFile := range protoInfo.ProtoFilesFromImport {
+			pkgName := lint.GetPackageName(protoFile)
+			collectProtoFileInfo(protoData, protoFile, PackageName(pkgName), string(importPath))
 		}
-
-		protoFile := protoInfo.Info
-
-		// read all services from protoFile
-		for _, service := range protoFile.ProtoBody.Services {
-			collection.Services[ServiceName(service.ServiceName)] = Service{
-				ProtoFilePath: protoInfo.Path,
-				PackageName:   pkgName,
-				Service:       service,
-			}
-		}
-
-		// starts with empty path
-		readMessages(collection, "", protoFile.ProtoBody.Messages, protoInfo.Path, pkgName)
-
-		// read all messages
-		for _, message := range protoFile.ProtoBody.Messages {
-			collection.MessagesOLD[MessageName(message.MessageName)] = Message{
-				ProtoFilePath: protoInfo.Path,
-				PackageName:   pkgName,
-				Message:       message,
-			}
-		}
-
-		protoData[PackageName(protoInfo.GetPackageName())] = collection
 	}
 
 	return protoData, nil
+}
+
+func collectProtoFileInfo(protoData ProtoData, protoFile *unordered.Proto, pkgName PackageName, protoFilePath string) {
+	collection, ok := protoData[pkgName]
+	if !ok {
+		collection = newCollection()
+	}
+
+	// read all services from protoFile
+	for _, service := range protoFile.ProtoBody.Services {
+		collection.Services[ServiceName(service.ServiceName)] = Service{
+			ProtoFilePath: protoFilePath,
+			PackageName:   pkgName,
+			Service:       service,
+		}
+	}
+
+	readMessages(collection, "", protoFile.ProtoBody.Messages, protoFilePath, pkgName)
+	protoData[pkgName] = collection
 }
 
 func readMessages(
