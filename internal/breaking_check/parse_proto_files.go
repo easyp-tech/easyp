@@ -53,17 +53,27 @@ type (
 
 func Collect(protoInfos []lint.ProtoInfo) (ProtoData, error) {
 	protoData := make(ProtoData)
+	collectedProtoFiles := make(map[string]struct{})
 
 	for _, protoInfo := range protoInfos {
-		pkgName := PackageName(lint.GetPackageName(protoInfo.Info))
 		protoFilePath := protoInfo.Path
+		pkgName := PackageName(lint.GetPackageName(protoInfo.Info))
 
-		collectProtoFileInfo(protoData, protoInfo.Info, pkgName, protoFilePath)
+		if _, ok := collectedProtoFiles[protoFilePath]; !ok {
+			collectProtoFileInfo(protoData, protoInfo.Info, pkgName, protoFilePath)
+			collectedProtoFiles[protoFilePath] = struct{}{}
+		}
 
 		// collectes from imports
 		for importPath, protoFile := range protoInfo.ProtoFilesFromImport {
+			protoFilePath := string(importPath)
+			if _, ok := collectedProtoFiles[protoFilePath]; ok {
+				continue
+			}
+
 			pkgName := lint.GetPackageName(protoFile)
-			collectProtoFileInfo(protoData, protoFile, PackageName(pkgName), string(importPath))
+			collectProtoFileInfo(protoData, protoFile, PackageName(pkgName), protoFilePath)
+			collectedProtoFiles[protoFilePath] = struct{}{}
 		}
 	}
 
@@ -103,6 +113,9 @@ func readMessages(
 			Message:       message,
 		}
 		newMessagePath := getProtoEntityPath(messagePath, message.MessageName)
+		if _, ok := collection.Messages[newMessagePath]; ok {
+			panic("ALREADY EXIST") // TODO: return error - check for duplicate
+		}
 		collection.Messages[newMessagePath] = msg
 
 		readMessages(collection, newMessagePath, message.MessageBody.Messages, protoFilePath, packageName)

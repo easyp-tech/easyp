@@ -36,7 +36,6 @@ func (b *BreakingCheck) checkPackage(packageName PackageName, collection *Collec
 	for messagePath, _ := range collection.Messages {
 		issues := b.checkMessage(packageName, messagePath)
 		res = append(res, issues...)
-		//issues := b.checkRootMessage(packageName, messageName)
 	}
 
 	return res
