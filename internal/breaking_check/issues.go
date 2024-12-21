@@ -29,7 +29,7 @@ func getServiceDeletedIssue(againstService Service) lint.IssueInfo {
 	message := fmt.Sprintf(
 		"Previously present service \"%s\" was deleted from file.", againstService.ServiceName,
 	)
-	return buildIssue(againstService.Path, message, againstService.Meta.Pos, againstService.ServiceName)
+	return buildIssue(againstService.ProtoFilePath, message, againstService.Meta.Pos, againstService.ServiceName)
 }
 
 func getRPCDeletedIssue(againstService Service, againstRPC *parser.RPC) lint.IssueInfo {
@@ -37,7 +37,7 @@ func getRPCDeletedIssue(againstService Service, againstRPC *parser.RPC) lint.Iss
 		"Previously present RPC \"%s\" on service \"%s\" was deleted.",
 		againstRPC.RPCName, againstService.ServiceName,
 	)
-	return buildIssue(againstService.Path, message, againstService.Meta.Pos, againstService.ServiceName)
+	return buildIssue(againstService.ProtoFilePath, message, againstService.Meta.Pos, againstService.ServiceName)
 }
 
 func getRPCRequestChangedTypeIssue(
@@ -53,7 +53,7 @@ func getRPCRequestChangedTypeIssue(
 		againstParser.Parse(againstRPC.RPCRequest.MessageType).GetFullName(),
 		currentParser.Parse(currentRPC.RPCRequest.MessageType).GetFullName(),
 	)
-	return buildIssue(againstService.Path, message, againstService.Meta.Pos, againstService.ServiceName)
+	return buildIssue(againstService.ProtoFilePath, message, againstService.Meta.Pos, againstService.ServiceName)
 }
 
 func getRPCResponseChangedTypeIssue(
@@ -69,14 +69,14 @@ func getRPCResponseChangedTypeIssue(
 		againstParser.Parse(againstRPC.RPCResponse.MessageType).GetFullName(),
 		currentParser.Parse(currentRPC.RPCResponse.MessageType).GetFullName(),
 	)
-	return buildIssue(againstService.Path, message, againstService.Meta.Pos, againstService.ServiceName)
+	return buildIssue(againstService.ProtoFilePath, message, againstService.Meta.Pos, againstService.ServiceName)
 }
 
 func getMessageDeletedIssue(againstMessage Message) lint.IssueInfo {
 	message := fmt.Sprintf(
 		"Previously present message \"%s\" was deleted from file.\n", againstMessage.MessageName,
 	)
-	return buildIssue(againstMessage.Path, message, againstMessage.Meta.Pos, againstMessage.MessageName)
+	return buildIssue(againstMessage.ProtoFilePath, message, againstMessage.Meta.Pos, againstMessage.MessageName)
 }
 
 func getFieldDeletedIssue(againstMessage Message, againstField *parser.Field) lint.IssueInfo {
@@ -84,7 +84,7 @@ func getFieldDeletedIssue(againstMessage Message, againstField *parser.Field) li
 		"on message \"%s\" was deleted.",
 		againstField.FieldNumber, againstField.FieldName, againstMessage.MessageName,
 	)
-	return buildIssue(againstMessage.Path, message, againstMessage.Meta.Pos, againstMessage.MessageName)
+	return buildIssue(againstMessage.ProtoFilePath, message, againstMessage.Meta.Pos, againstMessage.MessageName)
 }
 
 func getFieldChangedTypeIssue(againstMessage Message, againstField, currentField *parser.Field) lint.IssueInfo {
@@ -93,5 +93,5 @@ func getFieldChangedTypeIssue(againstMessage Message, againstField, currentField
 		againstField.FieldName, againstField.FieldName, againstMessage.MessageName,
 		againstField.Type, currentField.Type,
 	)
-	return buildIssue(againstMessage.Path, message, againstMessage.Meta.Pos, againstMessage.MessageName)
+	return buildIssue(againstMessage.ProtoFilePath, message, againstMessage.Meta.Pos, againstMessage.MessageName)
 }

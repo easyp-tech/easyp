@@ -21,14 +21,14 @@ type (
 // collections
 type (
 	Service struct {
-		Path        string
-		PackageName PackageName
+		ProtoFilePath string
+		PackageName   PackageName
 		*unordered.Service
 	}
 
 	Message struct {
-		Path        string
-		PackageName PackageName
+		ProtoFilePath string
+		PackageName   PackageName
 		*unordered.Message
 	}
 
@@ -59,18 +59,18 @@ func Collect(protoInfos []lint.ProtoInfo) (ProtoData, error) {
 		// read all services from protoFile
 		for _, service := range protoFile.ProtoBody.Services {
 			collection.Services[ServiceName(service.ServiceName)] = Service{
-				Path:        protoInfo.Path,
-				PackageName: pkgName,
-				Service:     service,
+				ProtoFilePath: protoInfo.Path,
+				PackageName:   pkgName,
+				Service:       service,
 			}
 		}
 
 		// read all messages
 		for _, message := range protoFile.ProtoBody.Messages {
 			collection.Messages[MessageName(message.MessageName)] = Message{
-				Path:        protoInfo.Path,
-				PackageName: pkgName,
-				Message:     message,
+				ProtoFilePath: protoInfo.Path,
+				PackageName:   pkgName,
+				Message:       message,
 			}
 		}
 
