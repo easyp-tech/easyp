@@ -43,8 +43,7 @@ type (
 		// 		message NestedMessage{};
 		// };
 		// will be: MainMessage.NestedMessage
-		Messages    map[string]Message
-		MessagesOLD map[MessageName]Message
+		Messages map[string]Message
 	}
 
 	// collects proto data collections
@@ -135,9 +134,8 @@ func getProtoEntityPath(rootPath, name string) string {
 
 func newCollection() *Collection {
 	collection := &Collection{
-		Services:    make(map[ServiceName]Service),
-		Messages:    make(map[string]Message),
-		MessagesOLD: make(map[MessageName]Message),
+		Services: make(map[ServiceName]Service),
+		Messages: make(map[string]Message),
 	}
 	return collection
 }

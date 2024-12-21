@@ -131,6 +131,12 @@ func (b *BreakingCheck) checkMessage(againstMessage Message) []lint.IssueInfo {
 	return res
 }
 
+func checkOneOf() []lint.IssueInfo {
+	res := make([]lint.IssueInfo, 0)
+
+	return res
+}
+
 func searchField(source []*parser.Field, number string) (*parser.Field, bool) {
 	for _, field := range source {
 		if field.FieldNumber == number {
