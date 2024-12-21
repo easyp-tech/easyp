@@ -29,6 +29,7 @@ type (
 	}
 
 	Message struct {
+		MessagePath   string
 		ProtoFilePath string
 		PackageName   PackageName
 		*unordered.Message
@@ -107,14 +108,16 @@ func readMessages(
 	packageName PackageName,
 ) {
 	for _, message := range messages {
-		msg := Message{
-			ProtoFilePath: protoFilePath,
-			PackageName:   packageName,
-			Message:       message,
-		}
 		newMessagePath := getProtoEntityPath(messagePath, message.MessageName)
 		if _, ok := collection.Messages[newMessagePath]; ok {
 			panic("ALREADY EXIST") // TODO: return error - check for duplicate
+		}
+
+		msg := Message{
+			MessagePath:   newMessagePath,
+			ProtoFilePath: protoFilePath,
+			PackageName:   packageName,
+			Message:       message,
 		}
 		collection.Messages[newMessagePath] = msg
 

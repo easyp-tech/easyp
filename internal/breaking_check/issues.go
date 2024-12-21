@@ -74,7 +74,7 @@ func getRPCResponseChangedTypeIssue(
 
 func getMessageDeletedIssue(againstMessage Message) lint.IssueInfo {
 	message := fmt.Sprintf(
-		"Previously present message \"%s\" was deleted from file.\n", againstMessage.MessageName,
+		"Previously present message \"%s\" was deleted from file.\n", againstMessage.MessagePath,
 	)
 	return buildIssue(againstMessage.ProtoFilePath, message, againstMessage.Meta.Pos, againstMessage.MessageName)
 }

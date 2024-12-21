@@ -33,8 +33,8 @@ func (b *BreakingCheck) checkPackage(packageName PackageName, collection *Collec
 		res = append(res, issues...)
 	}
 
-	for messagePath, _ := range collection.Messages {
-		issues := b.checkMessage(packageName, messagePath)
+	for _, againstMessage := range collection.Messages {
+		issues := b.checkMessage(againstMessage)
 		res = append(res, issues...)
 	}
 
@@ -101,8 +101,17 @@ func searchRPC(source []*parser.RPC, name string) (*parser.RPC, bool) {
 
 // ===== MESSAGE =====
 
-func (b *BreakingCheck) checkMessage(packageName PackageName, messagePath string) []lint.IssueInfo {
+func (b *BreakingCheck) checkMessage(againstMessage Message) []lint.IssueInfo {
 	res := make([]lint.IssueInfo, 0)
+
+	currentMessage, ok := getMessage(b.current, againstMessage.PackageName, againstMessage.MessagePath)
+	if !ok {
+		// message was deleted
+		issue := getMessageDeletedIssue(againstMessage)
+		res = append(res, issue)
+		return res
+	}
+	_ = currentMessage
 
 	return res
 }
@@ -111,22 +120,22 @@ func (b *BreakingCheck) checkMessage(packageName PackageName, messagePath string
 func (b *BreakingCheck) checkRootMessage(packageName PackageName, messageName MessageName) []lint.IssueInfo {
 	res := make([]lint.IssueInfo, 0)
 
-	messageInfo := lint.InstructionParser{
-		SourcePkgName: string(packageName),
-	}.Parse(string(messageName))
-
-	againstMessage, _ := getMessage(b.against, PackageName(messageInfo.PkgName), MessageName(messageInfo.Instruction))
-
-	currentMessage, ok := getMessage(b.current, PackageName(messageInfo.PkgName), MessageName(messageInfo.Instruction))
-	if !ok {
-		// message was deleted
-		issue := getMessageDeletedIssue(againstMessage)
-		res = append(res, issue)
-		return res
-	}
-
-	issues := b.checkMessageOLD(againstMessage, currentMessage)
-	res = append(res, issues...)
+	//messageInfo := lint.InstructionParser{
+	//	SourcePkgName: string(packageName),
+	//}.Parse(string(messageName))
+	//
+	//againstMessage, _ := getMessage(b.against, PackageName(messageInfo.PkgName), MessageName(messageInfo.Instruction))
+	//
+	//currentMessage, ok := getMessage(b.current, PackageName(messageInfo.PkgName), MessageName(messageInfo.Instruction))
+	//if !ok {
+	//	// message was deleted
+	//	issue := getMessageDeletedIssue(againstMessage)
+	//	res = append(res, issue)
+	//	return res
+	//}
+	//
+	//issues := b.checkMessageOLD(againstMessage, currentMessage)
+	//res = append(res, issues...)
 
 	return res
 }
@@ -135,48 +144,48 @@ func (b *BreakingCheck) checkMessageOLD(againstMessage, currentMessage Message) 
 	res := make([]lint.IssueInfo, 0)
 
 	// check fields
-	for _, againstField := range againstMessage.MessageBody.Fields {
-		currentField, ok := searchField(currentMessage.MessageBody.Fields, againstField.FieldNumber)
-		if !ok {
-			issue := getFieldDeletedIssue(againstMessage, againstField)
-			res = append(res, issue)
-			continue
-		}
-
-		// check fields type
-		if againstField.Type != currentField.Type {
-			issue := getFieldChangedTypeIssue(againstMessage, againstField, currentField)
-			res = append(res, issue)
-			continue
-		}
-
-		// look for type in ProtoData, in nested
-		// maybe should look for in deps as well
-		messageInfo := lint.InstructionParser{
-			SourcePkgName: string(againstMessage.PackageName),
-		}.Parse(againstField.Type)
-
-		// look for in messages
-		againstMessageType, ok := getMessage(
-			b.against, PackageName(messageInfo.PkgName), MessageName(messageInfo.Instruction),
-		)
-		if ok {
-			// message type found
-			currentMessageType, ok := getMessage(
-				b.current, PackageName(messageInfo.PkgName), MessageName(messageInfo.Instruction),
-			)
-			if !ok {
-				issue := getMessageDeletedIssue(againstMessageType)
-				res = append(res, issue)
-				continue
-			}
-
-			issues := b.checkMessageOLD(againstMessageType, currentMessageType)
-			res = append(res, issues...)
-			continue
-		}
-
-	} // for _, againstField := range againstMessage.MessageBody.Fields
+	//for _, againstField := range againstMessage.MessageBody.Fields {
+	//	currentField, ok := searchField(currentMessage.MessageBody.Fields, againstField.FieldNumber)
+	//	if !ok {
+	//		issue := getFieldDeletedIssue(againstMessage, againstField)
+	//		res = append(res, issue)
+	//		continue
+	//	}
+	//
+	//	// check fields type
+	//	if againstField.Type != currentField.Type {
+	//		issue := getFieldChangedTypeIssue(againstMessage, againstField, currentField)
+	//		res = append(res, issue)
+	//		continue
+	//	}
+	//
+	//	// look for type in ProtoData, in nested
+	//	// maybe should look for in deps as well
+	//	messageInfo := lint.InstructionParser{
+	//		SourcePkgName: string(againstMessage.PackageName),
+	//	}.Parse(againstField.Type)
+	//
+	//	// look for in messages
+	//	againstMessageType, ok := getMessage(
+	//		b.against, PackageName(messageInfo.PkgName), MessageName(messageInfo.Instruction),
+	//	)
+	//	if ok {
+	//		// message type found
+	//		currentMessageType, ok := getMessage(
+	//			b.current, PackageName(messageInfo.PkgName), MessageName(messageInfo.Instruction),
+	//		)
+	//		if !ok {
+	//			issue := getMessageDeletedIssue(againstMessageType)
+	//			res = append(res, issue)
+	//			continue
+	//		}
+	//
+	//		issues := b.checkMessageOLD(againstMessageType, currentMessageType)
+	//		res = append(res, issues...)
+	//		continue
+	//	}
+	//
+	//} // for _, againstField := range againstMessage.MessageBody.Fields
 
 	return res
 }
@@ -192,13 +201,13 @@ func searchField(source []*parser.Field, number string) (*parser.Field, bool) {
 }
 
 // ===== utils =====
-func getMessage(source ProtoData, packageName PackageName, messageName MessageName) (Message, bool) {
+func getMessage(source ProtoData, packageName PackageName, messagePath string) (Message, bool) {
 	collection, ok := source[packageName]
 	if !ok {
 		return Message{}, false
 	}
 
-	message, ok := collection.MessagesOLD[messageName]
+	message, ok := collection.Messages[messagePath]
 	if !ok {
 		return Message{}, false
 	}
