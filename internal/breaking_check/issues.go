@@ -6,7 +6,6 @@ import (
 	"github.com/yoheimuta/go-protoparser/v4/parser"
 	"github.com/yoheimuta/go-protoparser/v4/parser/meta"
 
-	"github.com/easyp-tech/easyp/internal/common"
 	"github.com/easyp-tech/easyp/internal/lint"
 )
 
@@ -44,8 +43,8 @@ func getRPCDeletedIssue(againstService Service, againstRPC *parser.RPC) lint.Iss
 func getRPCRequestChangedTypeIssue(
 	againstService, current Service, againstRPC, currentRPC *parser.RPC,
 ) lint.IssueInfo {
-	againstParser := common.InstructionParser{SourcePkgName: string(againstService.PackageName)}
-	currentParser := common.InstructionParser{SourcePkgName: string(current.PackageName)}
+	againstParser := lint.InstructionParser{SourcePkgName: string(againstService.PackageName)}
+	currentParser := lint.InstructionParser{SourcePkgName: string(current.PackageName)}
 
 	message := fmt.Sprintf(
 		"RPC \"%s\" on service \"%s\" changed request type "+

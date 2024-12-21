@@ -3,7 +3,6 @@ package breakingcheck
 import (
 	"github.com/yoheimuta/go-protoparser/v4/parser"
 
-	"github.com/easyp-tech/easyp/internal/common"
 	"github.com/easyp-tech/easyp/internal/lint"
 )
 
@@ -108,7 +107,7 @@ func searchRPC(source []*parser.RPC, name string) (*parser.RPC, bool) {
 func (b *BreakingCheck) checkInRPCMessage(packageName PackageName, messageName MessageName) []lint.IssueInfo {
 	res := make([]lint.IssueInfo, 0)
 
-	messageInfo := common.InstructionParser{
+	messageInfo := lint.InstructionParser{
 		SourcePkgName: string(packageName),
 	}.Parse(string(messageName))
 
