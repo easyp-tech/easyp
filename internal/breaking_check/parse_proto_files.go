@@ -34,7 +34,13 @@ type (
 
 	// TODO: think about struct's name
 	Collection struct {
-		Services    map[ServiceName]Service
+		Services map[ServiceName]Service
+		// key message path - for supporting nested messages:
+		// message MainMessage {
+		// 		message NestedMessage{};
+		// };
+		// will be: MainMessage.NestedMessage
+		Messages    map[string]Message
 		MessagesOLD map[MessageName]Message
 	}
 
