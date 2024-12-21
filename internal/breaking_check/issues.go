@@ -59,8 +59,8 @@ func getRPCRequestChangedTypeIssue(
 func getRPCResponseChangedTypeIssue(
 	againstService, current Service, againstRPC, currentRPC *parser.RPC,
 ) lint.IssueInfo {
-	againstParser := common.InstructionParser{SourcePkgName: string(againstService.PackageName)}
-	currentParser := common.InstructionParser{SourcePkgName: string(current.PackageName)}
+	againstParser := lint.InstructionParser{SourcePkgName: string(againstService.PackageName)}
+	currentParser := lint.InstructionParser{SourcePkgName: string(current.PackageName)}
 
 	message := fmt.Sprintf(
 		"RPC \"%s\" on service \"%s\" changed response type "+

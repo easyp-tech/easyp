@@ -148,7 +148,7 @@ func (b *BreakingCheck) checkMessage(againstMessage, currentMessage Message) []l
 
 		// look for type in ProtoData, in nested
 		// maybe should look for in deps as well
-		messageInfo := common.InstructionParser{
+		messageInfo := lint.InstructionParser{
 			SourcePkgName: string(againstMessage.PackageName),
 		}.Parse(againstField.Type)
 
