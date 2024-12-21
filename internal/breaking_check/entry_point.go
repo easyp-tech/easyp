@@ -13,7 +13,7 @@ const (
 	rootProjectDir = "."
 	//rootProjectDir = "/mnt/ssd_storage/Projects/Hound/easyp/proto-experiments"
 	// path where porot files are stored
-	path = "no_deps"
+	path = "no_deps/v1"
 	//path = "."
 	//path = "iam"
 
