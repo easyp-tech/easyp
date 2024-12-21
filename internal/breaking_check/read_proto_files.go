@@ -56,10 +56,15 @@ func ReadCurrentProtoFiles(ctx context.Context, path string) ([]lint.ProtoInfo, 
 			return fmt.Errorf("readProtoFile: %w", err)
 		}
 
+		protoFilesFromImport, err := readFilesFromImport(ctx, disk, proto)
+		if err != nil {
+			return fmt.Errorf("readFilesFromImport: %w", err)
+		}
+
 		protoInfo := lint.ProtoInfo{
-			Path: path,
-			Info: proto,
-			//ProtoFilesFromImport: protoFilesFromImport, // skip imports
+			Path:                 path,
+			Info:                 proto,
+			ProtoFilesFromImport: protoFilesFromImport,
 		}
 		protoFiles = append(protoFiles, protoInfo)
 
@@ -70,6 +75,30 @@ func ReadCurrentProtoFiles(ctx context.Context, path string) ([]lint.ProtoInfo, 
 	}
 
 	return protoFiles, nil
+}
+
+func readFilesFromImport(
+	ctx context.Context, disk fs.FS, scanProto *unordered.Proto,
+) (map[lint.ImportPath]*unordered.Proto, error) {
+	protoFilesFromImport := make(map[lint.ImportPath]*unordered.Proto, len(scanProto.ProtoBody.Imports))
+
+	for _, imp := range scanProto.ProtoBody.Imports {
+		importPath := lint.ConvertImportPath(imp.Location)
+		f, err := disk.Open(string(importPath))
+		if err != nil {
+			// skip may be it's thrd party dep
+			continue
+		}
+
+		fileFromImport, err := readProtoFile(f)
+		if err != nil {
+			return nil, fmt.Errorf("readFileFromImport: %w", err)
+		}
+
+		protoFilesFromImport[importPath] = fileFromImport
+	}
+
+	return protoFilesFromImport, nil
 }
 
 // the same as internal/lint/cmd.go:readProtoFile
@@ -131,10 +160,16 @@ func ReadAgainstProtoFiles(ctx context.Context, gitRef string, rootDir, path str
 		if err != nil {
 			return fmt.Errorf("readProtoFile: %w", err)
 		}
+
+		protoFilesFromImport, err := readFilesFromImportFromGIT(ctx, treeAgainst, proto)
+		if err != nil {
+			return fmt.Errorf("readFilesFromImport: %w", err)
+		}
+
 		protoInfo := lint.ProtoInfo{
-			Path: filepath.Join(rootDir, f.Name),
-			Info: proto,
-			//ProtoFilesFromImport: protoFilesFromImport, // skip imports
+			Path:                 filepath.Join(rootDir, f.Name),
+			Info:                 proto,
+			ProtoFilesFromImport: protoFilesFromImport,
 		}
 		protoFiles = append(protoFiles, protoInfo)
 
@@ -145,6 +180,33 @@ func ReadAgainstProtoFiles(ctx context.Context, gitRef string, rootDir, path str
 	}
 
 	return protoFiles, nil
+}
+
+func readFilesFromImportFromGIT(
+	ctx context.Context, dir *object.Tree, scanProto *unordered.Proto,
+) (map[lint.ImportPath]*unordered.Proto, error) {
+	protoFilesFromImport := make(map[lint.ImportPath]*unordered.Proto, len(scanProto.ProtoBody.Imports))
+
+	for _, imp := range scanProto.ProtoBody.Imports {
+		importPath := lint.ConvertImportPath(imp.Location)
+		f, err := dir.File(string(importPath))
+		if err != nil {
+			continue
+		}
+		reader, err := f.Blob.Reader()
+		if err != nil {
+			return nil, fmt.Errorf("f.Blob.Reader: %w", err)
+		}
+
+		fileFromImport, err := readProtoFile(reader)
+		if err != nil {
+			return nil, fmt.Errorf("readFileFromImport: %w", err)
+		}
+
+		protoFilesFromImport[importPath] = fileFromImport
+	}
+
+	return protoFilesFromImport, nil
 }
 
 func GetGitRepository(path string) (*git.Repository, error) {
