@@ -1,6 +1,8 @@
 package breakingcheck
 
 import (
+	"fmt"
+
 	"github.com/yoheimuta/go-protoparser/v4/interpret/unordered"
 
 	"github.com/easyp-tech/easyp/internal/lint"
@@ -71,6 +73,9 @@ func Collect(protoInfos []lint.ProtoInfo) (ProtoData, error) {
 			}
 		}
 
+		// starts with empty path
+		readMessages(collection, "", protoFile.ProtoBody.Messages, protoInfo.Path, pkgName)
+
 		// read all messages
 		for _, message := range protoFile.ProtoBody.Messages {
 			collection.MessagesOLD[MessageName(message.MessageName)] = Message{
@@ -86,9 +91,38 @@ func Collect(protoInfos []lint.ProtoInfo) (ProtoData, error) {
 	return protoData, nil
 }
 
+func readMessages(
+	collection *Collection,
+	messagePath string,
+	messages []*unordered.Message,
+	protoFilePath string,
+	packageName PackageName,
+) {
+	for _, message := range messages {
+		msg := Message{
+			ProtoFilePath: protoFilePath,
+			PackageName:   packageName,
+			Message:       message,
+		}
+		newMessagePath := getProtoEntityPath(messagePath, message.MessageName)
+		collection.Messages[newMessagePath] = msg
+
+		readMessages(collection, newMessagePath, message.MessageBody.Messages, protoFilePath, packageName)
+	}
+}
+
+func getProtoEntityPath(rootPath, name string) string {
+	if rootPath == "" {
+		return name
+	}
+
+	return fmt.Sprintf("%s.%s", rootPath, name)
+}
+
 func newCollection() *Collection {
 	collection := &Collection{
 		Services:    make(map[ServiceName]Service),
+		Messages:    make(map[string]Message),
 		MessagesOLD: make(map[MessageName]Message),
 	}
 	return collection
