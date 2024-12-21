@@ -24,7 +24,13 @@ import (
 func ReadCurrentProtoFiles(ctx context.Context, path string) ([]lint.ProtoInfo, error) {
 	protoFiles := make([]lint.ProtoInfo, 0)
 
-	err := filepath.WalkDir(path, func(path string, d fs.DirEntry, err error) error {
+	rootPath, err := os.Getwd()
+	if err != nil {
+		return nil, fmt.Errorf("os.Getwd: %w", err)
+	}
+
+	disk := os.DirFS(rootPath)
+	err = fs.WalkDir(disk, path, func(path string, d fs.DirEntry, err error) error {
 		switch {
 		case err != nil:
 			return err

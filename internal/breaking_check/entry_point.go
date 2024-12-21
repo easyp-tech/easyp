@@ -10,8 +10,8 @@ import (
 
 const (
 	// main dir. in could be current dir
-	//rootProjectDir = "."
-	rootProjectDir = "/mnt/ssd_storage/Projects/Hound/easyp/proto-experiments"
+	rootProjectDir = "."
+	//rootProjectDir = "/mnt/ssd_storage/Projects/Hound/easyp/proto-experiments"
 	// path where porot files are stored
 	//path = "no_deps"
 	path = "."
