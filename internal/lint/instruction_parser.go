@@ -1,6 +1,7 @@
 package lint
 
 import (
+	"fmt"
 	"strings"
 )
 
@@ -12,6 +13,10 @@ import (
 type InstructionInfo struct {
 	PkgName     string
 	Instruction string
+}
+
+func (i InstructionInfo) GetFullName() string {
+	return fmt.Sprintf("%s.%s", i.PkgName, i.Instruction)
 }
 
 // parseInstruction parse input string and return its package name
