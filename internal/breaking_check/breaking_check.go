@@ -111,7 +111,22 @@ func (b *BreakingCheck) checkMessage(againstMessage Message) []lint.IssueInfo {
 		res = append(res, issue)
 		return res
 	}
-	_ = currentMessage
+
+	// check fields
+	for _, againstField := range againstMessage.MessageBody.Fields {
+		currentField, ok := searchField(currentMessage.MessageBody.Fields, againstField.FieldNumber)
+		if !ok {
+			issue := getFieldDeletedIssue(againstMessage, againstField)
+			res = append(res, issue)
+			continue
+		}
+
+		if againstField.Type != currentField.Type {
+			issue := getFieldChangedTypeIssue(againstMessage, againstField, currentField)
+			res = append(res, issue)
+			continue
+		}
+	}
 
 	return res
 }

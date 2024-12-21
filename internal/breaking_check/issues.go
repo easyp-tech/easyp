@@ -82,7 +82,7 @@ func getMessageDeletedIssue(againstMessage Message) lint.IssueInfo {
 func getFieldDeletedIssue(againstMessage Message, againstField *parser.Field) lint.IssueInfo {
 	message := fmt.Sprintf("Previously present field \"%s\" with name \"%s\" "+
 		"on message \"%s\" was deleted.",
-		againstField.FieldNumber, againstField.FieldName, againstMessage.MessageName,
+		againstField.FieldNumber, againstField.FieldName, againstMessage.MessagePath,
 	)
 	return buildIssue(againstMessage.ProtoFilePath, message, againstMessage.Meta.Pos, againstMessage.MessageName)
 }
