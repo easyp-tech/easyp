@@ -30,7 +30,11 @@ func (b *BreakingCheck) checkPackage(packageName PackageName, collection *Collec
 	// iterate over services
 	for serviceName, _ := range collection.Services {
 		issues := b.checkService(packageName, serviceName)
+		res = append(res, issues...)
+	}
 
+	for messageName, _ := range collection.Messages {
+		issues := b.checkRootMessage(packageName, messageName)
 		res = append(res, issues...)
 	}
 
@@ -70,9 +74,6 @@ func (b *BreakingCheck) checkService(packageName PackageName, serviceName Servic
 		if againstRPC.RPCRequest.MessageType != currentRPC.RPCRequest.MessageType {
 			issue := getRPCRequestChangedTypeIssue(againstService, currentService, againstRPC, currentRPC)
 			res = append(res, issue)
-		} else {
-			issues := b.checkInRPCMessage(packageName, MessageName(againstRPC.RPCRequest.MessageType))
-			res = append(res, issues...)
 		}
 
 		// TODO: check stream
@@ -80,9 +81,6 @@ func (b *BreakingCheck) checkService(packageName PackageName, serviceName Servic
 		if againstRPC.RPCResponse.MessageType != currentRPC.RPCResponse.MessageType {
 			issue := getRPCResponseChangedTypeIssue(againstService, currentService, againstRPC, currentRPC)
 			res = append(res, issue)
-		} else {
-			issues := b.checkInRPCMessage(packageName, MessageName(againstRPC.RPCResponse.MessageType))
-			res = append(res, issues...)
 		}
 
 		// check messages in RPC
@@ -103,8 +101,8 @@ func searchRPC(source []*parser.RPC, name string) (*parser.RPC, bool) {
 
 // ===== MESSAGE =====
 
-// checkInRPCMessage check message from RPC (request or response) for breaking check
-func (b *BreakingCheck) checkInRPCMessage(packageName PackageName, messageName MessageName) []lint.IssueInfo {
+// checkRootMessage check message from RPC (request or response) for breaking check
+func (b *BreakingCheck) checkRootMessage(packageName PackageName, messageName MessageName) []lint.IssueInfo {
 	res := make([]lint.IssueInfo, 0)
 
 	messageInfo := lint.InstructionParser{
