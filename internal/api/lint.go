@@ -29,12 +29,11 @@ const (
 var (
 	flagLintDirectoryPath = &cli.StringFlag{
 		Name:       "path",
-		Usage:      "set path to directory with proto files",
+		Usage:      "set relative path to directory with proto files",
 		Required:   true,
 		HasBeenSet: true,
 		Value:      ".",
 		Aliases:    []string{"p"},
-		EnvVars:    []string{"EASYP_PATH"},
 	}
 
 	flagFormat = &cli.GenericFlag{
@@ -115,12 +114,17 @@ func (l Lint) action(ctx *cli.Context) error {
 		return fmt.Errorf("cfg.BuildLinterRules: %w", err)
 	}
 
-	rootPath := ctx.String(flagLintDirectoryPath.Name)
-	dirFS := os.DirFS(rootPath)
+	workingDir, err := os.Getwd()
+	if err != nil {
+		return fmt.Errorf("os.Getwd: %w", err)
+	}
+
+	dir := ctx.String(flagLintDirectoryPath.Name)
+	dirFS := os.DirFS(workingDir)
 
 	c := lint.New(lintRules, cfg.Lint.Ignore, cfg.Lint.IgnoreOnly, cfg.Deps)
 
-	issues, err := c.Lint(ctx.Context, dirFS)
+	issues, err := c.Lint(ctx.Context, dirFS, dir)
 	if err != nil {
 		return fmt.Errorf("c.Lint: %w", err)
 	}

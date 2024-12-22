@@ -24,10 +24,10 @@ func (e *OpenImportFileError) Error() string {
 }
 
 // Lint lints the proto file.
-func (c *Lint) Lint(ctx context.Context, disk fs.FS) ([]IssueInfo, error) {
+func (c *Lint) Lint(ctx context.Context, disk fs.FS, dir string) ([]IssueInfo, error) {
 	var res []IssueInfo
 
-	err := fs.WalkDir(disk, ".", func(path string, d fs.DirEntry, err error) error {
+	err := fs.WalkDir(disk, dir, func(path string, d fs.DirEntry, err error) error {
 		switch {
 		case err != nil:
 			return err
