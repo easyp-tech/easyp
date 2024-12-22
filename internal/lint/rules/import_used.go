@@ -26,7 +26,7 @@ func (i *ImportUsed) Validate(checkingProto lint.ProtoInfo) ([]lint.Issue, error
 	var res []lint.Issue
 
 	i.instrParser = lint.InstructionParser{
-		SourcePkgName: checkingProto.GetPackageName(),
+		SourcePkgName: lint.GetPackageName(checkingProto.Info),
 	}
 
 	// collects flags if import was used
@@ -35,12 +35,12 @@ func (i *ImportUsed) Validate(checkingProto lint.ProtoInfo) ([]lint.Issue, error
 	// collects pkg name -> import path
 	i.pkgToImport = make(map[string][]lint.ImportPath)
 	for importPath, proto := range checkingProto.ProtoFilesFromImport {
-		if len(proto.ProtoBody.Packages) == 0 {
+		pkgName := lint.GetPackageName(proto)
+		if pkgName == "" {
 			// skip if package is omitted
 			continue
 		}
 
-		pkgName := proto.ProtoBody.Packages[0].Name
 		i.pkgToImport[pkgName] = append(i.pkgToImport[pkgName], importPath)
 	}
 
