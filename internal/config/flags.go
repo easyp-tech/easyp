@@ -3,7 +3,7 @@ package config
 import (
 	"github.com/urfave/cli/v2"
 
-	"github.com/easyp-tech/easyp/internal/api/config/default_consts"
+	"github.com/easyp-tech/easyp/internal/config/default_consts"
 )
 
 var (

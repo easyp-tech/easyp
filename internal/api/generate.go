@@ -9,9 +9,12 @@ import (
 	"github.com/urfave/cli/v2"
 
 	"github.com/easyp-tech/easyp/internal/adapters/console"
-	"github.com/easyp-tech/easyp/internal/api/factories"
 	"github.com/easyp-tech/easyp/internal/config"
 	"github.com/easyp-tech/easyp/internal/core"
+	lockfile "github.com/easyp-tech/easyp/internal/core/adapters/lock_file"
+	moduleconfig "github.com/easyp-tech/easyp/internal/core/adapters/module_config"
+	"github.com/easyp-tech/easyp/internal/core/adapters/storage"
+	"github.com/easyp-tech/easyp/internal/factories"
 )
 
 var _ Handler = (*Generate)(nil)
@@ -64,6 +67,16 @@ func (g Generate) Action(ctx *cli.Context) error {
 		return fmt.Errorf("cfg.BuildLinterRules: %w", err)
 	}
 
+	lockFile := lockfile.New()
+	easypPath, err := getEasypPath()
+	if err != nil {
+		return fmt.Errorf("getEasypPath: %w", err)
+	}
+
+	store := storage.New(easypPath, lockFile)
+
+	moduleCfg := moduleconfig.New()
+
 	app := core.New(
 		lintRules,
 		cfg.Lint.Ignore,
@@ -86,6 +99,9 @@ func (g Generate) Action(ctx *cli.Context) error {
 			}),
 		},
 		console.New(),
+		store,
+		moduleCfg,
+		lockFile,
 	)
 
 	dir := ctx.String(flagGenerateDirectoryPath.Name)

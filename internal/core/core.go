@@ -2,9 +2,10 @@
 package core
 
 import (
+	"errors"
 	"log/slog"
 
-	modulereflect "github.com/easyp-tech/easyp/internal/api/shared/module_reflect"
+	"github.com/easyp-tech/easyp/internal/shared/module_reflect"
 )
 
 // Core provide to business logic of EasyP.
@@ -18,7 +19,14 @@ type Core struct {
 	plugins       []Plugin
 	inputs        Inputs
 	console       Console
+	storage       Storage
+	moduleConfig  ModuleConfig
+	lockFile      LockFile
 }
+
+var (
+	ErrInvalidRule = errors.New("invalid rule")
+)
 
 func New(
 	rules []Rule,
@@ -30,6 +38,9 @@ func New(
 	plugins []Plugin,
 	inputs Inputs,
 	console Console,
+	storage Storage,
+	moduleConfig ModuleConfig,
+	lockFile LockFile,
 ) *Core {
 	return &Core{
 		rules:         rules,
@@ -41,5 +52,8 @@ func New(
 		plugins:       plugins,
 		inputs:        inputs,
 		console:       console,
+		storage:       storage,
+		moduleConfig:  moduleConfig,
+		lockFile:      lockFile,
 	}
 }

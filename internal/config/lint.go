@@ -6,7 +6,6 @@ import (
 	"github.com/samber/lo"
 
 	"github.com/easyp-tech/easyp/internal/core"
-	"github.com/easyp-tech/easyp/internal/lint"
 	"github.com/easyp-tech/easyp/internal/rules"
 )
 
@@ -39,7 +38,7 @@ func (cfg *Config) buildFromUse() ([]core.Rule, error) {
 			ServiceSuffix:             cfg.Lint.ServiceSuffix,
 		})[ruleName]
 		if !ok {
-			return nil, fmt.Errorf("%w: %s", lint.ErrInvalidRule, ruleName)
+			return nil, fmt.Errorf("%w: %s", core.ErrInvalidRule, ruleName)
 		}
 
 		useRule = append(useRule, rule)

@@ -13,13 +13,7 @@ import (
 	"github.com/yoheimuta/go-protoparser/v4/parser"
 	"github.com/yoheimuta/go-protoparser/v4/parser/meta"
 
-	modulereflect "github.com/easyp-tech/easyp/internal/api/shared/module_reflect"
-)
-
-const (
-	// for backward compatibility with buf
-	bufLintIgnorePrefix = "buf:lint:ignore "
-	lintIgnorePrefix    = "nolint:"
+	"github.com/easyp-tech/easyp/internal/shared/module_reflect"
 )
 
 type (
@@ -71,38 +65,6 @@ func AppendIssue(
 	}
 
 	return append(issues, buildError(lintRule, pos, sourceName))
-}
-
-// CheckIsIgnored check if passed ruleName has to be ignored due to ignore command in comments
-func CheckIsIgnored(comments []*parser.Comment, ruleName string) bool {
-	if !allowCommentIgnores {
-		return false
-	}
-
-	if len(comments) == 0 {
-		return false
-	}
-
-	bufIgnore := bufLintIgnorePrefix + ruleName
-	easypIgnore := lintIgnorePrefix + ruleName
-
-	for _, comment := range comments {
-		if strings.Contains(comment.Raw, bufIgnore) {
-			return true
-		}
-		if strings.Contains(comment.Raw, easypIgnore) {
-			return true
-		}
-	}
-
-	return false
-}
-
-// NOTE: Try to not use global var
-var allowCommentIgnores = true
-
-func SetAllowCommentIgnores(val bool) {
-	allowCommentIgnores = val
 }
 
 // GetRuleName returns rule name

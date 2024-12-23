@@ -13,10 +13,12 @@ import (
 	"github.com/urfave/cli/v2"
 
 	"github.com/easyp-tech/easyp/internal/adapters/console"
-	"github.com/easyp-tech/easyp/internal/api/factories"
 	"github.com/easyp-tech/easyp/internal/config"
 	"github.com/easyp-tech/easyp/internal/core"
-	"github.com/easyp-tech/easyp/internal/lint"
+	lockfile "github.com/easyp-tech/easyp/internal/core/adapters/lock_file"
+	moduleconfig "github.com/easyp-tech/easyp/internal/core/adapters/module_config"
+	"github.com/easyp-tech/easyp/internal/core/adapters/storage"
+	"github.com/easyp-tech/easyp/internal/factories"
 )
 
 var _ Handler = (*Lint)(nil)
@@ -90,7 +92,7 @@ func (l Lint) Command() *cli.Command {
 func (l Lint) Action(ctx *cli.Context) error {
 	err := l.action(ctx)
 	if err != nil {
-		var e *lint.OpenImportFileError
+		var e *core.OpenImportFileError
 
 		switch {
 		case errors.Is(err, ErrHasLintIssue):
@@ -111,7 +113,7 @@ func (l Lint) action(ctx *cli.Context) error {
 	if err != nil {
 		return fmt.Errorf("config.ReadConfig: %w", err)
 	}
-	lint.SetAllowCommentIgnores(cfg.Lint.AllowCommentIgnores)
+	core.SetAllowCommentIgnores(cfg.Lint.AllowCommentIgnores)
 
 	lintRules, err := cfg.BuildLinterRules()
 	if err != nil {
@@ -123,16 +125,22 @@ func (l Lint) action(ctx *cli.Context) error {
 		return fmt.Errorf("os.Getwd: %w", err)
 	}
 
-	dir := ctx.String(flagLintDirectoryPath.Name)
 	dirFS := os.DirFS(workingDir)
 
-	c := lint.New(lintRules, cfg.Lint.Ignore, cfg.Lint.IgnoreOnly, cfg.Deps)
-
-	issues, err := c.Lint(ctx.Context, dirFS, dir)
 	moduleReflect, err := factories.NewModuleReflect()
 	if err != nil {
 		return fmt.Errorf("factories.NewModuleReflect: %w", err)
 	}
+
+	lockFile := lockfile.New()
+	easypPath, err := getEasypPath()
+	if err != nil {
+		return fmt.Errorf("getEasypPath: %w", err)
+	}
+
+	store := storage.New(easypPath, lockFile)
+
+	moduleCfg := moduleconfig.New()
 
 	app := core.New(
 		lintRules,
@@ -156,6 +164,9 @@ func (l Lint) action(ctx *cli.Context) error {
 			}),
 		},
 		console.New(),
+		store,
+		moduleCfg,
+		lockFile,
 	)
 
 	issues, err := app.Lint(ctx.Context, dirFS)
