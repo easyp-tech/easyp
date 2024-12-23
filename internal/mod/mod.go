@@ -2,6 +2,7 @@ package mod
 
 import (
 	"context"
+	"iter"
 
 	"github.com/easyp-tech/easyp/internal/mod/adapters/repository"
 	"github.com/easyp-tech/easyp/internal/mod/models"
@@ -34,6 +35,8 @@ type (
 		Write(
 			moduleName string, revisionVersion string, installedPackageHash models.ModuleHash,
 		) error
+		IsEmpty() bool
+		DepsIter() iter.Seq[models.LockFileInfo]
 	}
 
 	// Mod implement package manager's commands
