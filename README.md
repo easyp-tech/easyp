@@ -66,6 +66,14 @@ Read dependencies from `easyp.yaml` config file and ignore `easyp.lock` file.
 
 Could be used for update versions: set version in `easyp.yaml` file and run `update` command.
 
+* vendor
+```bash
+easyp -cfg example.easyp.yaml mod vendor
+```
+
+Copy all your proto files dependencies to local dir (like `go mod vendor` command).
+
+
 ### Configuration
 
 Write list of your dependencies in `easyp.yaml` config with in section `deps`.
