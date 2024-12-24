@@ -14,7 +14,6 @@ import (
 	"github.com/yoheimuta/go-protoparser/v4/parser/meta"
 
 	"github.com/easyp-tech/easyp/internal/core/models"
-	"github.com/easyp-tech/easyp/internal/shared/module_reflect"
 )
 
 type (
@@ -147,10 +146,9 @@ type (
 	}
 	// Config is the configuration for EasyP generate.
 	Config struct {
-		Deps          []string
-		Plugins       []Plugin
-		Inputs        Inputs
-		ModuleReflect *modulereflect.ModuleReflect
+		Deps    []string
+		Plugins []Plugin
+		Inputs  Inputs
 	}
 	// Query is a query for making sh command.
 	Query struct {
