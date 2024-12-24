@@ -3,10 +3,10 @@ package fs
 import (
 	"io/fs"
 
-	wfs "github.com/easyp-tech/easyp/internal/fs"
+	"github.com/easyp-tech/easyp/internal/core"
 )
 
-var _ wfs.DirWalker = (*FSWalker)(nil)
+var _ core.DirWalker = (*FSWalker)(nil)
 
 func NewFSWalker(fs fs.FS, path string) *FSWalker {
 	return &FSWalker{
@@ -21,7 +21,7 @@ type FSWalker struct {
 	path string
 }
 
-func (w *FSWalker) WalkDir(callback wfs.WalkerDirCallback) error {
+func (w *FSWalker) WalkDir(callback core.WalkerDirCallback) error {
 	err := fs.WalkDir(w.FS, w.path, func(path string, d fs.DirEntry, err error) error {
 		return callback(path, w, err)
 	})

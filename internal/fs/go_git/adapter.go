@@ -6,10 +6,10 @@ import (
 
 	"github.com/go-git/go-git/v5/plumbing/object"
 
-	wfs "github.com/easyp-tech/easyp/internal/fs"
+	"github.com/easyp-tech/easyp/internal/core"
 )
 
-var _ wfs.FS = (*GitTreeDiskAdapter)(nil)
+var _ core.FS = (*GitTreeDiskAdapter)(nil)
 
 type GitTreeDiskAdapter struct {
 	*object.Tree

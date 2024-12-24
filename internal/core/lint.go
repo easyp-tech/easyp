@@ -14,15 +14,14 @@ import (
 	"github.com/yoheimuta/go-protoparser/v4/interpret/unordered"
 	"github.com/yoheimuta/go-protoparser/v4/parser"
 
-	wfs "github.com/easyp-tech/easyp/internal/fs"
 	"github.com/easyp-tech/easyp/wellknownimports"
 )
 
 // Lint lints the proto file.
-func (c *Core) Lint(ctx context.Context, fsWalker wfs.DirWalker) ([]IssueInfo, error) {
+func (c *Core) Lint(ctx context.Context, fsWalker DirWalker) ([]IssueInfo, error) {
 	var res []IssueInfo
 
-	err := fsWalker.WalkDir(func(path string, fs wfs.FS, err error) error {
+	err := fsWalker.WalkDir(func(path string, fs FS, err error) error {
 		switch {
 		case err != nil:
 			return err
@@ -89,7 +88,7 @@ func (c *Core) Lint(ctx context.Context, fsWalker wfs.DirWalker) ([]IssueInfo, e
 
 // readFilesFromImport reads all files that imported from scanning file
 func (c *Core) readFilesFromImport(
-	ctx context.Context, disk wfs.FS, scanProto *unordered.Proto,
+	ctx context.Context, disk FS, scanProto *unordered.Proto,
 ) (map[ImportPath]*unordered.Proto, error) {
 	protoFilesFromImport := make(map[ImportPath]*unordered.Proto, len(scanProto.ProtoBody.Imports))
 
@@ -106,7 +105,7 @@ func (c *Core) readFilesFromImport(
 	return protoFilesFromImport, nil
 }
 
-func (c *Core) readFileFromImport(ctx context.Context, disk wfs.FS, importName string) (*unordered.Proto, error) {
+func (c *Core) readFileFromImport(ctx context.Context, disk FS, importName string) (*unordered.Proto, error) {
 	// first try to read it locally
 	f, err := disk.Open(importName)
 	if err == nil {

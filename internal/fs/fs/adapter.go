@@ -5,12 +5,10 @@ import (
 	"io/fs"
 	"os"
 
-	wfs "github.com/easyp-tech/easyp/internal/fs"
+	"github.com/easyp-tech/easyp/internal/core"
 )
 
-var (
-	_ wfs.FS = (*FSAdapter)(nil)
-)
+var _ core.FS = (*FSAdapter)(nil)
 
 type FSAdapter struct {
 	fs.FS

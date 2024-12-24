@@ -3,13 +3,9 @@ package core
 import (
 	"context"
 	"fmt"
-	"io/fs"
-	"os"
 	"path/filepath"
 
 	"gopkg.in/yaml.v3"
-
-	wfs "github.com/easyp-tech/easyp/internal/fs"
 )
 
 type (
@@ -64,21 +60,14 @@ type (
 		Lint     Lint     `yaml:"lint"`
 		Breaking Breaking `yaml:"breaking"`
 	}
-
-	// FS is the interface for the file system.
-	FS interface {
-		fs.FS
-		// Create creates a file.
-		Create(name string) (*os.File, error)
-	}
 )
 
 // Initialize initializes the EasyP configuration.
-func (i *Core) Initialize(ctx context.Context, disk wfs.DirWalker, defaultLinters []string) error {
+func (i *Core) Initialize(ctx context.Context, disk DirWalker, defaultLinters []string) error {
 	config := defaultConfig(defaultLinters)
 
 	var migrated bool
-	err := disk.WalkDir(func(path string, disk wfs.FS, err error) error {
+	err := disk.WalkDir(func(path string, disk FS, err error) error {
 		switch {
 		case err != nil:
 			return err
@@ -132,7 +121,7 @@ func defaultConfig(defaultLinters []string) EasyPConfig {
 	}
 }
 
-func migrateFromBUF(disk wfs.FS, path string, defaultConfiguration EasyPConfig) error {
+func migrateFromBUF(disk FS, path string, defaultConfiguration EasyPConfig) error {
 	f, err := disk.Open(path)
 	if err != nil {
 		return fmt.Errorf("disk.Open: %w", err)
