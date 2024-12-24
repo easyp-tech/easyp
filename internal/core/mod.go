@@ -4,7 +4,8 @@ import (
 	"context"
 	"iter"
 
-	"github.com/easyp-tech/easyp/internal/core/adapters/repository"
+	"github.com/easyp-tech/easyp/internal/adapters/repository"
+
 	"github.com/easyp-tech/easyp/internal/core/models"
 )
 
@@ -48,7 +49,7 @@ type (
 	//}
 )
 
-//func NewLegacy(storage Storage, moduleConfig ModuleConfig, lockFile LockFile) *Mod {
+//func New(storage Storage, moduleConfig ModuleConfig, lockFile LockFile) *Mod {
 //	return &Mod{
 //		storage:      storage,
 //		moduleConfig: moduleConfig,

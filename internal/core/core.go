@@ -25,7 +25,7 @@ var (
 	ErrInvalidRule = errors.New("invalid rule")
 )
 
-func NewLegacy(
+func New(
 	rules []Rule,
 	ignore []string,
 	deps []string,

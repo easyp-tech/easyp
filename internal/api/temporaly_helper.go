@@ -11,11 +11,12 @@ import (
 	"github.com/samber/lo"
 
 	"github.com/easyp-tech/easyp/internal/adapters/console"
+	lockfile "github.com/easyp-tech/easyp/internal/adapters/lock_file"
+	moduleconfig "github.com/easyp-tech/easyp/internal/adapters/module_config"
+	"github.com/easyp-tech/easyp/internal/adapters/storage"
 	"github.com/easyp-tech/easyp/internal/config"
 	"github.com/easyp-tech/easyp/internal/core"
-	lockfile "github.com/easyp-tech/easyp/internal/core/adapters/lock_file"
-	moduleconfig "github.com/easyp-tech/easyp/internal/core/adapters/module_config"
-	"github.com/easyp-tech/easyp/internal/core/adapters/storage"
+	"github.com/easyp-tech/easyp/internal/rules"
 )
 
 var (
@@ -49,7 +50,7 @@ func getEasypPath() (string, error) {
 }
 
 func buildCore(_ context.Context, cfg config.Config) (*core.Core, error) {
-	lintRules, err := cfg.BuildLinterRules()
+	lintRules, ignoreOnly, err := rules.New(cfg.Lint)
 	if err != nil {
 		return nil, fmt.Errorf("cfg.BuildLinterRules: %w", err)
 	}
@@ -64,11 +65,11 @@ func buildCore(_ context.Context, cfg config.Config) (*core.Core, error) {
 
 	moduleCfg := moduleconfig.New()
 
-	app := core.NewLegacy(
+	app := core.New(
 		lintRules,
 		cfg.Lint.Ignore,
 		cfg.Deps,
-		cfg.Lint.IgnoreOnly,
+		ignoreOnly,
 		slog.Default(), // TODO: remove global state
 		lo.Map(cfg.Generate.Plugins, func(p config.Plugin, _ int) core.Plugin {
 			return core.Plugin{
