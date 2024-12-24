@@ -48,7 +48,7 @@ type (
 	//}
 )
 
-//func NewLegacy(storage Storage, moduleConfig ModuleConfig, lockFile LockFile) *Mod {
+//func New(storage Storage, moduleConfig ModuleConfig, lockFile LockFile) *Mod {
 //	return &Mod{
 //		storage:      storage,
 //		moduleConfig: moduleConfig,
