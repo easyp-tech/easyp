@@ -1,12 +1,13 @@
 package config
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"io"
-	"log"
+	"log/slog"
 	"os"
 
-	"github.com/urfave/cli/v2"
 	"gopkg.in/yaml.v3"
 )
 
@@ -60,21 +61,23 @@ type Config struct {
 	Generate Generate `json:"generate" yaml:"generate"`
 }
 
-// ReadConfig reads the configuration from the file.
-func ReadConfig(ctx *cli.Context) (*Config, error) {
-	cfgFileName := ctx.String(FlagCfg.Name)
-	cfgFile, err := os.Open(cfgFileName)
+var errFileNotFound = errors.New("config file not found")
+
+// New creates a new configuration from the file.
+func New(_ context.Context, filepath string) (*Config, error) {
+	cfgFile, err := os.Open(filepath)
 	if err != nil {
 		if os.IsNotExist(err) {
-			log.Fatalf("Error open config file: %s", cfgFileName)
+			return nil, errFileNotFound
 		}
 
 		return nil, fmt.Errorf("os.Open: %w", err)
 	}
+
 	defer func() {
 		err := cfgFile.Close()
 		if err != nil {
-			log.Fatalf("Error close config file: %s", cfgFileName)
+			slog.Debug("cfgFile.Close", slog.String("filepath", filepath))
 		}
 	}()
 

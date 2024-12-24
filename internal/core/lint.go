@@ -127,7 +127,7 @@ func (c *Core) readFileFromImport(ctx context.Context, disk fs.FS, importName st
 	}
 
 	for _, dep := range c.deps {
-		modulePath, err := c.moduleReflect.GetModulePath(ctx, dep)
+		modulePath, err := c.getModulePath(ctx, dep)
 		if err != nil {
 			return nil, fmt.Errorf("c.moduleReflect.GetModulePath: %w", err)
 		}

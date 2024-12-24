@@ -22,6 +22,7 @@ type (
 		) (models.ModuleHash, error)
 		GetInstalledModuleHash(moduleName string, revisionVersion string) (models.ModuleHash, error)
 		IsModuleInstalled(module models.Module) (bool, error)
+		GetInstallDir(moduleName string, revisionVersion string) string
 	}
 
 	// ModuleConfig should implement adapter for reading module configs
@@ -47,7 +48,7 @@ type (
 	//}
 )
 
-//func New(storage Storage, moduleConfig ModuleConfig, lockFile LockFile) *Mod {
+//func NewLegacy(storage Storage, moduleConfig ModuleConfig, lockFile LockFile) *Mod {
 //	return &Mod{
 //		storage:      storage,
 //		moduleConfig: moduleConfig,

@@ -7,6 +7,8 @@ import (
 	"log/slog"
 	"path/filepath"
 	"strings"
+
+	"github.com/easyp-tech/easyp/internal/core/models"
 )
 
 const defaultCompiler = "protoc"
@@ -22,7 +24,7 @@ func (c *Core) Generate(ctx context.Context, root, directory string) error {
 	}
 
 	for _, dep := range c.deps {
-		modulePaths, err := c.moduleReflect.GetModulePath(ctx, dep)
+		modulePaths, err := c.getModulePath(ctx, dep)
 		if err != nil {
 			return fmt.Errorf("g.moduleReflect.GetModulePath: %w", err)
 		}
@@ -74,4 +76,28 @@ func shouldIgnore(path string, dirs []string) bool {
 	}
 
 	return true
+}
+
+func (c *Core) getModulePath(ctx context.Context, requestedDependency string) (string, error) {
+	module := models.NewModule(requestedDependency)
+
+	isInstalled, err := c.storage.IsModuleInstalled(module)
+	if err != nil {
+		return "", fmt.Errorf("h.storage.IsModuleInstalled: %w", err)
+	}
+
+	if !isInstalled {
+		if err := c.Get(ctx, module); err != nil {
+			return "", fmt.Errorf("h.mod.Get: %w", err)
+		}
+	}
+
+	lockFileInfo, err := c.lockFile.Read(module.Name)
+	if err != nil {
+		return "", fmt.Errorf("lockFile.Read: %w", err)
+	}
+
+	installedPath := c.storage.GetInstallDir(module.Name, lockFileInfo.Version)
+
+	return installedPath, nil
 }
