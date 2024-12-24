@@ -5,6 +5,7 @@ go 1.23
 require (
 	github.com/brianvoe/gofakeit/v6 v6.28.0
 	github.com/codeclysm/extract/v3 v3.1.1
+	github.com/fxamacker/cbor/v2 v2.7.0
 	github.com/goccy/go-yaml v1.11.3
 	github.com/samber/lo v1.39.0
 	github.com/stretchr/testify v1.8.4
@@ -27,6 +28,7 @@ require (
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
 	github.com/stretchr/objx v0.5.0 // indirect
 	github.com/ulikunitz/xz v0.5.12 // indirect
+	github.com/x448/float16 v0.8.4 // indirect
 	github.com/xrash/smetrics v0.0.0-20240312152122-5f08fbb34913 // indirect
 	golang.org/x/exp v0.0.0-20240506185415-9bf2ced13842 // indirect
 	golang.org/x/sys v0.20.0 // indirect

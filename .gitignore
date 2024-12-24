@@ -5,3 +5,4 @@ bin
 easyp
 coverage.out
 easyp.lock
+.DS_Store

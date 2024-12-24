@@ -2,14 +2,19 @@ package api
 
 import (
 	"fmt"
+	"log/slog"
 	"path"
 
 	"github.com/samber/lo"
 	"github.com/urfave/cli/v2"
 
-	"github.com/easyp-tech/easyp/internal/api/config"
-	"github.com/easyp-tech/easyp/internal/api/factories"
-	"github.com/easyp-tech/easyp/internal/generate"
+	"github.com/easyp-tech/easyp/internal/adapters/console"
+	"github.com/easyp-tech/easyp/internal/config"
+	"github.com/easyp-tech/easyp/internal/core"
+	lockfile "github.com/easyp-tech/easyp/internal/core/adapters/lock_file"
+	moduleconfig "github.com/easyp-tech/easyp/internal/core/adapters/module_config"
+	"github.com/easyp-tech/easyp/internal/core/adapters/storage"
+	"github.com/easyp-tech/easyp/internal/factories"
 )
 
 var _ Handler = (*Generate)(nil)
@@ -57,24 +62,47 @@ func (g Generate) Action(ctx *cli.Context) error {
 		return fmt.Errorf("factories.NewModuleReflect: %w", err)
 	}
 
-	generator := generate.New(generate.Config{
-		Deps: cfg.Deps,
-		Plugins: lo.Map(cfg.Generate.Plugins, func(p config.Plugin, _ int) generate.Plugin {
-			return generate.Plugin{
+	lintRules, err := cfg.BuildLinterRules()
+	if err != nil {
+		return fmt.Errorf("cfg.BuildLinterRules: %w", err)
+	}
+
+	lockFile := lockfile.New()
+	easypPath, err := getEasypPath()
+	if err != nil {
+		return fmt.Errorf("getEasypPath: %w", err)
+	}
+
+	store := storage.New(easypPath, lockFile)
+
+	moduleCfg := moduleconfig.New()
+
+	app := core.New(
+		lintRules,
+		cfg.Lint.Ignore,
+		cfg.Deps,
+		moduleReflect,
+		cfg.Lint.IgnoreOnly,
+		slog.Default(), // TODO: remove global state
+		lo.Map(cfg.Generate.Plugins, func(p config.Plugin, _ int) core.Plugin {
+			return core.Plugin{
 				Name:    p.Name,
 				Out:     p.Out,
 				Options: p.Opts,
 			}
 		}),
-		ModuleReflect: moduleReflect,
-		Inputs: generate.Inputs{
+		core.Inputs{
 			Dirs: lo.Filter(lo.Map(cfg.Generate.Inputs, func(i config.Input, _ int) string {
 				return i.Directory
 			}), func(s string, _ int) bool {
 				return s != ""
 			}),
 		},
-	})
+		console.New(),
+		store,
+		moduleCfg,
+		lockFile,
+	)
 
 	dir := ctx.String(flagGenerateDirectoryPath.Name)
 	if cfg.Generate.DependencyEntryPoint != nil {
@@ -85,7 +113,7 @@ func (g Generate) Action(ctx *cli.Context) error {
 		dir = path.Join(modulePaths, cfg.Generate.DependencyEntryPoint.Path)
 	}
 
-	err = generator.Generate(ctx.Context, ".", dir)
+	err = app.Generate(ctx.Context, ".", dir)
 	if err != nil {
 		return fmt.Errorf("generator.Generate: %w", err)
 	}
