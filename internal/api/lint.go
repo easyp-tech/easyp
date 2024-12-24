@@ -126,6 +126,7 @@ func (l Lint) action(ctx *cli.Context) error {
 	}
 
 	dirFS := os.DirFS(workingDir)
+	path := ctx.String(flagLintDirectoryPath.Name)
 
 	moduleReflect, err := factories.NewModuleReflect()
 	if err != nil {
@@ -169,7 +170,7 @@ func (l Lint) action(ctx *cli.Context) error {
 		lockFile,
 	)
 
-	issues, err := app.Lint(ctx.Context, dirFS)
+	issues, err := app.Lint(ctx.Context, dirFS, path)
 	if err != nil {
 		return fmt.Errorf("c.Lint: %w", err)
 	}

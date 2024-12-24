@@ -19,10 +19,10 @@ import (
 )
 
 // Lint lints the proto file.
-func (c *Core) Lint(ctx context.Context, disk fs.FS) ([]IssueInfo, error) {
+func (c *Core) Lint(ctx context.Context, disk fs.FS, path string) ([]IssueInfo, error) {
 	var res []IssueInfo
 
-	err := fs.WalkDir(disk, ".", func(path string, d fs.DirEntry, err error) error {
+	err := fs.WalkDir(disk, path, func(path string, d fs.DirEntry, err error) error {
 		switch {
 		case err != nil:
 			return err
