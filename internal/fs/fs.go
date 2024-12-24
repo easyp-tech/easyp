@@ -22,3 +22,9 @@ type FSReader interface {
 type FSWriter interface {
 	Create(name string) (io.WriteCloser, error)
 }
+
+type WalkerDirCallback func(path string, err error) error
+
+type DirWalker interface {
+	WalkDir(callback WalkerDirCallback) error
+}
