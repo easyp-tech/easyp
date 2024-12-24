@@ -6,8 +6,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/easyp-tech/easyp/internal/core/adapters"
-	"github.com/easyp-tech/easyp/internal/core/adapters/repository"
+	"github.com/easyp-tech/easyp/internal/adapters/repository"
 )
 
 var _ repository.Repo = (*gitRepo)(nil)
@@ -18,6 +17,8 @@ type gitRepo struct {
 	remoteURL string
 	// cacheDir local cache directory for store repository
 	cacheDir string
+	// console for call external commands
+	console Console
 }
 
 const (
@@ -31,12 +32,18 @@ const (
 // cmd/go/internal/modfetch/codehost/git.go:65 - create work dir
 // cmd/go/internal/modfetch/codehost/git.go:137 - git's struct
 
+// Console temporary interface for console commands, must be replaced from core.Console.
+type Console interface {
+	RunCmd(ctx context.Context, dir string, command string, commandParams ...string) (string, error)
+}
+
 // New returns gitRepo instance
 // remote: full remoteURL address without schema
-func New(ctx context.Context, remote string, cacheDir string) (repository.Repo, error) {
+func New(ctx context.Context, remote string, cacheDir string, console Console) (repository.Repo, error) {
 	r := &gitRepo{
 		remoteURL: getRemote(remote),
 		cacheDir:  cacheDir,
+		console:   console,
 	}
 
 	if _, err := os.Stat(filepath.Join(r.cacheDir, "objects")); err == nil {
@@ -44,11 +51,11 @@ func New(ctx context.Context, remote string, cacheDir string) (repository.Repo, 
 		return r, nil
 	}
 
-	if _, err := adapters.RunCmd(ctx, r.cacheDir, "git", "init", "--bare"); err != nil {
+	if _, err := r.console.RunCmd(ctx, r.cacheDir, "git", "init", "--bare"); err != nil {
 		return nil, fmt.Errorf("adapters.RunCmd (init): %w", err)
 	}
 
-	_, err := adapters.RunCmd(ctx, r.cacheDir, "git", "remote", "add", "origin", r.remoteURL)
+	_, err := r.console.RunCmd(ctx, r.cacheDir, "git", "remote", "add", "origin", r.remoteURL)
 	if err != nil {
 		return nil, fmt.Errorf("adapters.RunCmd (add origin): %w", err)
 	}

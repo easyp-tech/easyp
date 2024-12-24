@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/easyp-tech/easyp/internal/core/adapters"
 	"github.com/easyp-tech/easyp/internal/core/models"
 )
 
@@ -15,7 +14,7 @@ func (r *gitRepo) Archive(
 		"archive", "--format=zip", revision.CommitHash, "-o", cacheDownloadPaths.ArchiveFile, "*.proto",
 	}
 
-	if _, err := adapters.RunCmd(ctx, r.cacheDir, "git", params...); err != nil {
+	if _, err := r.console.RunCmd(ctx, r.cacheDir, "git", params...); err != nil {
 		return fmt.Errorf("utils.RunCmd: %w", err)
 	}
 

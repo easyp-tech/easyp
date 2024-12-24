@@ -6,9 +6,11 @@ import (
 	"fmt"
 	"log/slog"
 
-	"github.com/easyp-tech/easyp/internal/core/adapters/repository/git"
+	"github.com/easyp-tech/easyp/internal/adapters/repository/git"
 	"github.com/easyp-tech/easyp/internal/core/models"
 )
+
+//
 
 // Get download package.
 func (c *Core) Get(ctx context.Context, requestedModule models.Module) error {
@@ -18,12 +20,12 @@ func (c *Core) Get(ctx context.Context, requestedModule models.Module) error {
 	}
 
 	// TODO: use factory (git, svn etc)
-	repository, err := git.New(ctx, requestedModule.Name, cacheRepositoryDir)
+	repo, err := git.New(ctx, requestedModule.Name, cacheRepositoryDir, c.console)
 	if err != nil {
 		return fmt.Errorf("git.New: %w", err)
 	}
 
-	revision, err := repository.ReadRevision(ctx, requestedModule.Version)
+	revision, err := repo.ReadRevision(ctx, requestedModule.Version)
 	if err != nil {
 		return fmt.Errorf("repository.ReadRevision: %w", err)
 	}
@@ -34,11 +36,11 @@ func (c *Core) Get(ctx context.Context, requestedModule models.Module) error {
 		return fmt.Errorf("c.storage.CreateCacheDownloadDir: %w", err)
 	}
 
-	if err := repository.Fetch(ctx, revision); err != nil {
+	if err := repo.Fetch(ctx, revision); err != nil {
 		return fmt.Errorf("repository.Fetch: %w", err)
 	}
 
-	moduleConfig, err := c.moduleConfig.ReadFromRepo(ctx, repository, revision)
+	moduleConfig, err := c.moduleConfig.ReadFromRepo(ctx, repo, revision)
 	if err != nil {
 		return fmt.Errorf("c.moduleConfig.Read: %w", err)
 	}
@@ -66,7 +68,7 @@ func (c *Core) Get(ctx context.Context, requestedModule models.Module) error {
 	// check package deps (that was read from repo)
 	// compare versions
 
-	if err := repository.Archive(ctx, revision, cacheDownloadPaths); err != nil {
+	if err := repo.Archive(ctx, revision, cacheDownloadPaths); err != nil {
 		return fmt.Errorf("repository.Archive: %w", err)
 	}
 

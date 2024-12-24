@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/easyp-tech/easyp/internal/core/adapters"
 	"github.com/easyp-tech/easyp/internal/core/models"
 )
 
@@ -14,7 +13,7 @@ func (r *gitRepo) GetFiles(ctx context.Context, revision models.Revision, dirs .
 		"ls-tree", "-r", revision.CommitHash,
 	}
 	params = append(params, dirs...)
-	res, err := adapters.RunCmd(ctx, r.cacheDir, "git", params...)
+	res, err := r.console.RunCmd(ctx, r.cacheDir, "git", params...)
 	if err != nil {
 		return nil, fmt.Errorf("utils.RunCmd: %w", err)
 	}

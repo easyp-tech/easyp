@@ -11,11 +11,11 @@ import (
 	"github.com/samber/lo"
 
 	"github.com/easyp-tech/easyp/internal/adapters/console"
+	lockfile "github.com/easyp-tech/easyp/internal/adapters/lock_file"
+	moduleconfig "github.com/easyp-tech/easyp/internal/adapters/module_config"
+	"github.com/easyp-tech/easyp/internal/adapters/storage"
 	"github.com/easyp-tech/easyp/internal/config"
 	"github.com/easyp-tech/easyp/internal/core"
-	lockfile "github.com/easyp-tech/easyp/internal/core/adapters/lock_file"
-	moduleconfig "github.com/easyp-tech/easyp/internal/core/adapters/module_config"
-	"github.com/easyp-tech/easyp/internal/core/adapters/storage"
 	"github.com/easyp-tech/easyp/internal/rules"
 )
 

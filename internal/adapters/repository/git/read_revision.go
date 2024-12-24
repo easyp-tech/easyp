@@ -6,7 +6,6 @@ import (
 	"log/slog"
 	"strings"
 
-	"github.com/easyp-tech/easyp/internal/core/adapters"
 	"github.com/easyp-tech/easyp/internal/core/models"
 )
 
@@ -64,7 +63,7 @@ func (r *gitRepo) readRevisionByGitTagVersion(
 ) (revisionParts, error) {
 	gitTagVersion := string(requestedVersion)
 
-	res, err := adapters.RunCmd(ctx, r.cacheDir, "git", "ls-remote", "origin", gitTagVersion)
+	res, err := r.console.RunCmd(ctx, r.cacheDir, "git", "ls-remote", "origin", gitTagVersion)
 	if err != nil {
 		return revisionParts{}, models.ErrVersionNotFound
 	}
@@ -97,7 +96,7 @@ func (r *gitRepo) readRevisionByGitTagVersion(
 func (r *gitRepo) readRevisionForLatestCommit(
 	ctx context.Context,
 ) (revisionParts, error) {
-	headInfo, err := adapters.RunCmd(
+	headInfo, err := r.console.RunCmd(
 		ctx, r.cacheDir, "git", "ls-remote", "origin", gitLatestVersionRef,
 	)
 	if err != nil {
@@ -118,7 +117,7 @@ func (r *gitRepo) readRevisionForLatestCommit(
 	version := ""
 
 	// try to get git tag for this commit
-	tagInfo, err := adapters.RunCmd(ctx, r.cacheDir, "git", "ls-remote", "origin")
+	tagInfo, err := r.console.RunCmd(ctx, r.cacheDir, "git", "ls-remote", "origin")
 	if err != nil {
 		return revisionParts{}, fmt.Errorf("adapters.RunCmd (ls-remote tagInfo): %w", err)
 	}
@@ -150,7 +149,7 @@ func (r *gitRepo) readRevisionForLatestCommit(
 	// didn't find tag for this commit, so generate version
 
 	// fetch commit by its hash
-	_, err = adapters.RunCmd(
+	_, err = r.console.RunCmd(
 		ctx, r.cacheDir, "git", "fetch", "-f", "origin", "--depth=1", commitHash,
 	)
 	if err != nil {
@@ -158,7 +157,7 @@ func (r *gitRepo) readRevisionForLatestCommit(
 	}
 
 	// get commit's datetime
-	commitDatetime, err := adapters.RunCmd(
+	commitDatetime, err := r.console.RunCmd(
 		ctx,
 		r.cacheDir,
 		"git",
@@ -202,7 +201,7 @@ func (r *gitRepo) readRevisionByGeneratedVersion(
 	}
 
 	// fetch by passed commit hash
-	_, err = adapters.RunCmd(
+	_, err = r.console.RunCmd(
 		ctx, r.cacheDir, "git", "fetch", "-f", "origin", "--depth=1", generatedParts.CommitHash,
 	)
 	if err != nil {
