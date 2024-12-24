@@ -20,7 +20,7 @@ func (c *Core) Get(ctx context.Context, requestedModule models.Module) error {
 	// TODO: use factory (git, svn etc)
 	repository, err := git.New(ctx, requestedModule.Name, cacheRepositoryDir)
 	if err != nil {
-		return fmt.Errorf("git.New: %w", err)
+		return fmt.Errorf("git.NewLegacy: %w", err)
 	}
 
 	revision, err := repository.ReadRevision(ctx, requestedModule.Version)
