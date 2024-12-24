@@ -19,7 +19,7 @@ func (c *Core) Vendor(ctx context.Context) error {
 	}
 
 	for dep := range c.lockFile.DepsIter() {
-		depPath, err := c.moduleReflect.GetModulePath(ctx, dep.Name)
+		depPath, err := c.getModulePath(ctx, dep.Name)
 		if err != nil {
 			return fmt.Errorf("c.moduleReflect.GetModulePath: %w", err)
 		}

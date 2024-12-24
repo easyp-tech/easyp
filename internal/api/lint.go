@@ -14,6 +14,7 @@ import (
 	"github.com/easyp-tech/easyp/internal/config"
 	"github.com/easyp-tech/easyp/internal/core"
 	"github.com/easyp-tech/easyp/internal/flags"
+	"github.com/easyp-tech/easyp/internal/fs/fs"
 )
 
 var _ Handler = (*Lint)(nil)
@@ -122,7 +123,8 @@ func (l Lint) action(ctx *cli.Context) error {
 	if err != nil {
 		return fmt.Errorf("buildCore: %w", err)
 	}
-	issues, err := app.Lint(ctx.Context, dirFS, path)
+	fsWalker := fs.NewFSWalker(dirFS, path)
+	issues, err := app.Lint(ctx.Context, fsWalker)
 	if err != nil {
 		return fmt.Errorf("c.Lint: %w", err)
 	}

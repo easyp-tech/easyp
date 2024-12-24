@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"io/fs"
 	"log/slog"
 	"os"
 	"path/filepath"
@@ -19,28 +18,22 @@ import (
 )
 
 // Lint lints the proto file.
-func (c *Core) Lint(ctx context.Context, disk fs.FS, path string) ([]IssueInfo, error) {
+func (c *Core) Lint(ctx context.Context, fsWalker DirWalker) ([]IssueInfo, error) {
 	var res []IssueInfo
 
-	err := fs.WalkDir(disk, path, func(path string, d fs.DirEntry, err error) error {
+	err := fsWalker.WalkDir(func(path string, fs FS, err error) error {
 		switch {
 		case err != nil:
 			return err
 		case ctx.Err() != nil:
 			return ctx.Err()
 		case slices.Contains(c.ignore, path):
-			if d.IsDir() {
-				c.logger.DebugContext(ctx, "ignore", slog.String("path", path))
-
-				return fs.SkipDir
-			}
-
 			return nil
 		case filepath.Ext(path) != ".proto":
 			return nil
 		}
 
-		f, err := disk.Open(path)
+		f, err := fs.Open(path)
 		if err != nil {
 			return fmt.Errorf("disk.Open: %w", err)
 		}
@@ -51,7 +44,7 @@ func (c *Core) Lint(ctx context.Context, disk fs.FS, path string) ([]IssueInfo, 
 			return fmt.Errorf("readProtoFile: %w: path: %s", err, path)
 		}
 
-		protoFilesFromImport, err := c.readFilesFromImport(ctx, disk, proto)
+		protoFilesFromImport, err := c.readFilesFromImport(ctx, fs, proto)
 		if err != nil {
 			return fmt.Errorf("readFilesFromImport: %w", err)
 		}
@@ -95,7 +88,7 @@ func (c *Core) Lint(ctx context.Context, disk fs.FS, path string) ([]IssueInfo, 
 
 // readFilesFromImport reads all files that imported from scanning file
 func (c *Core) readFilesFromImport(
-	ctx context.Context, disk fs.FS, scanProto *unordered.Proto,
+	ctx context.Context, disk FS, scanProto *unordered.Proto,
 ) (map[ImportPath]*unordered.Proto, error) {
 	protoFilesFromImport := make(map[ImportPath]*unordered.Proto, len(scanProto.ProtoBody.Imports))
 
@@ -112,7 +105,7 @@ func (c *Core) readFilesFromImport(
 	return protoFilesFromImport, nil
 }
 
-func (c *Core) readFileFromImport(ctx context.Context, disk fs.FS, importName string) (*unordered.Proto, error) {
+func (c *Core) readFileFromImport(ctx context.Context, disk FS, importName string) (*unordered.Proto, error) {
 	// first try to read it locally
 	f, err := disk.Open(importName)
 	if err == nil {
@@ -170,7 +163,7 @@ func (c *Core) readFileFromImport(ctx context.Context, disk fs.FS, importName st
 	return proto, nil
 }
 
-func readProtoFile(f fs.File) (*unordered.Proto, error) {
+func readProtoFile(f io.Reader) (*unordered.Proto, error) {
 	got, err := protoparser.Parse(f)
 	if err != nil {
 		return nil, fmt.Errorf("protoparser.Parse: %w", err)

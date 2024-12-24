@@ -2,12 +2,13 @@ package api
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/urfave/cli/v2"
 
 	"github.com/easyp-tech/easyp/internal/config"
 	"github.com/easyp-tech/easyp/internal/flags"
-	wfs "github.com/easyp-tech/easyp/internal/fs"
+	"github.com/easyp-tech/easyp/internal/fs/fs"
 )
 
 var _ Handler = (*Init)(nil)
@@ -45,7 +46,7 @@ func (i Init) Command() *cli.Command {
 // Action implements Handler.
 func (i Init) Action(ctx *cli.Context) error {
 	rootPath := ctx.String(flagInitDirectoryPath.Name)
-	dirFS := wfs.Disk(rootPath)
+	dirFS := fs.NewFSWalker(os.DirFS(rootPath), ".")
 
 	cfg, err := config.New(ctx.Context, ctx.String(flags.Config.Name))
 	if err != nil {
