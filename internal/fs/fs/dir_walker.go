@@ -8,7 +8,7 @@ import (
 
 var _ wfs.DirWalker = (*FSWalker)(nil)
 
-func NewFSWalker(fs fs.FS, path string) *OSFSWalker {
+func NewFSWalker(fs fs.FS, path string) *FSWalker {
 	return &FSWalker{
 		path:    path,
 		adapter: &FSAdapter{fs},
