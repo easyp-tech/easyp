@@ -12,16 +12,17 @@ var _ wfs.DirWalker = (*GitTreeWalker)(nil)
 
 func NewGitTreeWalker(tree *object.Tree, path string) *GitTreeWalker {
 	return &GitTreeWalker{
-		tree:    tree,
-		path:    path,
-		adapter: &GitTreeDiskAdapter{tree},
+		GitTreeDiskAdapter: &GitTreeDiskAdapter{tree},
+		tree:               tree,
+		path:               path,
 	}
 }
 
 type GitTreeWalker struct {
-	tree    *object.Tree
-	path    string
-	adapter *GitTreeDiskAdapter
+	*GitTreeDiskAdapter
+
+	tree *object.Tree
+	path string
 }
 
 func (w *GitTreeWalker) WalkDir(callback wfs.WalkerDirCallback) error {
@@ -31,7 +32,7 @@ func (w *GitTreeWalker) WalkDir(callback wfs.WalkerDirCallback) error {
 			return nil
 		}
 
-		return callback(f.Name, nil)
+		return callback(f.Name, w, nil)
 	})
 	return err
 }

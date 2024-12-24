@@ -1,6 +1,7 @@
 package go_git
 
 import (
+	"errors"
 	"io"
 
 	"github.com/go-git/go-git/v5/plumbing/object"
@@ -8,7 +9,7 @@ import (
 	wfs "github.com/easyp-tech/easyp/internal/fs"
 )
 
-var _ wfs.FSReader = (*GitTreeDiskAdapter)(nil)
+var _ wfs.FS = (*GitTreeDiskAdapter)(nil)
 
 type GitTreeDiskAdapter struct {
 	*object.Tree
@@ -21,4 +22,8 @@ func (a *GitTreeDiskAdapter) Open(name string) (io.ReadCloser, error) {
 	}
 
 	return gitFile.Blob.Reader()
+}
+
+func (a *GitTreeDiskAdapter) Create(name string) (io.WriteCloser, error) {
+	return nil, errors.New("not implemented")
 }

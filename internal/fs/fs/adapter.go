@@ -9,8 +9,7 @@ import (
 )
 
 var (
-	_ wfs.FSReader = (*FSAdapter)(nil)
-	_ wfs.FSWriter = (*FSAdapter)(nil)
+	_ wfs.FS = (*FSAdapter)(nil)
 )
 
 type FSAdapter struct {

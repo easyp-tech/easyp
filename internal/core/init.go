@@ -8,6 +8,8 @@ import (
 	"path/filepath"
 
 	"gopkg.in/yaml.v3"
+
+	wfs "github.com/easyp-tech/easyp/internal/fs"
 )
 
 type (
@@ -72,18 +74,16 @@ type (
 )
 
 // Initialize initializes the EasyP configuration.
-func (i *Core) Initialize(ctx context.Context, disk FS, defaultLinters []string) error {
+func (i *Core) Initialize(ctx context.Context, disk wfs.DirWalker, defaultLinters []string) error {
 	config := defaultConfig(defaultLinters)
 
 	var migrated bool
-	err := fs.WalkDir(disk, ".", func(path string, d fs.DirEntry, err error) error {
+	err := disk.WalkDir(func(path string, disk wfs.FS, err error) error {
 		switch {
 		case err != nil:
 			return err
 		case ctx.Err() != nil:
 			return ctx.Err()
-		case d.IsDir():
-			return nil
 		}
 
 		defaultConfiguration := defaultConfig(defaultLinters)
@@ -132,7 +132,7 @@ func defaultConfig(defaultLinters []string) EasyPConfig {
 	}
 }
 
-func migrateFromBUF(disk FS, path string, defaultConfiguration EasyPConfig) error {
+func migrateFromBUF(disk wfs.FS, path string, defaultConfiguration EasyPConfig) error {
 	f, err := disk.Open(path)
 	if err != nil {
 		return fmt.Errorf("disk.Open: %w", err)
