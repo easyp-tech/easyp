@@ -77,19 +77,18 @@ tasks:
       - task: mock
         vars: { NAME: 'LockFile', DIR: './internal/adapters/storage' }
 
-#      - task: mock
-#        vars: { NAME: 'Storage', DIR: './internal/mod' }
-#      - task: mock
-#        vars: { NAME: 'ModuleConfig', DIR: './internal/mod' }
-#      - task: mock
-#        vars: { NAME: 'LockFile', DIR: './internal/mod' }
-#
-#      - task: mock
-#        vars: { NAME: 'Mod', DIR: './internal/api/shared/module_reflect' }
-#      - task: mock
-#        vars: { NAME: 'Storage', DIR: './internal/api/shared/module_reflect' }
-#      - task: mock
-#        vars: { NAME: 'LockFile', DIR: './internal/api/shared/module_reflect' }
+      - task: mock
+        vars: { NAME: 'Rule', DIR: './internal/core' }
+      - task: mock
+        vars: { NAME: 'Console', DIR: './internal/core' }
+      - task: mock
+        vars: { NAME: 'CurrentProjectGitWalker', DIR: './internal/core' }
+      - task: mock
+        vars: { NAME: 'Storage', DIR: './internal/core' }
+      - task: mock
+        vars: { NAME: 'ModuleConfig', DIR: './internal/core' }
+      - task: mock
+        vars: { NAME: 'LockFile', DIR: './internal/core' }
 
   docker_base:
     preconditions:

@@ -6,7 +6,7 @@ import (
 	"github.com/brianvoe/gofakeit/v6"
 	"github.com/stretchr/testify/require"
 
-	"github.com/easyp-tech/easyp/internal/mod/models"
+	"github.com/easyp-tech/easyp/internal/core/models"
 )
 
 func Test_isVersionsMatched(t *testing.T) {

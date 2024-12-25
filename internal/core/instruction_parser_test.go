@@ -10,10 +10,10 @@ import (
 
 func Test_InstructionParser_Parse(t *testing.T) {
 	tests := map[string]struct {
-		sourcePkgName string
+		sourcePkgName core.PackageName
 		source        string
 
-		pkgName         string
+		pkgName         core.PackageName
 		instructionName string
 	}{
 		"google_api_package": {

@@ -5,7 +5,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/easyp-tech/easyp/internal/mod/models"
+	"github.com/easyp-tech/easyp/internal/core/models"
 )
 
 func TestGetRenamer(t *testing.T) {

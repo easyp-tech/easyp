@@ -35,12 +35,12 @@ func TestPackageDefined_Validate(t *testing.T) {
 			fileName: invalidAuthProtoEmptyPkg,
 			wantIssues: &core.Issue{
 				Position: meta.Position{
-					Filename: "./../../../testdata/auth/empty_pkg.proto",
+					Filename: "./../../testdata/auth/empty_pkg.proto",
 					Offset:   0,
 					Line:     0,
 					Column:   0,
 				},
-				SourceName: "./../../../testdata/auth/empty_pkg.proto",
+				SourceName: "./../../testdata/auth/empty_pkg.proto",
 				Message:    "package should be defined",
 				RuleName:   "PACKAGE_DEFINED",
 			},
