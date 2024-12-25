@@ -16,7 +16,7 @@ import (
 func (c *Core) Lint(ctx context.Context, fsWalker DirWalker) ([]IssueInfo, error) {
 	var res []IssueInfo
 
-	err := fsWalker.WalkDir(func(path string, fs FS, err error) error {
+	err := fsWalker.WalkDir(func(path string, err error) error {
 		switch {
 		case err != nil:
 			return err
@@ -28,7 +28,7 @@ func (c *Core) Lint(ctx context.Context, fsWalker DirWalker) ([]IssueInfo, error
 			return nil
 		}
 
-		protoInfo, err := c.protoInfoRead(ctx, fs, path)
+		protoInfo, err := c.protoInfoRead(ctx, fsWalker, path)
 		if err != nil {
 			return fmt.Errorf("c.protoInfoRead: %w", err)
 		}

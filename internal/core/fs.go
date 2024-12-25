@@ -6,7 +6,7 @@ import (
 
 type DirWalker interface {
 	FS
-	WalkDir(callback WalkerDirCallback) error
+	WalkDir(callback func(path string, err error) error) error
 }
 
 type WalkerDirCallback func(path string, fs FS, err error) error
