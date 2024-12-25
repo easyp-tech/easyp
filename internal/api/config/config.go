@@ -28,6 +28,8 @@ type Generate struct {
 	DependencyEntryPoint *DependencyEntryPoint `json:"dependency_entry_point" yaml:"dependency_entry_point"`
 	Inputs               []Input               `json:"inputs" yaml:"inputs"`
 	Plugins              []Plugin              `json:"plugins" yaml:"plugins"`
+	ProtoRoot            string                `json:"proto_root" yaml:"proto_root"`
+	GenerateOutDirs      bool                  `json:"generate_out_dirs" yaml:"generate_out_dirs"`
 }
 
 // Input source for generating code.

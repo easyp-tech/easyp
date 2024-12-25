@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"io/fs"
+	"os"
+	stdpath "path"
 	"path/filepath"
 	"strings"
 
@@ -22,6 +24,10 @@ func (g *Generator) Generate(ctx context.Context, root, directory string) error 
 		Plugins: g.plugins,
 	}
 
+	if g.protoRoot != "" {
+		q.Imports[0] = g.protoRoot
+	}
+
 	for _, dep := range g.deps {
 		modulePaths, err := g.moduleReflect.GetModulePath(ctx, dep)
 		if err != nil {
@@ -29,6 +35,19 @@ func (g *Generator) Generate(ctx context.Context, root, directory string) error 
 		}
 
 		q.Imports = append(q.Imports, modulePaths)
+	}
+
+	if g.generateOutDirs {
+		for _, plug := range q.Plugins {
+			if stdpath.IsAbs(plug.Out) {
+				continue
+			}
+
+			err := os.MkdirAll(plug.Out, 0777)
+			if err != nil {
+				return fmt.Errorf("os.MkdirAll: %w", err)
+			}
+		}
 	}
 
 	err := filepath.WalkDir(directory, func(path string, d fs.DirEntry, err error) error {
