@@ -75,21 +75,21 @@ tasks:
   mocks:
     cmds:
       - task: mock
-        vars: { NAME: 'LockFile', DIR: './internal/mod/adapters/storage' }
+        vars: { NAME: 'LockFile', DIR: './internal/adapters/storage' }
 
-      - task: mock
-        vars: { NAME: 'Storage', DIR: './internal/mod' }
-      - task: mock
-        vars: { NAME: 'ModuleConfig', DIR: './internal/mod' }
-      - task: mock
-        vars: { NAME: 'LockFile', DIR: './internal/mod' }
-
-      - task: mock
-        vars: { NAME: 'Mod', DIR: './internal/api/shared/module_reflect' }
-      - task: mock
-        vars: { NAME: 'Storage', DIR: './internal/api/shared/module_reflect' }
-      - task: mock
-        vars: { NAME: 'LockFile', DIR: './internal/api/shared/module_reflect' }
+#      - task: mock
+#        vars: { NAME: 'Storage', DIR: './internal/mod' }
+#      - task: mock
+#        vars: { NAME: 'ModuleConfig', DIR: './internal/mod' }
+#      - task: mock
+#        vars: { NAME: 'LockFile', DIR: './internal/mod' }
+#
+#      - task: mock
+#        vars: { NAME: 'Mod', DIR: './internal/api/shared/module_reflect' }
+#      - task: mock
+#        vars: { NAME: 'Storage', DIR: './internal/api/shared/module_reflect' }
+#      - task: mock
+#        vars: { NAME: 'LockFile', DIR: './internal/api/shared/module_reflect' }
 
   docker_base:
     preconditions:
