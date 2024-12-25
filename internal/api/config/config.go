@@ -33,7 +33,7 @@ type Generate struct {
 	Inputs               []Input               `json:"inputs" yaml:"inputs"`
 	Plugins              []Plugin              `json:"plugins" yaml:"plugins"`
 	ProtoRoot            string                `json:"proto_root" yaml:"proto_root"`
-	MakeOutDirs          bool                  `json:"make_out_dirs" yaml:"make_out_dirs"`
+	GenerateOutDirs      bool                  `json:"generate_out_dirs" yaml:"generate_out_dirs"`
 }
 
 // Input source for generating code.

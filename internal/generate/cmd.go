@@ -9,14 +9,13 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/easyp-tech/easyp/internal/api/config"
 	"github.com/easyp-tech/easyp/internal/generate/adapters"
 )
 
 const defaultCompiler = "protoc"
 
 // Generate generates files.
-func (g *Generator) Generate(ctx context.Context, root, directory string, cfg config.Generate) error {
+func (g *Generator) Generate(ctx context.Context, root, directory string) error {
 	q := Query{
 		Compiler: defaultCompiler,
 		Imports: []string{
@@ -25,8 +24,8 @@ func (g *Generator) Generate(ctx context.Context, root, directory string, cfg co
 		Plugins: g.plugins,
 	}
 
-	if cfg.ProtoRoot != "" {
-		q.Imports[0] = cfg.ProtoRoot
+	if g.protoRoot != "" {
+		q.Imports[0] = g.protoRoot
 	}
 
 	for _, dep := range g.deps {
@@ -38,7 +37,7 @@ func (g *Generator) Generate(ctx context.Context, root, directory string, cfg co
 		q.Imports = append(q.Imports, modulePaths)
 	}
 
-	if cfg.MakeOutDirs {
+	if g.generateOutDirs {
 		for _, plug := range q.Plugins {
 			if stdpath.IsAbs(plug.Out) {
 				continue

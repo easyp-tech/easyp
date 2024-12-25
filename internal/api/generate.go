@@ -74,6 +74,8 @@ func (g Generate) Action(ctx *cli.Context) error {
 				return s != ""
 			}),
 		},
+		ProtoRoot:       cfg.Generate.ProtoRoot,
+		GenerateOutDirs: cfg.Generate.GenerateOutDirs,
 	})
 
 	dir := ctx.String(flagGenerateDirectoryPath.Name)
@@ -84,8 +86,7 @@ func (g Generate) Action(ctx *cli.Context) error {
 		}
 		dir = path.Join(modulePaths, cfg.Generate.DependencyEntryPoint.Path)
 	}
-
-	err = generator.Generate(ctx.Context, ".", dir, cfg.Generate)
+	err = generator.Generate(ctx.Context, ".", dir)
 	if err != nil {
 		return fmt.Errorf("generator.Generate: %w", err)
 	}

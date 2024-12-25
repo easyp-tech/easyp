@@ -23,17 +23,21 @@ type (
 	}
 	// Config is the configuration for EasyP generate.
 	Config struct {
-		Deps          []string
-		Plugins       []Plugin
-		Inputs        Inputs
-		ModuleReflect *modulereflect.ModuleReflect
+		Deps            []string
+		Plugins         []Plugin
+		Inputs          Inputs
+		ModuleReflect   *modulereflect.ModuleReflect
+		ProtoRoot       string
+		GenerateOutDirs bool
 	}
 	// Generator is the core functionality of EasyP generate.
 	Generator struct {
-		deps          []string
-		plugins       []Plugin
-		inputs        Inputs
-		moduleReflect *modulereflect.ModuleReflect
+		deps            []string
+		plugins         []Plugin
+		inputs          Inputs
+		moduleReflect   *modulereflect.ModuleReflect
+		protoRoot       string
+		generateOutDirs bool
 	}
 	// Query is a query for making sh command.
 	Query struct {
@@ -58,10 +62,12 @@ type (
 //	 proto/hello.proto
 func New(cfg Config) *Generator {
 	return &Generator{
-		deps:          cfg.Deps,
-		plugins:       cfg.Plugins,
-		moduleReflect: cfg.ModuleReflect,
-		inputs:        cfg.Inputs,
+		deps:            cfg.Deps,
+		plugins:         cfg.Plugins,
+		moduleReflect:   cfg.ModuleReflect,
+		inputs:          cfg.Inputs,
+		protoRoot:       cfg.ProtoRoot,
+		generateOutDirs: cfg.GenerateOutDirs,
 	}
 }
 
