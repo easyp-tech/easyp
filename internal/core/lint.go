@@ -6,10 +6,11 @@ import (
 	"io"
 	"log/slog"
 	"path/filepath"
-	"slices"
 	"strings"
 
 	"github.com/yoheimuta/go-protoparser/v4/parser"
+
+	"github.com/easyp-tech/easyp/internal/core/path_helpers"
 )
 
 // Lint lints the proto file.
@@ -22,7 +23,7 @@ func (c *Core) Lint(ctx context.Context, fsWalker DirWalker) ([]IssueInfo, error
 			return err
 		case ctx.Err() != nil:
 			return ctx.Err()
-		case slices.Contains(c.ignore, path):
+		case path_helpers.IsIgnoredPath(path, c.ignore):
 			return nil
 		case filepath.Ext(path) != ".proto":
 			return nil

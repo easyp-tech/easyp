@@ -9,10 +9,18 @@ import (
 	"github.com/yoheimuta/go-protoparser/v4/interpret/unordered"
 	"github.com/yoheimuta/go-protoparser/v4/parser"
 
+	"github.com/easyp-tech/easyp/internal/core/path_helpers"
 	"github.com/easyp-tech/easyp/internal/fs/fs"
 )
 
-func (c *Core) BreakingCheck(ctx context.Context, workingDir, path, against string) ([]IssueInfo, error) {
+type BreakingCheckConfig struct {
+	// branch name to compare with
+	AgainstGitRef string
+	// dirs should be ignored
+	IgnoreDirs []string
+}
+
+func (c *Core) BreakingCheck(ctx context.Context, workingDir, path string) ([]IssueInfo, error) {
 	fsWalker := fs.NewFSWalker(os.DirFS(workingDir), path)
 
 	currentProtoFiles, err := c.readProtoFiles(ctx, fsWalker)
@@ -20,7 +28,9 @@ func (c *Core) BreakingCheck(ctx context.Context, workingDir, path, against stri
 		return nil, fmt.Errorf("c.readCurrentProtoFiles: %w", err)
 	}
 
-	againstFSWalker, err := c.currentProjectGitWalker.GetDirWalker(workingDir, against, path)
+	againstFSWalker, err := c.currentProjectGitWalker.GetDirWalker(
+		workingDir, c.breakingCheckConfig.AgainstGitRef, path,
+	)
 	if err != nil {
 		return nil, fmt.Errorf("c.currentProjectGitWalker.GetDirWalker: %w", err)
 	}
@@ -57,6 +67,8 @@ func (c *Core) readProtoFiles(ctx context.Context, fsWalker DirWalker) ([]ProtoI
 		case ctx.Err() != nil:
 			return ctx.Err()
 		case filepath.Ext(path) != ".proto":
+			return nil
+		case path_helpers.IsIgnoredPath(path, c.breakingCheckConfig.IgnoreDirs):
 			return nil
 		}
 

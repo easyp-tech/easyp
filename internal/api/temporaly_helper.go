@@ -68,6 +68,11 @@ func buildCore(_ context.Context, cfg config.Config) (*core.Core, error) {
 
 	currentProjectGitWalker := go_git.New()
 
+	breakingCheckConfig := core.BreakingCheckConfig{
+		IgnoreDirs:    cfg.BreakingCheck.Ignore,
+		AgainstGitRef: cfg.BreakingCheck.AgainstGitRef,
+	}
+
 	app := core.New(
 		lintRules,
 		cfg.Lint.Ignore,
@@ -93,6 +98,7 @@ func buildCore(_ context.Context, cfg config.Config) (*core.Core, error) {
 		moduleCfg,
 		lockFile,
 		currentProjectGitWalker,
+		breakingCheckConfig,
 	)
 
 	return app, nil
