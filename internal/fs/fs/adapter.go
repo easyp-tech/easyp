@@ -4,11 +4,7 @@ import (
 	"io"
 	"io/fs"
 	"os"
-
-	"github.com/easyp-tech/easyp/internal/core"
 )
-
-var _ core.FS = (*FSAdapter)(nil)
 
 type FSAdapter struct {
 	fs.FS

@@ -67,7 +67,7 @@ func (i *Core) Initialize(ctx context.Context, disk DirWalker, defaultLinters []
 	config := defaultConfig(defaultLinters)
 
 	var migrated bool
-	err := disk.WalkDir(func(path string, disk FS, err error) error {
+	err := disk.WalkDir(func(path string, err error) error {
 		switch {
 		case err != nil:
 			return err
