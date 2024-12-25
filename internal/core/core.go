@@ -8,17 +8,19 @@ import (
 
 // Core provide to business logic of EasyP.
 type Core struct {
-	rules                   []Rule
-	ignore                  []string
-	deps                    []string
-	ignoreOnly              map[string][]string
-	logger                  *slog.Logger
-	plugins                 []Plugin
-	inputs                  Inputs
-	console                 Console
-	storage                 Storage
-	moduleConfig            ModuleConfig
-	lockFile                LockFile
+	rules        []Rule
+	ignore       []string
+	deps         []string
+	ignoreOnly   map[string][]string
+	logger       *slog.Logger
+	plugins      []Plugin
+	inputs       Inputs
+	console      Console
+	storage      Storage
+	moduleConfig ModuleConfig
+	lockFile     LockFile
+
+	breakingCheckConfig     BreakingCheckConfig
 	currentProjectGitWalker CurrentProjectGitWalker
 }
 
@@ -39,6 +41,7 @@ func New(
 	moduleConfig ModuleConfig,
 	lockFile LockFile,
 	currentProjectGitWalker CurrentProjectGitWalker,
+	breakingCheckConfig BreakingCheckConfig,
 ) *Core {
 	return &Core{
 		rules:                   rules,
@@ -53,5 +56,6 @@ func New(
 		moduleConfig:            moduleConfig,
 		lockFile:                lockFile,
 		currentProjectGitWalker: currentProjectGitWalker,
+		breakingCheckConfig:     breakingCheckConfig,
 	}
 }

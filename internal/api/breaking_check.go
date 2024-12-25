@@ -88,12 +88,15 @@ func (b BreakingCheck) action(ctx *cli.Context) error {
 		return fmt.Errorf("os.Getwd: %w", err)
 	}
 
-	path := ctx.String(flagLintDirectoryPath.Name)
-	against := ctx.String(flagAgainstBranchName.Name)
-
 	cfg, err := config.New(ctx.Context, ctx.String(flags.Config.Name))
 	if err != nil {
 		return fmt.Errorf("config.New: %w", err)
+	}
+
+	path := ctx.String(flagLintDirectoryPath.Name)
+	against := ctx.String(flagAgainstBranchName.Name)
+	if against != "" {
+		cfg.BreakingCheck.AgainstGitRef = against
 	}
 
 	app, err := buildCore(ctx.Context, *cfg)
@@ -101,7 +104,7 @@ func (b BreakingCheck) action(ctx *cli.Context) error {
 		return fmt.Errorf("buildCore: %w", err)
 	}
 
-	issues, err := app.BreakingCheck(ctx.Context, workingDir, path, against)
+	issues, err := app.BreakingCheck(ctx.Context, workingDir, path)
 	if err != nil {
 		return fmt.Errorf("app.BreakingCheck: %w", err)
 	}

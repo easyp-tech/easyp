@@ -24,11 +24,6 @@ type Generate struct {
 	Plugins []Plugin `json:"plugins" yaml:"plugins"`
 }
 
-// BreakingCheck is the configuration for `breaking` command
-type BreakingCheck struct {
-	AgainstBranch string `json:"against_branch" yaml:"against_branch"`
-}
-
 // Input source for generating code.
 type Input struct {
 	Directory string       `yaml:"directory"`
