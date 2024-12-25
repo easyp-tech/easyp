@@ -369,8 +369,8 @@ func getRPCDeletedIssue(againstService Service, againstRPC *parser.RPC) IssueInf
 func getRPCRequestChangedTypeIssue(
 	againstService, current Service, againstRPC, currentRPC *parser.RPC,
 ) IssueInfo {
-	againstParser := InstructionParser{SourcePkgName: string(againstService.PackageName)}
-	currentParser := InstructionParser{SourcePkgName: string(current.PackageName)}
+	againstParser := InstructionParser{SourcePkgName: againstService.PackageName}
+	currentParser := InstructionParser{SourcePkgName: current.PackageName}
 
 	message := fmt.Sprintf(
 		"RPC \"%s\" on service \"%s\" changed request type "+
@@ -385,8 +385,8 @@ func getRPCRequestChangedTypeIssue(
 func getRPCResponseChangedTypeIssue(
 	againstService, current Service, againstRPC, currentRPC *parser.RPC,
 ) IssueInfo {
-	againstParser := InstructionParser{SourcePkgName: string(againstService.PackageName)}
-	currentParser := InstructionParser{SourcePkgName: string(current.PackageName)}
+	againstParser := InstructionParser{SourcePkgName: againstService.PackageName}
+	currentParser := InstructionParser{SourcePkgName: current.PackageName}
 
 	message := fmt.Sprintf(
 		"RPC \"%s\" on service \"%s\" changed response type "+

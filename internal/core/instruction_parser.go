@@ -11,7 +11,7 @@ import (
 //	`google.api` - package name
 //	'http' - instruction name
 type InstructionInfo struct {
-	PkgName     string
+	PkgName     PackageName
 	Instruction string
 }
 
@@ -22,7 +22,7 @@ func (i InstructionInfo) GetFullName() string {
 // parseInstruction parse input string and return its package name
 // if passed input does not have package -> return pkgName as package name source proto file
 type InstructionParser struct {
-	SourcePkgName string
+	SourcePkgName PackageName
 }
 
 func (p InstructionParser) Parse(input string) InstructionInfo {
@@ -45,7 +45,7 @@ func (p InstructionParser) Parse(input string) InstructionInfo {
 	}
 
 	return InstructionInfo{
-		PkgName:     input[:idx],
+		PkgName:     PackageName(input[:idx]),
 		Instruction: input[idx+1:],
 	}
 }

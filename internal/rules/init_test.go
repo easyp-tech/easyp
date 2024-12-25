@@ -13,20 +13,20 @@ import (
 )
 
 const (
-	invalidAuthProto         = `./../../../testdata/auth/service.proto`
-	invalidAuthProto2        = `./../../../testdata/auth/queue.proto`
-	invalidAuthProto3        = `./../../../testdata/auth/InvalidName.proto`
-	invalidAuthProto4        = `./../../../testdata/invalid_pkg/queue.proto`
-	invalidAuthProto5        = `./../../../testdata/invalid_options/queue.proto`
-	invalidAuthProto6        = `./../../../testdata/invalid_options/session.proto`
-	invalidAuthProtoEmptyPkg = `./../../../testdata/auth/empty_pkg.proto`
-	invalidsSessionProto     = `./../../../testdata/invalid_pkg/session.proto`
-	validAuthProto           = `./../../../testdata/api/session/v1/session.proto`
-	validAuthProto2          = `./../../../testdata/api/session/v1/events.proto`
-	importUsed               = "./../../../testdata/import_used/used.proto"
-	importNotUsed            = "./../../../testdata/import_used/not_used.proto"
-	noLintBufComment         = "./../../../testdata/no_lint/no_lint_buf_comment.proto"
-	noLintEasypComment       = "./../../../testdata/no_lint/no_lint_easyp_comment.proto"
+	invalidAuthProto         = `./../../testdata/auth/service.proto`
+	invalidAuthProto2        = `./../../testdata/auth/queue.proto`
+	invalidAuthProto3        = `./../../testdata/auth/InvalidName.proto`
+	invalidAuthProto4        = `./../../testdata/invalid_pkg/queue.proto`
+	invalidAuthProto5        = `./../../testdata/invalid_options/queue.proto`
+	invalidAuthProto6        = `./../../testdata/invalid_options/session.proto`
+	invalidAuthProtoEmptyPkg = `./../../testdata/auth/empty_pkg.proto`
+	invalidsSessionProto     = `./../../testdata/invalid_pkg/session.proto`
+	validAuthProto           = `./../../testdata/api/session/v1/session.proto`
+	validAuthProto2          = `./../../testdata/api/session/v1/events.proto`
+	importUsed               = "./../../testdata/import_used/used.proto"
+	importNotUsed            = "./../../testdata/import_used/not_used.proto"
+	noLintBufComment         = "./../../testdata/no_lint/no_lint_buf_comment.proto"
+	noLintEasypComment       = "./../../testdata/no_lint/no_lint_easyp_comment.proto"
 )
 
 func start(t testing.TB) (*require.Assertions, map[string]core.ProtoInfo) {
@@ -72,7 +72,7 @@ func parseFile(t testing.TB, assert *require.Assertions, path string) core.Proto
 	// read imports files
 	for _, imp := range res.ProtoBody.Imports {
 		importPath := core.ConvertImportPath(imp.Location)
-		fullPath := filepath.Join("./../../../testdata", string(importPath))
+		fullPath := filepath.Join("./../../testdata", string(importPath))
 
 		f, err := os.Open(fullPath)
 		if err != nil {

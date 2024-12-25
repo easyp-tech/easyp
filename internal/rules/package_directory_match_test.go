@@ -40,7 +40,7 @@ func TestPackageDirectoryMatch_Validate(t *testing.T) {
 					Line:     3,
 					Column:   1,
 				},
-				SourceName: "./../../../testdata/auth/service.proto",
+				SourceName: "./../../testdata/auth/service.proto",
 				Message:    "package is not matched with path",
 				RuleName:   "PACKAGE_DIRECTORY_MATCH",
 			},
@@ -60,7 +60,7 @@ func TestPackageDirectoryMatch_Validate(t *testing.T) {
 			r, protos := start(t)
 
 			rule := rules.PackageDirectoryMatch{
-				Root: "./../../../testdata/",
+				Root: "./../../testdata/",
 			}
 			issues, err := rule.Validate(protos[tc.fileName])
 			r.ErrorIs(err, tc.wantErr)

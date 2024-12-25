@@ -3,7 +3,7 @@
 package mocks
 
 import (
-	models "github.com/easyp-tech/easyp/internal/mod/models"
+	models "github.com/easyp-tech/easyp/internal/core/models"
 	mock "github.com/stretchr/testify/mock"
 )
 
