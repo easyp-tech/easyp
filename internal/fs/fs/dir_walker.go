@@ -1,8 +1,14 @@
 package fs
 
 import (
+	"io"
 	"io/fs"
 )
+
+type FS interface {
+	Open(name string) (io.ReadCloser, error)
+	Create(name string) (io.WriteCloser, error)
+}
 
 func NewFSWalker(fs fs.FS, path string) *FSWalker {
 	return &FSWalker{

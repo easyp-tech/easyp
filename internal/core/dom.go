@@ -30,6 +30,11 @@ type (
 		RunCmd(ctx context.Context, dir string, command string, commandParams ...string) (string, error)
 	}
 
+	// CurrentProjectGitWalker is provider for fs walking for current project
+	CurrentProjectGitWalker interface {
+		GetDirWalker(workingDir, gitRef, path string) (DirWalker, error)
+	}
+
 	// IssueInfo contains the information of an issue and the path.
 	IssueInfo struct {
 		Issue
@@ -47,12 +52,65 @@ type (
 	// ImportPath type alias for path import in proto file
 	ImportPath string
 
+	// PackageName type alias for package name `package` section in protofile.
+	PackageName string
+
 	// ProtoInfo is the information of a proto file.
 	ProtoInfo struct {
 		Path                 string
 		Info                 *unordered.Proto
 		ProtoFilesFromImport map[ImportPath]*unordered.Proto
 	}
+
+	Import struct {
+		ProtoFilePath string
+		PackageName   PackageName
+		*parser.Import
+	}
+
+	Service struct {
+		ProtoFilePath string
+		PackageName   PackageName
+		*unordered.Service
+	}
+
+	Message struct {
+		MessagePath   string
+		ProtoFilePath string
+		PackageName   PackageName
+		*unordered.Message
+	}
+
+	OneOf struct {
+		OneOfPath     string
+		ProtoFilePath string
+		PackageName   PackageName
+		*parser.Oneof
+	}
+
+	Enum struct {
+		EnumPath      string
+		ProtoFilePath string
+		PackageName   PackageName
+		*unordered.Enum
+	}
+
+	Collection struct {
+		Imports  map[ImportPath]Import
+		Services map[string]Service
+		// key message path - for supporting nested messages:
+		// message MainMessage {
+		// 		message NestedMessage{};
+		// };
+		// will be: MainMessage.NestedMessage
+		Messages map[string]Message
+		OneOfs   map[string]OneOf
+		Enums    map[string]Enum
+	}
+
+	// collects proto data collections
+	// packageName -> services,messages etc
+	ProtoData map[PackageName]*Collection
 )
 
 type Repo interface {
@@ -73,6 +131,14 @@ type Repo interface {
 
 	// Fetch from remote repository specified version
 	Fetch(ctx context.Context, revision models.Revision) error
+}
+
+func GetPackageName(protoFile *unordered.Proto) PackageName {
+	if len(protoFile.ProtoBody.Packages) == 0 {
+		return ""
+	}
+
+	return PackageName(protoFile.ProtoBody.Packages[0].Name)
 }
 
 // AppendIssue check if lint error is ignored -> add new error to slice
@@ -127,6 +193,14 @@ type OpenImportFileError struct {
 
 func (e *OpenImportFileError) Error() string {
 	return fmt.Sprintf("open import file `%s`", e.FileName)
+}
+
+type GitRefNotFoundError struct {
+	GitRef string
+}
+
+func (e *GitRefNotFoundError) Error() string {
+	return fmt.Sprintf("git ref `%s` not found", e.GitRef)
 }
 
 func ConvertImportPath(source string) ImportPath {

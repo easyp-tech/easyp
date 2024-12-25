@@ -4,11 +4,7 @@ import (
 	"path/filepath"
 
 	"github.com/go-git/go-git/v5/plumbing/object"
-
-	"github.com/easyp-tech/easyp/internal/core"
 )
-
-var _ core.DirWalker = (*GitTreeWalker)(nil)
 
 func NewGitTreeWalker(tree *object.Tree, path string) *GitTreeWalker {
 	return &GitTreeWalker{
@@ -25,14 +21,14 @@ type GitTreeWalker struct {
 	path string
 }
 
-func (w *GitTreeWalker) WalkDir(callback core.WalkerDirCallback) error {
+func (w *GitTreeWalker) WalkDir(callback func(path string, err error) error) error {
 	err := w.tree.Files().ForEach(func(f *object.File) error {
 		switch {
 		case !isTargetFile(w.path, f.Name):
 			return nil
 		}
 
-		return callback(f.Name, w, nil)
+		return callback(f.Name, nil)
 	})
 	return err
 }

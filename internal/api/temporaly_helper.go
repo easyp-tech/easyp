@@ -11,6 +11,7 @@ import (
 	"github.com/samber/lo"
 
 	"github.com/easyp-tech/easyp/internal/adapters/console"
+	"github.com/easyp-tech/easyp/internal/adapters/go_git"
 	lockfile "github.com/easyp-tech/easyp/internal/adapters/lock_file"
 	moduleconfig "github.com/easyp-tech/easyp/internal/adapters/module_config"
 	"github.com/easyp-tech/easyp/internal/adapters/storage"
@@ -65,6 +66,8 @@ func buildCore(_ context.Context, cfg config.Config) (*core.Core, error) {
 
 	moduleCfg := moduleconfig.New()
 
+	currentProjectGitWalker := go_git.New()
+
 	app := core.New(
 		lintRules,
 		cfg.Lint.Ignore,
@@ -89,6 +92,7 @@ func buildCore(_ context.Context, cfg config.Config) (*core.Core, error) {
 		store,
 		moduleCfg,
 		lockFile,
+		currentProjectGitWalker,
 	)
 
 	return app, nil
