@@ -1,6 +1,7 @@
 package go_git
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/go-git/go-git/v5"
@@ -13,6 +14,10 @@ import (
 func (g *GoGit) GetDirWalker(workingDir, gitRef, path string) (core.DirWalker, error) {
 	repository, err := git.PlainOpen(workingDir)
 	if err != nil {
+		if errors.Is(err, git.ErrRepositoryNotExists) {
+			return nil, core.ErrRepositoryDoesNotExist
+		}
+
 		return nil, fmt.Errorf("git.PlainOpen: %w", err)
 	}
 	refName := plumbing.ReferenceName(fmt.Sprintf("refs/heads/%s", gitRef))

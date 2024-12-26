@@ -3,7 +3,6 @@ package api
 import (
 	"errors"
 	"fmt"
-	"log/slog"
 	"os"
 
 	"github.com/urfave/cli/v2"
@@ -69,11 +68,11 @@ func (b BreakingCheck) Action(ctx *cli.Context) error {
 		case errors.Is(err, ErrBreakingCheckIssue):
 			os.Exit(1)
 		case errors.As(err, &e):
-			slog.Info("Cannot import file", "file name", e.FileName)
-			os.Exit(2)
+			errExit(2, "Cannot import file", "file name", e.FileName)
 		case errors.As(err, &g):
-			slog.Info("Cannot find git ref", "ref", g.GitRef)
-			os.Exit(2)
+			errExit(2, "Cannot find git ref", "ref", g.GitRef)
+		case errors.Is(err, core.ErrRepositoryDoesNotExist):
+			errExit(2, "Repository does not exist in current directory")
 		default:
 			return err
 		}

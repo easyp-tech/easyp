@@ -25,7 +25,8 @@ type Core struct {
 }
 
 var (
-	ErrInvalidRule = errors.New("invalid rule")
+	ErrInvalidRule            = errors.New("invalid rule")
+	ErrRepositoryDoesNotExist = errors.New("repository does not exist")
 )
 
 func New(
