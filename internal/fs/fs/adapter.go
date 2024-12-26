@@ -15,5 +15,6 @@ func (a *FSAdapter) Open(name string) (io.ReadCloser, error) {
 }
 
 func (a *FSAdapter) Create(name string) (io.WriteCloser, error) {
+
 	return os.Create(name)
 }
