@@ -29,6 +29,11 @@ const (
 	defaultEasypPath = ".easyp"
 )
 
+func errExit(code int, msg string, args ...any) {
+	slog.Info(msg, args...)
+	os.Exit(code)
+}
+
 // getEasypPath return path for cache, modules storage
 func getEasypPath() (string, error) {
 	easypPath := os.Getenv(envEasypPath)

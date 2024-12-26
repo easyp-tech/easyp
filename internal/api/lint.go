@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log/slog"
 	"os"
 
 	"github.com/urfave/cli/v2"
@@ -94,8 +93,7 @@ func (l Lint) Action(ctx *cli.Context) error {
 		case errors.Is(err, ErrHasLintIssue):
 			os.Exit(1)
 		case errors.As(err, &e):
-			slog.Info("Cannot import file", "file name", e.FileName)
-			os.Exit(2)
+			errExit(2, "Cannot import file", "file name", e.FileName)
 		default:
 			return err
 		}
