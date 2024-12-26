@@ -4,16 +4,20 @@ import (
 	"io"
 	"io/fs"
 	"os"
+	"path/filepath"
 )
 
 type FSAdapter struct {
 	fs.FS
+
+	rootDir string
 }
 
 func (a *FSAdapter) Open(name string) (io.ReadCloser, error) {
-	return os.Open(name)
+	return a.FS.Open(name)
 }
 
 func (a *FSAdapter) Create(name string) (io.WriteCloser, error) {
-	return os.Create(name)
+	path := filepath.Join(a.rootDir, name)
+	return os.Create(path)
 }

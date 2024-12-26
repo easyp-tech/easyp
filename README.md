@@ -32,6 +32,18 @@ go build ./cmd/easyp
 go install github.com/easyp-tech/easyp/cmd/easyp@latest
 ```
 
+## Init
+
+Creates empty `easyp` project.
+
+Creates `easyp.yaml` (by default) and `easyp.lock` files.
+
+### Usage
+
+```bash
+easyp init
+```
+
 ## Linter
 
 `easyp` support `buf's` linter rules.

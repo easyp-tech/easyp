@@ -3,7 +3,6 @@ package core
 import (
 	"context"
 	"fmt"
-	"os"
 	"path/filepath"
 
 	"github.com/yoheimuta/go-protoparser/v4/interpret/unordered"
@@ -21,7 +20,7 @@ type BreakingCheckConfig struct {
 }
 
 func (c *Core) BreakingCheck(ctx context.Context, workingDir, path string) ([]IssueInfo, error) {
-	fsWalker := fs.NewFSWalker(os.DirFS(workingDir), path)
+	fsWalker := fs.NewFSWalker(workingDir, path)
 
 	currentProtoFiles, err := c.readProtoFiles(ctx, fsWalker)
 	if err != nil {

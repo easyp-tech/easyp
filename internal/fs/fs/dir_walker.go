@@ -3,6 +3,7 @@ package fs
 import (
 	"io"
 	"io/fs"
+	"os"
 )
 
 type FS interface {
@@ -10,9 +11,10 @@ type FS interface {
 	Create(name string) (io.WriteCloser, error)
 }
 
-func NewFSWalker(fs fs.FS, path string) *FSWalker {
+func NewFSWalker(root, path string) *FSWalker {
+	diskFS := os.DirFS(root)
 	return &FSWalker{
-		FSAdapter: &FSAdapter{fs},
+		FSAdapter: &FSAdapter{diskFS, root},
 		path:      path,
 	}
 }
