@@ -2,7 +2,6 @@ package api
 
 import (
 	"fmt"
-	"os"
 
 	"github.com/urfave/cli/v2"
 
@@ -45,7 +44,7 @@ func (i Init) Command() *cli.Command {
 // Action implements Handler.
 func (i Init) Action(ctx *cli.Context) error {
 	rootPath := ctx.String(flagInitDirectoryPath.Name)
-	dirFS := fs.NewFSWalker(os.DirFS(rootPath), ".")
+	dirFS := fs.NewFSWalker(rootPath, ".")
 
 	cfg := &config.Config{}
 
