@@ -6,6 +6,8 @@ import (
 	"path/filepath"
 
 	"gopkg.in/yaml.v3"
+
+	"github.com/easyp-tech/easyp/internal/config"
 )
 
 type (
@@ -51,20 +53,11 @@ type (
 		BUF *BUFConfig
 		//Protoool *ProtooolConfig TODO
 	}
-
-	// EasyPConfig is the configuration for EasyP.
-	EasyPConfig struct {
-		Version  string   `yaml:"version"`
-		Deps     []string `yaml:"deps"`
-		Build    Build    `yaml:"build"`
-		Lint     Lint     `yaml:"lint"`
-		Breaking Breaking `yaml:"breaking"`
-	}
 )
 
 // Initialize initializes the EasyP configuration.
 func (i *Core) Initialize(ctx context.Context, disk DirWalker, defaultLinters []string) error {
-	config := defaultConfig(defaultLinters)
+	cfg := defaultConfig(defaultLinters)
 
 	var migrated bool
 	err := disk.WalkDir(func(path string, err error) error {
@@ -97,7 +90,7 @@ func (i *Core) Initialize(ctx context.Context, disk DirWalker, defaultLinters []
 			return fmt.Errorf("disk.Create: %w", err)
 		}
 
-		err = yaml.NewEncoder(res).Encode(config)
+		err = yaml.NewEncoder(res).Encode(cfg)
 		if err != nil {
 			return fmt.Errorf("yaml.NewEncoder.Encode: %w", err)
 		}
@@ -106,22 +99,21 @@ func (i *Core) Initialize(ctx context.Context, disk DirWalker, defaultLinters []
 	return nil
 }
 
-func defaultConfig(defaultLinters []string) EasyPConfig {
-	return EasyPConfig{
-		Version: "v1alpha",
-		Lint: Lint{
-			Use:                                  defaultLinters,
-			AllowCommentIgnores:                  false,
-			EnumZeroValueSuffix:                  "_NONE",
-			RPCAllowSameRequestResponse:          false,
-			RPCAllowGoogleProtobufEmptyRequests:  false,
-			RPCAllowGoogleProtobufEmptyResponses: false,
-			ServiceSuffix:                        "API",
+func defaultConfig(defaultLinters []string) config.Config {
+	return config.Config{
+		Lint: config.LintConfig{
+			Use:                 defaultLinters,
+			AllowCommentIgnores: false,
+			EnumZeroValueSuffix: "_NONE",
+			ServiceSuffix:       "API",
+		},
+		BreakingCheck: config.BreakingCheck{
+			AgainstGitRef: "master",
 		},
 	}
 }
 
-func migrateFromBUF(disk FS, path string, defaultConfiguration EasyPConfig) error {
+func migrateFromBUF(disk FS, path string, defaultConfiguration config.Config) error {
 	f, err := disk.Open(path)
 	if err != nil {
 		return fmt.Errorf("disk.Open: %w", err)
@@ -158,21 +150,17 @@ func migrateFromBUF(disk FS, path string, defaultConfiguration EasyPConfig) erro
 	return nil
 }
 
-func buildCfgFromBUF(cfg EasyPConfig, bufConfig BUFConfig) EasyPConfig {
-	return EasyPConfig{
-		Version: cfg.Version,
-		Deps:    nil,
-		Lint: Lint{
-			Use:                                  bufConfig.Lint.Use,
-			Except:                               bufConfig.Lint.Except,
-			Ignore:                               bufConfig.Lint.Ignore,
-			IgnoreOnly:                           bufConfig.Lint.IgnoreOnly,
-			AllowCommentIgnores:                  bufConfig.Lint.AllowCommentIgnores,
-			EnumZeroValueSuffix:                  bufConfig.Lint.EnumZeroValueSuffix,
-			RPCAllowSameRequestResponse:          bufConfig.Lint.RPCAllowSameRequestResponse,
-			RPCAllowGoogleProtobufEmptyRequests:  bufConfig.Lint.RPCAllowGoogleProtobufEmptyRequests,
-			RPCAllowGoogleProtobufEmptyResponses: bufConfig.Lint.RPCAllowGoogleProtobufEmptyResponses,
-			ServiceSuffix:                        bufConfig.Lint.ServiceSuffix,
+func buildCfgFromBUF(cfg config.Config, bufConfig BUFConfig) config.Config {
+	return config.Config{
+		Deps: nil,
+		Lint: config.LintConfig{
+			Use:                 bufConfig.Lint.Use,
+			Except:              bufConfig.Lint.Except,
+			Ignore:              bufConfig.Lint.Ignore,
+			IgnoreOnly:          bufConfig.Lint.IgnoreOnly,
+			AllowCommentIgnores: bufConfig.Lint.AllowCommentIgnores,
+			EnumZeroValueSuffix: bufConfig.Lint.EnumZeroValueSuffix,
+			ServiceSuffix:       bufConfig.Lint.ServiceSuffix,
 		},
 	}
 }
