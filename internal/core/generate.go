@@ -2,6 +2,7 @@ package core
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io/fs"
 	"log/slog"
@@ -31,6 +32,52 @@ func (c *Core) Generate(ctx context.Context, root, directory string) error {
 
 		q.Imports = append(q.Imports, modulePaths)
 	}
+
+	for _, repo := range c.inputs.InputGitRepos {
+		module := models.NewModule(fmt.Sprintf("%s@%s", repo.URL, repo.Tag))
+
+		isInstalled, err := c.storage.IsModuleInstalled(module)
+		if err != nil {
+			return fmt.Errorf("c.isModuleInstalled: %w", err)
+		}
+
+		if isInstalled {
+			slog.Info("Module is installed", "name", module.Name, "version", module.Version)
+			continue
+		}
+
+		err = c.Get(ctx, module)
+		if err != nil {
+			if errors.Is(err, models.ErrVersionNotFound) {
+				slog.Error("Version not found", "dependency", module.Name)
+
+				return models.ErrVersionNotFound
+			}
+
+			return fmt.Errorf("c.Get: %w", err)
+		}
+	}
+
+	//module := models.NewModule(dependency)
+	//
+	//isInstalled, err := c.storage.IsModuleInstalled(module)
+	//if err != nil {
+	//	return fmt.Errorf("c.isModuleInstalled: %w", err)
+	//}
+	//
+	//if isInstalled {
+	//	slog.Info("Module is installed", "name", module.Name, "version", module.Version)
+	//	continue
+	//}
+	//
+	//if err := c.Get(ctx, module); err != nil {
+	//	if errors.Is(err, models.ErrVersionNotFound) {
+	//		slog.Error("Version not found", "dependency", dependency)
+	//		return models.ErrVersionNotFound
+	//	}
+	//
+	//	return fmt.Errorf("c.Get: %w", err)
+	//}
 
 	err := filepath.WalkDir(directory, func(path string, d fs.DirEntry, err error) error {
 		switch {

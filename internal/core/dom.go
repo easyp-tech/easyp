@@ -214,9 +214,18 @@ type (
 		Out     string
 		Options map[string]string
 	}
+	// InputGitRepo is the configuration of the git repository.
+	InputGitRepo struct {
+		URL          string `yaml:"url"`
+		Branch       string `yaml:"branch"`
+		SubDirectory string `yaml:"sub_directory"`
+		Tag          string `yaml:"tag"`
+	}
+
 	// Inputs is the source for generating code.
 	Inputs struct {
-		Dirs []string
+		Dirs          []string
+		InputGitRepos []InputGitRepo
 	}
 	// Config is the configuration for EasyP generate.
 	Config struct {

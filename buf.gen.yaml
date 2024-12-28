@@ -1,0 +1,19 @@
+version: v2
+
+plugins:
+  # BSR remote plugin
+  - local: protoc-gen-go
+    out: gen/proto
+  # Built-in protoc plugin for C++
+  # Local binary plugin, search in ${PATH} by default
+#  - local: protoc-gen-validate
+#    out: gen/proto
+# 'inputs' is a list of inputs that will be run for buf generate. It's a
+# required key for v2 buf.gen.yaml and allows you to specify options based on the type
+# of input (https://buf.build/docs/reference/inputs.md#source) being configured.
+inputs:
+  # Git repository
+  - git_repo: https://github.com/sipki-tech/currency
+    branch: main
+#    subdir: api
+    depth: 30

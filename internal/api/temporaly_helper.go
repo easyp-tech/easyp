@@ -97,6 +97,14 @@ func buildCore(_ context.Context, cfg config.Config) (*core.Core, error) {
 			}), func(s string, _ int) bool {
 				return s != ""
 			}),
+			InputGitRepos: lo.Map(cfg.Generate.Inputs, func(i config.Input, _ int) core.InputGitRepo {
+				return core.InputGitRepo{
+					URL:          i.GitRepo.URL,
+					Branch:       i.GitRepo.Branch,
+					SubDirectory: i.GitRepo.SubDirectory,
+					Tag:          i.GitRepo.Tag,
+				}
+			}),
 		},
 		console.New(),
 		store,
