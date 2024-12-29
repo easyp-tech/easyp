@@ -63,6 +63,44 @@ Checking your current API on backward compatibility with API from another branch
 easyp breaking --against $BRANCH_TO_COMPARE_WITH
 ```
 
+## Generate
+
+Generate proto files. 
+
+### Usage
+
+There are several ways to get proto files to generate:
+1. from current local repository:
+```yaml
+generate:
+  inputs:
+    - directory: WHERE YOUR PROTO FILES ARE
+```
+2. from remote git repository:
+```yaml
+generate:
+  inputs:
+    - git_repo:
+        url: "github.com/sipki-tech/currency@v0.1.2"
+        sub_directory: DIR WITH PROTO FILES ON REMOTE REPO
+```
+
+`plugins` section: config for `protoc`
+
+Example:
+```yaml
+  plugins:
+    - name: go
+      out: .
+      opts:
+        paths: source_relative
+    - name: go-grpc
+      out: .
+      opts:
+        paths: source_relative
+        require_unimplemented_servers: false
+```
+
 ## Package manager
 
 ### Usage
