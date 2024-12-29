@@ -104,6 +104,8 @@ Example:
 
 ## Package manager
 
+Install dependence from `easyp` config (or lock file).
+
 ### Usage
 
 * download
@@ -148,6 +150,37 @@ deps:
 **NOTE:** Use only git tag or full hash of commit version.
 
 By default, `easyp` use `$HOME/.easyp` dir to storage cache and downloaded modules, you could override it with `EASYPPATH` env var.
+
+### Install from private repositories
+
+There are two ways to install from private repository.
+
+1. Use `.netrc`
+
+Create `.netrc` in your home dir:
+```
+machine $GIT_HOSTING
+login $YOUR_LOGIN
+password $YOUR_API_TOKEN
+```
+
+In that case you have to create API token on git hosting
+
+2. Use ssh keys
+
+* Configure your `ssh` config (`~/.ssh/config`) with path to private key and git hosting's params
+
+* Configure your git config (`~/.gitconfig`):
+```
+[url "ssh://git@$GIT_HOSTING/"]
+    insteadOf = https://$GIT_HOSTING/
+```
+
+for example:
+```
+[url "ssh://git@github.com/"]
+    insteadOf = https://github.com/
+```
 
 ## Auto-completion
 
