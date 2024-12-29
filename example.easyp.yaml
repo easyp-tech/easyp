@@ -20,9 +20,7 @@ generate:
   inputs:
     - directory: "proto"
     - git_repo:
-      url: "https://github.com/sipki-tech/currency"
-      tag: "main"
-      sub_directory: "proto"
+        url: "github.com/sipki-tech/currency@v0.1.2"
   plugins:
     - name: go
       out: .
