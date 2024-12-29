@@ -32,6 +32,18 @@ go build ./cmd/easyp
 go install github.com/easyp-tech/easyp/cmd/easyp@latest
 ```
 
+## Init
+
+Creates empty `easyp` project.
+
+Creates `easyp.yaml` (by default) and `easyp.lock` files.
+
+### Usage
+
+```bash
+easyp init
+```
+
 ## Linter
 
 `easyp` support `buf's` linter rules.
@@ -40,6 +52,54 @@ go install github.com/easyp-tech/easyp/cmd/easyp@latest
 
 ```bash
 easyp lint -cfg example.easyp.yaml
+```
+## Breaking check
+
+Checking your current API on backward compatibility with API from another branch.
+
+### Usage
+
+```bash
+easyp breaking --against $BRANCH_TO_COMPARE_WITH
+```
+
+## Generate
+
+Generate proto files. 
+
+### Usage
+
+There are several ways to get proto files to generate:
+1. from current local repository:
+```yaml
+generate:
+  inputs:
+    - directory: WHERE YOUR PROTO FILES ARE
+```
+2. from remote git repository:
+```yaml
+generate:
+  inputs:
+    - git_repo:
+        url: "URL TO REMOTE REPO"
+        sub_directory: DIR WITH PROTO FILES ON REMOTE REPO
+```
+**NOTE:** format `url` the same as in `deps` section.
+
+`plugins` section: config for `protoc`
+
+Example:
+```yaml
+  plugins:
+    - name: go
+      out: .
+      opts:
+        paths: source_relative
+    - name: go-grpc
+      out: .
+      opts:
+        paths: source_relative
+        require_unimplemented_servers: false
 ```
 
 ## Package manager
@@ -65,6 +125,14 @@ easyp -cfg example.easyp.yaml mod update
 Read dependencies from `easyp.yaml` config file and ignore `easyp.lock` file.
 
 Could be used for update versions: set version in `easyp.yaml` file and run `update` command.
+
+* vendor
+```bash
+easyp -cfg example.easyp.yaml mod vendor
+```
+
+Copy all your proto files dependencies to local dir (like `go mod vendor` command).
+
 
 ### Configuration
 
@@ -111,9 +179,3 @@ source <(easyp completion bash)
 ```bash
 source ~/.bashrc
 ```
-
-### Roadmap
-
-* [x] Implement support for `buf.work.yaml` config
-* [ ] Calc hash sum, store it and compare (i.e go.sum)
-* [ ] Code generation

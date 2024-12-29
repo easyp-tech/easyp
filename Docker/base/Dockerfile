@@ -1,4 +1,4 @@
-FROM --platform=${BUILDPLATFORM} golang:1.22.3-alpine3.20 AS builder
+FROM --platform=${BUILDPLATFORM} golang:1.23.3-alpine3.20 AS builder
 
 LABEL stage=gobuilder
 
