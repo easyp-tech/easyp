@@ -101,6 +101,7 @@ func buildCore(_ context.Context, cfg config.Config) (*core.Core, error) {
 				return core.InputGitRepo{
 					URL:          i.GitRepo.URL,
 					SubDirectory: i.GitRepo.SubDirectory,
+					Out:          i.GitRepo.Out,
 				}
 			}), func(i core.InputGitRepo, _ int) bool {
 				return i.URL != ""

@@ -216,8 +216,9 @@ type (
 	}
 	// InputGitRepo is the configuration of the git repository.
 	InputGitRepo struct {
-		URL          string `yaml:"url"`
-		SubDirectory string `yaml:"sub_directory"`
+		URL          string
+		SubDirectory string
+		Out          string
 	}
 
 	// Inputs is the source for generating code.

@@ -34,6 +34,7 @@ type Input struct {
 type InputGitRepo struct {
 	URL          string `yaml:"url"`
 	SubDirectory string `yaml:"sub_directory"`
+	Out          string `yaml:"out"`
 }
 
 // InputDirectory is the configuration of the directory.

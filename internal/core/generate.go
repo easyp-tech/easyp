@@ -4,12 +4,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io/fs"
 	"log/slog"
 	"path/filepath"
 	"strings"
 
 	"github.com/easyp-tech/easyp/internal/core/models"
+	"github.com/easyp-tech/easyp/internal/fs/fs"
 )
 
 const defaultCompiler = "protoc"
@@ -41,15 +41,13 @@ func (c *Core) Generate(ctx context.Context, root, directory string) error {
 			return fmt.Errorf("c.isModuleInstalled: %w", err)
 		}
 
-		gitGenerateCb := func(modulePaths string) func(path string, d fs.DirEntry, err error) error {
-			return func(path string, d fs.DirEntry, err error) error {
+		gitGenerateCb := func(modulePaths string) func(path string, err error) error {
+			return func(path string, err error) error {
 				switch {
 				case err != nil:
 					return err
 				case ctx.Err() != nil:
 					return ctx.Err()
-				case d.IsDir():
-					return nil
 				case filepath.Ext(path) != ".proto":
 					return nil
 				}
@@ -67,13 +65,11 @@ func (c *Core) Generate(ctx context.Context, root, directory string) error {
 				return fmt.Errorf("g.moduleReflect.GetModulePath: %w", err)
 			}
 
-			if repo.SubDirectory != "" {
-				modulePaths = filepath.Join(modulePaths, repo.SubDirectory)
-			}
+			fsWalker := fs.NewFSWalker(modulePaths, repo.SubDirectory)
 
-			err = filepath.WalkDir(modulePaths, gitGenerateCb(modulePaths))
+			err = fsWalker.WalkDir(gitGenerateCb(modulePaths))
 			if err != nil {
-				return fmt.Errorf("filepath.WalkDir: %w", err)
+				return fmt.Errorf("fsWalker.WalkDir1: %w", err)
 			}
 
 			continue
@@ -95,24 +91,20 @@ func (c *Core) Generate(ctx context.Context, root, directory string) error {
 			return fmt.Errorf("g.moduleReflect.GetModulePath: %w", err)
 		}
 
-		if repo.SubDirectory != "" {
-			modulePaths = filepath.Join(modulePaths, repo.SubDirectory)
-		}
-
-		err = filepath.WalkDir(modulePaths, gitGenerateCb(modulePaths))
+		fsWalker := fs.NewFSWalker(modulePaths, repo.SubDirectory)
+		err = fsWalker.WalkDir(gitGenerateCb(modulePaths))
 		if err != nil {
-			return fmt.Errorf("filepath.WalkDir: %w", err)
+			return fmt.Errorf("fsWalker.WalkDir: %w", err)
 		}
 	}
 
-	err := filepath.WalkDir(directory, func(path string, d fs.DirEntry, err error) error {
+	fsWalker := fs.NewFSWalker(directory, "")
+	err := fsWalker.WalkDir(func(path string, err error) error {
 		switch {
 		case err != nil:
 			return err
 		case ctx.Err() != nil:
 			return ctx.Err()
-		case d.IsDir():
-			return nil
 		case filepath.Ext(path) != ".proto":
 			return nil
 		case shouldIgnore(path, c.inputs.Dirs):
@@ -126,7 +118,7 @@ func (c *Core) Generate(ctx context.Context, root, directory string) error {
 		return nil
 	})
 	if err != nil {
-		return fmt.Errorf("filepath.WalkDir: %w", err)
+		return fmt.Errorf("fsWalker.WalkDir: %w", err)
 	}
 
 	cmd := q.build()

@@ -12,6 +12,10 @@ type FS interface {
 }
 
 func NewFSWalker(root, path string) *FSWalker {
+	if path == "" {
+		path = "."
+	}
+
 	diskFS := os.DirFS(root)
 	return &FSWalker{
 		FSAdapter: &FSAdapter{diskFS, root},
