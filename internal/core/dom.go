@@ -214,9 +214,17 @@ type (
 		Out     string
 		Options map[string]string
 	}
+	// InputGitRepo is the configuration of the git repository.
+	InputGitRepo struct {
+		URL          string
+		SubDirectory string
+		Out          string
+	}
+
 	// Inputs is the source for generating code.
 	Inputs struct {
-		Dirs []string
+		Dirs          []string
+		InputGitRepos []InputGitRepo
 	}
 	// Config is the configuration for EasyP generate.
 	Config struct {

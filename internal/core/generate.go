@@ -2,13 +2,14 @@ package core
 
 import (
 	"context"
+	"errors"
 	"fmt"
-	"io/fs"
 	"log/slog"
 	"path/filepath"
 	"strings"
 
 	"github.com/easyp-tech/easyp/internal/core/models"
+	"github.com/easyp-tech/easyp/internal/fs/fs"
 )
 
 const defaultCompiler = "protoc"
@@ -32,14 +33,78 @@ func (c *Core) Generate(ctx context.Context, root, directory string) error {
 		q.Imports = append(q.Imports, modulePaths)
 	}
 
-	err := filepath.WalkDir(directory, func(path string, d fs.DirEntry, err error) error {
+	for _, repo := range c.inputs.InputGitRepos {
+		module := models.NewModule(repo.URL)
+
+		isInstalled, err := c.storage.IsModuleInstalled(module)
+		if err != nil {
+			return fmt.Errorf("c.isModuleInstalled: %w", err)
+		}
+
+		gitGenerateCb := func(modulePaths string) func(path string, err error) error {
+			return func(path string, err error) error {
+				switch {
+				case err != nil:
+					return err
+				case ctx.Err() != nil:
+					return ctx.Err()
+				case filepath.Ext(path) != ".proto":
+					return nil
+				}
+
+				q.Files = append(q.Files, path)
+				q.Imports = append(q.Imports, modulePaths)
+
+				return nil
+			}
+		}
+
+		if isInstalled {
+			modulePaths, err := c.getModulePath(ctx, module.Name)
+			if err != nil {
+				return fmt.Errorf("g.moduleReflect.GetModulePath: %w", err)
+			}
+
+			fsWalker := fs.NewFSWalker(modulePaths, repo.SubDirectory)
+
+			err = fsWalker.WalkDir(gitGenerateCb(modulePaths))
+			if err != nil {
+				return fmt.Errorf("fsWalker.WalkDir1: %w", err)
+			}
+
+			continue
+		}
+
+		err = c.Get(ctx, module)
+		if err != nil {
+			if errors.Is(err, models.ErrVersionNotFound) {
+				slog.Error("Version not found", "dependency", module.Name, "version", module.Version)
+
+				return fmt.Errorf("models.ErrVersionNotFound: %w", err)
+			}
+
+			return fmt.Errorf("c.Get: %w", err)
+		}
+
+		modulePaths, err := c.getModulePath(ctx, module.Name)
+		if err != nil {
+			return fmt.Errorf("g.moduleReflect.GetModulePath: %w", err)
+		}
+
+		fsWalker := fs.NewFSWalker(modulePaths, repo.SubDirectory)
+		err = fsWalker.WalkDir(gitGenerateCb(modulePaths))
+		if err != nil {
+			return fmt.Errorf("fsWalker.WalkDir: %w", err)
+		}
+	}
+
+	fsWalker := fs.NewFSWalker(directory, "")
+	err := fsWalker.WalkDir(func(path string, err error) error {
 		switch {
 		case err != nil:
 			return err
 		case ctx.Err() != nil:
 			return ctx.Err()
-		case d.IsDir():
-			return nil
 		case filepath.Ext(path) != ".proto":
 			return nil
 		case shouldIgnore(path, c.inputs.Dirs):
@@ -53,10 +118,14 @@ func (c *Core) Generate(ctx context.Context, root, directory string) error {
 		return nil
 	})
 	if err != nil {
-		return fmt.Errorf("filepath.WalkDir: %w", err)
+		return fmt.Errorf("fsWalker.WalkDir: %w", err)
 	}
 
-	_, err = c.console.RunCmd(ctx, root, q.build())
+	cmd := q.build()
+
+	slog.DebugContext(ctx, "Run command", "cmd", cmd)
+
+	_, err = c.console.RunCmd(ctx, root, cmd)
 	if err != nil {
 		return fmt.Errorf("adapters.RunCmd: %w", err)
 	}

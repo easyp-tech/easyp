@@ -18,8 +18,9 @@ breaking:
 
 generate:
   inputs:
-    - directory: "api/user"
-    - directory: "api/session"
+    - directory: "proto"
+    - git_repo:
+        url: "github.com/sipki-tech/currency@v0.1.2"
   plugins:
     - name: go
       out: .
