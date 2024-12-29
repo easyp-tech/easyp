@@ -87,6 +87,7 @@ func (r *gitRepo) readRevisionByGitTagVersion(
 		CommitHash: commitHash,
 		Version:    gitTagVersion,
 	}
+
 	return parts, nil
 }
 

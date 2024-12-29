@@ -34,7 +34,7 @@ func (c *Core) Generate(ctx context.Context, root, directory string) error {
 	}
 
 	for _, repo := range c.inputs.InputGitRepos {
-		module := models.NewModule(fmt.Sprintf("%s@%s", repo.URL, repo.Tag))
+		module := models.NewModule(repo.URL)
 
 		isInstalled, err := c.storage.IsModuleInstalled(module)
 		if err != nil {
@@ -42,42 +42,80 @@ func (c *Core) Generate(ctx context.Context, root, directory string) error {
 		}
 
 		if isInstalled {
-			slog.Info("Module is installed", "name", module.Name, "version", module.Version)
+			modulePaths, err := c.getModulePath(ctx, module.Name)
+			if err != nil {
+				return fmt.Errorf("g.moduleReflect.GetModulePath: %w", err)
+			}
+
+			if repo.SubDirectory != "" {
+				modulePaths = filepath.Join(modulePaths, repo.SubDirectory)
+			}
+
+			err = filepath.WalkDir(modulePaths, func(path string, d fs.DirEntry, err error) error {
+				switch {
+				case err != nil:
+					return err
+				case ctx.Err() != nil:
+					return ctx.Err()
+				case d.IsDir():
+					return nil
+				case filepath.Ext(path) != ".proto":
+					return nil
+				}
+
+				q.Files = append(q.Files, path)
+				q.Imports = append(q.Imports, modulePaths)
+
+				return nil
+			})
+			if err != nil {
+				return fmt.Errorf("filepath.WalkDir: %w", err)
+			}
+
 			continue
 		}
 
 		err = c.Get(ctx, module)
 		if err != nil {
 			if errors.Is(err, models.ErrVersionNotFound) {
-				slog.Error("Version not found", "dependency", module.Name)
+				slog.Error("Version not found", "dependency", module.Name, "version", module.Version)
 
-				return models.ErrVersionNotFound
+				return fmt.Errorf("models.ErrVersionNotFound: %w", err)
 			}
 
 			return fmt.Errorf("c.Get: %w", err)
 		}
-	}
 
-	//module := models.NewModule(dependency)
-	//
-	//isInstalled, err := c.storage.IsModuleInstalled(module)
-	//if err != nil {
-	//	return fmt.Errorf("c.isModuleInstalled: %w", err)
-	//}
-	//
-	//if isInstalled {
-	//	slog.Info("Module is installed", "name", module.Name, "version", module.Version)
-	//	continue
-	//}
-	//
-	//if err := c.Get(ctx, module); err != nil {
-	//	if errors.Is(err, models.ErrVersionNotFound) {
-	//		slog.Error("Version not found", "dependency", dependency)
-	//		return models.ErrVersionNotFound
-	//	}
-	//
-	//	return fmt.Errorf("c.Get: %w", err)
-	//}
+		modulePaths, err := c.getModulePath(ctx, module.Name)
+		if err != nil {
+			return fmt.Errorf("g.moduleReflect.GetModulePath: %w", err)
+		}
+
+		if repo.SubDirectory != "" {
+			modulePaths = filepath.Join(modulePaths, repo.SubDirectory)
+		}
+
+		err = filepath.WalkDir(modulePaths, func(path string, d fs.DirEntry, err error) error {
+			switch {
+			case err != nil:
+				return err
+			case ctx.Err() != nil:
+				return ctx.Err()
+			case d.IsDir():
+				return nil
+			case filepath.Ext(path) != ".proto":
+				return nil
+			}
+
+			q.Files = append(q.Files, path)
+			q.Imports = append(q.Imports, modulePaths)
+
+			return nil
+		})
+		if err != nil {
+			return fmt.Errorf("filepath.WalkDir: %w", err)
+		}
+	}
 
 	err := filepath.WalkDir(directory, func(path string, d fs.DirEntry, err error) error {
 		switch {
@@ -103,7 +141,11 @@ func (c *Core) Generate(ctx context.Context, root, directory string) error {
 		return fmt.Errorf("filepath.WalkDir: %w", err)
 	}
 
-	_, err = c.console.RunCmd(ctx, root, q.build())
+	cmd := q.build()
+
+	slog.DebugContext(ctx, "Run command", "cmd", cmd)
+
+	_, err = c.console.RunCmd(ctx, root, cmd)
 	if err != nil {
 		return fmt.Errorf("adapters.RunCmd: %w", err)
 	}

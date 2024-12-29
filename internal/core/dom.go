@@ -219,7 +219,6 @@ type (
 		URL          string `yaml:"url"`
 		Branch       string `yaml:"branch"`
 		SubDirectory string `yaml:"sub_directory"`
-		Tag          string `yaml:"tag"`
 	}
 
 	// Inputs is the source for generating code.
