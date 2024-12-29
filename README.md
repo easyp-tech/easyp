@@ -81,9 +81,10 @@ generate:
 generate:
   inputs:
     - git_repo:
-        url: "github.com/sipki-tech/currency@v0.1.2"
+        url: "URL TO REMOTE REPO"
         sub_directory: DIR WITH PROTO FILES ON REMOTE REPO
 ```
+**NOTE:** format `url` the same as in `deps` section.
 
 `plugins` section: config for `protoc`
 
