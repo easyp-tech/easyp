@@ -41,17 +41,8 @@ func (c *Core) Generate(ctx context.Context, root, directory string) error {
 			return fmt.Errorf("c.isModuleInstalled: %w", err)
 		}
 
-		if isInstalled {
-			modulePaths, err := c.getModulePath(ctx, module.Name)
-			if err != nil {
-				return fmt.Errorf("g.moduleReflect.GetModulePath: %w", err)
-			}
-
-			if repo.SubDirectory != "" {
-				modulePaths = filepath.Join(modulePaths, repo.SubDirectory)
-			}
-
-			err = filepath.WalkDir(modulePaths, func(path string, d fs.DirEntry, err error) error {
+		gitGenerateCb := func(modulePaths string) func(path string, d fs.DirEntry, err error) error {
+			return func(path string, d fs.DirEntry, err error) error {
 				switch {
 				case err != nil:
 					return err
@@ -67,7 +58,20 @@ func (c *Core) Generate(ctx context.Context, root, directory string) error {
 				q.Imports = append(q.Imports, modulePaths)
 
 				return nil
-			})
+			}
+		}
+
+		if isInstalled {
+			modulePaths, err := c.getModulePath(ctx, module.Name)
+			if err != nil {
+				return fmt.Errorf("g.moduleReflect.GetModulePath: %w", err)
+			}
+
+			if repo.SubDirectory != "" {
+				modulePaths = filepath.Join(modulePaths, repo.SubDirectory)
+			}
+
+			err = filepath.WalkDir(modulePaths, gitGenerateCb(modulePaths))
 			if err != nil {
 				return fmt.Errorf("filepath.WalkDir: %w", err)
 			}
@@ -95,23 +99,7 @@ func (c *Core) Generate(ctx context.Context, root, directory string) error {
 			modulePaths = filepath.Join(modulePaths, repo.SubDirectory)
 		}
 
-		err = filepath.WalkDir(modulePaths, func(path string, d fs.DirEntry, err error) error {
-			switch {
-			case err != nil:
-				return err
-			case ctx.Err() != nil:
-				return ctx.Err()
-			case d.IsDir():
-				return nil
-			case filepath.Ext(path) != ".proto":
-				return nil
-			}
-
-			q.Files = append(q.Files, path)
-			q.Imports = append(q.Imports, modulePaths)
-
-			return nil
-		})
+		err = filepath.WalkDir(modulePaths, gitGenerateCb(modulePaths))
 		if err != nil {
 			return fmt.Errorf("filepath.WalkDir: %w", err)
 		}

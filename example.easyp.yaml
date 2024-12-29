@@ -18,8 +18,11 @@ breaking:
 
 generate:
   inputs:
-    - directory: "api/user"
-    - directory: "api/session"
+    - directory: "proto"
+    - git_repo:
+      url: "https://github.com/sipki-tech/currency"
+      tag: "main"
+      sub_directory: "proto"
   plugins:
     - name: go
       out: .

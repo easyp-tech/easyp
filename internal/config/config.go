@@ -33,7 +33,6 @@ type Input struct {
 // InputGitRepo is the configuration of the git repository.
 type InputGitRepo struct {
 	URL          string `yaml:"url"`
-	Branch       string `yaml:"branch"`
 	SubDirectory string `yaml:"sub_directory"`
 }
 

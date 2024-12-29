@@ -217,7 +217,6 @@ type (
 	// InputGitRepo is the configuration of the git repository.
 	InputGitRepo struct {
 		URL          string `yaml:"url"`
-		Branch       string `yaml:"branch"`
 		SubDirectory string `yaml:"sub_directory"`
 	}
 
