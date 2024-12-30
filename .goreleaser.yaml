@@ -76,6 +76,7 @@ brews:
     repository:
       owner: easyp-tech
       name: homebrew-tap
+      token: ${{ .Env.GORELEASER_AUTH_TOKEN }}
     commit_author:
       name: easyp-tech-releaser
       email: action@github.com
