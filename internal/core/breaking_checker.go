@@ -7,6 +7,8 @@ import (
 	"github.com/yoheimuta/go-protoparser/v4/parser/meta"
 )
 
+const breakingCheckRuleName = "BREAKING_CHECK"
+
 type BreakingChecker struct {
 	against ProtoData
 	current ProtoData
@@ -338,7 +340,7 @@ func buildBreakingCheckIssue(path, message string, pos meta.Position) IssueInfo 
 		Position:   pos,
 		SourceName: "",
 		Message:    message,
-		RuleName:   "BREAKING_CHECK",
+		RuleName:   breakingCheckRuleName,
 	}
 	return IssueInfo{
 		Issue: issue,

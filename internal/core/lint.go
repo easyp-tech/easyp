@@ -108,7 +108,7 @@ const (
 // NOTE: Try to not use global var
 var allowCommentIgnores = true
 
-// CheckIsIgnored check if passed ruleName has to be ignored due to ignore command in comments
+// CheckIsIgnored check if passed breakingCheckRuleName has to be ignored due to ignore command in comments
 func CheckIsIgnored(comments []*parser.Comment, ruleName string) bool {
 	if !allowCommentIgnores {
 		return false

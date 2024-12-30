@@ -1,0 +1,11 @@
+syntax = "proto3";
+
+package breaking;
+
+message RPC1Request {
+  string field_1 = 1;
+}
+
+message RPC1Response {
+  string field_1 = 1;
+}
