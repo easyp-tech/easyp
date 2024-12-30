@@ -3,7 +3,7 @@ syntax = "proto3";
 package breaking;
 
 message RPC1Request {
-  string field_1 = 1;
+  string field_1 = 11;
 }
 
 message RPC1Response {

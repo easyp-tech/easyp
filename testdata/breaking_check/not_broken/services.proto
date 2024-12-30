@@ -8,6 +8,7 @@ enum SomeEnum {
   CORPUS_UNSPECIFIED = 0;
   CORPUS_UNIVERSAL = 1;
   CORPUS_WEB = 2;
+  CORPUS_WS = 3;
 }
 
 message RPC2Request {
