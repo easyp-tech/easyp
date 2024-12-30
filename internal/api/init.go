@@ -48,7 +48,7 @@ func (i Init) Action(ctx *cli.Context) error {
 
 	cfg := &config.Config{}
 
-	app, err := buildCore(ctx.Context, *cfg)
+	app, err := buildCore(ctx.Context, *cfg, dirFS)
 	if err != nil {
 		return fmt.Errorf("buildCore: %w", err)
 	}

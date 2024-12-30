@@ -10,6 +10,11 @@ import (
 func (l *LockFile) Write(
 	moduleName string, revisionVersion string, installedPackageHash models.ModuleHash,
 ) error {
+	fp, err := l.dirWalker.Create(lockFileName)
+	if err != nil {
+		return fmt.Errorf("l.dirWalker.Create: %w", err)
+	}
+
 	fileInfo := fileInfo{
 		version: revisionVersion,
 		hash:    string(installedPackageHash),
@@ -22,11 +27,10 @@ func (l *LockFile) Write(
 		keys = append(keys, k)
 	}
 	sort.Strings(keys)
-	_ = l.fp.Truncate(0)
 
 	for _, k := range keys {
 		r := fmt.Sprintf("%s %s %s\n", k, l.cache[k].version, l.cache[k].hash)
-		_, _ = l.fp.WriteString(r)
+		_, _ = fp.Write([]byte(r))
 	}
 
 	return nil

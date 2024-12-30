@@ -2,14 +2,13 @@ package lockfile
 
 import (
 	"bufio"
-	"log"
-	"os"
 	"strings"
+
+	"github.com/easyp-tech/easyp/internal/core"
 )
 
 const (
-	lockFileName  = "easyp.lock"
-	lockFilePerms = 0644
+	lockFileName = "easyp.lock"
 )
 
 type fileInfo struct {
@@ -18,36 +17,34 @@ type fileInfo struct {
 }
 
 type LockFile struct {
-	fp    *os.File
-	cache map[string]fileInfo
+	dirWalker core.DirWalker
+	cache     map[string]fileInfo
 }
 
-func New() *LockFile {
-	fp, err := os.OpenFile(lockFileName, os.O_RDWR|os.O_CREATE|os.O_APPEND, lockFilePerms)
-	if err != nil {
-		// TODO: return err?
-		log.Fatal(err)
-	}
-
+func New(dirWalker core.DirWalker) *LockFile {
 	cache := make(map[string]fileInfo)
 
-	fscanner := bufio.NewScanner(fp)
-	for fscanner.Scan() {
-		parts := strings.Fields(fscanner.Text())
-		if len(parts) != 3 {
-			continue
-		}
+	fp, err := dirWalker.Open(lockFileName)
+	if err == nil {
+		fscanner := bufio.NewScanner(fp)
 
-		fileInfo := fileInfo{
-			version: parts[1],
-			hash:    parts[2],
+		for fscanner.Scan() {
+			parts := strings.Fields(fscanner.Text())
+			if len(parts) != 3 {
+				continue
+			}
+
+			fileInfo := fileInfo{
+				version: parts[1],
+				hash:    parts[2],
+			}
+			cache[parts[0]] = fileInfo
 		}
-		cache[parts[0]] = fileInfo
 	}
 
 	lockFile := &LockFile{
-		fp:    fp,
-		cache: cache,
+		dirWalker: dirWalker,
+		cache:     cache,
 	}
 	return lockFile
 }

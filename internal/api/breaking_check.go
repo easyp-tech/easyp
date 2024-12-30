@@ -10,6 +10,7 @@ import (
 	"github.com/easyp-tech/easyp/internal/config"
 	"github.com/easyp-tech/easyp/internal/core"
 	"github.com/easyp-tech/easyp/internal/flags"
+	"github.com/easyp-tech/easyp/internal/fs/fs"
 )
 
 var _ Handler = (*BreakingCheck)(nil)
@@ -98,7 +99,8 @@ func (b BreakingCheck) action(ctx *cli.Context) error {
 		cfg.BreakingCheck.AgainstGitRef = against
 	}
 
-	app, err := buildCore(ctx.Context, *cfg)
+	dirWalker := fs.NewFSWalker(workingDir, ".")
+	app, err := buildCore(ctx.Context, *cfg, dirWalker)
 	if err != nil {
 		return fmt.Errorf("buildCore: %w", err)
 	}

@@ -116,11 +116,12 @@ func (l Lint) action(ctx *cli.Context) error {
 	}
 	core.SetAllowCommentIgnores(cfg.Lint.AllowCommentIgnores)
 
-	app, err := buildCore(ctx.Context, *cfg)
+	fsWalker := fs.NewFSWalker(workingDir, path)
+
+	app, err := buildCore(ctx.Context, *cfg, fsWalker)
 	if err != nil {
 		return fmt.Errorf("buildCore: %w", err)
 	}
-	fsWalker := fs.NewFSWalker(workingDir, path)
 	issues, err := app.Lint(ctx.Context, fsWalker)
 	if err != nil {
 		return fmt.Errorf("c.Lint: %w", err)
