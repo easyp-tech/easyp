@@ -8,8 +8,7 @@ import (
 )
 
 const (
-	lockFileName  = "easyp.lock"
-	lockFilePerms = 0644
+	lockFileName = "easyp.lock"
 )
 
 type fileInfo struct {
