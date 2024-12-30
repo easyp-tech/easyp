@@ -13,30 +13,15 @@ builds:
       - darwin
       - windows
       - linux
-      - freebsd
-      - netbsd
-      - illumos
     goarch:
       - amd64
       - arm64
       - arm
-      - 386
-      - ppc64le
-      - s390x
-      - mips64
-      - mips64le
-      - riscv64
-      - loong64
     goarm:
       - 6
       - 7
     gomips:
       - hardfloat
-    ignore:
-      - goos: darwin
-        goarch: 386
-      - goos: freebsd
-        goarch: arm64
 
 archives:
   - format: tar.gz
