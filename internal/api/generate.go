@@ -2,11 +2,13 @@ package api
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/urfave/cli/v2"
 
 	"github.com/easyp-tech/easyp/internal/config"
 	"github.com/easyp-tech/easyp/internal/flags"
+	"github.com/easyp-tech/easyp/internal/fs/fs"
 )
 
 var _ Handler = (*Generate)(nil)
@@ -44,11 +46,17 @@ func (g Generate) Command() *cli.Command {
 
 // Action implements Handler.
 func (g Generate) Action(ctx *cli.Context) error {
+	workingDir, err := os.Getwd()
+	if err != nil {
+		return fmt.Errorf("os.Getwd: %w", err)
+	}
+
 	cfg, err := config.New(ctx.Context, ctx.String(flags.Config.Name))
 	if err != nil {
 		return fmt.Errorf("config.New: %w", err)
 	}
-	app, err := buildCore(ctx.Context, *cfg)
+	dirWalker := fs.NewFSWalker(workingDir, ".")
+	app, err := buildCore(ctx.Context, *cfg, dirWalker)
 	if err != nil {
 		return fmt.Errorf("buildCore: %w", err)
 	}

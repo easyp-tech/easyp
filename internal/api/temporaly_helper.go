@@ -55,13 +55,13 @@ func getEasypPath() (string, error) {
 	return easypPath, nil
 }
 
-func buildCore(_ context.Context, cfg config.Config) (*core.Core, error) {
+func buildCore(_ context.Context, cfg config.Config, dirWalker core.DirWalker) (*core.Core, error) {
 	lintRules, ignoreOnly, err := rules.New(cfg.Lint)
 	if err != nil {
 		return nil, fmt.Errorf("cfg.BuildLinterRules: %w", err)
 	}
 
-	lockFile := lockfile.New()
+	lockFile := lockfile.New(dirWalker)
 	easypPath, err := getEasypPath()
 	if err != nil {
 		return nil, fmt.Errorf("getEasypPath: %w", err)

@@ -5,6 +5,8 @@ import (
 	"log"
 	"os"
 	"strings"
+
+	"github.com/easyp-tech/easyp/internal/core"
 )
 
 const (
@@ -18,11 +20,13 @@ type fileInfo struct {
 }
 
 type LockFile struct {
+	dirWalker core.DirWalker
+
 	fp    *os.File
 	cache map[string]fileInfo
 }
 
-func New() *LockFile {
+func New(dirWalker core.DirWalker) *LockFile {
 	fp, err := os.OpenFile(lockFileName, os.O_RDWR|os.O_CREATE|os.O_APPEND, lockFilePerms)
 	if err != nil {
 		// TODO: return err?
@@ -46,6 +50,8 @@ func New() *LockFile {
 	}
 
 	lockFile := &LockFile{
+		dirWalker: dirWalker,
+
 		fp:    fp,
 		cache: cache,
 	}
