@@ -6,13 +6,14 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log/slog"
 	"os"
 
 	"github.com/urfave/cli/v2"
 
-	"github.com/easyp-tech/easyp/internal/api/config"
-	"github.com/easyp-tech/easyp/internal/lint"
+	"github.com/easyp-tech/easyp/internal/config"
+	"github.com/easyp-tech/easyp/internal/core"
+	"github.com/easyp-tech/easyp/internal/flags"
+	"github.com/easyp-tech/easyp/internal/fs/fs"
 )
 
 var _ Handler = (*Lint)(nil)
@@ -29,12 +30,11 @@ const (
 var (
 	flagLintDirectoryPath = &cli.StringFlag{
 		Name:       "path",
-		Usage:      "set path to directory with proto files",
+		Usage:      "set relative path to directory with proto files",
 		Required:   true,
 		HasBeenSet: true,
 		Value:      ".",
 		Aliases:    []string{"p"},
-		EnvVars:    []string{"EASYP_PATH"},
 	}
 
 	flagFormat = &cli.GenericFlag{
@@ -87,14 +87,13 @@ func (l Lint) Command() *cli.Command {
 func (l Lint) Action(ctx *cli.Context) error {
 	err := l.action(ctx)
 	if err != nil {
-		var e *lint.OpenImportFileError
+		var e *core.OpenImportFileError
 
 		switch {
 		case errors.Is(err, ErrHasLintIssue):
 			os.Exit(1)
 		case errors.As(err, &e):
-			slog.Info("Cannot import file", "file name", e.FileName)
-			os.Exit(2)
+			errExit(2, "Cannot import file", "file name", e.FileName)
 		default:
 			return err
 		}
@@ -104,23 +103,26 @@ func (l Lint) Action(ctx *cli.Context) error {
 }
 
 func (l Lint) action(ctx *cli.Context) error {
-	cfg, err := config.ReadConfig(ctx)
+	workingDir, err := os.Getwd()
 	if err != nil {
-		return fmt.Errorf("config.ReadConfig: %w", err)
-	}
-	lint.SetAllowCommentIgnores(cfg.Lint.AllowCommentIgnores)
-
-	lintRules, err := cfg.BuildLinterRules()
-	if err != nil {
-		return fmt.Errorf("cfg.BuildLinterRules: %w", err)
+		return fmt.Errorf("os.Getwd: %w", err)
 	}
 
-	rootPath := ctx.String(flagLintDirectoryPath.Name)
-	dirFS := os.DirFS(rootPath)
+	path := ctx.String(flagLintDirectoryPath.Name)
 
-	c := lint.New(lintRules, cfg.Lint.Ignore, cfg.Lint.IgnoreOnly, cfg.Deps)
+	cfg, err := config.New(ctx.Context, ctx.String(flags.Config.Name))
+	if err != nil {
+		return fmt.Errorf("config.New: %w", err)
+	}
+	core.SetAllowCommentIgnores(cfg.Lint.AllowCommentIgnores)
 
-	issues, err := c.Lint(ctx.Context, dirFS)
+	fsWalker := fs.NewFSWalker(workingDir, path)
+
+	app, err := buildCore(ctx.Context, *cfg, fsWalker)
+	if err != nil {
+		return fmt.Errorf("buildCore: %w", err)
+	}
+	issues, err := app.Lint(ctx.Context, fsWalker)
 	if err != nil {
 		return fmt.Errorf("c.Lint: %w", err)
 	}
@@ -141,7 +143,7 @@ func (l Lint) action(ctx *cli.Context) error {
 	return ErrHasLintIssue
 }
 
-func printIssues(format string, w io.Writer, issues []lint.IssueInfo) error {
+func printIssues(format string, w io.Writer, issues []core.IssueInfo) error {
 	switch format {
 	case TextFormat:
 		return textPrinter(w, issues)
@@ -153,7 +155,7 @@ func printIssues(format string, w io.Writer, issues []lint.IssueInfo) error {
 }
 
 // textPrinter prints the error in text format.
-func textPrinter(w io.Writer, issues []lint.IssueInfo) error {
+func textPrinter(w io.Writer, issues []core.IssueInfo) error {
 	buffer := bytes.NewBuffer(nil)
 	for _, issue := range issues {
 		buffer.Reset()
@@ -176,7 +178,7 @@ func textPrinter(w io.Writer, issues []lint.IssueInfo) error {
 }
 
 // jsonPrinter prints the error in json format.
-func jsonPrinter(w io.Writer, issues []lint.IssueInfo) error {
+func jsonPrinter(w io.Writer, issues []core.IssueInfo) error {
 	for _, issue := range issues {
 		marshalErr := json.NewEncoder(w).Encode(issue)
 		if marshalErr != nil {

@@ -1,0 +1,52 @@
+syntax = "proto3";
+
+package breaking;
+
+import "messages.proto";
+
+enum SomeEnum {
+  CORPUS_UNSPECIFIED = 0;
+  CORPUS_UNIVERSAL = 1;
+  CORPUS_WEB = 2;
+  CORPUS_WS = 3;
+}
+
+message RPC2Request {
+  string field_1 = 1;
+}
+
+message MessageForType {
+  string message_for_type = 1;
+}
+
+message RPC2Response {
+  message RPC2ResponseNested {
+    string rpc2_response_nested_field = 1;
+  };
+
+  optional MessageForType field_1 = 1;
+
+  oneof login {
+    string field = 3;
+    string fff = 2;
+    RPC2ResponseNested rrr = 4;
+  }
+}
+
+message AuthInfo {
+  string username = 1;
+  string password = 2;
+}
+
+message AuthResponse {
+
+}
+
+// Сервис-фасад для DAST сканнера
+service Service {
+  rpc Auth(AuthInfo) returns(AuthResponse);
+  // RPC1
+  rpc RPC1(RPC1Request) returns(RPC1Response);
+  // RPC2
+  rpc RPC2(RPC2Request) returns(RPC2Response);
+}

@@ -50,3 +50,14 @@ enum social_network {
   option allow_alias = true;
   none = 4;
 }
+
+
+// Product type.
+enum ProductType {
+  // For unknown value.
+  PRODUCT_TYPE_NONE = 0;
+  // Calculator.
+  PRODUCT_TYPE_CALCULATOR = 1;
+  // Mailing.
+  PRODUCT_TYPE_MAILING = 2;
+}

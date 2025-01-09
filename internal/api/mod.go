@@ -7,9 +7,12 @@ import (
 
 	"github.com/urfave/cli/v2"
 
-	"github.com/easyp-tech/easyp/internal/api/config"
-	"github.com/easyp-tech/easyp/internal/api/factories"
-	"github.com/easyp-tech/easyp/internal/mod/models"
+	"github.com/easyp-tech/easyp/internal/core/models"
+	"github.com/easyp-tech/easyp/internal/flags"
+	"github.com/easyp-tech/easyp/internal/fs/fs"
+
+	"github.com/easyp-tech/easyp/internal/config"
+	"github.com/easyp-tech/easyp/internal/core"
 )
 
 var _ Handler = (*Mod)(nil)
@@ -32,6 +35,13 @@ func (m Mod) Command() *cli.Command {
 		Description: "update modules version using version from config",
 		Action:      m.Update,
 	}
+	vendorCmd := &cli.Command{
+		Name:        "vendor",
+		Usage:       "copy proto files from deps to vendor dir",
+		UsageText:   "copy proto files from deps to vendor dir",
+		Description: "copy proto files from deps to vendor dir",
+		Action:      m.Vendor,
+	}
 
 	return &cli.Command{
 		Name:                   "mod",
@@ -46,7 +56,7 @@ func (m Mod) Command() *cli.Command {
 		After:                  nil,
 		Action:                 nil,
 		OnUsageError:           nil,
-		Subcommands:            []*cli.Command{downloadCmd, updateCmd},
+		Subcommands:            []*cli.Command{downloadCmd, updateCmd, vendorCmd},
 		Flags:                  []cli.Flag{},
 		SkipFlagParsing:        false,
 		HideHelp:               false,
@@ -59,17 +69,24 @@ func (m Mod) Command() *cli.Command {
 }
 
 func (m Mod) Download(ctx *cli.Context) error {
-	cfg, err := config.ReadConfig(ctx)
+	workingDir, err := os.Getwd()
 	if err != nil {
-		return fmt.Errorf("ReadConfig: %w", err)
+		return fmt.Errorf("os.Getwd: %w", err)
+	}
+	dirWalker := fs.NewFSWalker(workingDir, ".")
+
+	cfg, err := config.New(ctx.Context, ctx.String(flags.Config.Name))
+	if err != nil {
+		return fmt.Errorf("config.New: %w", err)
+	}
+	core.SetAllowCommentIgnores(cfg.Lint.AllowCommentIgnores)
+
+	app, err := buildCore(ctx.Context, *cfg, dirWalker)
+	if err != nil {
+		return fmt.Errorf("buildCore: %w", err)
 	}
 
-	cmd, err := factories.NewMod()
-	if err != nil {
-		return fmt.Errorf("factories.NewMod: %w", err)
-	}
-
-	if err := cmd.Download(ctx.Context, cfg.Deps); err != nil {
+	if err := app.Download(ctx.Context, cfg.Deps); err != nil {
 		if errors.Is(err, models.ErrVersionNotFound) {
 			os.Exit(1)
 		}
@@ -80,17 +97,52 @@ func (m Mod) Download(ctx *cli.Context) error {
 }
 
 func (m Mod) Update(ctx *cli.Context) error {
-	cfg, err := config.ReadConfig(ctx)
+	workingDir, err := os.Getwd()
 	if err != nil {
-		return fmt.Errorf("ReadConfig: %w", err)
+		return fmt.Errorf("os.Getwd: %w", err)
+	}
+	dirWalker := fs.NewFSWalker(workingDir, ".")
+
+	cfg, err := config.New(ctx.Context, ctx.String(flags.Config.Name))
+	if err != nil {
+		return fmt.Errorf("config.New: %w", err)
+	}
+	core.SetAllowCommentIgnores(cfg.Lint.AllowCommentIgnores)
+
+	app, err := buildCore(ctx.Context, *cfg, dirWalker)
+	if err != nil {
+		return fmt.Errorf("buildCore: %w", err)
 	}
 
-	cmd, err := factories.NewMod()
+	if err := app.Update(ctx.Context, cfg.Deps); err != nil {
+		if errors.Is(err, models.ErrVersionNotFound) {
+			os.Exit(1)
+		}
+
+		return fmt.Errorf("cmd.Download: %w", err)
+	}
+	return nil
+}
+
+func (m Mod) Vendor(ctx *cli.Context) error {
+	workingDir, err := os.Getwd()
 	if err != nil {
-		return fmt.Errorf("factories.NewMod: %w", err)
+		return fmt.Errorf("os.Getwd: %w", err)
+	}
+	dirWalker := fs.NewFSWalker(workingDir, ".")
+
+	cfg, err := config.New(ctx.Context, ctx.String(flags.Config.Name))
+	if err != nil {
+		return fmt.Errorf("config.New: %w", err)
+	}
+	core.SetAllowCommentIgnores(cfg.Lint.AllowCommentIgnores)
+
+	app, err := buildCore(ctx.Context, *cfg, dirWalker)
+	if err != nil {
+		return fmt.Errorf("buildCore: %w", err)
 	}
 
-	if err := cmd.Update(ctx.Context, cfg.Deps); err != nil {
+	if err := app.Vendor(ctx.Context); err != nil {
 		if errors.Is(err, models.ErrVersionNotFound) {
 			os.Exit(1)
 		}

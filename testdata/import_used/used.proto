@@ -5,6 +5,7 @@ import "import_used/enums.proto";
 import "import_used/options.proto";
 import "import_used/types.proto";
 import "import_used/field.proto";
+import "import_used/for_one_of.proto";
 import "import_used/thrd_party/messages.proto";
 import "import_used/thrd_party/enums.proto";
 import "import_used/thrd_party/options.proto";
@@ -28,6 +29,10 @@ message SomeMessage {
 
   message Nested {
     SomeField in_nested = 1;
+
+    oneof oneof{
+      ForOneOf one_of = 3;
+    }
   }
 }
 

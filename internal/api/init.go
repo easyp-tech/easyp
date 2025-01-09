@@ -5,8 +5,8 @@ import (
 
 	"github.com/urfave/cli/v2"
 
-	wfs "github.com/easyp-tech/easyp/internal/fs"
-	"github.com/easyp-tech/easyp/internal/initialization"
+	"github.com/easyp-tech/easyp/internal/config"
+	"github.com/easyp-tech/easyp/internal/fs/fs"
 )
 
 var _ Handler = (*Init)(nil)
@@ -44,10 +44,16 @@ func (i Init) Command() *cli.Command {
 // Action implements Handler.
 func (i Init) Action(ctx *cli.Context) error {
 	rootPath := ctx.String(flagInitDirectoryPath.Name)
-	dirFS := wfs.Disk(rootPath)
+	dirFS := fs.NewFSWalker(rootPath, ".")
 
-	initer := initialization.New()
-	err := initer.Initialize(ctx.Context, dirFS, []string{"DEFAULT"})
+	cfg := &config.Config{}
+
+	app, err := buildCore(ctx.Context, *cfg, dirFS)
+	if err != nil {
+		return fmt.Errorf("buildCore: %w", err)
+	}
+
+	err = app.Initialize(ctx.Context, dirFS, []string{"DEFAULT"})
 	if err != nil {
 		return fmt.Errorf("initer.Initialize: %w", err)
 	}
