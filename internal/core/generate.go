@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"os"
 	"path/filepath"
 	"strings"
 
@@ -24,6 +25,10 @@ func (c *Core) Generate(ctx context.Context, root, directory string) error {
 		Plugins: c.plugins,
 	}
 
+	if c.protoRoot != "" {
+		q.Imports[0] = c.protoRoot
+	}
+
 	for _, dep := range c.deps {
 		modulePaths, err := c.getModulePath(ctx, dep)
 		if err != nil {
@@ -31,6 +36,19 @@ func (c *Core) Generate(ctx context.Context, root, directory string) error {
 		}
 
 		q.Imports = append(q.Imports, modulePaths)
+	}
+
+	if c.generateOutDirs {
+		for _, plug := range q.Plugins {
+			if filepath.IsAbs(plug.Out) {
+				continue
+			}
+
+			err := os.MkdirAll(plug.Out, 0777)
+			if err != nil {
+				return fmt.Errorf("os.MkdirAll: %w", err)
+			}
+		}
 	}
 
 	for _, repo := range c.inputs.InputGitRepos {

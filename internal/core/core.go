@@ -22,6 +22,9 @@ type Core struct {
 
 	breakingCheckConfig     BreakingCheckConfig
 	currentProjectGitWalker CurrentProjectGitWalker
+
+	protoRoot       string
+	generateOutDirs bool
 }
 
 var (
@@ -43,6 +46,8 @@ func New(
 	lockFile LockFile,
 	currentProjectGitWalker CurrentProjectGitWalker,
 	breakingCheckConfig BreakingCheckConfig,
+	protoRoot string,
+	generateOutDirs bool,
 ) *Core {
 	return &Core{
 		rules:                   rules,
@@ -58,5 +63,7 @@ func New(
 		lockFile:                lockFile,
 		currentProjectGitWalker: currentProjectGitWalker,
 		breakingCheckConfig:     breakingCheckConfig,
+		protoRoot:               protoRoot,
+		generateOutDirs:         generateOutDirs,
 	}
 }
