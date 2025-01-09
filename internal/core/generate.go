@@ -44,7 +44,7 @@ func (c *Core) Generate(ctx context.Context, root, directory string) error {
 				continue
 			}
 
-			err := os.MkdirAll(plug.Out, 0777)
+			err := os.MkdirAll(plug.Out, os.ModePerm)
 			if err != nil {
 				return fmt.Errorf("os.MkdirAll: %w", err)
 			}
