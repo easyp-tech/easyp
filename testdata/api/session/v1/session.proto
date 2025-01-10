@@ -84,6 +84,6 @@ enum SocialNetwork {
   SOCIAL_NETWORK_YAHOO = 2;
   //---Must be filled out---
   SOCIAL_NETWORK_FACEBOOK = 3;
-  //---Wuth int---
+  //---With int---
   SOCIAL_NETWORK_123 = 4;
 }
