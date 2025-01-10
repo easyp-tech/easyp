@@ -84,4 +84,10 @@ enum SocialNetwork {
   SOCIAL_NETWORK_YAHOO = 2;
   //---Must be filled out---
   SOCIAL_NETWORK_FACEBOOK = 3;
+  //---With int---
+  SOCIAL_NETWORK_123 = 4;
+  //---With int---
+  SOCIAL_NETWORK_K8S = 5;
+  //---With int---
+  SOCIAL_NETWORK_S3_OBJECT = 6;
 }
