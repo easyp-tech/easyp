@@ -228,9 +228,11 @@ type (
 	}
 	// Config is the configuration for EasyP generate.
 	Config struct {
-		Deps    []string
-		Plugins []Plugin
-		Inputs  Inputs
+		Deps            []string
+		Plugins         []Plugin
+		Inputs          Inputs
+		ProtoRoot       string
+		GenerateOutDirs bool
 	}
 	// Query is a query for making sh command.
 	Query struct {
