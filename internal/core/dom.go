@@ -244,7 +244,7 @@ type (
 
 func (q Query) build() string {
 	if runtime.GOOS == "windows" {
-		return q.windowsBuild()
+		return q.defaultBuild()
 	}
 	return q.defaultBuild()
 }
