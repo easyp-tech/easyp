@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"reflect"
+	"runtime"
 	"strings"
 	"unicode"
 
@@ -242,6 +243,13 @@ type (
 )
 
 func (q Query) build() string {
+	if runtime.GOOS == "windows" {
+		return q.windowsBuild()
+	}
+	return q.defaultBuild()
+}
+
+func (q Query) defaultBuild() string {
 	var buf bytes.Buffer
 
 	buf.WriteString(q.Compiler)
@@ -276,6 +284,48 @@ func (q Query) build() string {
 
 		if i != len(q.Files)-1 {
 			buf.WriteString(" \\\n")
+		}
+	}
+
+	return buf.String()
+}
+
+// Новая функция для Windows
+func (q Query) windowsBuild() string {
+	var buf bytes.Buffer
+
+	buf.WriteString(q.Compiler)
+	buf.WriteString(" ^\r\n")
+
+	for _, imp := range q.Imports {
+		buf.WriteString(" -I ")
+		buf.WriteString(imp)
+		buf.WriteString(" ^\r\n")
+	}
+
+	for _, plugin := range q.Plugins {
+		buf.WriteString(" --")
+		buf.WriteString(plugin.Name)
+		buf.WriteString("_out=")
+		buf.WriteString(plugin.Out)
+		buf.WriteString(" ^\r\n")
+		buf.WriteString(" --")
+		buf.WriteString(plugin.Name)
+		buf.WriteString("_opt=")
+
+		options := lo.MapToSlice(plugin.Options, func(k string, v string) string {
+			return k + "=" + v
+		})
+		buf.WriteString(strings.Join(options, ","))
+		buf.WriteString(" ^\r\n")
+	}
+
+	for i, file := range q.Files {
+		buf.WriteString(" ")
+		buf.WriteString(file)
+
+		if i != len(q.Files)-1 {
+			buf.WriteString(" ^\r\n")
 		}
 	}
 
