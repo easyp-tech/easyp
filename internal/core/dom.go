@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"reflect"
+	"runtime"
 	"strings"
 	"unicode"
 
@@ -243,14 +244,18 @@ type (
 
 func (q Query) build() string {
 	var buf bytes.Buffer
+	lineSeparator := " \\\n"
+	if runtime.GOOS == "windows" {
+		lineSeparator = " "
+	}
 
 	buf.WriteString(q.Compiler)
-	buf.WriteString(" \\\n")
+	buf.WriteString(lineSeparator)
 
 	for _, imp := range q.Imports {
 		buf.WriteString(" -I ")
 		buf.WriteString(imp)
-		buf.WriteString(" \\\n")
+		buf.WriteString(lineSeparator)
 	}
 
 	for _, plugin := range q.Plugins {
@@ -258,7 +263,7 @@ func (q Query) build() string {
 		buf.WriteString(plugin.Name)
 		buf.WriteString("_out=")
 		buf.WriteString(plugin.Out)
-		buf.WriteString(" \\\n")
+		buf.WriteString(lineSeparator)
 		buf.WriteString(" --")
 		buf.WriteString(plugin.Name)
 		buf.WriteString("_opt=")
@@ -267,7 +272,7 @@ func (q Query) build() string {
 			return k + "=" + v
 		})
 		buf.WriteString(strings.Join(options, ","))
-		buf.WriteString(" \\\n")
+		buf.WriteString(lineSeparator)
 	}
 
 	for i, file := range q.Files {
@@ -275,7 +280,7 @@ func (q Query) build() string {
 		buf.WriteString(file)
 
 		if i != len(q.Files)-1 {
-			buf.WriteString(" \\\n")
+			buf.WriteString(lineSeparator)
 		}
 	}
 
