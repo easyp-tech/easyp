@@ -1,7 +1,7 @@
 package storage
 
 import (
-	"path"
+	"path/filepath"
 
 	"github.com/easyp-tech/easyp/internal/core/adapters"
 )
@@ -11,5 +11,5 @@ import (
 // eg: ~/.EASYP/mod/github.com/google/googleapis/v1.2.3
 func (s *Storage) GetInstallDir(moduleName string, version string) string {
 	version = adapters.SanitizePath(version)
-	return path.Join(s.rootDir, installedDir, moduleName, version)
+	return filepath.Join(s.rootDir, installedDir, moduleName, version)
 }
