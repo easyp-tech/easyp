@@ -113,6 +113,8 @@ func buildCore(_ context.Context, cfg config.Config, dirWalker core.DirWalker) (
 		lockFile,
 		currentProjectGitWalker,
 		breakingCheckConfig,
+		cfg.Generate.ProtoRoot,
+		cfg.Generate.GenerateOutDirs,
 	)
 
 	return app, nil

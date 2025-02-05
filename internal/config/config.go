@@ -20,8 +20,10 @@ type Plugin struct {
 
 // Generate is the configuration of the generate command.
 type Generate struct {
-	Inputs  []Input  `json:"inputs" yaml:"inputs"`
-	Plugins []Plugin `json:"plugins" yaml:"plugins"`
+	Inputs          []Input  `json:"inputs" yaml:"inputs"`
+	Plugins         []Plugin `json:"plugins" yaml:"plugins"`
+	ProtoRoot       string   `json:"proto_root" yaml:"proto_root"`
+	GenerateOutDirs bool     `json:"generate_out_dirs" yaml:"generate_out_dirs"`
 }
 
 // Input source for generating code.
