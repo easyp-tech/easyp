@@ -10,7 +10,7 @@ import (
 	"github.com/yoheimuta/go-protoparser/v4"
 	"github.com/yoheimuta/go-protoparser/v4/interpret/unordered"
 
-	"github.com/easyp-tech/easyp/wellknownimports"
+	"go.redsock.ru/protopack/wellknownimports"
 )
 
 func (c *Core) protoInfoRead(ctx context.Context, fs FS, path string) (ProtoInfo, error) {

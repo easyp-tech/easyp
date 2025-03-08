@@ -9,8 +9,8 @@ import (
 
 	"gopkg.in/yaml.v3"
 
-	"github.com/easyp-tech/easyp/internal/adapters/repository"
-	"github.com/easyp-tech/easyp/internal/core/models"
+	"go.redsock.ru/protopack/internal/adapters/repository"
+	"go.redsock.ru/protopack/internal/core/models"
 )
 
 type bufWork struct {

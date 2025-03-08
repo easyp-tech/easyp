@@ -10,10 +10,10 @@ import (
 
 	"github.com/urfave/cli/v2"
 
-	"github.com/easyp-tech/easyp/internal/config"
-	"github.com/easyp-tech/easyp/internal/core"
-	"github.com/easyp-tech/easyp/internal/flags"
-	"github.com/easyp-tech/easyp/internal/fs/fs"
+	"go.redsock.ru/protopack/internal/config"
+	"go.redsock.ru/protopack/internal/core"
+	"go.redsock.ru/protopack/internal/flags"
+	"go.redsock.ru/protopack/internal/fs/fs"
 )
 
 var _ Handler = (*Lint)(nil)

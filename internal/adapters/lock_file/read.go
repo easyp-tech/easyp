@@ -1,7 +1,7 @@
 package lockfile
 
 import (
-	"github.com/easyp-tech/easyp/internal/core/models"
+	"go.redsock.ru/protopack/internal/core/models"
 )
 
 // Read information about module by its name from lock file

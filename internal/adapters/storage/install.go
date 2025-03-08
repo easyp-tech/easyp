@@ -10,8 +10,8 @@ import (
 	"github.com/codeclysm/extract/v3"
 	"golang.org/x/mod/sumdb/dirhash"
 
-	"github.com/easyp-tech/easyp/internal/core/adapters"
-	"github.com/easyp-tech/easyp/internal/core/models"
+	"go.redsock.ru/protopack/internal/core/adapters"
+	"go.redsock.ru/protopack/internal/core/models"
 )
 
 // Install package from archive

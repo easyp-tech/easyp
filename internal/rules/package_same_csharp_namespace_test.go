@@ -6,8 +6,8 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/yoheimuta/go-protoparser/v4/parser/meta"
 
-	"github.com/easyp-tech/easyp/internal/core"
-	"github.com/easyp-tech/easyp/internal/rules"
+	"go.redsock.ru/protopack/internal/core"
+	"go.redsock.ru/protopack/internal/rules"
 )
 
 func TestPackageSameCSharpNamespace_Message(t *testing.T) {

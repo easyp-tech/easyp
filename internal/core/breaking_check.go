@@ -8,8 +8,8 @@ import (
 	"github.com/yoheimuta/go-protoparser/v4/interpret/unordered"
 	"github.com/yoheimuta/go-protoparser/v4/parser"
 
-	"github.com/easyp-tech/easyp/internal/core/path_helpers"
-	"github.com/easyp-tech/easyp/internal/fs/fs"
+	"go.redsock.ru/protopack/internal/core/path_helpers"
+	"go.redsock.ru/protopack/internal/fs/fs"
 )
 
 type BreakingCheckConfig struct {

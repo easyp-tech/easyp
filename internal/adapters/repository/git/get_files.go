@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/easyp-tech/easyp/internal/core/models"
+	"go.redsock.ru/protopack/internal/core/models"
 )
 
 func (r *gitRepo) GetFiles(ctx context.Context, revision models.Revision, dirs ...string) ([]string, error) {

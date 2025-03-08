@@ -7,8 +7,8 @@ import (
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
 
-	"github.com/easyp-tech/easyp/internal/core"
-	"github.com/easyp-tech/easyp/internal/fs/go_git"
+	"go.redsock.ru/protopack/internal/core"
+	"go.redsock.ru/protopack/internal/fs/go_git"
 )
 
 func (g *GoGit) GetDirWalker(workingDir, gitRef, path string) (core.DirWalker, error) {

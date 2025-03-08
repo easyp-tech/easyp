@@ -13,7 +13,7 @@ import (
 	"github.com/yoheimuta/go-protoparser/v4/parser"
 	"github.com/yoheimuta/go-protoparser/v4/parser/meta"
 
-	"github.com/easyp-tech/easyp/internal/core/models"
+	"go.redsock.ru/protopack/internal/core/models"
 )
 
 type (

@@ -9,8 +9,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/easyp-tech/easyp/internal/core/models"
-	"github.com/easyp-tech/easyp/internal/fs/fs"
+	"go.redsock.ru/protopack/internal/core/models"
+	"go.redsock.ru/protopack/internal/fs/fs"
 )
 
 const defaultCompiler = "protoc"

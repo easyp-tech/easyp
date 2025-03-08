@@ -3,7 +3,7 @@ package repository
 import (
 	"context"
 
-	"github.com/easyp-tech/easyp/internal/core/models"
+	"go.redsock.ru/protopack/internal/core/models"
 )
 
 type Repo interface {

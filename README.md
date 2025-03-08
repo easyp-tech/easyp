@@ -1,4 +1,4 @@
-# Easyp
+# ProtoPack
 
 `easyp` is a cli tool for workflows with `proto` files.
 

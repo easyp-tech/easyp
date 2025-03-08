@@ -3,7 +3,7 @@ package go_git
 import (
 	"github.com/go-git/go-git/v5/plumbing/object"
 
-	"github.com/easyp-tech/easyp/internal/core/path_helpers"
+	"go.redsock.ru/protopack/internal/core/path_helpers"
 )
 
 func NewGitTreeWalker(tree *object.Tree, path string) *GitTreeWalker {

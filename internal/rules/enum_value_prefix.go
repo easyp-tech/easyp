@@ -4,7 +4,7 @@ import (
 	"strings"
 	"unicode"
 
-	"github.com/easyp-tech/easyp/internal/core"
+	"go.redsock.ru/protopack/internal/core"
 )
 
 var _ core.Rule = (*EnumValuePrefix)(nil)

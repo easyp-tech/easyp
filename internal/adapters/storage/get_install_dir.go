@@ -3,7 +3,7 @@ package storage
 import (
 	"path"
 
-	"github.com/easyp-tech/easyp/internal/core/adapters"
+	"go.redsock.ru/protopack/internal/core/adapters"
 )
 
 // getInstallDir returns dir to install package

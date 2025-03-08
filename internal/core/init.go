@@ -7,7 +7,7 @@ import (
 
 	"gopkg.in/yaml.v3"
 
-	"github.com/easyp-tech/easyp/internal/config"
+	"go.redsock.ru/protopack/internal/config"
 )
 
 type (

@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/easyp-tech/easyp/internal/core/models"
+	"go.redsock.ru/protopack/internal/core/models"
 )
 
 func (r *gitRepo) Fetch(ctx context.Context, revision models.Revision) error {

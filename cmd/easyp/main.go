@@ -8,9 +8,9 @@ import (
 	"github.com/samber/lo"
 	"github.com/urfave/cli/v2"
 
-	"github.com/easyp-tech/easyp/internal/api"
-	"github.com/easyp-tech/easyp/internal/flags"
-	"github.com/easyp-tech/easyp/internal/version"
+	"go.redsock.ru/protopack/internal/api"
+	"go.redsock.ru/protopack/internal/flags"
+	"go.redsock.ru/protopack/internal/version"
 )
 
 func initLogger(isDebug bool) *slog.Logger {

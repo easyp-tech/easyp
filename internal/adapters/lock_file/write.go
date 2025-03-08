@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"sort"
 
-	"github.com/easyp-tech/easyp/internal/core/models"
+	"go.redsock.ru/protopack/internal/core/models"
 )
 
 func (l *LockFile) Write(

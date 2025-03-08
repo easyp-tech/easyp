@@ -10,7 +10,7 @@ import (
 
 	"github.com/yoheimuta/go-protoparser/v4/parser"
 
-	"github.com/easyp-tech/easyp/internal/core/path_helpers"
+	"go.redsock.ru/protopack/internal/core/path_helpers"
 )
 
 // Lint lints the proto file.

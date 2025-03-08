@@ -6,7 +6,7 @@ import (
 
 	"golang.org/x/mod/sumdb/dirhash"
 
-	"github.com/easyp-tech/easyp/internal/core/models"
+	"go.redsock.ru/protopack/internal/core/models"
 )
 
 func (s *Storage) GetInstalledModuleHash(moduleName string, revisionVersion string) (models.ModuleHash, error) {

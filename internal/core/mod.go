@@ -4,9 +4,9 @@ import (
 	"context"
 	"iter"
 
-	"github.com/easyp-tech/easyp/internal/adapters/repository"
+	"go.redsock.ru/protopack/internal/adapters/repository"
 
-	"github.com/easyp-tech/easyp/internal/core/models"
+	"go.redsock.ru/protopack/internal/core/models"
 )
 
 type (

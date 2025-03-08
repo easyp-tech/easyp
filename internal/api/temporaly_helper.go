@@ -10,14 +10,14 @@ import (
 
 	"github.com/samber/lo"
 
-	"github.com/easyp-tech/easyp/internal/adapters/console"
-	"github.com/easyp-tech/easyp/internal/adapters/go_git"
-	lockfile "github.com/easyp-tech/easyp/internal/adapters/lock_file"
-	moduleconfig "github.com/easyp-tech/easyp/internal/adapters/module_config"
-	"github.com/easyp-tech/easyp/internal/adapters/storage"
-	"github.com/easyp-tech/easyp/internal/config"
-	"github.com/easyp-tech/easyp/internal/core"
-	"github.com/easyp-tech/easyp/internal/rules"
+	"go.redsock.ru/protopack/internal/adapters/console"
+	"go.redsock.ru/protopack/internal/adapters/go_git"
+	lockfile "go.redsock.ru/protopack/internal/adapters/lock_file"
+	moduleconfig "go.redsock.ru/protopack/internal/adapters/module_config"
+	"go.redsock.ru/protopack/internal/adapters/storage"
+	"go.redsock.ru/protopack/internal/config"
+	"go.redsock.ru/protopack/internal/core"
+	"go.redsock.ru/protopack/internal/rules"
 )
 
 var (

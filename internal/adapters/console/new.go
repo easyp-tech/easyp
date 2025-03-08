@@ -3,7 +3,7 @@ package console
 import (
 	"runtime"
 
-	"github.com/easyp-tech/easyp/internal/core"
+	"go.redsock.ru/protopack/internal/core"
 )
 
 // New create new console.
