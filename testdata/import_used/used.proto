@@ -10,13 +10,15 @@ import "import_used/thrd_party/messages.proto";
 import "import_used/thrd_party/enums.proto";
 import "import_used/thrd_party/options.proto";
 import "import_used/thrd_party/types.proto";
-import "import_used/thrd_party/for_extends.proto";
+import "import_used/thrd_party/for_option.proto";
 
 package import_used;
 
 extend import_used.thrd_party.MethodOptions {
   MethodOption options = 10000;
 }
+
+option (import_used.thrd_party.ForExtend) = {};
 
 message SomeMessage {
   // use import from the same package
