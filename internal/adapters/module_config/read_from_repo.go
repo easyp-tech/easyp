@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/easyp-tech/easyp/internal/adapters/repository"
-	"github.com/easyp-tech/easyp/internal/core/models"
+	"go.redsock.ru/protopack/internal/adapters/repository"
+	"go.redsock.ru/protopack/internal/core/models"
 )
 
 // Read and return module's config from repository

@@ -9,7 +9,7 @@ import (
 	"github.com/yoheimuta/go-protoparser/v4"
 	"github.com/yoheimuta/go-protoparser/v4/interpret/unordered"
 
-	"github.com/easyp-tech/easyp/internal/core"
+	"go.redsock.ru/protopack/internal/core"
 )
 
 const (

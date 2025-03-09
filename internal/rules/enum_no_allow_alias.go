@@ -1,7 +1,7 @@
 package rules
 
 import (
-	"github.com/easyp-tech/easyp/internal/core"
+	"go.redsock.ru/protopack/internal/core"
 )
 
 // EnumNoAllowAlias this rule checks that enums are PascalCase.

@@ -9,9 +9,9 @@ import (
 
 	"gopkg.in/yaml.v3"
 
-	"github.com/easyp-tech/easyp/internal/adapters/repository"
-	"github.com/easyp-tech/easyp/internal/config/default_consts"
-	"github.com/easyp-tech/easyp/internal/core/models"
+	"go.redsock.ru/protopack/internal/adapters/repository"
+	"go.redsock.ru/protopack/internal/config/default_consts"
+	"go.redsock.ru/protopack/internal/core/models"
 )
 
 // Config is the configuration of easyp.

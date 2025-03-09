@@ -1,4 +1,4 @@
-module github.com/easyp-tech/easyp
+module go.redsock.ru/protopack
 
 go 1.23
 

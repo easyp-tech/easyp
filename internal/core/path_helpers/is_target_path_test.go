@@ -5,7 +5,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/easyp-tech/easyp/internal/core/path_helpers"
+	"go.redsock.ru/protopack/internal/core/path_helpers"
 )
 
 func Test_IsTargetPath(t *testing.T) {

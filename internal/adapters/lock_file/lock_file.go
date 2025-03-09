@@ -4,7 +4,7 @@ import (
 	"bufio"
 	"strings"
 
-	"github.com/easyp-tech/easyp/internal/core"
+	"go.redsock.ru/protopack/internal/core"
 )
 
 const (

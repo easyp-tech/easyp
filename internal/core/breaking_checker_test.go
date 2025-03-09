@@ -7,7 +7,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/yoheimuta/go-protoparser/v4/parser/meta"
 
-	"github.com/easyp-tech/easyp/internal/fs/fs"
+	"go.redsock.ru/protopack/internal/fs/fs"
 )
 
 const (

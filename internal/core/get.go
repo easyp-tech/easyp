@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"log/slog"
 
-	"github.com/easyp-tech/easyp/internal/adapters/repository/git"
-	"github.com/easyp-tech/easyp/internal/core/models"
+	"go.redsock.ru/protopack/internal/adapters/repository/git"
+	"go.redsock.ru/protopack/internal/core/models"
 )
 
 // Get download package.

@@ -5,8 +5,8 @@ import (
 
 	"github.com/samber/lo"
 
-	"github.com/easyp-tech/easyp/internal/config"
-	"github.com/easyp-tech/easyp/internal/core"
+	"go.redsock.ru/protopack/internal/config"
+	"go.redsock.ru/protopack/internal/core"
 )
 
 const (

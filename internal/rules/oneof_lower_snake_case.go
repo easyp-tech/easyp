@@ -3,7 +3,7 @@ package rules
 import (
 	"regexp"
 
-	"github.com/easyp-tech/easyp/internal/core"
+	"go.redsock.ru/protopack/internal/core"
 )
 
 var _ core.Rule = (*OneofLowerSnakeCase)(nil)

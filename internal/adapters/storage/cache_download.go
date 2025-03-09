@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/easyp-tech/easyp/internal/core/models"
+	"go.redsock.ru/protopack/internal/core/models"
 )
 
 // CacheDownload create path to downloaded cache.

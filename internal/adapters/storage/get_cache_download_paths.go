@@ -3,8 +3,8 @@ package storage
 import (
 	"path/filepath"
 
-	"github.com/easyp-tech/easyp/internal/core/adapters"
-	"github.com/easyp-tech/easyp/internal/core/models"
+	"go.redsock.ru/protopack/internal/core/adapters"
+	"go.redsock.ru/protopack/internal/core/models"
 )
 
 // GetDownloadArchivePath returns full path to download archive (include extension)

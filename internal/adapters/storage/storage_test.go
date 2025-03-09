@@ -7,8 +7,8 @@ import (
 	"github.com/brianvoe/gofakeit/v6"
 	"github.com/stretchr/testify/suite"
 
-	"github.com/easyp-tech/easyp/internal/adapters/storage/mocks"
-	"github.com/easyp-tech/easyp/internal/core/models"
+	"go.redsock.ru/protopack/internal/adapters/storage/mocks"
+	"go.redsock.ru/protopack/internal/core/models"
 )
 
 type storageSuite struct {

@@ -7,12 +7,12 @@ import (
 
 	"github.com/urfave/cli/v2"
 
-	"github.com/easyp-tech/easyp/internal/core/models"
-	"github.com/easyp-tech/easyp/internal/flags"
-	"github.com/easyp-tech/easyp/internal/fs/fs"
+	"go.redsock.ru/protopack/internal/core/models"
+	"go.redsock.ru/protopack/internal/flags"
+	"go.redsock.ru/protopack/internal/fs/fs"
 
-	"github.com/easyp-tech/easyp/internal/config"
-	"github.com/easyp-tech/easyp/internal/core"
+	"go.redsock.ru/protopack/internal/config"
+	"go.redsock.ru/protopack/internal/core"
 )
 
 var _ Handler = (*Mod)(nil)

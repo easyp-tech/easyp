@@ -6,7 +6,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/easyp-tech/easyp/internal/adapters/repository"
+	"go.redsock.ru/protopack/internal/adapters/repository"
 )
 
 var _ repository.Repo = (*gitRepo)(nil)
