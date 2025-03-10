@@ -56,6 +56,7 @@ func (i *ImportUsed) Validate(checkingProto core.ProtoInfo) ([]core.Issue, error
 	i.checkInServices(checkingProto.Info.ProtoBody.Services, checkingProto)
 	i.checkInMessages(checkingProto.Info.ProtoBody.Messages, checkingProto)
 	i.checkInExtends(checkingProto.Info.ProtoBody.Extends, checkingProto)
+	i.checkInOptions(checkingProto.Info.ProtoBody.Options, checkingProto)
 
 	for imp, used := range i.isImportUsed {
 		if !used {
@@ -125,6 +126,12 @@ func (i *ImportUsed) checkInMessages(messages []*unordered.Message, checkingProt
 func (i *ImportUsed) checkInExtends(extends []*unordered.Extend, checkingProto core.ProtoInfo) {
 	for _, extend := range extends {
 		i.checkIsImportUsed(extend.MessageType, checkingProto)
+	}
+}
+
+func (i *ImportUsed) checkInOptions(options []*parser.Option, checkingProto core.ProtoInfo) {
+	for _, option := range options {
+		i.checkIsImportUsed(option.OptionName, checkingProto)
 	}
 }
 

@@ -1,0 +1,6 @@
+syntax = "proto3";
+
+package import_used.thrd_party;
+
+message ForExtend {
+}
