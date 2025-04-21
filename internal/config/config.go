@@ -26,8 +26,9 @@ type Generate struct {
 
 // Input source for generating code.
 type Input struct {
-	Directory string       `yaml:"directory"`
-	GitRepo   InputGitRepo `yaml:"git_repo"`
+	Directory     string        `yaml:"directory"`
+	GitRepo       InputGitRepo  `yaml:"git_repo"`
+	InputFilesDir InputFilesDir `yaml:"input_files_dir"`
 }
 
 // InputGitRepo is the configuration of the git repository.
@@ -40,6 +41,12 @@ type InputGitRepo struct {
 // InputDirectory is the configuration of the directory.
 type InputDirectory struct {
 	Path string `yaml:"path"`
+}
+
+// InputFilesDir is the configuration of the directory with additional functionality.
+type InputFilesDir struct {
+	Path string `yaml:"path"`
+	Root string `yaml:"root"`
 }
 
 // Config is the configuration of easyp.

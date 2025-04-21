@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"path"
 	"path/filepath"
 	"strings"
 
@@ -98,7 +99,35 @@ func (c *Core) Generate(ctx context.Context, root, directory string) error {
 		}
 	}
 
+	for _, inputFilesDir := range c.inputs.InputFilesDir {
+		fsWalker := fs.NewFSWalker(directory, inputFilesDir.Root)
+		q.Imports = append(q.Imports, inputFilesDir.Root)
+
+		err := fsWalker.WalkDir(func(walkPath string, err error) error {
+			switch {
+			case err != nil:
+				return err
+			case ctx.Err() != nil:
+				return ctx.Err()
+			case filepath.Ext(walkPath) != ".proto":
+				return nil
+			case shouldIgnore(walkPath, []string{path.Join(inputFilesDir.Root, inputFilesDir.Path)}):
+				c.logger.DebugContext(ctx, "ignore", slog.String("walkPath", walkPath))
+
+				return nil
+			}
+
+			addedFile := stripPrefix(walkPath, inputFilesDir.Root)
+			q.Files = append(q.Files, addedFile)
+
+			return nil
+		})
+		if err != nil {
+			return fmt.Errorf("fsWalker.WalkDir: %w", err)
+		}
+	}
 	fsWalker := fs.NewFSWalker(directory, "")
+
 	err := fsWalker.WalkDir(func(path string, err error) error {
 		switch {
 		case err != nil:
@@ -135,7 +164,7 @@ func (c *Core) Generate(ctx context.Context, root, directory string) error {
 
 func shouldIgnore(path string, dirs []string) bool {
 	if len(dirs) == 0 {
-		return false
+		return true
 	}
 
 	for _, dir := range dirs {
@@ -169,4 +198,11 @@ func (c *Core) getModulePath(ctx context.Context, requestedDependency string) (s
 	installedPath := c.storage.GetInstallDir(module.Name, lockFileInfo.Version)
 
 	return installedPath, nil
+}
+
+func stripPrefix(path, prefix string) string {
+	normalizedPath := filepath.ToSlash(path)
+	normalizedPrefix := filepath.ToSlash(prefix)
+
+	return strings.TrimPrefix(normalizedPath, normalizedPrefix+"/")
 }
