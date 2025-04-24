@@ -228,9 +228,8 @@ type (
 	}
 	// Inputs is the source for generating code.
 	Inputs struct {
-		Dirs          []string
-		InputGitRepos []InputGitRepo
 		InputFilesDir []InputFilesDir
+		InputGitRepos []InputGitRepo
 	}
 	// Config is the configuration for EasyP generate.
 	Config struct {

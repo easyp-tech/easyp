@@ -26,9 +26,8 @@ type Generate struct {
 
 // Input source for generating code.
 type Input struct {
-	Directory     string        `yaml:"directory"`
+	InputFilesDir InputFilesDir `yaml:"directory"`
 	GitRepo       InputGitRepo  `yaml:"git_repo"`
-	InputFilesDir InputFilesDir `yaml:"input_files_dir"`
 }
 
 // InputGitRepo is the configuration of the git repository.
@@ -96,4 +95,28 @@ func New(_ context.Context, filepath string) (*Config, error) {
 	}
 
 	return cfg, nil
+}
+
+func (d *InputFilesDir) UnmarshalYAML(value *yaml.Node) error {
+	switch value.Kind {
+	case yaml.ScalarNode:
+		// строка — старый формат
+		var path string
+		if err := value.Decode(&path); err != nil {
+			return err
+		}
+		d.Path = path
+		d.Root = "."
+	case yaml.MappingNode:
+		// структура — новый формат
+		type raw InputFilesDir
+		var r raw
+		if err := value.Decode(&r); err != nil {
+			return err
+		}
+		*d = InputFilesDir(r)
+	default:
+		return fmt.Errorf("unsupported type for directory: %v", value.Kind)
+	}
+	return nil
 }

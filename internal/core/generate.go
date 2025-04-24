@@ -126,35 +126,12 @@ func (c *Core) Generate(ctx context.Context, root, directory string) error {
 			return fmt.Errorf("fsWalker.WalkDir: %w", err)
 		}
 	}
-	fsWalker := fs.NewFSWalker(directory, "")
-
-	err := fsWalker.WalkDir(func(path string, err error) error {
-		switch {
-		case err != nil:
-			return err
-		case ctx.Err() != nil:
-			return ctx.Err()
-		case filepath.Ext(path) != ".proto":
-			return nil
-		case shouldIgnore(path, c.inputs.Dirs):
-			c.logger.DebugContext(ctx, "ignore", slog.String("path", path))
-
-			return nil
-		}
-
-		q.Files = append(q.Files, path)
-
-		return nil
-	})
-	if err != nil {
-		return fmt.Errorf("fsWalker.WalkDir: %w", err)
-	}
 
 	cmd := q.build()
 
 	slog.DebugContext(ctx, "Run command", "cmd", cmd)
 
-	_, err = c.console.RunCmd(ctx, root, cmd)
+	_, err := c.console.RunCmd(ctx, root, cmd)
 	if err != nil {
 		return fmt.Errorf("adapters.RunCmd: %w", err)
 	}

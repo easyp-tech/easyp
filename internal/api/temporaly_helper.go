@@ -93,11 +93,6 @@ func buildCore(_ context.Context, cfg config.Config, dirWalker core.DirWalker) (
 			}
 		}),
 		core.Inputs{
-			Dirs: lo.Filter(lo.Map(cfg.Generate.Inputs, func(i config.Input, _ int) string {
-				return i.Directory
-			}), func(s string, _ int) bool {
-				return s != ""
-			}),
 			InputGitRepos: lo.Filter(lo.Map(cfg.Generate.Inputs, func(i config.Input, _ int) core.InputGitRepo {
 				return core.InputGitRepo{
 					URL:          i.GitRepo.URL,
