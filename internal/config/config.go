@@ -26,8 +26,8 @@ type Generate struct {
 
 // Input source for generating code.
 type Input struct {
-	Directory string       `yaml:"directory"`
-	GitRepo   InputGitRepo `yaml:"git_repo"`
+	InputFilesDir InputFilesDir `yaml:"directory"`
+	GitRepo       InputGitRepo  `yaml:"git_repo"`
 }
 
 // InputGitRepo is the configuration of the git repository.
@@ -40,6 +40,12 @@ type InputGitRepo struct {
 // InputDirectory is the configuration of the directory.
 type InputDirectory struct {
 	Path string `yaml:"path"`
+}
+
+// InputFilesDir is the configuration of the directory with additional functionality.
+type InputFilesDir struct {
+	Path string `yaml:"path"`
+	Root string `yaml:"root"`
 }
 
 // Config is the configuration of easyp.
@@ -89,4 +95,28 @@ func New(_ context.Context, filepath string) (*Config, error) {
 	}
 
 	return cfg, nil
+}
+
+func (d *InputFilesDir) UnmarshalYAML(value *yaml.Node) error {
+	switch value.Kind {
+	case yaml.ScalarNode:
+		// строка — старый формат
+		var path string
+		if err := value.Decode(&path); err != nil {
+			return err
+		}
+		d.Path = path
+		d.Root = "."
+	case yaml.MappingNode:
+		// структура — новый формат
+		type raw InputFilesDir
+		var r raw
+		if err := value.Decode(&r); err != nil {
+			return err
+		}
+		*d = InputFilesDir(r)
+	default:
+		return fmt.Errorf("unsupported type for directory: %v", value.Kind)
+	}
+	return nil
 }

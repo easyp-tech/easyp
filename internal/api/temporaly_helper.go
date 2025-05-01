@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/samber/lo"
 
@@ -92,11 +93,6 @@ func buildCore(_ context.Context, cfg config.Config, dirWalker core.DirWalker) (
 			}
 		}),
 		core.Inputs{
-			Dirs: lo.Filter(lo.Map(cfg.Generate.Inputs, func(i config.Input, _ int) string {
-				return i.Directory
-			}), func(s string, _ int) bool {
-				return s != ""
-			}),
 			InputGitRepos: lo.Filter(lo.Map(cfg.Generate.Inputs, func(i config.Input, _ int) core.InputGitRepo {
 				return core.InputGitRepo{
 					URL:          i.GitRepo.URL,
@@ -105,6 +101,14 @@ func buildCore(_ context.Context, cfg config.Config, dirWalker core.DirWalker) (
 				}
 			}), func(i core.InputGitRepo, _ int) bool {
 				return i.URL != ""
+			}),
+			InputFilesDir: lo.Filter(lo.Map(cfg.Generate.Inputs, func(i config.Input, _ int) core.InputFilesDir {
+				return core.InputFilesDir{
+					Path: i.InputFilesDir.Path,
+					Root: i.InputFilesDir.Root,
+				}
+			}), func(i core.InputFilesDir, _ int) bool {
+				return i.Path != "" && IsExistingDir(i.Root)
 			}),
 		},
 		console.New(),
@@ -116,4 +120,24 @@ func buildCore(_ context.Context, cfg config.Config, dirWalker core.DirWalker) (
 	)
 
 	return app, nil
+}
+
+func IsExistingDir(path string) bool {
+	if path == "" || strings.ContainsRune(path, '\x00') {
+		return false
+	}
+
+	// Очистим путь от лишнего (типа "./../")
+	cleanPath := filepath.Clean(path)
+
+	info, err := os.Stat(cleanPath)
+	if err != nil {
+		return false
+	}
+
+	if !info.IsDir() {
+		return false
+	}
+
+	return true
 }

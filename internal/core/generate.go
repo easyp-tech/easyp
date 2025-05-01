@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"path"
 	"path/filepath"
 	"strings"
 
@@ -98,34 +99,39 @@ func (c *Core) Generate(ctx context.Context, root, directory string) error {
 		}
 	}
 
-	fsWalker := fs.NewFSWalker(directory, "")
-	err := fsWalker.WalkDir(func(path string, err error) error {
-		switch {
-		case err != nil:
-			return err
-		case ctx.Err() != nil:
-			return ctx.Err()
-		case filepath.Ext(path) != ".proto":
-			return nil
-		case shouldIgnore(path, c.inputs.Dirs):
-			c.logger.DebugContext(ctx, "ignore", slog.String("path", path))
+	for _, inputFilesDir := range c.inputs.InputFilesDir {
+		fsWalker := fs.NewFSWalker(directory, inputFilesDir.Root)
+		q.Imports = append(q.Imports, inputFilesDir.Root)
+
+		err := fsWalker.WalkDir(func(walkPath string, err error) error {
+			switch {
+			case err != nil:
+				return err
+			case ctx.Err() != nil:
+				return ctx.Err()
+			case filepath.Ext(walkPath) != ".proto":
+				return nil
+			case shouldIgnore(walkPath, []string{path.Join(inputFilesDir.Root, inputFilesDir.Path)}):
+				c.logger.DebugContext(ctx, "ignore", slog.String("walkPath", walkPath))
+
+				return nil
+			}
+
+			addedFile := stripPrefix(walkPath, inputFilesDir.Root)
+			q.Files = append(q.Files, addedFile)
 
 			return nil
+		})
+		if err != nil {
+			return fmt.Errorf("fsWalker.WalkDir: %w", err)
 		}
-
-		q.Files = append(q.Files, path)
-
-		return nil
-	})
-	if err != nil {
-		return fmt.Errorf("fsWalker.WalkDir: %w", err)
 	}
 
 	cmd := q.build()
 
 	slog.DebugContext(ctx, "Run command", "cmd", cmd)
 
-	_, err = c.console.RunCmd(ctx, root, cmd)
+	_, err := c.console.RunCmd(ctx, root, cmd)
 	if err != nil {
 		return fmt.Errorf("adapters.RunCmd: %w", err)
 	}
@@ -135,7 +141,7 @@ func (c *Core) Generate(ctx context.Context, root, directory string) error {
 
 func shouldIgnore(path string, dirs []string) bool {
 	if len(dirs) == 0 {
-		return false
+		return true
 	}
 
 	for _, dir := range dirs {
@@ -169,4 +175,11 @@ func (c *Core) getModulePath(ctx context.Context, requestedDependency string) (s
 	installedPath := c.storage.GetInstallDir(module.Name, lockFileInfo.Version)
 
 	return installedPath, nil
+}
+
+func stripPrefix(path, prefix string) string {
+	normalizedPath := filepath.ToSlash(path)
+	normalizedPrefix := filepath.ToSlash(prefix)
+
+	return strings.TrimPrefix(normalizedPath, normalizedPrefix+"/")
 }

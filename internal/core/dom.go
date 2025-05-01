@@ -221,10 +221,14 @@ type (
 		SubDirectory string
 		Out          string
 	}
-
+	// InputFilesDir is the configuration of the directory with additional functionality.
+	InputFilesDir struct {
+		Path string
+		Root string
+	}
 	// Inputs is the source for generating code.
 	Inputs struct {
-		Dirs          []string
+		InputFilesDir []InputFilesDir
 		InputGitRepos []InputGitRepo
 	}
 	// Config is the configuration for EasyP generate.
