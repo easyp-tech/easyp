@@ -8,9 +8,8 @@ jobs:
   release:
     runs-on: ubuntu-latest
     env:
-      GO_VERSION: '1.23'
+      GO_VERSION: "1.24"
     steps:
-
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
