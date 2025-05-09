@@ -18,7 +18,9 @@ func (c *Core) Get(ctx context.Context, requestedModule models.Module) error {
 	}
 
 	// TODO: use factory (git, svn etc)
-	repo, err := git.New(ctx, requestedModule.Name, cacheRepositoryDir, c.console)
+	// TODO: use replace from config
+	remoteURL := requestedModule.Name
+	repo, err := git.New(ctx, remoteURL, cacheRepositoryDir, c.console)
 	if err != nil {
 		return fmt.Errorf("git.New: %w", err)
 	}
