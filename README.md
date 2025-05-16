@@ -182,6 +182,22 @@ for example:
     insteadOf = https://github.com/
 ```
 
+### Use mirrors
+
+For use your company private mirrors (e.g artifactory) you can use `mirrors` settings.
+
+```yaml
+mirrors:
+  - origin: onprem-vcs.loc
+    use: github.com
+```
+
+In that case dependency from your config with host `onprem-vcs.loc` will be replaced with `github.com`.
+
+So you are able to download deps from your mirror without modificate easyp config file.
+
+In case when you have to use private 
+
 ## Auto-completion
 
 ### zsh auto-completion

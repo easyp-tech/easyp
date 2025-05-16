@@ -3,6 +3,7 @@ package git
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"os"
 	"path/filepath"
 
@@ -45,6 +46,8 @@ func New(ctx context.Context, remoteURL string, cacheDir string, console Console
 		cacheDir:  cacheDir,
 		console:   console,
 	}
+
+	slog.Debug("clone", "remoteURL", remoteURL, "cacheDir", cacheDir)
 
 	if _, err := os.Stat(filepath.Join(r.cacheDir, "objects")); err == nil {
 		// repo is already exists

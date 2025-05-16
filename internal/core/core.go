@@ -22,6 +22,8 @@ type Core struct {
 
 	breakingCheckConfig     BreakingCheckConfig
 	currentProjectGitWalker CurrentProjectGitWalker
+
+	depAddressResolver DepAddressResolver
 }
 
 var (
@@ -43,6 +45,7 @@ func New(
 	lockFile LockFile,
 	currentProjectGitWalker CurrentProjectGitWalker,
 	breakingCheckConfig BreakingCheckConfig,
+	depAddressResolver DepAddressResolver,
 ) *Core {
 	return &Core{
 		rules:                   rules,
@@ -58,5 +61,6 @@ func New(
 		lockFile:                lockFile,
 		currentProjectGitWalker: currentProjectGitWalker,
 		breakingCheckConfig:     breakingCheckConfig,
+		depAddressResolver:      depAddressResolver,
 	}
 }
