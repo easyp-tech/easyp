@@ -48,6 +48,12 @@ type InputFilesDir struct {
 	Root string `yaml:"root"`
 }
 
+// Mirror is the mirror setup for dependency
+type Mirror struct {
+	Origin string `yaml:"origin"`
+	Use    string `yaml:"use"`
+}
+
 // Config is the configuration of easyp.
 type Config struct {
 	// LintConfig is the lint configuration.
@@ -61,6 +67,9 @@ type Config struct {
 
 	// BreakingCheck `breaking` command's configuration
 	BreakingCheck BreakingCheck `json:"breaking" yaml:"breaking"`
+
+	// Mirrors configs
+	Mirrors []Mirror `json:"mirrors" yaml:"mirrors"`
 }
 
 var errFileNotFound = errors.New("config file not found")

@@ -45,6 +45,6 @@ generate:
       opts:
         paths: source_relative
 
-instead:
-  - origin: github.com
-    use: super-yadro.ru
+mirrors:
+  - origin: onprem-vcs.loc
+    use: github.com
