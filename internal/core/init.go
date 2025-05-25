@@ -119,9 +119,9 @@ func migrateFromBUF(disk FS, path string, defaultConfiguration config.Config) er
 		return fmt.Errorf("disk.Open: %w", err)
 	}
 	defer func() {
-		err := f.Close()
-		if err != nil {
-			// TODO: Handle error
+		closeErr := f.Close()
+		if closeErr != nil {
+			err = fmt.Errorf("disk.Close: %w: original error: %w", closeErr, err)
 		}
 	}()
 

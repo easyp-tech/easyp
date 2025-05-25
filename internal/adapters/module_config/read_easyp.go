@@ -7,11 +7,11 @@ import (
 	"log/slog"
 	"strings"
 
-	"gopkg.in/yaml.v3"
-
 	"github.com/easyp-tech/easyp/internal/adapters/repository"
-	"github.com/easyp-tech/easyp/internal/config/default_consts"
+	"github.com/easyp-tech/easyp/internal/config"
 	"github.com/easyp-tech/easyp/internal/core/models"
+
+	"gopkg.in/yaml.v3"
 )
 
 // Config is the configuration of easyp.
@@ -24,7 +24,7 @@ type easypConfig struct {
 
 // readEasyp read easyp's config from repository
 func readEasyp(ctx context.Context, repo repository.Repo, revision models.Revision) ([]models.Module, error) {
-	content, err := repo.ReadFile(ctx, revision, default_consts.DefaultConfigFileName)
+	content, err := repo.ReadFile(ctx, revision, config.DefaultFileName)
 	if err != nil {
 		if errors.Is(err, models.ErrFileNotFound) {
 			slog.Debug("easyp config not found")

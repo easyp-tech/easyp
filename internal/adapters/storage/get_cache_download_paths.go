@@ -3,7 +3,6 @@ package storage
 import (
 	"path/filepath"
 
-	"github.com/easyp-tech/easyp/internal/core/adapters"
 	"github.com/easyp-tech/easyp/internal/core/models"
 )
 
@@ -11,7 +10,7 @@ import (
 func (s *Storage) GetCacheDownloadPaths(module models.Module, revision models.Revision) models.CacheDownloadPaths {
 	cacheDownloadDir := filepath.Join(s.rootDir, cacheDir, cacheDownloadDir, module.Name)
 
-	fileName := adapters.SanitizePath(revision.Version)
+	fileName := sanitizePath(revision.Version)
 
 	archiveFile := filepath.Join(cacheDownloadDir, fileName) + ".zip"
 	archiveHashFile := filepath.Join(cacheDownloadDir, fileName) + ".ziphash"
