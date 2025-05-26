@@ -160,14 +160,16 @@ func textPrinter(w io.Writer, issues []core.IssueInfo) error {
 	for _, issue := range issues {
 		buffer.Reset()
 
-		_, _ = buffer.WriteString(fmt.Sprintf("%s:%d:%d:%s %s (%s)",
+		str := fmt.Sprintf("%s:%d:%d:%s %s (%s)",
 			issue.Path,
 			issue.Position.Line,
 			issue.Position.Column,
 			issue.SourceName,
 			issue.Message,
 			issue.RuleName,
-		))
+		)
+
+		_, _ = buffer.WriteString(str)
 		_, _ = buffer.WriteString("\n")
 		if _, err := w.Write(buffer.Bytes()); err != nil {
 			return fmt.Errorf("w.Write: %w", err)

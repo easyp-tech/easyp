@@ -87,11 +87,8 @@ func (v RequestedVersion) GetParts() (GeneratedVersionParts, error) {
 // like v0.0.0-20240222234643-814bf88cf225 in go mod
 func (v RequestedVersion) IsGenerated() bool {
 	_, err := v.GetParts()
-	if err != nil {
-		return false
-	}
 
-	return true
+	return err == nil
 }
 
 // IsOmitted check if requested version is omitted

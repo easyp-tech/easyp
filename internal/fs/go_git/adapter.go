@@ -17,7 +17,7 @@ func (a *GitTreeDiskAdapter) Open(name string) (io.ReadCloser, error) {
 		return nil, err
 	}
 
-	return gitFile.Blob.Reader()
+	return gitFile.Reader()
 }
 
 func (a *GitTreeDiskAdapter) Create(name string) (io.WriteCloser, error) {

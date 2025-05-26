@@ -24,7 +24,7 @@ func (d *PackageDirectoryMatch) Validate(protoInfo core.ProtoInfo) ([]core.Issue
 	var res []core.Issue
 
 	preparePath := filepath.Dir(strings.TrimPrefix(protoInfo.Path, d.Root))
-	expectedPackage := strings.Replace(preparePath, "/", ".", -1)
+	expectedPackage := strings.ReplaceAll(preparePath, "/", ".")
 
 	for _, pkgInfo := range protoInfo.Info.ProtoBody.Packages {
 		if pkgInfo.Name != expectedPackage {
