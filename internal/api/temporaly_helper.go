@@ -79,6 +79,14 @@ func buildCore(_ context.Context, cfg config.Config, dirWalker core.DirWalker) (
 		AgainstGitRef: cfg.BreakingCheck.AgainstGitRef,
 	}
 
+	mirrors := lo.Map(cfg.Mirrors, func(item config.Mirror, _ int) core.MirrorConfig {
+		return core.MirrorConfig{
+			Origin: item.Origin,
+			Use:    item.Use,
+		}
+	})
+	depAddressResolver := core.NewDepAddressResolver(mirrors)
+
 	app := core.New(
 		lintRules,
 		cfg.Lint.Ignore,
@@ -117,6 +125,7 @@ func buildCore(_ context.Context, cfg config.Config, dirWalker core.DirWalker) (
 		lockFile,
 		currentProjectGitWalker,
 		breakingCheckConfig,
+		depAddressResolver,
 	)
 
 	return app, nil

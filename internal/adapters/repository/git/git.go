@@ -3,6 +3,7 @@ package git
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"os"
 	"path/filepath"
 
@@ -39,12 +40,14 @@ type Console interface {
 
 // New returns gitRepo instance
 // remote: full remoteURL address without schema
-func New(ctx context.Context, remote string, cacheDir string, console Console) (repository.Repo, error) {
+func New(ctx context.Context, remoteURL string, cacheDir string, console Console) (repository.Repo, error) {
 	r := &gitRepo{
-		remoteURL: getRemote(remote),
+		remoteURL: getRemote(remoteURL),
 		cacheDir:  cacheDir,
 		console:   console,
 	}
+
+	slog.Debug("clone", "remoteURL", remoteURL, "cacheDir", cacheDir)
 
 	if _, err := os.Stat(filepath.Join(r.cacheDir, "objects")); err == nil {
 		// repo is already exists
