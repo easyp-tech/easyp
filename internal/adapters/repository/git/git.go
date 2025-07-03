@@ -97,3 +97,14 @@ func (r *gitRepo) getCommitDatetime(ctx context.Context, commitHash string) (str
 
 	return parts[0], nil
 }
+
+func (r *gitRepo) fetchCommit(ctx context.Context, commitHash string) error {
+	_, err := r.console.RunCmd(
+		ctx, r.cacheDir, "git", "fetch", "-f", "origin", "--depth=1", commitHash,
+	)
+	if err != nil {
+		return fmt.Errorf("r.console.RunCmd: %w", err)
+	}
+
+	return nil
+}

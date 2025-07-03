@@ -150,11 +150,8 @@ func (r *gitRepo) readRevisionForLatestCommit(
 	// didn't find tag for this commit, so generate version
 
 	// fetch commit by its hash
-	_, err = r.console.RunCmd(
-		ctx, r.cacheDir, "git", "fetch", "-f", "origin", "--depth=1", commitHash,
-	)
-	if err != nil {
-		return revisionParts{}, fmt.Errorf("adapters.RunCmd (fetch): %w", err)
+	if err := r.fetchCommit(ctx, commitHash); err != nil {
+		return revisionParts{}, fmt.Errorf("r.fetchCommit: %w", err)
 	}
 
 	commitDatetime, err := r.getCommitDatetime(ctx, commitHash)
@@ -184,12 +181,8 @@ func (r *gitRepo) readRevisionByGeneratedVersion(
 	}
 
 	// fetch by passed commit hash
-	_, err = r.console.RunCmd(
-		ctx, r.cacheDir, "git", "fetch", "-f", "origin", "--depth=1", generatedParts.CommitHash,
-	)
-	if err != nil {
-		// do not parse error, just return as commit was not found
-		return revisionParts{}, nil
+	if err := r.fetchCommit(ctx, generatedParts.CommitHash); err != nil {
+		return revisionParts{}, fmt.Errorf("r.fetchCommit: %w", err)
 	}
 
 	parts := revisionParts{
