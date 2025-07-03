@@ -2,6 +2,7 @@ package git
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"strings"
@@ -37,7 +38,7 @@ func (r *gitRepo) ReadRevision(ctx context.Context, requestedVersion models.Requ
 		}
 	default:
 		// in other case use readRevisionByGitTagVersion
-		revParts, err = r.readRevisionByGitTagVersion(ctx, requestedVersion)
+		revParts, err = r.readRevisionByVersion(ctx, requestedVersion)
 		if err != nil {
 			return models.Revision{}, fmt.Errorf("r.readRevisionByGitTagVersion: %w", err)
 		}
@@ -56,7 +57,32 @@ func (r *gitRepo) ReadRevision(ctx context.Context, requestedVersion models.Requ
 	return revision, nil
 }
 
-// readRevisionByTag read revision by passed git tag
+// readRevisionByVersion read revision by passed version
+// order of resolving:
+// 1. try to read as git tag
+// 2. try to read as commit's hash
+// 3. return not found error
+func (r *gitRepo) readRevisionByVersion(
+	ctx context.Context, requestedVersion models.RequestedVersion,
+) (revisionParts, error) {
+	revParts, err := r.readRevisionByGitTagVersion(ctx, requestedVersion)
+	if err == nil {
+		return revParts, nil
+	}
+
+	if !errors.Is(err, models.ErrVersionNotFound) {
+		return revisionParts{}, fmt.Errorf("r.readRevisionByGitTagVersion: %w", err)
+	}
+
+	revParts, err = r.readRevisionByCommitHash(ctx, requestedVersion)
+	if err != nil {
+		return revisionParts{}, fmt.Errorf("r.readRevisionByCommitHash: %w", err)
+	}
+
+	return revParts, nil
+}
+
+// readRevisionByGitTagVersion read revision by passed git tag
 // tag has to be on the remote repository
 func (r *gitRepo) readRevisionByGitTagVersion(
 	ctx context.Context, requestedVersion models.RequestedVersion,
@@ -83,12 +109,28 @@ func (r *gitRepo) readRevisionByGitTagVersion(
 		}
 	}
 
+	if commitHash == "" {
+		return revisionParts{}, models.ErrVersionNotFound
+	}
+
 	parts := revisionParts{
 		CommitHash: commitHash,
 		Version:    gitTagVersion,
 	}
 
 	return parts, nil
+}
+
+// readRevisionByCommitHash read revision by passed hash of commit
+func (r *gitRepo) readRevisionByCommitHash(
+	ctx context.Context, requestedVersion models.RequestedVersion,
+) (revisionParts, error) {
+	// try to fetch commit
+	if err := r.fetchCommit(ctx, string(requestedVersion)); err != nil {
+		return revisionParts{}, fmt.Errorf("r.fetchCommit: %w", models.ErrVersionNotFound)
+	}
+
+	return revisionParts{}, nil
 }
 
 // readRevisionForLatestCommit read the latest commit
