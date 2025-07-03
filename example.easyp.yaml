@@ -8,8 +8,10 @@ lint:
     - IMPORT_USED
 deps:
   - github.com/googleapis/googleapis
-  - github.com/bufbuild/protovalidate@v0.3.1
-  - github.com/grpc-ecosystem/grpc-gateway@v2.19.1
+  #- github.com/googleapis/googleapis@74826619fc927a93e61cd96d5c96db0ca1b3bb1a
+  #
+#  - github.com/bufbuild/protovalidate@v0.3.1
+#  - github.com/grpc-ecosystem/grpc-gateway@v2.19.1
 
 breaking:
   ignore:
