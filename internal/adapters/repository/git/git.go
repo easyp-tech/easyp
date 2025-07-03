@@ -108,3 +108,43 @@ func (r *gitRepo) fetchCommit(ctx context.Context, commitHash string) error {
 
 	return nil
 }
+
+func (r *gitRepo) lsRemote(ctx context.Context, args ...string) ([]string, error) {
+	res, err := r.console.RunCmd(
+		ctx,
+		r.cacheDir,
+		"git",
+		append([]string{"ls-remote", "origin"}, args...)...,
+	)
+
+	if err != nil {
+		return nil, fmt.Errorf("r.console.RunCmd: %w", err)
+	}
+
+	return strings.Split(res, "\n"), nil
+}
+
+// return empty string if git tag was not found
+func (r *gitRepo) getTagByCommit(ctx context.Context, commitHash string) (string, error) {
+	res, err := r.lsRemote(ctx)
+	if err != nil {
+		return "", fmt.Errorf("r.lsRemote: %w", err)
+	}
+
+	gitTag := ""
+
+	for _, lsOut := range res {
+		rev := strings.Fields(lsOut)
+
+		if len(rev) != 2 {
+			continue
+		}
+
+		if rev[0] == commitHash && strings.HasPrefix(rev[1], gitRefsTagPrefix) {
+			gitTag = strings.TrimPrefix(rev[1], gitRefsTagPrefix)
+			break
+		}
+	}
+
+	return gitTag, nil
+}
