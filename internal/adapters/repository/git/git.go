@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/easyp-tech/easyp/internal/adapters/repository"
 )
@@ -65,4 +66,34 @@ func New(ctx context.Context, remote string, cacheDir string, console Console) (
 
 func getRemote(name string) string {
 	return "https://" + name
+}
+
+// getCommitDatetime returns datetime of commit
+// NOTE: the commit has to be fetched!
+func (r *gitRepo) getCommitDatetime(ctx context.Context, commitHash string) (string, error) {
+	var lines []string
+
+	commitDatetime, err := r.console.RunCmd(
+		ctx,
+		r.cacheDir,
+		"git",
+		"log", "-1",
+		"--pretty=%ad", "--date=format:%Y%m%d%H%M%S",
+		commitHash,
+	)
+	if err != nil {
+		return "", fmt.Errorf("r.console.RunCmd: %w", err)
+	}
+
+	// got commit hash from result
+	lines = strings.Split(commitDatetime, "\n")
+	if len(lines) == 0 {
+		return "", fmt.Errorf("invalid lines of git log: %s", commitDatetime)
+	}
+	parts := strings.Fields(lines[0])
+	if len(parts) != 1 {
+		return "", fmt.Errorf("invalid parts of git log: %s", commitDatetime)
+	}
+
+	return parts[0], nil
 }

@@ -157,31 +157,13 @@ func (r *gitRepo) readRevisionForLatestCommit(
 		return revisionParts{}, fmt.Errorf("adapters.RunCmd (fetch): %w", err)
 	}
 
-	// get commit's datetime
-	commitDatetime, err := r.console.RunCmd(
-		ctx,
-		r.cacheDir,
-		"git",
-		"log", "-1",
-		"--pretty=%ad", "--date=format:%Y%m%d%H%M%S",
-		commitHash,
-	)
+	commitDatetime, err := r.getCommitDatetime(ctx, commitHash)
 	if err != nil {
-		return revisionParts{}, fmt.Errorf("adapters.RunCmd (log): %w", err)
-	}
-
-	// got commit hash from result
-	lines = strings.Split(commitDatetime, "\n")
-	if len(lines) == 0 {
-		return revisionParts{}, fmt.Errorf("invalid lines of git log: %s", commitDatetime)
-	}
-	parts = strings.Fields(lines[0])
-	if len(parts) != 1 {
-		return revisionParts{}, fmt.Errorf("invalid parts of git log: %s", commitDatetime)
+		return revisionParts{}, fmt.Errorf("r.getCommitDatetime: %w", err)
 	}
 
 	generatedVersion := models.GeneratedVersionParts{
-		Datetime:   parts[0],
+		Datetime:   commitDatetime,
 		CommitHash: commitHash,
 	}
 
