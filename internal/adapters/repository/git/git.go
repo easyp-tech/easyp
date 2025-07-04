@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/easyp-tech/easyp/internal/adapters/repository"
+	"github.com/easyp-tech/easyp/internal/core/models"
 )
 
 var _ repository.Repo = (*gitRepo)(nil)
@@ -147,4 +148,29 @@ func (r *gitRepo) getTagByCommit(ctx context.Context, commitHash string) (string
 	}
 
 	return gitTag, nil
+}
+
+// look for hash of commit by passed git tag
+func (r *gitRepo) getCommitByTag(ctx context.Context, gitTag string) (string, error) {
+	res, err := r.lsRemote(ctx, gitTag)
+	if err != nil {
+		return "", models.ErrVersionNotFound
+	}
+
+	commitHash := ""
+
+	for _, lsOut := range res {
+		rev := strings.Fields(lsOut)
+		if len(rev) != 2 {
+			continue
+		}
+
+		if strings.HasPrefix(rev[1], gitRefsTagPrefix) &&
+			strings.TrimPrefix(rev[1], gitRefsTagPrefix) == gitTag {
+			commitHash = rev[0]
+			break
+		}
+	}
+
+	return commitHash, nil
 }

@@ -89,24 +89,9 @@ func (r *gitRepo) readRevisionByGitTagVersion(
 ) (revisionParts, error) {
 	gitTagVersion := string(requestedVersion)
 
-	res, err := r.lsRemote(ctx, gitTagVersion)
+	commitHash, err := r.getCommitByTag(ctx, gitTagVersion)
 	if err != nil {
-		return revisionParts{}, models.ErrVersionNotFound
-	}
-
-	commitHash := ""
-
-	for _, lsOut := range res {
-		rev := strings.Fields(lsOut)
-		if len(rev) != 2 {
-			continue
-		}
-
-		if strings.HasPrefix(rev[1], gitRefsTagPrefix) &&
-			strings.TrimPrefix(rev[1], gitRefsTagPrefix) == gitTagVersion {
-			commitHash = rev[0]
-			break
-		}
+		return revisionParts{}, fmt.Errorf("r.getCommitByTag: %w", err)
 	}
 
 	if commitHash == "" {

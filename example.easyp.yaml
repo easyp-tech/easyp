@@ -7,8 +7,8 @@ lint:
     - COMMENT_SERVICE
     - IMPORT_USED
 deps:
-  - github.com/googleapis/googleapis
-#  - github.com/googleapis/googleapis@common-protos-1_3_1
+#  - github.com/googleapis/googleapis
+  - github.com/googleapis/googleapis@common-protos-1_3_1
 #  - github.com/googleapis/googleapis@27156597fdf4fb77004434d4409154a230dc9a32
 #  - github.com/googleapis/googleapis@eae19435eb84f8f7a78000858432b64455525ee7
   #
