@@ -5,8 +5,10 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/easyp-tech/easyp/internal/adapters/repository"
+	"github.com/easyp-tech/easyp/internal/core/models"
 )
 
 var _ repository.Repo = (*gitRepo)(nil)
@@ -65,4 +67,110 @@ func New(ctx context.Context, remote string, cacheDir string, console Console) (
 
 func getRemote(name string) string {
 	return "https://" + name
+}
+
+// getCommitDatetime returns datetime of commit
+// NOTE: the commit has to be fetched!
+func (r *gitRepo) getCommitDatetime(ctx context.Context, commitHash string) (string, error) {
+	var lines []string
+
+	commitDatetime, err := r.console.RunCmd(
+		ctx,
+		r.cacheDir,
+		"git",
+		"log", "-1",
+		"--pretty=%ad", "--date=format:%Y%m%d%H%M%S",
+		commitHash,
+	)
+	if err != nil {
+		return "", fmt.Errorf("r.console.RunCmd: %w", err)
+	}
+
+	// got commit hash from result
+	lines = strings.Split(commitDatetime, "\n")
+	if len(lines) == 0 {
+		return "", fmt.Errorf("invalid lines of git log: %s", commitDatetime)
+	}
+	parts := strings.Fields(lines[0])
+	if len(parts) != 1 {
+		return "", fmt.Errorf("invalid parts of git log: %s", commitDatetime)
+	}
+
+	return parts[0], nil
+}
+
+func (r *gitRepo) fetchCommit(ctx context.Context, commitHash string) error {
+	_, err := r.console.RunCmd(
+		ctx, r.cacheDir, "git", "fetch", "-f", "origin", "--depth=1", commitHash,
+	)
+	if err != nil {
+		return fmt.Errorf("r.console.RunCmd: %w", err)
+	}
+
+	return nil
+}
+
+func (r *gitRepo) lsRemote(ctx context.Context, args ...string) ([]string, error) {
+	res, err := r.console.RunCmd(
+		ctx,
+		r.cacheDir,
+		"git",
+		append([]string{"ls-remote", "origin"}, args...)...,
+	)
+
+	if err != nil {
+		return nil, fmt.Errorf("r.console.RunCmd: %w", err)
+	}
+
+	return strings.Split(res, "\n"), nil
+}
+
+// return empty string if git tag was not found
+func (r *gitRepo) getTagByCommit(ctx context.Context, commitHash string) (string, error) {
+	res, err := r.lsRemote(ctx)
+	if err != nil {
+		return "", fmt.Errorf("r.lsRemote: %w", err)
+	}
+
+	gitTag := ""
+
+	for _, lsOut := range res {
+		rev := strings.Fields(lsOut)
+
+		if len(rev) != 2 {
+			continue
+		}
+
+		if rev[0] == commitHash && strings.HasPrefix(rev[1], gitRefsTagPrefix) {
+			gitTag = strings.TrimPrefix(rev[1], gitRefsTagPrefix)
+			break
+		}
+	}
+
+	return gitTag, nil
+}
+
+// look for hash of commit by passed git tag
+func (r *gitRepo) getCommitByTag(ctx context.Context, gitTag string) (string, error) {
+	res, err := r.lsRemote(ctx, gitTag)
+	if err != nil {
+		return "", models.ErrVersionNotFound
+	}
+
+	commitHash := ""
+
+	for _, lsOut := range res {
+		rev := strings.Fields(lsOut)
+		if len(rev) != 2 {
+			continue
+		}
+
+		if strings.HasPrefix(rev[1], gitRefsTagPrefix) &&
+			strings.TrimPrefix(rev[1], gitRefsTagPrefix) == gitTag {
+			commitHash = rev[0]
+			break
+		}
+	}
+
+	return commitHash, nil
 }
