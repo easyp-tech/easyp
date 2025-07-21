@@ -115,6 +115,9 @@ func (d *InputFilesDir) UnmarshalYAML(value *yaml.Node) error {
 			return err
 		}
 		*d = InputFilesDir(r)
+		if d.Root == "" {
+			d.Root = "."
+		}
 	default:
 		return fmt.Errorf("unsupported type for directory: %v", value.Kind)
 	}

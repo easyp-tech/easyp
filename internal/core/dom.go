@@ -273,6 +273,10 @@ func (q Query) build() string {
 		buf.WriteString("_opt=")
 
 		options := lo.MapToSlice(plugin.Options, func(k string, v string) string {
+			if v == "" {
+				return k
+			}
+
 			return k + "=" + v
 		})
 		buf.WriteString(strings.Join(options, ","))
