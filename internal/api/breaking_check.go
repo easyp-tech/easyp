@@ -95,7 +95,7 @@ func (b BreakingCheck) action(ctx *cli.Context) error {
 
 	path := ctx.String(flagLintDirectoryPath.Name)
 	against := ctx.String(flagAgainstBranchName.Name)
-	if against != "" {
+	if cfg.BreakingCheck.AgainstGitRef == "" {
 		cfg.BreakingCheck.AgainstGitRef = against
 	}
 
