@@ -4,8 +4,6 @@
 
 For now, it's just linter and package manager, but... who knows, who knows...
 
-Just testing
-
 ## Community
 
 ### Official site
