@@ -3,6 +3,7 @@ package git
 import (
 	"context"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -37,6 +38,7 @@ const (
 // Console temporary interface for console commands, must be replaced from core.Console.
 type Console interface {
 	RunCmd(ctx context.Context, dir string, command string, commandParams ...string) (string, error)
+	RunCmdWithStdin(ctx context.Context, dir string, stdin io.Reader, command string, commandParams ...string) (string, error)
 }
 
 // New returns gitRepo instance

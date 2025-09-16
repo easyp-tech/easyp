@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"io"
 	"reflect"
 	"runtime"
 	"strings"
@@ -29,6 +30,7 @@ type (
 	// Console is provide to terminal command in console.
 	Console interface {
 		RunCmd(ctx context.Context, dir string, command string, commandParams ...string) (string, error)
+		RunCmdWithStdin(ctx context.Context, dir string, stdin io.Reader, command string, commandParams ...string) (string, error)
 	}
 
 	// CurrentProjectGitWalker is provider for fs walking for current project
