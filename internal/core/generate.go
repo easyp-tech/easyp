@@ -15,6 +15,7 @@ import (
 	"github.com/bufbuild/protocompile/protoutil"
 	"github.com/bufbuild/protocompile/wellknownimports"
 	"github.com/samber/lo"
+	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/descriptorpb"
 	"google.golang.org/protobuf/types/pluginpb"
@@ -194,6 +195,13 @@ func (c *Core) Generate(ctx context.Context, root, directory string) error {
 			return fmt.Errorf("proto.Unmarshal response: %w", err)
 		}
 
+		logData, err := protojson.Marshal(&resp)
+		if err != nil {
+			slog.Error("ATTENTION: Could not marshal response to JSON")
+		} else {
+			fmt.Printf("\n\n\n%s\n\n\n", string(logData))
+		}
+
 		// Проверяем на ошибки от плагина
 		if resp.Error != nil {
 			return fmt.Errorf("plugin error: %s", *resp.Error)
@@ -201,6 +209,7 @@ func (c *Core) Generate(ctx context.Context, root, directory string) error {
 
 		// Выводим информацию о сгенерированных файлах (для отладки)
 		for _, file := range resp.File {
+
 			p := filepath.Join(directory, *file.Name)
 
 			c.logger.DebugContext(ctx, "generated file",
@@ -212,6 +221,10 @@ func (c *Core) Generate(ctx context.Context, root, directory string) error {
 			f, err := os.Create(p)
 			if err != nil {
 				return fmt.Errorf("os.Create: %w", err)
+			}
+
+			if file.Content == nil {
+				continue
 			}
 
 			_, err = f.WriteString(*file.Content)
