@@ -19,7 +19,8 @@ type Plugin struct {
 	// URL для удаленного плагина (опционально).
 	// Если указан, то плагин вызывается через HTTP вместо локального выполнения.
 	// Формат: "host:port/plugin_name:version" или "http://host:port/plugin_name:version"
-	URL string `json:"url,omitempty" yaml:"url,omitempty"`
+	URL         string `json:"url,omitempty" yaml:"url,omitempty"`
+	WithImports bool   `json:"with_imports,omitempty" yaml:"with_imports,omitempty"`
 }
 
 // Generate is the configuration of the generate command.

@@ -3,7 +3,6 @@ package core
 import (
 	"context"
 	"fmt"
-	"io"
 	"reflect"
 	"strings"
 	"unicode"
@@ -22,12 +21,6 @@ type (
 		Message() string
 		// Validate validates the proto rule.
 		Validate(ProtoInfo) ([]Issue, error)
-	}
-
-	// Console is provide to terminal command in console.
-	Console interface {
-		RunCmd(ctx context.Context, dir string, command string, commandParams ...string) (string, error)
-		RunCmdWithStdin(ctx context.Context, dir string, stdin io.Reader, command string, commandParams ...string) (string, error)
 	}
 
 	// CurrentProjectGitWalker is provider for fs walking for current project
@@ -214,7 +207,8 @@ type (
 		Out     string
 		Options map[string]string
 		// URL для удаленного плагина (если указан, плагин вызывается через gRPC)
-		URL string
+		URL         string
+		WithImports bool
 	}
 	// InputGitRepo is the configuration of the git repository.
 	InputGitRepo struct {

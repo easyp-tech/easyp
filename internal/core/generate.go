@@ -15,7 +15,6 @@ import (
 	"github.com/bufbuild/protocompile"
 	"github.com/bufbuild/protocompile/protoutil"
 	"github.com/bufbuild/protocompile/wellknownimports"
-	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/types/descriptorpb"
 	"google.golang.org/protobuf/types/pluginpb"
 
@@ -155,6 +154,7 @@ func (c *Core) Generate(ctx context.Context, root, directory string) error {
 	// Используем slice для сохранения правильного порядка
 	var fileDescriptors []*descriptorpb.FileDescriptorProto
 	processedFiles := make(map[string]bool)
+	dependencyFiles := make([]string, 0)
 
 	// Рекурсивная функция для добавления файла и его зависимостей в правильном порядке
 	var addFileWithDeps func(string) error
@@ -190,6 +190,7 @@ func (c *Core) Generate(ctx context.Context, root, directory string) error {
 		if !processedFiles[fileName] {
 			fileDescriptors = append(fileDescriptors, descriptor)
 			processedFiles[fileName] = true
+			dependencyFiles = append(dependencyFiles, fileName)
 		}
 
 		return nil
@@ -223,9 +224,14 @@ func (c *Core) Generate(ctx context.Context, root, directory string) error {
 	}
 
 	for _, plugin := range c.plugins {
+		filesToGenerate := q.Files
+
+		if plugin.WithImports {
+			filesToGenerate = append(filesToGenerate, dependencyFiles...)
+		}
 		// Создаем запрос для плагина
 		req := &pluginpb.CodeGeneratorRequest{
-			FileToGenerate: q.Files,
+			FileToGenerate: filesToGenerate,
 			ProtoFile:      fileDescriptors,
 		}
 
@@ -240,13 +246,6 @@ func (c *Core) Generate(ctx context.Context, root, directory string) error {
 		}, req)
 		if err != nil {
 			return fmt.Errorf("execute plugin %s: %w", plugin.Name, err)
-		}
-
-		logData, err := protojson.Marshal(resp)
-		if err != nil {
-			slog.Error("ATTENTION: Could not marshal response to JSON")
-		} else {
-			fmt.Printf("\n\n\n%s\n\n\n", string(logData))
 		}
 
 		// Проверяем на ошибки от плагина
