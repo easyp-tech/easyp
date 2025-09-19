@@ -14,12 +14,11 @@ import (
 	"github.com/bufbuild/protocompile"
 	"github.com/bufbuild/protocompile/protoutil"
 	"github.com/bufbuild/protocompile/wellknownimports"
-	"github.com/samber/lo"
 	"google.golang.org/protobuf/encoding/protojson"
-	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/descriptorpb"
 	"google.golang.org/protobuf/types/pluginpb"
 
+	pluginexecutor "github.com/easyp-tech/easyp/internal/adapters/plugin"
 	"github.com/easyp-tech/easyp/internal/core/models"
 	"github.com/easyp-tech/easyp/internal/fs/fs"
 )
@@ -158,44 +157,26 @@ func (c *Core) Generate(ctx context.Context, root, directory string) error {
 	}
 
 	for _, plugin := range c.plugins {
-
-		options := lo.MapToSlice(plugin.Options, func(k string, v string) string {
-			if v == "" {
-				return k
-			}
-
-			return k + "=" + v
-		})
-
+		// Создаем запрос для плагина
 		req := &pluginpb.CodeGeneratorRequest{
 			FileToGenerate: q.Files,
 			ProtoFile:      fileDescriptors,
-			Parameter:      proto.String(strings.Join(options, ",")),
 		}
 
-		stdIn := &bytes.Buffer{}
-		b, err := proto.Marshal(req)
+		// Получаем подходящий executor для плагина
+		executor := c.getExecutor(plugin)
+
+		// Выполняем плагин
+		resp, err := executor.Execute(ctx, pluginexecutor.Info{
+			Name:    plugin.Name,
+			Options: plugin.Options,
+			URL:     plugin.URL,
+		}, req)
 		if err != nil {
-			return fmt.Errorf("proto.Marshal: %w", err)
+			return fmt.Errorf("execute plugin %s: %w", plugin.Name, err)
 		}
 
-		_, err = stdIn.Write(b)
-		if err != nil {
-			return fmt.Errorf("stdIn.Write: %w", err)
-		}
-
-		stdout, err := c.console.RunCmdWithStdin(ctx, root, stdIn, fmt.Sprintf("protoc-gen-%s", plugin.Name))
-		if err != nil {
-			return fmt.Errorf("runCmd: %w", err)
-		}
-
-		// Парсим ответ от плагина
-		var resp pluginpb.CodeGeneratorResponse
-		if err := proto.Unmarshal([]byte(stdout), &resp); err != nil {
-			return fmt.Errorf("proto.Unmarshal response: %w", err)
-		}
-
-		logData, err := protojson.Marshal(&resp)
+		logData, err := protojson.Marshal(resp)
 		if err != nil {
 			slog.Error("ATTENTION: Could not marshal response to JSON")
 		} else {
@@ -209,14 +190,28 @@ func (c *Core) Generate(ctx context.Context, root, directory string) error {
 
 		// Выводим информацию о сгенерированных файлах (для отладки)
 		for _, file := range resp.File {
+			// Определяем базовую директорию для вывода файлов с учетом plugin.Out
+			var baseDir string
+			if plugin.Out != "" {
+				baseDir = filepath.Join(directory, plugin.Out)
+			} else {
+				baseDir = directory
+			}
 
-			p := filepath.Join(directory, *file.Name)
+			p := filepath.Join(baseDir, file.GetName())
 
 			c.logger.DebugContext(ctx, "generated file",
 				slog.String("plugin", plugin.Name),
-				slog.String("file", *file.Name),
+				slog.String("file", file.GetName()),
+				slog.String("plugin_out", plugin.Out),
 				slog.String("full_path", p),
 			)
+
+			// Проверяем и создаем директорию, если она не существует (кроссплатформенно)
+			dir := filepath.Dir(p)
+			if err := os.MkdirAll(dir, 0755); err != nil {
+				return fmt.Errorf("os.MkdirAll %s: %w", dir, err)
+			}
 
 			f, err := os.Create(p)
 			if err != nil {
@@ -300,4 +295,12 @@ func runCmd(ctx context.Context, dir string, command string, stdIn *bytes.Buffer
 	}
 
 	return stdout.String(), nil
+}
+
+func (c *Core) getExecutor(plugin Plugin) pluginexecutor.Executor {
+	if plugin.URL != "" {
+		return c.remoteExecutor
+	}
+
+	return c.localExecutor
 }

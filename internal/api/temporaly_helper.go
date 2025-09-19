@@ -90,6 +90,7 @@ func buildCore(_ context.Context, cfg config.Config, dirWalker core.DirWalker) (
 				Name:    p.Name,
 				Out:     p.Out,
 				Options: p.Opts,
+				URL:     p.URL,
 			}
 		}),
 		core.Inputs{

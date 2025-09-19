@@ -16,6 +16,10 @@ type Plugin struct {
 	Name string            `json:"name" yaml:"name"`
 	Out  string            `json:"out" yaml:"out"`
 	Opts map[string]string `json:"opts" yaml:"opts"`
+	// URL для удаленного плагина (опционально).
+	// Если указан, то плагин вызывается через HTTP вместо локального выполнения.
+	// Формат: "host:port/plugin_name:version" или "http://host:port/plugin_name:version"
+	URL string `json:"url,omitempty" yaml:"url,omitempty"`
 }
 
 // Generate is the configuration of the generate command.

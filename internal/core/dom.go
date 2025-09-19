@@ -1,16 +1,13 @@
 package core
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"io"
 	"reflect"
-	"runtime"
 	"strings"
 	"unicode"
 
-	"github.com/samber/lo"
 	"github.com/yoheimuta/go-protoparser/v4/interpret/unordered"
 	"github.com/yoheimuta/go-protoparser/v4/parser"
 	"github.com/yoheimuta/go-protoparser/v4/parser/meta"
@@ -216,6 +213,8 @@ type (
 		Name    string
 		Out     string
 		Options map[string]string
+		// URL для удаленного плагина (если указан, плагин вызывается через gRPC)
+		URL string
 	}
 	// InputGitRepo is the configuration of the git repository.
 	InputGitRepo struct {
@@ -247,52 +246,3 @@ type (
 		Files    []string
 	}
 )
-
-func (q Query) build() string {
-	var buf bytes.Buffer
-	lineSeparator := " \\\n"
-	if runtime.GOOS == "windows" {
-		lineSeparator = " "
-	}
-
-	buf.WriteString(q.Compiler)
-	buf.WriteString(lineSeparator)
-
-	for _, imp := range q.Imports {
-		buf.WriteString(" -I ")
-		buf.WriteString(imp)
-		buf.WriteString(lineSeparator)
-	}
-
-	for _, plugin := range q.Plugins {
-		buf.WriteString(" --")
-		buf.WriteString(plugin.Name)
-		buf.WriteString("_out=")
-		buf.WriteString(plugin.Out)
-		buf.WriteString(lineSeparator)
-		buf.WriteString(" --")
-		buf.WriteString(plugin.Name)
-		buf.WriteString("_opt=")
-
-		options := lo.MapToSlice(plugin.Options, func(k string, v string) string {
-			if v == "" {
-				return k
-			}
-
-			return k + "=" + v
-		})
-		buf.WriteString(strings.Join(options, ","))
-		buf.WriteString(lineSeparator)
-	}
-
-	for i, file := range q.Files {
-		buf.WriteString(" ")
-		buf.WriteString(file)
-
-		if i != len(q.Files)-1 {
-			buf.WriteString(lineSeparator)
-		}
-	}
-
-	return buf.String()
-}
