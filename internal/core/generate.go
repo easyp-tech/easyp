@@ -3,6 +3,7 @@ package core
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"os"
@@ -40,6 +41,71 @@ func (c *Core) Generate(ctx context.Context, root, directory string) error {
 		}
 
 		q.Imports = append(q.Imports, modulePaths)
+	}
+
+	for _, repo := range c.inputs.InputGitRepos {
+		module := models.NewModule(repo.URL)
+
+		isInstalled, err := c.storage.IsModuleInstalled(module)
+		if err != nil {
+			return fmt.Errorf("c.isModuleInstalled: %w", err)
+		}
+
+		gitGenerateCb := func(modulePaths string) func(path string, err error) error {
+			return func(path string, err error) error {
+				switch {
+				case err != nil:
+					return err
+				case ctx.Err() != nil:
+					return ctx.Err()
+				case filepath.Ext(path) != ".proto":
+					return nil
+				}
+
+				q.Files = append(q.Files, path)
+				q.Imports = append(q.Imports, modulePaths)
+
+				return nil
+			}
+		}
+
+		if isInstalled {
+			modulePaths, err := c.getModulePath(ctx, module.Name)
+			if err != nil {
+				return fmt.Errorf("g.moduleReflect.GetModulePath: %w", err)
+			}
+
+			fsWalker := fs.NewFSWalker(modulePaths, repo.SubDirectory)
+
+			err = fsWalker.WalkDir(gitGenerateCb(modulePaths))
+			if err != nil {
+				return fmt.Errorf("fsWalker.WalkDir1: %w", err)
+			}
+
+			continue
+		}
+
+		err = c.Get(ctx, module)
+		if err != nil {
+			if errors.Is(err, models.ErrVersionNotFound) {
+				slog.Error("Version not found", "dependency", module.Name, "version", module.Version)
+
+				return fmt.Errorf("models.ErrVersionNotFound: %w", err)
+			}
+
+			return fmt.Errorf("c.Get: %w", err)
+		}
+
+		modulePaths, err := c.getModulePath(ctx, module.Name)
+		if err != nil {
+			return fmt.Errorf("g.moduleReflect.GetModulePath: %w", err)
+		}
+
+		fsWalker := fs.NewFSWalker(modulePaths, repo.SubDirectory)
+		err = fsWalker.WalkDir(gitGenerateCb(modulePaths))
+		if err != nil {
+			return fmt.Errorf("fsWalker.WalkDir: %w", err)
+		}
 	}
 
 	for _, inputFilesDir := range c.inputs.InputFilesDir {
