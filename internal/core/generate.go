@@ -1,14 +1,24 @@
 package core
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
 	"log/slog"
+	"os"
+	"os/exec"
 	"path"
 	"path/filepath"
 	"strings"
 
+	"github.com/bufbuild/protocompile"
+	"github.com/bufbuild/protocompile/protoutil"
+	"github.com/bufbuild/protocompile/wellknownimports"
+	"google.golang.org/protobuf/types/descriptorpb"
+	"google.golang.org/protobuf/types/pluginpb"
+
+	pluginexecutor "github.com/easyp-tech/easyp/internal/adapters/plugin"
 	"github.com/easyp-tech/easyp/internal/core/models"
 	"github.com/easyp-tech/easyp/internal/fs/fs"
 )
@@ -19,10 +29,8 @@ const defaultCompiler = "protoc"
 func (c *Core) Generate(ctx context.Context, root, directory string) error {
 	q := Query{
 		Compiler: defaultCompiler,
-		Imports: []string{
-			root,
-		},
-		Plugins: c.plugins,
+		Imports:  []string{},
+		Plugins:  c.plugins,
 	}
 
 	for _, dep := range c.deps {
@@ -127,13 +135,163 @@ func (c *Core) Generate(ctx context.Context, root, directory string) error {
 		}
 	}
 
-	cmd := q.build()
+	compiler := protocompile.Compiler{
+		Resolver: protocompile.CompositeResolver{
+			wellknownimports.WithStandardImports(
+				&protocompile.SourceResolver{
+					ImportPaths: append(q.Imports),
+				},
+			),
+		},
+		SourceInfoMode: protocompile.SourceInfoStandard,
+	}
 
-	slog.DebugContext(ctx, "Run command", "cmd", cmd)
-
-	_, err := c.console.RunCmd(ctx, root, cmd)
+	res, err := compiler.Compile(ctx, q.Files...)
 	if err != nil {
-		return fmt.Errorf("adapters.RunCmd: %w", err)
+		return fmt.Errorf("compiler.Compile: %w", err)
+	}
+
+	// Используем slice для сохранения правильного порядка
+	var fileDescriptors []*descriptorpb.FileDescriptorProto
+	processedFiles := make(map[string]bool)
+	dependencyFiles := make([]string, 0)
+
+	// Рекурсивная функция для добавления файла и его зависимостей в правильном порядке
+	var addFileWithDeps func(string) error
+	addFileWithDeps = func(fileName string) error {
+		// Если уже обработали - пропускаем
+		if processedFiles[fileName] {
+			return nil
+		}
+
+		// Компилируем файл
+		depRes, err := compiler.Compile(ctx, fileName)
+		if err != nil {
+			return fmt.Errorf("compile %s: %w", fileName, err)
+		}
+
+		if len(depRes) == 0 {
+			return fmt.Errorf("no results for %s", fileName)
+		}
+
+		descriptor := protoutil.ProtoFromFileDescriptor(depRes[0])
+
+		// ВАЖНО: сначала рекурсивно добавляем все зависимости
+		for _, dep := range descriptor.Dependency {
+			if err := addFileWithDeps(dep); err != nil {
+				// Игнорируем ошибки для опциональных зависимостей
+				c.logger.DebugContext(ctx, "Warning: could not compile dependency",
+					slog.String("dependency", dep),
+					slog.String("error", err.Error()))
+			}
+		}
+
+		// Только после зависимостей добавляем сам файл (если еще не добавлен)
+		if !processedFiles[fileName] {
+			fileDescriptors = append(fileDescriptors, descriptor)
+			processedFiles[fileName] = true
+			dependencyFiles = append(dependencyFiles, fileName)
+		}
+
+		return nil
+	}
+
+	// Обрабатываем все файлы и их зависимости
+	for _, file := range res {
+		descriptor := protoutil.ProtoFromFileDescriptor(file)
+
+		// Сначала добавляем все зависимости этого файла
+		for _, dep := range descriptor.Dependency {
+			if err := addFileWithDeps(dep); err != nil {
+				c.logger.DebugContext(ctx, "Warning: could not compile dependency",
+					slog.String("dependency", dep),
+					slog.String("error", err.Error()))
+			}
+		}
+
+		// Потом добавляем сам файл (если еще не добавлен)
+		fileName := descriptor.GetName()
+		if !processedFiles[fileName] {
+			fileDescriptors = append(fileDescriptors, descriptor)
+			processedFiles[fileName] = true
+		}
+	}
+
+	// Логируем порядок файлов для отладки
+	c.logger.DebugContext(ctx, "File order in request:")
+	for i, fd := range fileDescriptors {
+		c.logger.DebugContext(ctx, fmt.Sprintf("%d: %s", i, fd.GetName()))
+	}
+
+	for _, plugin := range c.plugins {
+		filesToGenerate := q.Files
+
+		if plugin.WithImports {
+			filesToGenerate = append(filesToGenerate, dependencyFiles...)
+		}
+		// Создаем запрос для плагина
+		req := &pluginpb.CodeGeneratorRequest{
+			FileToGenerate: filesToGenerate,
+			ProtoFile:      fileDescriptors,
+		}
+
+		// Получаем подходящий executor для плагина
+		executor := c.getExecutor(plugin)
+
+		// Выполняем плагин
+		resp, err := executor.Execute(ctx, pluginexecutor.Info{
+			Name:    plugin.Name,
+			Options: plugin.Options,
+			URL:     plugin.URL,
+		}, req)
+		if err != nil {
+			return fmt.Errorf("execute plugin %s: %w", plugin.Name, err)
+		}
+
+		// Проверяем на ошибки от плагина
+		if resp.Error != nil {
+			return fmt.Errorf("plugin error: %s", *resp.Error)
+		}
+
+		// Выводим информацию о сгенерированных файлах (для отладки)
+		for _, file := range resp.File {
+			// Определяем базовую директорию для вывода файлов с учетом plugin.Out
+			var baseDir string
+			if plugin.Out != "" {
+				baseDir = filepath.Join(directory, plugin.Out)
+			} else {
+				baseDir = directory
+			}
+
+			p := filepath.Join(baseDir, file.GetName())
+
+			c.logger.DebugContext(ctx, "generated file",
+				slog.String("plugin", plugin.Name),
+				slog.String("file", file.GetName()),
+				slog.String("plugin_out", plugin.Out),
+				slog.String("full_path", p),
+			)
+
+			// Проверяем и создаем директорию, если она не существует (кроссплатформенно)
+			dir := filepath.Dir(p)
+			if err := os.MkdirAll(dir, 0755); err != nil {
+				return fmt.Errorf("os.MkdirAll %s: %w", dir, err)
+			}
+
+			f, err := os.Create(p)
+			if err != nil {
+				return fmt.Errorf("os.Create: %w", err)
+			}
+
+			if file.Content == nil {
+				continue
+			}
+
+			_, err = f.WriteString(*file.Content)
+			if err != nil {
+				return fmt.Errorf("f.WriteString: %w", err)
+			}
+		}
 	}
 
 	return nil
@@ -182,4 +340,32 @@ func stripPrefix(path, prefix string) string {
 	normalizedPrefix := filepath.ToSlash(prefix)
 
 	return strings.TrimPrefix(normalizedPath, normalizedPrefix+"/")
+}
+
+// For debuging
+func runCmd(ctx context.Context, dir string, command string, stdIn *bytes.Buffer, commandParams ...string) (string, error) {
+	var stderr bytes.Buffer
+	var stdout bytes.Buffer
+
+	fullCommand := append([]string{command}, commandParams...)
+	cmd := exec.CommandContext(ctx, "bash", "-c", strings.Join(fullCommand, " "))
+	cmd.Dir = dir
+	cmd.Stdin = stdIn
+	cmd.Stderr = &stderr
+	cmd.Stdout = &stdout
+
+	err := cmd.Run()
+	if err != nil {
+		return "", fmt.Errorf(stderr.String())
+	}
+
+	return stdout.String(), nil
+}
+
+func (c *Core) getExecutor(plugin Plugin) pluginexecutor.Executor {
+	if plugin.URL != "" {
+		return c.remoteExecutor
+	}
+
+	return c.localExecutor
 }

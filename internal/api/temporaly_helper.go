@@ -87,9 +87,11 @@ func buildCore(_ context.Context, cfg config.Config, dirWalker core.DirWalker) (
 		slog.Default(), // TODO: remove global state
 		lo.Map(cfg.Generate.Plugins, func(p config.Plugin, _ int) core.Plugin {
 			return core.Plugin{
-				Name:    p.Name,
-				Out:     p.Out,
-				Options: p.Opts,
+				Name:        p.Name,
+				Out:         p.Out,
+				Options:     p.Opts,
+				URL:         p.URL,
+				WithImports: p.WithImports,
 			}
 		}),
 		core.Inputs{
