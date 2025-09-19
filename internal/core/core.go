@@ -4,6 +4,9 @@ package core
 import (
 	"errors"
 	"log/slog"
+
+	"github.com/easyp-tech/easyp/internal/adapters/console"
+	"github.com/easyp-tech/easyp/internal/adapters/plugin"
 )
 
 // Core provide to business logic of EasyP.
@@ -15,13 +18,16 @@ type Core struct {
 	logger       *slog.Logger
 	plugins      []Plugin
 	inputs       Inputs
-	console      Console
+	console      console.Console
 	storage      Storage
 	moduleConfig ModuleConfig
 	lockFile     LockFile
 
 	breakingCheckConfig     BreakingCheckConfig
 	currentProjectGitWalker CurrentProjectGitWalker
+
+	localExecutor  plugin.Executor
+	remoteExecutor plugin.Executor
 }
 
 var (
@@ -37,7 +43,7 @@ func New(
 	logger *slog.Logger,
 	plugins []Plugin,
 	inputs Inputs,
-	console Console,
+	console console.Console,
 	storage Storage,
 	moduleConfig ModuleConfig,
 	lockFile LockFile,
@@ -58,5 +64,7 @@ func New(
 		lockFile:                lockFile,
 		currentProjectGitWalker: currentProjectGitWalker,
 		breakingCheckConfig:     breakingCheckConfig,
+		localExecutor:           plugin.NewLocalPluginExecutor(console, logger),
+		remoteExecutor:          plugin.NewRemotePluginExecutor(logger),
 	}
 }

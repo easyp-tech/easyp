@@ -3,6 +3,7 @@ package core
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"os"
@@ -14,11 +15,10 @@ import (
 	"github.com/bufbuild/protocompile"
 	"github.com/bufbuild/protocompile/protoutil"
 	"github.com/bufbuild/protocompile/wellknownimports"
-	"github.com/samber/lo"
-	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/descriptorpb"
 	"google.golang.org/protobuf/types/pluginpb"
 
+	pluginexecutor "github.com/easyp-tech/easyp/internal/adapters/plugin"
 	"github.com/easyp-tech/easyp/internal/core/models"
 	"github.com/easyp-tech/easyp/internal/fs/fs"
 )
@@ -40,6 +40,71 @@ func (c *Core) Generate(ctx context.Context, root, directory string) error {
 		}
 
 		q.Imports = append(q.Imports, modulePaths)
+	}
+
+	for _, repo := range c.inputs.InputGitRepos {
+		module := models.NewModule(repo.URL)
+
+		isInstalled, err := c.storage.IsModuleInstalled(module)
+		if err != nil {
+			return fmt.Errorf("c.isModuleInstalled: %w", err)
+		}
+
+		gitGenerateCb := func(modulePaths string) func(path string, err error) error {
+			return func(path string, err error) error {
+				switch {
+				case err != nil:
+					return err
+				case ctx.Err() != nil:
+					return ctx.Err()
+				case filepath.Ext(path) != ".proto":
+					return nil
+				}
+
+				q.Files = append(q.Files, path)
+				q.Imports = append(q.Imports, modulePaths)
+
+				return nil
+			}
+		}
+
+		if isInstalled {
+			modulePaths, err := c.getModulePath(ctx, module.Name)
+			if err != nil {
+				return fmt.Errorf("g.moduleReflect.GetModulePath: %w", err)
+			}
+
+			fsWalker := fs.NewFSWalker(modulePaths, repo.SubDirectory)
+
+			err = fsWalker.WalkDir(gitGenerateCb(modulePaths))
+			if err != nil {
+				return fmt.Errorf("fsWalker.WalkDir1: %w", err)
+			}
+
+			continue
+		}
+
+		err = c.Get(ctx, module)
+		if err != nil {
+			if errors.Is(err, models.ErrVersionNotFound) {
+				slog.Error("Version not found", "dependency", module.Name, "version", module.Version)
+
+				return fmt.Errorf("models.ErrVersionNotFound: %w", err)
+			}
+
+			return fmt.Errorf("c.Get: %w", err)
+		}
+
+		modulePaths, err := c.getModulePath(ctx, module.Name)
+		if err != nil {
+			return fmt.Errorf("g.moduleReflect.GetModulePath: %w", err)
+		}
+
+		fsWalker := fs.NewFSWalker(modulePaths, repo.SubDirectory)
+		err = fsWalker.WalkDir(gitGenerateCb(modulePaths))
+		if err != nil {
+			return fmt.Errorf("fsWalker.WalkDir: %w", err)
+		}
 	}
 
 	for _, inputFilesDir := range c.inputs.InputFilesDir {
@@ -89,6 +154,7 @@ func (c *Core) Generate(ctx context.Context, root, directory string) error {
 	// Используем slice для сохранения правильного порядка
 	var fileDescriptors []*descriptorpb.FileDescriptorProto
 	processedFiles := make(map[string]bool)
+	dependencyFiles := make([]string, 0)
 
 	// Рекурсивная функция для добавления файла и его зависимостей в правильном порядке
 	var addFileWithDeps func(string) error
@@ -124,6 +190,7 @@ func (c *Core) Generate(ctx context.Context, root, directory string) error {
 		if !processedFiles[fileName] {
 			fileDescriptors = append(fileDescriptors, descriptor)
 			processedFiles[fileName] = true
+			dependencyFiles = append(dependencyFiles, fileName)
 		}
 
 		return nil
@@ -157,41 +224,28 @@ func (c *Core) Generate(ctx context.Context, root, directory string) error {
 	}
 
 	for _, plugin := range c.plugins {
+		filesToGenerate := q.Files
 
-		options := lo.MapToSlice(plugin.Options, func(k string, v string) string {
-			if v == "" {
-				return k
-			}
-
-			return k + "=" + v
-		})
-
+		if plugin.WithImports {
+			filesToGenerate = append(filesToGenerate, dependencyFiles...)
+		}
+		// Создаем запрос для плагина
 		req := &pluginpb.CodeGeneratorRequest{
-			FileToGenerate: q.Files,
+			FileToGenerate: filesToGenerate,
 			ProtoFile:      fileDescriptors,
-			Parameter:      proto.String(strings.Join(options, ",")),
 		}
 
-		stdIn := &bytes.Buffer{}
-		b, err := proto.Marshal(req)
+		// Получаем подходящий executor для плагина
+		executor := c.getExecutor(plugin)
+
+		// Выполняем плагин
+		resp, err := executor.Execute(ctx, pluginexecutor.Info{
+			Name:    plugin.Name,
+			Options: plugin.Options,
+			URL:     plugin.URL,
+		}, req)
 		if err != nil {
-			return fmt.Errorf("proto.Marshal: %w", err)
-		}
-
-		_, err = stdIn.Write(b)
-		if err != nil {
-			return fmt.Errorf("stdIn.Write: %w", err)
-		}
-
-		stdout, err := c.console.RunCmdWithStdin(ctx, root, stdIn, fmt.Sprintf("protoc-gen-%s", plugin.Name))
-		if err != nil {
-			return fmt.Errorf("runCmd: %w", err)
-		}
-
-		// Парсим ответ от плагина
-		var resp pluginpb.CodeGeneratorResponse
-		if err := proto.Unmarshal([]byte(stdout), &resp); err != nil {
-			return fmt.Errorf("proto.Unmarshal response: %w", err)
+			return fmt.Errorf("execute plugin %s: %w", plugin.Name, err)
 		}
 
 		// Проверяем на ошибки от плагина
@@ -201,17 +255,36 @@ func (c *Core) Generate(ctx context.Context, root, directory string) error {
 
 		// Выводим информацию о сгенерированных файлах (для отладки)
 		for _, file := range resp.File {
-			p := filepath.Join(directory, *file.Name)
+			// Определяем базовую директорию для вывода файлов с учетом plugin.Out
+			var baseDir string
+			if plugin.Out != "" {
+				baseDir = filepath.Join(directory, plugin.Out)
+			} else {
+				baseDir = directory
+			}
+
+			p := filepath.Join(baseDir, file.GetName())
 
 			c.logger.DebugContext(ctx, "generated file",
 				slog.String("plugin", plugin.Name),
-				slog.String("file", *file.Name),
+				slog.String("file", file.GetName()),
+				slog.String("plugin_out", plugin.Out),
 				slog.String("full_path", p),
 			)
+
+			// Проверяем и создаем директорию, если она не существует (кроссплатформенно)
+			dir := filepath.Dir(p)
+			if err := os.MkdirAll(dir, 0755); err != nil {
+				return fmt.Errorf("os.MkdirAll %s: %w", dir, err)
+			}
 
 			f, err := os.Create(p)
 			if err != nil {
 				return fmt.Errorf("os.Create: %w", err)
+			}
+
+			if file.Content == nil {
+				continue
 			}
 
 			_, err = f.WriteString(*file.Content)
@@ -287,4 +360,12 @@ func runCmd(ctx context.Context, dir string, command string, stdIn *bytes.Buffer
 	}
 
 	return stdout.String(), nil
+}
+
+func (c *Core) getExecutor(plugin Plugin) pluginexecutor.Executor {
+	if plugin.URL != "" {
+		return c.remoteExecutor
+	}
+
+	return c.localExecutor
 }
