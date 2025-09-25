@@ -356,7 +356,7 @@ func runCmd(ctx context.Context, dir string, command string, stdIn *bytes.Buffer
 
 	err := cmd.Run()
 	if err != nil {
-		return "", fmt.Errorf(stderr.String())
+		return "", fmt.Errorf("%s", stderr.String())
 	}
 
 	return stdout.String(), nil
