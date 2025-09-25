@@ -29,6 +29,8 @@ const (
 	gitLatestVersionRef = "HEAD"
 	// tag prefix on output of ls-remote command
 	gitRefsTagPrefix = "refs/tags/"
+	// branch name prefix in output of ls-remote commanf
+	gitRefsBranchPrefix = "refs/heads/"
 )
 
 // Some links from go mod:
@@ -169,6 +171,31 @@ func (r *gitRepo) getCommitByTag(ctx context.Context, gitTag string) (string, er
 
 		if strings.HasPrefix(rev[1], gitRefsTagPrefix) &&
 			strings.TrimPrefix(rev[1], gitRefsTagPrefix) == gitTag {
+			commitHash = rev[0]
+			break
+		}
+	}
+
+	return commitHash, nil
+}
+
+// look for hash of commit by passed git tag
+func (r *gitRepo) getCommitByBranchName(ctx context.Context, branchName string) (string, error) {
+	res, err := r.lsRemote(ctx, branchName)
+	if err != nil {
+		return "", models.ErrVersionNotFound
+	}
+
+	commitHash := ""
+
+	for _, lsOut := range res {
+		rev := strings.Fields(lsOut)
+		if len(rev) != 2 {
+			continue
+		}
+
+		if strings.HasPrefix(rev[1], gitRefsBranchPrefix) &&
+			strings.TrimPrefix(rev[1], gitRefsBranchPrefix) == branchName {
 			commitHash = rev[0]
 			break
 		}
