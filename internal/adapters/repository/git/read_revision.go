@@ -131,12 +131,7 @@ func (r *gitRepo) readRevisionByBranchName(
 		return revisionParts{}, models.ErrVersionNotFound
 	}
 
-	parts := revisionParts{
-		CommitHash: commitHash,
-		Version:    branchName,
-	}
-
-	return parts, nil
+	return r.readRevisionByCommitHash(ctx, commitHash)
 }
 
 // readRevisionByCommitHash read revision by passed hash of commit
