@@ -86,7 +86,10 @@ func (m Mod) Download(ctx *cli.Context) error {
 		return fmt.Errorf("buildCore: %w", err)
 	}
 
-	if err := app.Download(ctx.Context, cfg.Deps); err != nil {
+	deps := append([]string{}, cfg.Deps...)
+	deps = append(deps, getDepsFromGenerateDeps(cfg.Generate)...)
+
+	if err := app.Download(ctx.Context, deps); err != nil {
 		if errors.Is(err, models.ErrVersionNotFound) {
 			os.Exit(1)
 		}
@@ -114,7 +117,10 @@ func (m Mod) Update(ctx *cli.Context) error {
 		return fmt.Errorf("buildCore: %w", err)
 	}
 
-	if err := app.Update(ctx.Context, cfg.Deps); err != nil {
+	deps := append([]string{}, cfg.Deps...)
+	deps = append(deps, getDepsFromGenerateDeps(cfg.Generate)...)
+
+	if err := app.Update(ctx.Context, deps); err != nil {
 		if errors.Is(err, models.ErrVersionNotFound) {
 			os.Exit(1)
 		}
@@ -150,4 +156,18 @@ func (m Mod) Vendor(ctx *cli.Context) error {
 		return fmt.Errorf("cmd.Download: %w", err)
 	}
 	return nil
+}
+
+func getDepsFromGenerateDeps(cfg config.Generate) []string {
+	res := make([]string, 0, len(cfg.Inputs))
+	for _, input := range cfg.Inputs {
+		url := input.GitRepo.URL
+		if url == "" {
+			continue
+		}
+
+		res = append(res, url)
+	}
+
+	return res
 }

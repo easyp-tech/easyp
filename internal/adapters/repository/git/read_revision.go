@@ -74,6 +74,15 @@ func (r *gitRepo) readRevisionByVersion(
 		return revisionParts{}, fmt.Errorf("r.readRevisionByGitTagVersion: %w", err)
 	}
 
+	revParts, err = r.readRevisionByBranchName(ctx, requestedVersion)
+	if err == nil {
+		return revParts, nil
+	}
+
+	if !errors.Is(err, models.ErrVersionNotFound) {
+		return revisionParts{}, fmt.Errorf("r.readRevisionByBranchName: %w", err)
+	}
+
 	revParts, err = r.readRevisionByCommitHash(ctx, string(requestedVersion))
 	if err != nil {
 		return revisionParts{}, fmt.Errorf("r.readRevisionByCommitHash: %w", err)
@@ -104,6 +113,25 @@ func (r *gitRepo) readRevisionByGitTagVersion(
 	}
 
 	return parts, nil
+}
+
+// readRevisionByBranchName read revision by passed ranch name
+// branch has to be on the remote repository
+func (r *gitRepo) readRevisionByBranchName(
+	ctx context.Context, requestedVersion models.RequestedVersion,
+) (revisionParts, error) {
+	branchName := string(requestedVersion)
+
+	commitHash, err := r.getCommitByBranchName(ctx, branchName)
+	if err != nil {
+		return revisionParts{}, fmt.Errorf("r.getCommitByBranchName: %w", err)
+	}
+
+	if commitHash == "" {
+		return revisionParts{}, models.ErrVersionNotFound
+	}
+
+	return r.readRevisionByCommitHash(ctx, commitHash)
 }
 
 // readRevisionByCommitHash read revision by passed hash of commit
