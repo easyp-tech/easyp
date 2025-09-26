@@ -1,6 +1,7 @@
 package rules
 
 import (
+	"log/slog"
 	"path/filepath"
 	"strings"
 
@@ -24,9 +25,11 @@ func (d *PackageDirectoryMatch) Validate(protoInfo core.ProtoInfo) ([]core.Issue
 	var res []core.Issue
 
 	preparePath := filepath.Dir(strings.TrimPrefix(protoInfo.Path, d.Root))
+	preparePath = filepath.ToSlash(preparePath)
 	expectedPackage := strings.ReplaceAll(preparePath, "/", ".")
 
 	for _, pkgInfo := range protoInfo.Info.ProtoBody.Packages {
+		slog.Info("data", "preparePath", preparePath, "expectedPackage", expectedPackage, "pkgInfo.Name", pkgInfo.Name)
 		if pkgInfo.Name != expectedPackage {
 			res = core.AppendIssue(res, d, pkgInfo.Meta.Pos, protoInfo.Path, pkgInfo.Comments)
 		}
