@@ -29,7 +29,6 @@ func (d *PackageDirectoryMatch) Validate(protoInfo core.ProtoInfo) ([]core.Issue
 	expectedPackage := strings.ReplaceAll(preparePath, "/", ".")
 
 	for _, pkgInfo := range protoInfo.Info.ProtoBody.Packages {
-		slog.Info("data", "preparePath", preparePath, "expectedPackage", expectedPackage, "pkgInfo.Name", pkgInfo.Name)
 		if pkgInfo.Name != expectedPackage {
 			res = core.AppendIssue(res, d, pkgInfo.Meta.Pos, protoInfo.Path, pkgInfo.Comments)
 		}
