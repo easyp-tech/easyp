@@ -1,7 +1,6 @@
 package rules
 
 import (
-	"log/slog"
 	"path/filepath"
 	"strings"
 
