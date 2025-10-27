@@ -49,4 +49,3 @@ git clone https://github.com/easyp-tech/easyp.git
 ```bash
 go build ./cmd/easyp
 ```
-
