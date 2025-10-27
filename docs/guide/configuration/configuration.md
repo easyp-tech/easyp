@@ -110,9 +110,35 @@ easyp init --dir proto-project/
 ```
 
 **Package management commands:**
+
+#### `easyp mod download`
+Downloads dependencies based on lock file priority:
+
+1. **If `easyp.lock` exists** - downloads exact versions from lock file
+2. **If `easyp.lock` is missing** - downloads versions from `easyp.yaml` and creates `easyp.lock`
+
 ```bash
+# Download exact versions (recommended for production)
 easyp mod download
+```
+
+#### `easyp mod update`  
+Always downloads dependencies from `easyp.yaml`, ignoring existing lock file:
+
+1. **Ignores `easyp.lock`** completely
+2. **Downloads versions from `easyp.yaml`**
+3. **Creates/updates `easyp.lock`** with new versions
+
+```bash
+# Update dependencies and lock file
 easyp mod update
+```
+
+#### `easyp mod vendor`
+Copies proto files from dependencies to local `vendor/` directory (similar to `go mod vendor`).
+
+```bash
+# Create local vendor directory with dependencies
 easyp mod vendor
 ```
 
@@ -461,21 +487,40 @@ lint:
 
 **Optional.** Lists external proto dependencies to download and manage.
 
-**Type:** `[]string`
+**Type:** `[]string`  
 **Default:** `[]`
+
+#### Dependency Format
+
+Dependencies follow the format: `$GIT_LINK@$VERSION`
+
+**Components:**
+- `$GIT_LINK` - Git repository URL (GitHub, GitLab, etc.)
+- `$VERSION` - Git tag or full commit hash (optional)
+
+**Format variations:**
+- `owner/repo` - Latest commit from default branch
+- `owner/repo@v1.0.0` - Specific git tag
+- `owner/repo@47b927cbb41c4fdea1292baf` - Full commit hash
+- `github.com/owner/repo@version` - Full URL with version
+- `gitlab.com/group/repo@tag` - GitLab repository
 
 ```yaml
 deps:
-  - github.com/googleapis/googleapis                           # Latest commit
-  - github.com/googleapis/googleapis@v1.0.0                   # Specific tag
-  - github.com/acme/proto@47b927cbb41c4fdea1292bafadb8976f    # Specific commit hash
+  # Latest commit from default branch
+  - googleapis/googleapis
+  
+  # Specific tag (recommended for production)
+  - googleapis/googleapis@v1.0.0
+  
+  # Full commit hash (most precise)
+  - googleapis/googleapis@47b927cbb41c4fdea1292bafadb8976f
+  
+  # Different Git hosting
+  - gitlab.com/acme/proto@v2.1.0
 ```
 
-**Dependency formats:**
-- `owner/repo` - Latest commit
-- `owner/repo@tag` - Specific tag
-- `owner/repo@commit_hash` - Specific commit
-- `github.com/owner/repo@version` - Full GitHub URL with version
+**Note:** If `@$VERSION` is omitted, EasyP downloads the latest commit from the repository's default branch.
 
 ### `generate`
 

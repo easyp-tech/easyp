@@ -19,6 +19,12 @@ apt, yum, pacman, etc.
 
 #### _**Not recommended**_
 
+Local installation is not recommended because package managers provide:
+- Automatic updates and security patches
+- Better integration with system package management
+- Easier installation and removal process
+- Verified and signed binaries
+
 #### Requires Go 1.24 or later
 
 ### Go install
