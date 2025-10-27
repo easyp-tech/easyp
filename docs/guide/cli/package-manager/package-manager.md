@@ -10,7 +10,7 @@ The EasyP package manager follows the **Go modules philosophy** - any Git reposi
 
 - **Decentralized**: No single point of failure or control
 - **Security**: Direct access to source repositories
-- **Flexibility**: Support for public, private, and enterprise repositories  
+- **Flexibility**: Support for public, private, and enterprise repositories
 - **Reproducibility**: Lock files ensure consistent builds across environments
 - **Performance**: Local caching minimizes network requests
 
@@ -87,7 +87,7 @@ deps:
   - github.com/mycompany/internal-protos          # Latest internal changes
   - github.com/bufbuild/protoc-gen-validate       # Latest features
 
-# production.easyp.yaml  
+# production.easyp.yaml
 deps:
   - github.com/googleapis/googleapis@common-protos-1_3_1       # Pinned
   - github.com/mycompany/internal-protos@v2.1.0                # Stable release
@@ -99,11 +99,11 @@ deps:
 deps:
   # Public dependencies
   - github.com/googleapis/googleapis@common-protos-1_3_1
-  
-  # Private company repositories  
+
+  # Private company repositories
   - github.com/mycompany/auth-protos@v1.5.0
   - github.com/mycompany/common-types@v2.0.1
-  
+
   # Internal GitLab
   - gitlab.company.com/platform/messaging-protos@v0.3.0
 ```
@@ -169,7 +169,7 @@ Downloads and installs all dependencies declared in your configuration.
 
 **What happens:**
 1. **Resolves versions**: Converts tags/latest to specific commits
-2. **Downloads archives**: Stores `.zip` files in cache/download  
+2. **Downloads archives**: Stores `.zip` files in cache/download
 3. **Verifies checksums**: Ensures archive integrity
 4. **Extracts modules**: Unpacks to cache/mod with proper structure
 5. **Updates lock file**: Records exact versions and content hashes
@@ -256,16 +256,16 @@ github.com/grpc-ecosystem/grpc-gateway v2.19.1 h1:01NNlCezvwUQ07ZvblXH0kelWq8hNl
 ### Lock File Format
 
 Each line contains three components:
-- **Module path**: Full repository path  
+- **Module path**: Full repository path
 - **Exact version**: Resolved version (tag or pseudo-version)
 - **Content hash**: SHA256 of extracted content (`h1:` prefix)
 
 ### Best Practices
 
-✅ **Always commit `easyp.lock`** - Ensures team consistency  
-✅ **Run `mod update` deliberately** - Don't auto-update in CI  
-✅ **Review lock changes** - Understand what's being updated  
-❌ **Don't edit manually** - Let EasyP manage the format  
+✅ **Always commit `easyp.lock`** - Ensures team consistency
+✅ **Run `mod update` deliberately** - Don't auto-update in CI
+✅ **Review lock changes** - Understand what's being updated
+❌ **Don't edit manually** - Let EasyP manage the format
 
 ## Authentication
 
@@ -313,7 +313,7 @@ For HTTPS authentication:
 git config --global credential.helper store
 echo "https://username:token@github.com" >> ~/.git-credentials
 
-# Method 2: URL rewriting  
+# Method 2: URL rewriting
 git config --global url."https://username:token@github.com/mycompany".insteadOf "https://github.com/mycompany"
 ```
 
@@ -396,20 +396,20 @@ easyp -I easyp_vendor generate
 
 #### "Repository not found" or "Authentication failed"
 
-**Problem**: Can't access private repository  
+**Problem**: Can't access private repository
 **Solution**: Check authentication setup
 
 ```bash
 # Test Git access
 git ls-remote https://github.com/mycompany/private-repo
 
-# Check Git configuration  
+# Check Git configuration
 git config --list | grep url
 ```
 
 #### "Version not found"
 
-**Problem**: Specified tag/version doesn't exist  
+**Problem**: Specified tag/version doesn't exist
 **Solution**: Check available tags
 
 ```bash
@@ -423,7 +423,7 @@ deps:
 
 #### "Cache corruption" or "Checksum mismatch"
 
-**Problem**: Corrupted cache files  
+**Problem**: Corrupted cache files
 **Solution**: Clear cache and re-download
 
 ```bash
@@ -439,7 +439,7 @@ easyp mod download
 
 #### Network timeouts
 
-**Problem**: Slow or unreliable network  
+**Problem**: Slow or unreliable network
 **Solution**: Configure Git timeouts
 
 ```bash
@@ -495,14 +495,14 @@ find ~/.easyp/mod -type d -name "v0.0.0-*" -mtime +30 -exec rm -rf {} \;
 ```dockerfile
 # Stage 1: Download dependencies
 FROM easyp/easyp:latest AS deps
-WORKDIR /workspace  
+WORKDIR /workspace
 COPY easyp.yaml easyp.lock ./
 RUN easyp mod vendor
 
 # Stage 2: Build application
 FROM alpine:latest AS build
 WORKDIR /app
-COPY --from=deps /workspace/easyp_vendor ./easyp_vendor  
+COPY --from=deps /workspace/easyp_vendor ./easyp_vendor
 COPY . .
 # Use vendored dependencies for generation
 RUN easyp -I easyp_vendor generate
@@ -528,7 +528,7 @@ Each `easyp.yaml` can have different dependencies based on service needs.
 
 ### Development Workflow
 - ✅ Use **latest tags** during active development
-- ✅ **Pin versions** for production deployments  
+- ✅ **Pin versions** for production deployments
 - ✅ **Commit lock files** to ensure reproducibility
 - ✅ **Review dependency updates** before merging
 - ✅ **Test after updates** to catch compatibility issues
@@ -540,14 +540,14 @@ Each `easyp.yaml` can have different dependencies based on service needs.
 - ✅ **Monitor for vulnerabilities** in dependencies
 - ❌ **Don't embed credentials** in configuration files
 
-### Performance  
+### Performance
 - ✅ **Cache aggressively** in CI/CD systems
 - ✅ **Use vendoring** for frequently rebuilt projects
 - ✅ **Clean old cache** periodically to save space
 - ✅ **Use shared cache** for team environments
 
 ### Team Collaboration
-- ✅ **Document authentication setup** for new team members  
+- ✅ **Document authentication setup** for new team members
 - ✅ **Use consistent tooling** across environments
 - ✅ **Automate dependency updates** with proper testing
 - ✅ **Share cache locations** when possible

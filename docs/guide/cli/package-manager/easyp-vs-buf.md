@@ -39,32 +39,32 @@ This document provides a comprehensive comparison between EasyP's decentralized 
 ### Buf: Centralized Registry Approach
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                      Buf Architecture                           │
-├─────────────────────────────────────────────────────────────────┤
-│                                                                 │
-│  Developer Machine                Buf Schema Registry (BSR)     │
-│  ┌──────────────┐               ┌─────────────────────────────┐ │
-│  │              │   push/pull   │                             │ │
-│  │ ~/.cache/    │◄─────────────►│  buf.build                  │ │
-│  │ bufcli/      │   modules     │                             │ │
-│  │              │               │  ┌─────────────────────────┐ │ │
-│  │              │               │  │ googleapis/googleapis   │ │ │
-│  │              │               │  ├─────────────────────────┤ │ │
-│  │              │               │  │ grpc/grpc               │ │ │
-│  │              │               │  ├─────────────────────────┤ │ │
-│  │              │               │  │ envoyproxy/protoc-gen-  │ │ │
-│  │              │               │  │ validate                │ │ │
-│  └──────────────┘               │  └─────────────────────────┘ │ │
-│                                  │                             │ │
-│                                  └─────────────────────────────┘ │
-│                                                                 │
-│  ⚠️  Centralized dependency                                     │
+┌────────────────────────────────────────────────────────────────┐
+│                      Buf Architecture                          │
+├────────────────────────────────────────────────────────────────┤
+│                                                                │
+│  Developer Machine               Buf Schema Registry (BSR)     │
+│  ┌──────────────┐              ┌─────────────────────────────┐ │
+│  │              │   push/pull  │                             │ │
+│  │ ~/.cache/    │◄────────────►│  buf.build                  │ │
+│  │ bufcli/      │   modules    │                             │ │
+│  │              │              │ ┌─────────────────────────┐ │ │
+│  │              │              │ │ googleapis/googleapis   │ │ │
+│  │              │              │ ├─────────────────────────┤ │ │
+│  │              │              │ │ grpc/grpc               │ │ │
+│  │              │              │ ├─────────────────────────┤ │ │
+│  │              │              │ │ envoyproxy/protoc-gen-  │ │ │
+│  │              │              │ │ validate                │ │ │
+│  └──────────────┘              │ └─────────────────────────┘ │ │
+│                                │                             │ │
+│                                └─────────────────────────────┘ │
+│                                                                │
+│  ⚠️  Centralized dependency                                    │
 │  ⚠️  Single point of control                                   │
 │  ⚠️  Requires buf.build access                                 │
 │  ⚠️  Limited to BSR ecosystem                                  │
-│                                                                 │
-└─────────────────────────────────────────────────────────────────┘
+│                                                                │
+└────────────────────────────────────────────────────────────────┘
 ```
 
 ## Key Differences Summary
@@ -91,7 +91,7 @@ This document provides a comprehensive comparison between EasyP's decentralized 
 # Direct Git repository references
 deps:
   - github.com/googleapis/googleapis@v1.2.3
-  - gitlab.company.com/protos/internal@v2.0.1  
+  - gitlab.company.com/protos/internal@v2.0.1
   - git.example.com/team/shared-types@main
 ```
 
@@ -145,7 +145,7 @@ easyp generate             # Works offline
 
 **Benefits:**
 - ✅ Complete independence from external services
-- ✅ No need for internal registry infrastructure  
+- ✅ No need for internal registry infrastructure
 - ✅ Uses existing Git infrastructure
 - ✅ Simple file-based distribution
 
@@ -178,10 +178,10 @@ buf mod download           # Must reach buf.build
 deps:
   # Public repository - your choice of version
   - github.com/googleapis/googleapis@common-protos-1_3_1
-  
+
   # Internal repository - complete control
   - gitlab.company.com/security/validated-protos@v1.0.0
-  
+
   # Specific commit for security fix
   - github.com/bufbuild/protoc-gen-validate@abc123def456
 ```
@@ -238,7 +238,7 @@ deps:
 deps:
   # Public
   - github.com/googleapis/googleapis@v1.2.3
-  
+
   # Private (existing Git repos)
   - github.com/mycompany/auth-protos@v2.0.0
   - gitlab.enterprise.com/platform/shared-types@v1.5.1
@@ -360,7 +360,7 @@ deps:
 - Strict compliance requirements
 - Air-gapped or classified networks
 
-✅ **Security-first organizations**  
+✅ **Security-first organizations**
 - Want direct control over dependency sources
 - Need to audit entire supply chain
 - Concerned about third-party service risks
@@ -407,7 +407,7 @@ deps:
 ### Migrating from Buf to EasyP
 
 1. **Identify source repositories** for each BSR module
-2. **Map BSR modules** to Git repository references  
+2. **Map BSR modules** to Git repository references
 3. **Update configuration** to use Git URLs
 4. **Test compatibility** and resolve any issues
 
@@ -418,7 +418,7 @@ deps:
   - buf.build/googleapis/googleapis
   - buf.build/grpc/grpc
 
-# After (easyp.yaml)  
+# After (easyp.yaml)
 deps:
   - github.com/googleapis/googleapis@common-protos-1_3_1
   - github.com/grpc/grpc@v1.50.0
@@ -437,7 +437,7 @@ Both EasyP and Buf offer valid approaches to protobuf dependency management, but
 
 **EasyP excels in:**
 - Enterprise and air-gapped environments
-- Security-conscious organizations  
+- Security-conscious organizations
 - Cost-sensitive projects
 - Direct Git repository usage
 - Zero-infrastructure deployments
