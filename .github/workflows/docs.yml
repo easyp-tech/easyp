@@ -1,0 +1,64 @@
+name: "Build and Deploy Documentation"
+
+on:
+  push:
+    tags:
+      # Только для релизных тегов (v1.0.0, v2.3.4, etc.)
+      - 'v[0-9]+.[0-9]+.[0-9]+'
+
+permissions:
+  contents: write
+
+jobs:
+  build-docs:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: latest
+
+      - name: Install dependencies
+        run: |
+          cd site
+          pnpm install --frozen-lockfile
+
+      - name: Build VitePress documentation
+        run: |
+          cd site
+          pnpm docs:build
+
+      - name: Check for changes
+        id: verify-changed-files
+        run: |
+          if git diff --quiet; then
+            echo "changed=false" >> $GITHUB_OUTPUT
+          else
+            echo "changed=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Commit and push built documentation
+        if: steps.verify-changed-files.outputs.changed == 'true'
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+
+          git add site/docs/.vitepress/dist/
+          git commit -m "docs: build documentation for ${GITHUB_REF_NAME} [skip ci]"
+          git push
+
+      - name: Summary
+        run: |
+          echo "📚 Documentation built and committed for tag: ${GITHUB_REF_NAME}"
+          echo "🌐 External service will pull changes for easyp.tech"

@@ -2,7 +2,9 @@ name: "Release"
 on:
   push:
     tags:
-      - v*
+      # Only match tags like v1.0.0, v2.3.4, etc.
+      # Exclude pre-release versions like v1.0.0-rc1, v1.0.0-alpha, v1.0.0-beta.1
+      - 'v[0-9]+.[0-9]+.[0-9]+'
 
 jobs:
   release:
@@ -17,6 +19,16 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version: ${{ env.GO_VERSION }}
+
+      - name: Validate release tag
+        run: |
+          # Ensure we're only releasing stable versions (no pre-release suffixes)
+          if [[ ! "${GITHUB_REF_NAME}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "❌ Tag ${GITHUB_REF_NAME} is not a valid release version"
+            echo "Only stable version tags (v*.*.* without suffixes) are allowed for release"
+            exit 1
+          fi
+          echo "✅ Valid release tag: ${GITHUB_REF_NAME}"
 
       - name: Create release
         uses: goreleaser/goreleaser-action@v6

@@ -60,10 +60,12 @@ lint:
 
 deps:
   - github.com/googleapis/googleapis
-  - github.com/bufbuild/protovalidate@v0.3.1
+  - github.com/bufbuild/protoc-gen-validate
   - github.com/grpc-ecosystem/grpc-gateway@v2.19.1
 
 generate:
+  inputs:
+    - directory: "api"
   plugins:
     - name: go
       out: .
@@ -83,7 +85,3 @@ generate:
       opts:
         simple_operation_ids: false
         generate_unbound_methods: false
-    - name: validate-go
-      out: .
-      opts:
-        paths: source_relative

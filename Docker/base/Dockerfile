@@ -1,4 +1,4 @@
-FROM --platform=${BUILDPLATFORM} golang:1.23.3-alpine3.20 AS builder
+FROM --platform=${BUILDPLATFORM} golang:1.25.2-alpine3.22 AS builder
 
 LABEL stage=gobuilder
 
@@ -20,8 +20,8 @@ COPY . .
 
 RUN go build -o /easyp  ./cmd/easyp
 
-FROM alpine:3.20.0
+FROM alpine:3.22
 
-RUN apk update --no-cache && apk add --no-cache ca-certificates=20240226-r0
+RUN apk update --no-cache
 
 COPY --from=builder /easyp /easyp
