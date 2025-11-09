@@ -26,8 +26,8 @@ import (
 // Generate generates files.
 func (c *Core) Generate(ctx context.Context, root, directory string) error {
 	q := Query{
-		Imports:  []string{},
-		Plugins:  c.plugins,
+		Imports: []string{},
+		Plugins: c.plugins,
 	}
 
 	for _, dep := range c.deps {
@@ -226,13 +226,12 @@ func (c *Core) Generate(ctx context.Context, root, directory string) error {
 		if plugin.WithImports {
 			filesToGenerate = append(filesToGenerate, dependencyFiles...)
 		}
-		// Создаем запрос для плагина
+
 		req := &pluginpb.CodeGeneratorRequest{
 			FileToGenerate: filesToGenerate,
 			ProtoFile:      fileDescriptors,
 		}
 
-		// Получаем подходящий executor для плагина
 		executor := c.getExecutor(plugin)
 
 		source := plugin.Source.Name
