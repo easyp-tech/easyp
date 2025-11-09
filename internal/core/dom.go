@@ -201,13 +201,17 @@ func ConvertImportPath(source string) ImportPath {
 }
 
 type (
+	// PluginSource is the source of the plugin.
+	PluginSource struct {
+		Name   string
+		Remote string
+		Path   string
+	}
 	// Plugin is a plugin for gRPC generator.
 	Plugin struct {
-		Name    string
-		Out     string
-		Options map[string]string
-		// URL для удаленного плагина (если указан, плагин вызывается через gRPC)
-		URL         string
+		Source      PluginSource
+		Out         string
+		Options     map[string]string
 		WithImports bool
 	}
 	// InputGitRepo is the configuration of the git repository.
@@ -234,7 +238,6 @@ type (
 	}
 	// Query is a query for making sh command.
 	Query struct {
-		Compiler string
 		Imports  []string
 		Plugins  []Plugin
 		Files    []string

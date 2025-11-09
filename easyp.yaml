@@ -85,3 +85,8 @@ generate:
       opts:
         simple_operation_ids: false
         generate_unbound_methods: false
+    - remote: localhost:8080/protoc-gen-python:v32.1
+      out: .
+      opts:
+        simple_operation_ids: false
+        generate_unbound_methods: false
