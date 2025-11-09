@@ -23,12 +23,9 @@ import (
 	"github.com/easyp-tech/easyp/internal/fs/fs"
 )
 
-const defaultCompiler = "protoc"
-
 // Generate generates files.
 func (c *Core) Generate(ctx context.Context, root, directory string) error {
 	q := Query{
-		Compiler: defaultCompiler,
 		Imports:  []string{},
 		Plugins:  c.plugins,
 	}
@@ -238,14 +235,21 @@ func (c *Core) Generate(ctx context.Context, root, directory string) error {
 		// Получаем подходящий executor для плагина
 		executor := c.getExecutor(plugin)
 
-		// Выполняем плагин
+		source := plugin.Source.Name
+		if plugin.Source.Remote != "" {
+			source = plugin.Source.Remote
+		}
+
+		if plugin.Source.Path != "" {
+			source = plugin.Source.Path
+		}
+
 		resp, err := executor.Execute(ctx, pluginexecutor.Info{
-			Name:    plugin.Name,
+			Source:  source,
 			Options: plugin.Options,
-			URL:     plugin.URL,
 		}, req)
 		if err != nil {
-			return fmt.Errorf("execute plugin %s: %w", plugin.Name, err)
+			return fmt.Errorf("execute plugin %s: %w", source, err)
 		}
 
 		// Проверяем на ошибки от плагина
@@ -266,7 +270,7 @@ func (c *Core) Generate(ctx context.Context, root, directory string) error {
 			p := filepath.Join(baseDir, file.GetName())
 
 			c.logger.DebugContext(ctx, "generated file",
-				slog.String("plugin", plugin.Name),
+				slog.String("plugin", source),
 				slog.String("file", file.GetName()),
 				slog.String("plugin_out", plugin.Out),
 				slog.String("full_path", p),
@@ -363,7 +367,7 @@ func runCmd(ctx context.Context, dir string, command string, stdIn *bytes.Buffer
 }
 
 func (c *Core) getExecutor(plugin Plugin) pluginexecutor.Executor {
-	if plugin.URL != "" {
+	if plugin.Source.Remote != "" {
 		return c.remoteExecutor
 	}
 

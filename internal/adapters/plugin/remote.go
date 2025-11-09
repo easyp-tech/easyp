@@ -32,17 +32,16 @@ func NewRemotePluginExecutor(logger *slog.Logger) *RemotePluginExecutor {
 // Execute executes a remote plugin via gRPC
 func (e *RemotePluginExecutor) Execute(ctx context.Context, plugin Info, request *pluginpb.CodeGeneratorRequest) (*pluginpb.CodeGeneratorResponse, error) {
 	// Парсим URL плагина для извлечения хоста и информации о плагине
-	host, pluginName, version, err := e.parsePluginURL(plugin.URL)
+	host, pluginName, version, err := e.parsePluginURL(plugin.Source)
 	if err != nil {
-		return nil, fmt.Errorf("parse plugin URL %s: %w", plugin.URL, err)
+		return nil, fmt.Errorf("parse plugin URL %s: %w", plugin.Source, err)
 	}
 
 	e.logger.DebugContext(ctx, "executing remote plugin via gRPC",
-		slog.String("plugin", plugin.Name),
+		slog.String("plugin", plugin.Source),
 		slog.String("host", host),
 		slog.String("plugin_name", pluginName),
 		slog.String("version", version),
-		slog.String("url", plugin.URL),
 	)
 
 	// Создаем контекст с таймаутом
@@ -84,7 +83,7 @@ func (e *RemotePluginExecutor) Execute(ctx context.Context, plugin Info, request
 	// Вызываем удаленный плагин
 	resp, err := client.GenerateCode(ctxWithTimeout, grpcRequest)
 	if err != nil {
-		return nil, fmt.Errorf("gRPC call failed for plugin %s: %w", plugin.Name, err)
+		return nil, fmt.Errorf("gRPC call failed for plugin %s: %w", plugin.Source, err)
 	}
 
 	// Проверяем статус ответа

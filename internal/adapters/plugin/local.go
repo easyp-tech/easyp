@@ -15,8 +15,7 @@ import (
 )
 
 type Info struct {
-	URL     string
-	Name    string
+	Source  string
 	Options map[string]string
 }
 
@@ -37,7 +36,7 @@ func NewLocalPluginExecutor(console console.Console, logger *slog.Logger) *Local
 // Execute executes a local plugin via terminal
 func (e *LocalPluginExecutor) Execute(ctx context.Context, plugin Info, request *pluginpb.CodeGeneratorRequest) (*pluginpb.CodeGeneratorResponse, error) {
 	e.logger.DebugContext(ctx, "executing local plugin",
-		slog.String("plugin", plugin.Name),
+		slog.String("plugin", plugin.Source),
 	)
 
 	// Подготавливаем параметры плагина
@@ -63,15 +62,15 @@ func (e *LocalPluginExecutor) Execute(ctx context.Context, plugin Info, request 
 	stdIn := bytes.NewReader(reqData)
 
 	// Вызываем плагин через терминал
-	stdout, err := e.console.RunCmdWithStdin(ctx, ".", stdIn, fmt.Sprintf("protoc-gen-%s", plugin.Name))
+	stdout, err := e.console.RunCmdWithStdin(ctx, ".", stdIn, fmt.Sprintf("protoc-gen-%s", plugin.Source))
 	if err != nil {
-		return nil, fmt.Errorf("run local plugin %s: %w", plugin.Name, err)
+		return nil, fmt.Errorf("run local plugin %s: %w", plugin.Source, err)
 	}
 
 	// Парсим ответ от плагина
 	var resp pluginpb.CodeGeneratorResponse
 	if err := proto.Unmarshal([]byte(stdout), &resp); err != nil {
-		return nil, fmt.Errorf("proto.Unmarshal response from plugin %s: %w", plugin.Name, err)
+		return nil, fmt.Errorf("proto.Unmarshal response from plugin %s: %w", plugin.Source, err)
 	}
 
 	return &resp, nil
