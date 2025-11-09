@@ -136,7 +136,7 @@ func (c *Core) Generate(ctx context.Context, root, directory string) error {
 		Resolver: protocompile.CompositeResolver{
 			wellknownimports.WithStandardImports(
 				&protocompile.SourceResolver{
-					ImportPaths: append(q.Imports),
+					ImportPaths: q.Imports,
 				},
 			),
 		},
