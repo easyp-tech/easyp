@@ -250,7 +250,7 @@ func (c *Core) Generate(ctx context.Context, root, directory string) error {
 
 		// Проверяем на ошибки от плагина
 		if resp.Error != nil {
-			return fmt.Errorf("plugin error: %s", *resp.Error)
+			return fmt.Errorf("plugin %s error: %s, executor: %s", plugin.Name, *resp.Error, executor.GetName())
 		}
 
 		// Выводим информацию о сгенерированных файлах (для отладки)
@@ -362,10 +362,25 @@ func runCmd(ctx context.Context, dir string, command string, stdIn *bytes.Buffer
 	return stdout.String(), nil
 }
 
+// isPluginInPath проверяет, доступен ли плагин в PATH
+func (c *Core) isPluginInPath(pluginName string) bool {
+	pluginCmd := fmt.Sprintf("protoc-gen-%s", pluginName)
+	_, err := exec.LookPath(pluginCmd)
+	return err == nil
+}
+
 func (c *Core) getExecutor(plugin Plugin) pluginexecutor.Executor {
+	// Приоритет 1: Если указан URL, используем удаленный executor
 	if plugin.URL != "" {
 		return c.remoteExecutor
 	}
 
+	// Приоритет 2: Если плагин базовый и не найден в PATH, используем builtin executor
+	// (если он доступен - собран с тегом builtin_plugins)
+	if pluginexecutor.IsBuiltinPlugin(plugin.Name) && !c.isPluginInPath(plugin.Name) {
+		return c.builtinExecutor
+	}
+
+	// Приоритет 3: Иначе используем локальный executor (обратная совместимость)
 	return c.localExecutor
 }
