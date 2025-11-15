@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"os/exec"
 	"strings"
 
 	"github.com/samber/lo"
@@ -26,6 +27,10 @@ type LocalPluginExecutor struct {
 	logger  *slog.Logger
 }
 
+func (e *LocalPluginExecutor) GetName() string {
+	return "LocalPluginExecutor from PATH"
+}
+
 // NewLocalPluginExecutor creates a new LocalPluginExecutor
 func NewLocalPluginExecutor(console console.Console, logger *slog.Logger) *LocalPluginExecutor {
 	return &LocalPluginExecutor{
@@ -34,11 +39,23 @@ func NewLocalPluginExecutor(console console.Console, logger *slog.Logger) *Local
 	}
 }
 
+// isPluginInPath проверяет, доступен ли плагин в PATH
+func (e *LocalPluginExecutor) isPluginInPath(pluginName string) bool {
+	pluginCmd := fmt.Sprintf("protoc-gen-%s", pluginName)
+	_, err := exec.LookPath(pluginCmd)
+	return err == nil
+}
+
 // Execute executes a local plugin via terminal
 func (e *LocalPluginExecutor) Execute(ctx context.Context, plugin Info, request *pluginpb.CodeGeneratorRequest) (*pluginpb.CodeGeneratorResponse, error) {
 	e.logger.DebugContext(ctx, "executing local plugin",
 		slog.String("plugin", plugin.Name),
 	)
+
+	// Проверяем наличие плагина в PATH
+	if !e.isPluginInPath(plugin.Name) {
+		return nil, fmt.Errorf("plugin protoc-gen-%s not found in PATH", plugin.Name)
+	}
 
 	// Подготавливаем параметры плагина
 	options := lo.MapToSlice(plugin.Options, func(k string, v string) string {

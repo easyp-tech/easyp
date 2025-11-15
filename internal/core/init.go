@@ -56,7 +56,7 @@ type (
 )
 
 // Initialize initializes the EasyP configuration.
-func (i *Core) Initialize(ctx context.Context, disk DirWalker, defaultLinters []string) error {
+func (c *Core) Initialize(ctx context.Context, disk DirWalker, defaultLinters []string) error {
 	cfg := defaultConfig(defaultLinters)
 
 	var migrated bool
