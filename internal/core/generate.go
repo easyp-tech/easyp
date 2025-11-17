@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
-	"os"
 	"os/exec"
 	"path"
 	"path/filepath"
@@ -23,7 +22,10 @@ import (
 	"github.com/easyp-tech/easyp/internal/fs/fs"
 )
 
-const defaultCompiler = "protoc"
+const (
+	defaultCompiler          = "protoc"
+	averageGeneratedFileSize = 15 * 1024
+)
 
 // Generate generates files.
 func (c *Core) Generate(ctx context.Context, root, directory string) error {
@@ -223,6 +225,8 @@ func (c *Core) Generate(ctx context.Context, root, directory string) error {
 		c.logger.DebugContext(ctx, fmt.Sprintf("%d: %s", i, fd.GetName()))
 	}
 
+	filesToWrite := NewGenerateBucket()
+
 	for _, plugin := range c.plugins {
 		filesToGenerate := q.Files
 
@@ -272,28 +276,63 @@ func (c *Core) Generate(ctx context.Context, root, directory string) error {
 				slog.String("full_path", p),
 			)
 
-			// Проверяем и создаем директорию, если она не существует (кроссплатформенно)
-			dir := filepath.Dir(p)
-			if err := os.MkdirAll(dir, 0755); err != nil {
-				return fmt.Errorf("os.MkdirAll %s: %w", dir, err)
+			if err := addFileWithInsertionPoint(ctx, p, file, filesToWrite); err != nil {
+				return fmt.Errorf("addFileWithInsertionPoint: %w", err)
 			}
-
-			f, err := os.Create(p)
-			if err != nil {
-				return fmt.Errorf("os.Create: %w", err)
-			}
-
-			if file.Content == nil {
-				continue
-			}
-
-			_, err = f.WriteString(*file.Content)
-			if err != nil {
-				return fmt.Errorf("f.WriteString: %w", err)
-			}
+			//// Пишем файл даже если пустой
+			//fileContent := make([]byte, 0)
+			//if file.Content != nil {
+			//	fileContent = []byte(*file.Content)
+			//}
+			//
+			//filesToWrite.PutFile(ctx, p, fileContent)
 		}
 	}
 
+	err = filesToWrite.DumpToFs(ctx)
+	if err != nil {
+		return fmt.Errorf("filesToWrite.DumpToFs: %w", err)
+	}
+
+	return nil
+}
+
+// addFileWithInsertionPoint добавляет файл в bucket с поддержкой insertion point
+// inspired by https://github.com/bufbuild/buf/blob/v1.60.0/private/bufpkg/bufprotoplugin/response_writer.go#L75
+func addFileWithInsertionPoint(
+	ctx context.Context,
+	filePath string,
+	file *pluginpb.CodeGeneratorResponse_File,
+	bucket *GenerateBucket,
+) error {
+	// Пишем файл даже если пустой
+	fileContent := make([]byte, 0)
+	if file.Content != nil {
+		fileContent = []byte(*file.Content)
+	}
+	if insertionPoint := file.GetInsertionPoint(); insertionPoint != "" {
+		// Если есть insertion point есть в file нужно найти уже имеющийся файл с таким же path в bucket
+		// Этот механизм может быть сломан изменённым порядком выполнения плагинов
+		// inspired by https://github.com/bufbuild/buf/blob/v1.60.0/private/pkg/storage/storagemem/bucket.go#L144
+		existsFile, ok := bucket.GetFile(ctx, filePath)
+		if !ok || len(existsFile.Data()) == 0 {
+			return fmt.Errorf("file not found (bucket): %s", filePath)
+		}
+
+		newFileContent, err := writeInsertionPoint(
+			ctx,
+			file,
+			bytes.NewReader(existsFile.Data()),
+		)
+		if err != nil {
+			return fmt.Errorf("writeInsertionPoint: %w", err)
+		}
+
+		bucket.PutFile(ctx, filePath, newFileContent)
+		return nil
+	}
+
+	bucket.PutFile(ctx, filePath, fileContent)
 	return nil
 }
 
