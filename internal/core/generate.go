@@ -276,16 +276,10 @@ func (c *Core) Generate(ctx context.Context, root, directory string) error {
 				slog.String("full_path", p),
 			)
 
+			// Пишем файл в bucket с поддержкой insertion point
 			if err := addFileWithInsertionPoint(ctx, p, file, filesToWrite); err != nil {
 				return fmt.Errorf("addFileWithInsertionPoint: %w", err)
 			}
-			//// Пишем файл даже если пустой
-			//fileContent := make([]byte, 0)
-			//if file.Content != nil {
-			//	fileContent = []byte(*file.Content)
-			//}
-			//
-			//filesToWrite.PutFile(ctx, p, fileContent)
 		}
 	}
 
