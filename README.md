@@ -4,6 +4,8 @@
 
 EasyP is a comprehensive CLI tool that simplifies working with Protocol Buffers by providing linting, package management, code generation, and compatibility checking in a single, unified interface.
 
+📖 **[Documentation](https://easyp.tech)** | 💬 **[Community](https://t.me/easyptech)**
+
 ---
 
 ## 🤔 Why EasyP?
@@ -663,7 +665,7 @@ rm -rf $EASYPPATH
 - **🌐 Official Website**: [https://easyp.tech/](https://easyp.tech/)
 - **💬 Telegram Chat**: [https://t.me/easyptech](https://t.me/easyptech)  
 - **🐛 Issues & Feature Requests**: [GitHub Issues](https://github.com/easyp-tech/easyp/issues)
-- **📚 Documentation**: Coming soon at docs.easyp.tech
+- **📚 Documentation**: [https://easyp.tech](https://easyp.tech)
 
 ### Contributing
 
