@@ -15,9 +15,9 @@ import (
 type Plugin struct {
 	// Sources
 
-	Name        string            `json:"name,omitempty" yaml:"name,omitempty"`
-	Remote      string            `json:"remote,omitempty" yaml:"remote,omitempty"`
-	Path        string            `json:"path,omitempty" yaml:"path,omitempty"`
+	Name   string `json:"name,omitempty" yaml:"name,omitempty"`
+	Remote string `json:"remote,omitempty" yaml:"remote,omitempty"`
+	Path   string `json:"path,omitempty" yaml:"path,omitempty"`
 
 	Out         string            `json:"out" yaml:"out"`
 	Opts        map[string]string `json:"opts,omitempty" yaml:"opts,omitempty"`
@@ -134,7 +134,6 @@ func (d *InputFilesDir) UnmarshalYAML(value *yaml.Node) error {
 	}
 	return nil
 }
-
 
 // Validate validates the configuration.
 func (c *Config) Validate() error {

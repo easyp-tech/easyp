@@ -13,7 +13,7 @@ import (
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/pluginpb"
 
-	plugingeneratorv1 "github.com/easyp-tech/easyp-plugin-server/api/plugin-generator/v1"
+	plugingeneratorv1 "github.com/easyp-tech/service/api/generator/v1"
 	"github.com/samber/lo"
 )
 
@@ -57,7 +57,7 @@ func (e *RemotePluginExecutor) Execute(ctx context.Context, plugin Info, request
 	defer conn.Close()
 
 	// Создаем gRPC клиент
-	client := plugingeneratorv1.NewPluginGeneratorServiceClient(conn)
+	client := plugingeneratorv1.NewServiceAPIClient(conn)
 
 	// Формируем информацию о плагине в формате "name:version"
 	pluginInfo := fmt.Sprintf("%s:%s", pluginName, version)
@@ -74,21 +74,22 @@ func (e *RemotePluginExecutor) Execute(ctx context.Context, plugin Info, request
 		request.Parameter = proto.String(strings.Join(options, ","))
 	}
 
-	// Создаем запрос для gRPC сервиса
 	grpcRequest := &plugingeneratorv1.GenerateCodeRequest{
 		CodeGeneratorRequest: request,
-		PluginInfo:           pluginInfo,
+		PluginName:           pluginInfo,
 	}
 
-	// Вызываем удаленный плагин
 	resp, err := client.GenerateCode(ctxWithTimeout, grpcRequest)
 	if err != nil {
 		return nil, fmt.Errorf("gRPC call failed for plugin %s: %w", plugin.Source, err)
 	}
 
-	// Проверяем статус ответа
-	if resp.Status != "success" && resp.Status != "" {
-		return nil, fmt.Errorf("remote plugin returned error status '%s': %s", resp.Status, resp.Message)
+	err = conn.Close()
+	if err != nil {
+		e.logger.WarnContext(ctx, "failed to close gRPC connection",
+			slog.String("plugin", plugin.Source),
+			slog.String("error", err.Error()),
+		)
 	}
 
 	return resp.CodeGeneratorResponse, nil
