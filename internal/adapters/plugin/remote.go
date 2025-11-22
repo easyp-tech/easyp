@@ -2,6 +2,7 @@ package plugin
 
 import (
 	"context"
+	"crypto/x509"
 	"fmt"
 	"log/slog"
 	"net/url"
@@ -9,6 +10,7 @@ import (
 	"time"
 
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/pluginpb"
@@ -44,13 +46,22 @@ func (e *RemotePluginExecutor) Execute(ctx context.Context, plugin Info, request
 		slog.String("version", version),
 	)
 
-	// Создаем контекст с таймаутом
 	ctxWithTimeout, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
 
-	// Устанавливаем gRPC соединение
-	conn, err := grpc.NewClient(host,
-		grpc.WithTransportCredentials(insecure.NewCredentials()))
+	var transportCreds credentials.TransportCredentials
+	if strings.HasPrefix(plugin.Source, "https://") || (!strings.HasPrefix(plugin.Source, "http://") && !strings.Contains(host, "localhost") && !strings.Contains(host, "127.0.0.1")) {
+		pool, err := x509.SystemCertPool()
+		if err != nil {
+			return nil, fmt.Errorf("failed to get system cert pool: %w", err)
+		}
+
+		transportCreds = credentials.NewClientTLSFromCert(pool, "")
+	} else {
+		transportCreds = insecure.NewCredentials()
+	}
+
+	conn, err := grpc.NewClient(host, grpc.WithTransportCredentials(transportCreds))
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to gRPC server %s: %w", host, err)
 	}
@@ -95,39 +106,33 @@ func (e *RemotePluginExecutor) Execute(ctx context.Context, plugin Info, request
 	return resp.CodeGeneratorResponse, nil
 }
 
-// parsePluginURL парсит URL плагина в формате:
 // - localhost:8080/python:v1.35
 // - http://localhost:8080/python:v1.35
 // - https://example.com/python:v1.35
 func (e *RemotePluginExecutor) parsePluginURL(pluginURL string) (host, pluginName, version string, err error) {
-	// Нормализуем URL, добавляем схему если её нет
 	normalizedURL := pluginURL
 	if !strings.HasPrefix(pluginURL, "http://") && !strings.HasPrefix(pluginURL, "https://") {
 		normalizedURL = "http://" + pluginURL
 	}
 
-	// Парсим URL
 	parsedURL, err := url.Parse(normalizedURL)
 	if err != nil {
 		return "", "", "", fmt.Errorf("invalid URL: %w", err)
 	}
 
-	// Извлекаем хост (host:port)
 	host = parsedURL.Host
 
-	// Извлекаем путь и парсим plugin_name:version
 	path := strings.TrimPrefix(parsedURL.Path, "/")
 	if path == "" {
 		return "", "", "", fmt.Errorf("plugin name not specified in URL")
 	}
 
-	// Разделяем plugin_name:version
 	parts := strings.SplitN(path, ":", 2)
 	pluginName = parts[0]
 	if len(parts) > 1 {
 		version = parts[1]
 	} else {
-		version = "latest" // версия по умолчанию
+		version = "latest"
 	}
 
 	if pluginName == "" {
