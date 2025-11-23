@@ -1,12 +1,15 @@
 package api
 
 import (
+	"errors"
 	"fmt"
+	"log/slog"
 	"os"
 
 	"github.com/urfave/cli/v2"
 
 	"github.com/easyp-tech/easyp/internal/config"
+	"github.com/easyp-tech/easyp/internal/core"
 	"github.com/easyp-tech/easyp/internal/flags"
 	"github.com/easyp-tech/easyp/internal/fs/fs"
 )
@@ -46,6 +49,8 @@ func (g Generate) Command() *cli.Command {
 
 // Action implements Handler.
 func (g Generate) Action(ctx *cli.Context) error {
+	logger := slog.Default()
+
 	workingDir, err := os.Getwd()
 	if err != nil {
 		return fmt.Errorf("os.Getwd: %w", err)
@@ -64,6 +69,11 @@ func (g Generate) Action(ctx *cli.Context) error {
 	dir := ctx.String(flagGenerateDirectoryPath.Name)
 	err = app.Generate(ctx.Context, ".", dir)
 	if err != nil {
+		if errors.Is(err, core.ErrEmptyInputFiles) {
+			logger.Warn("empty input files!")
+			return nil
+		}
+
 		return fmt.Errorf("generator.Generate: %w", err)
 	}
 

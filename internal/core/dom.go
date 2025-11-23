@@ -219,6 +219,7 @@ type (
 		URL          string
 		SubDirectory string
 		Out          string
+		Root         string
 	}
 	// InputFilesDir is the configuration of the directory with additional functionality.
 	InputFilesDir struct {
@@ -238,8 +239,8 @@ type (
 	}
 	// Query is a query for making sh command.
 	Query struct {
-		Imports  []string
-		Plugins  []Plugin
-		Files    []string
+		Imports []string
+		Plugins []Plugin
+		Files   []string
 	}
 )
