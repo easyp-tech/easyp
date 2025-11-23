@@ -1,0 +1,100 @@
+{
+    "nav": {
+        "features": "Возможности",
+        "registry": "Registry",
+        "enterprise": "Enterprise",
+        "documentation": "Docs",
+        "github": "GitHub",
+        "sponsor": "Поддержать",
+        "getStarted": "Начать"
+    },
+    "hero": {
+        "badge": {
+            "beta": "Beta",
+            "license": "Лицензия Apache 2.0"
+        },
+        "title": "Современный стандарт для",
+        "titleHighlight": "Protobuf Workflows",
+        "subtitle": "Единый Git-native инструментарий для линтинга, генерации кода и управления зависимостями. Полностью Open Source.",
+        "exploreDocs": "Изучить документацию"
+    },
+    "trustedBy": {
+        "title": "Нам доверяют команды разработчиков из"
+    },
+    "features": {
+        "title": "Два режима.",
+        "titleHighlight": "Одна платформа.",
+        "subtitle": "EasyP сочетает удобный CLI для разработчиков с мощным движком удаленного выполнения.",
+        "localDev": "Локальная разработка",
+        "remoteInfra": "Удаленная инфраструктура",
+        "cli": {
+            "title": "Ускорьте свой рабочий процесс",
+            "description": "Все инструменты в одном бинарнике. Линтинг, форматирование и детекция breaking changes работают мгновенно.",
+            "packageManager": {
+                "title": "Package Manager",
+                "desc": "Управление версиями через easyp.lock. Как npm, но для Protobuf."
+            },
+            "linting": {
+                "title": "Instant Linting",
+                "desc": "100% совместимость с правилами Buf"
+            },
+            "apiSafety": {
+                "title": "API Safety",
+                "desc": "Проверка обратной совместимости в CI"
+            }
+        },
+        "server": {
+            "title": "Ваша инфраструктура, ваши правила",
+            "description": "Забудьте о проблеме \"works on my machine\". Централизованный сервер генерации гарантирует идентичный результат для всей команды.",
+            "dockerNative": {
+                "title": "Docker Native",
+                "desc": "Запуск любых плагинов (Java, Python, Node) в контейнерах"
+            },
+            "airGap": {
+                "title": "Air-Gap Ready",
+                "desc": "Работает в полностью изолированных контурах"
+            },
+            "costEffective": {
+                "title": "Cost Effective",
+                "desc": "Платите за инфраструктуру, а не за пользователей"
+            }
+        }
+    },
+    "architecture": {
+        "title": "Почему EasyP — это лучший выбор",
+        "subtitle": "Фундаментальный сдвиг в управлении Protobuf-инфраструктурой.",
+        "dataSovereignty": {
+            "title": "Суверенность данных",
+            "description": "В отличие от SaaS-решений, где схемы хранятся в облаке, EasyP является <strong>Git-Native</strong>. Ваши данные никогда не покидают безопасные репозитории."
+        },
+        "hybridRuntime": {
+            "title": "Гибридная среда выполнения",
+            "description": "Не выбирайте между скоростью и совместимостью. EasyP использует <strong>Wasm</strong> для скорости и <strong>Docker</strong> для тяжелых плагинов."
+        },
+        "noVendorLock": {
+            "title": "Без привязки к поставщику",
+            "description": "Вся платформа является <strong>Open Source</strong> (Apache 2.0). Размещайте сервер где угодно. Никакой платы за пользователя."
+        }
+    },
+    "footer": {
+        "description": "Open-source стандарт для Protobuf workflows. Создан для современных инженерных команд.",
+        "product": {
+            "title": "Продукты",
+            "cliTool": "CLI Tool",
+            "apiService": "API Service",
+            "registry": "Registry",
+            "documentation": "Документация",
+            "enterprise": "Enterprise"
+        },
+        "community": {
+            "title": "Сообщество",
+            "github": "GitHub",
+            "telegram": "Telegram",
+            "youtube": "YouTube"
+        },
+        "rights": "© 2025 EasyP Tech. Все права защищены.",
+        "privacy": "Конфиденциальность",
+        "terms": "Условия",
+        "license": "Лицензия Apache 2.0"
+    }
+}
