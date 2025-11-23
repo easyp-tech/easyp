@@ -139,6 +139,10 @@ func (c *Core) Generate(ctx context.Context, root, directory string) error {
 
 	c.logger.DebugContext(ctx, "data", "import", q.Imports, "files", q.Files)
 
+	if len(q.Files) == 0 {
+		return ErrEmptyInputFiles
+	}
+
 	compiler := protocompile.Compiler{
 		Resolver: protocompile.CompositeResolver{
 			wellknownimports.WithStandardImports(

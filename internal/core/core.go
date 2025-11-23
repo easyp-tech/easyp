@@ -33,6 +33,7 @@ type Core struct {
 var (
 	ErrInvalidRule            = errors.New("invalid rule")
 	ErrRepositoryDoesNotExist = errors.New("repository does not exist")
+	ErrEmptyInputFiles        = errors.New("empty input files")
 )
 
 func New(
