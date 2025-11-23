@@ -1,13 +1,3 @@
-/* Ambient module declarations for JSON sidebar configs */
-declare module '../config/sidebar.en.json' {
-    const value: import('../types/sidebar').SidebarConfig
-    export default value
-}
-declare module '../config/sidebar.ru.json' {
-    const value: import('../types/sidebar').SidebarConfig
-    export default value
-}
-
 import type { SidebarItem, SidebarConfig } from '../types/sidebar'
 import sidebarEn from '../config/sidebar.en.json'
 import sidebarRu from '../config/sidebar.ru.json'

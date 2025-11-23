@@ -12,7 +12,7 @@ import Mermaid from '../../../components/Mermaid';
  */
 export function processMermaid(
   content: string,
-  options?: MarkdownProcessorOptions
+  _options?: MarkdownProcessorOptions
 ): string {
   // Find all mermaid code blocks
   const mermaidRegex = /```mermaid\n([\s\S]*?)\n```/g;
@@ -102,7 +102,7 @@ export function processMermaidAsHtml(content: string): string {
 
 
 
-  processedContent = processedContent.replace(mermaidRegex, (match, diagramCode) => {
+  processedContent = processedContent.replace(mermaidRegex, (_match, diagramCode) => {
     const diagramId = `mermaid-diagram-${diagramIndex++}`;
     const cleanDiagramCode = diagramCode.trim();
 

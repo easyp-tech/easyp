@@ -184,13 +184,8 @@ const Mermaid: React.FC<MermaidProps> = ({ chart, id }) => {
         gantt: {
           titleTopMargin: 25,
           barHeight: 20,
-          fontsize: 11,
+          fontSize: 11,
           sectionFontSize: 11,
-          gridLineStartPadding: 35,
-          bottomPadding: 25,
-          leftPadding: 75,
-          topPadding: 50,
-          rightPadding: 75,
         },
         journey: {
           diagramMarginX: 50,
@@ -215,7 +210,6 @@ const Mermaid: React.FC<MermaidProps> = ({ chart, id }) => {
           rect_min_width: 200,
           rect_min_height: 200,
           fontSize: 14,
-          fontWeight: 'normal',
         },
         gitGraph: {
           diagramPadding: 8,

@@ -20,7 +20,7 @@ function createMarkdownHeading(level: number) {
     if (typeof props.children === 'string') {
       text = props.children;
     } else if (Array.isArray(props.children)) {
-      text = props.children.map(child =>
+      text = props.children.map((child: any) =>
         typeof child === 'string' ? child : child.props?.children || ''
       ).join('');
     } else if (props.children?.props?.children) {
@@ -65,7 +65,7 @@ export function MarkdownContent({
     }
 
     // Escape underscores in headings to prevent italic interpretation
-    processed = processed.replace(/^(#{1,6})\s+(.+)$/gm, (match, hashes, title) => {
+    processed = processed.replace(/^(#{1,6})\s+(.+)$/gm, (_match, hashes, title) => {
       // Escape underscores only in the title part
       const escapedTitle = title.replace(/_/g, '\\_');
       return `${hashes} ${escapedTitle}`;

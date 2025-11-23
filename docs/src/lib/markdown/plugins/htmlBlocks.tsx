@@ -1,4 +1,3 @@
-import React from 'react';
 import type { MarkdownProcessorOptions } from '../types';
 import { parseCustomBlockDiv } from '../components/CustomBlock';
 
@@ -24,7 +23,7 @@ export function processHtmlBlocks(
   // Process custom block divs
   return content.replace(
     /<div\s+class="([^"]*custom-block[^"]*)"[^>]*>([\s\S]*?)<\/div>/gi,
-    (match, className, innerContent) => {
+    (_match, className, innerContent) => {
       // Normalize the custom block structure
       return normalizeCustomBlock(className, innerContent);
     }
@@ -200,19 +199,19 @@ export function transformLegacyBlocks(content: string): string {
   // Transform VitePress-style blocks
   return content
     .replace(/::: tip\s*([^\n]*)\n([\s\S]*?):::/gi,
-      (match, title, body) =>
+      (_match, title, body) =>
         `<div class="tip custom-block">${title ? `<strong>${title}</strong>\n` : ''}${body.trim()}</div>`
     )
     .replace(/::: warning\s*([^\n]*)\n([\s\S]*?):::/gi,
-      (match, title, body) =>
+      (_match, title, body) =>
         `<div class="warning custom-block">${title ? `<strong>${title}</strong>\n` : ''}${body.trim()}</div>`
     )
     .replace(/::: danger\s*([^\n]*)\n([\s\S]*?):::/gi,
-      (match, title, body) =>
+      (_match, title, body) =>
         `<div class="danger custom-block">${title ? `<strong>${title}</strong>\n` : ''}${body.trim()}</div>`
     )
     .replace(/::: details\s*([^\n]*)\n([\s\S]*?):::/gi,
-      (match, title, body) =>
+      (_match, title, body) =>
         `<div class="details custom-block">${title ? `<strong>${title}</strong>\n` : ''}${body.trim()}</div>`
     );
 }

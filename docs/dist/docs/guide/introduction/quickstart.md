@@ -1,18 +1,41 @@
 # Quickstart
 
-## Initial setup
+EasyP is a modern toolkit for working with Protobuf files. In this quickstart, you'll learn to:
 
-To start using EasyP, you need to initialize the project.
+1. **Initialize** your project with EasyP configuration
+2. **Set up linting** to catch errors and ensure best practices
+3. **Manage dependencies** from Git repositories
+4. **Generate code** from your Protobuf files
 
-To do this, run the following command in the terminal:
+## Prerequisites
+
+Before you begin, make sure you have:
+
+- **EasyP CLI installed** - See [Installation guide](/docs/guide/introduction/install) if you haven't already
+- **Git** installed and in your `$PATH`
+- **Protobuf files** ready to work with (or create some as you go)
+
+You can verify your installation:
 
 ```bash
-easyp init 
+easyp --version
 ```
 
-## Setup linter rules
+## Initialize your project
 
-For example, you can use default linter rules.
+Start by creating an `easyp.yaml` configuration file in your project root:
+
+```bash
+easyp init
+```
+
+This creates a basic configuration file that you'll customize in the following steps.
+
+## Configure linting
+
+Linting helps catch errors and ensures your Protobuf files follow best practices. EasyP provides default rules compatible with Buf standards.
+
+Add lint configuration to your `easyp.yaml`:
 
 ```yaml
 lint:
@@ -20,47 +43,67 @@ lint:
     - DEFAULT
 ```
 
-After setting up the linter rules, you can run the linter command:
+Now you can run the linter:
 
 ```bash
 easyp lint
 ```
 
-## Setup package dependencies
+The linter will check all your `.proto` files and report any issues found.
 
-If you are using third-party packages,
-you need to add them to the `deps` section in the `easyp.yaml` file.
+::: tip
+EasyP's linting rules are 100% compatible with Buf, making migration easy if you're switching tools.
+:::
 
-### Dependency Format
+## Manage dependencies
 
-Format is simple: `$GIT_LINK@$VERSION` where:
-- `$GIT_LINK`: is just a link to git repo (github, gitlab etc)
-- `$VERSION`: git tag or FULL hash of commit
+If your project uses third-party Protobuf packages (like Google APIs or gRPC Gateway), EasyP makes it easy to manage them.
 
-If version is omitted then easyp will download the latest commit from default branch.
+### Dependency format
+
+Dependencies use a simple format: `$GIT_LINK@$VERSION`
+
+- **`$GIT_LINK`** - URL to any Git repository (GitHub, GitLab, etc.)
+- **`$VERSION`** - Git tag or commit hash (optional)
+
+If you omit the version, EasyP downloads the latest commit from the default branch.
+
+### Add dependencies
+
+Update your `easyp.yaml` to include dependencies:
 
 ```yaml
 lint:
   use:
     - DEFAULT
 deps:
-  - github.com/googleapis/googleapis                           # Latest commit
-  - github.com/grpc-ecosystem/grpc-gateway@v2.20.0            # Specific tag
+  - github.com/googleapis/googleapis                          # Latest commit
+  - github.com/grpc-ecosystem/grpc-gateway@v2.20.0           # Specific version
 ```
 
-### Download Dependencies
+### Download dependencies
 
-Now you can download packages:
+Download the packages you specified:
 
 ```bash
 easyp mod download
 ```
 
-**Note:** 
-- `download` command will download deps from your `easyp.lock` file. If lock file is missing then easyp downloads packages with versions from `easyp.yaml` file and creates lock file
-- `update` command ignores lock file and downloads packages with versions from `easyp.yaml` file and creates/updates lock file
+This command:
+- Downloads dependencies from `easyp.lock` if it exists
+- Otherwise, downloads from `easyp.yaml` and creates `easyp.lock`
 
-## Setup proto generation
+::: info
+**Tip:** Use `easyp mod update` to ignore the lock file and fetch the latest versions from `easyp.yaml`.
+:::
+
+## Generate code
+
+Now let's configure code generation. EasyP supports all standard Protobuf plugins.
+
+### Configure generation
+
+Add plugin configuration to your `easyp.yaml`:
 
 ```yaml
 lint:
@@ -82,10 +125,38 @@ generate:
         require_unimplemented_servers: false
 ```
 
-On this step, you can generate proto files by command:
+### Run code generation
+
+Generate your code stubs:
 
 ```bash
 easyp generate
 ```
 
-*Enjoy working with proto without any pain! 🚀*
+EasyP will:
+1. Resolve all dependencies
+2. Connect to the EasyP service (or run locally)
+3. Execute the configured plugins
+4. Output generated code to the specified directories
+
+::: tip
+EasyP uses a hybrid runtime with WASM for speed and Docker for heavy plugins, giving you the best of both worlds.
+:::
+
+## Next steps
+
+Congratulations! 🎉 You've successfully:
+- ✅ Initialized an EasyP project
+- ✅ Configured linting rules
+- ✅ Managed third-party dependencies
+- ✅ Generated code from your Protobuf files
+
+### Learn more
+
+- **[CLI Reference](/docs/guide/cli/linter/linter)** - Deep dive into all CLI commands
+- **[API Service](/docs/guide/api-service/overview)** - Set up remote code generation
+- **[Configuration](/docs)** - Explore all configuration options
+
+---
+
+*Enjoy working with Protobuf without any pain! 🚀*

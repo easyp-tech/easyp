@@ -30,7 +30,7 @@ export function processLinks(
   // Process markdown links [text](url)
   return content.replace(
     /\[([^\]]+)\]\(([^)]+)\)/g,
-    (match, text, url) => {
+    (_match, text, url) => {
       const processedUrl = processLinkUrl(url, options);
       return `[${text}](${processedUrl})`;
     }

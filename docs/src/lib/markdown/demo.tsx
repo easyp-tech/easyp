@@ -1,4 +1,3 @@
-import React from 'react';
 import { MarkdownContent } from './index';
 import './styles.css';
 

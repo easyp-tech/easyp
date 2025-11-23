@@ -350,7 +350,7 @@ export function CodeBlock({
         language={finalLanguage as any}
         prism={Prism}
       >
-        {({ className: highlightClassName, style, tokens, getLineProps, getTokenProps }) => (
+        {({ className: highlightClassName, style, tokens, getTokenProps }) => (
           <pre
             className={`${highlightClassName} code-pre`}
             style={{ ...style, background: 'transparent' }}
@@ -359,8 +359,6 @@ export function CodeBlock({
               const lineNumber = lineIndex + 1;
               const isFocusLine = parsedFocusLines.includes(lineNumber);
               const isDimmedLine = shouldShowFocus && !isFocusLine;
-
-              const lineProps = getLineProps({ line, key: lineIndex });
 
               return (
                 <div
