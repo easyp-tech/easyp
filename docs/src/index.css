@@ -122,12 +122,19 @@ body {
 
 @media (max-width: 768px) {
     .docs-sidebar {
-        display: none;
         position: fixed;
         left: 0;
         top: 0;
         width: 280px;
         z-index: 50;
+        display: block;
+        transform: translateX(-100%);
+        transition: transform 0.3s ease;
+    }
+
+    .docs-sidebar--open {
+        display: block;
+        transform: translateX(0);
     }
 }
 
@@ -223,18 +230,6 @@ body {
 
 .docs-sidebar-toggle:hover {
     background-color: rgba(255, 255, 255, 0.05);
-}
-
-/* Sidebar open state on mobile */
-@media (max-width: 768px) {
-    .docs-sidebar {
-        transform: translateX(-100%);
-        transition: transform 0.3s ease;
-    }
-
-    .docs-sidebar--open {
-        transform: translateX(0);
-    }
 }
 
 /* Sidebar Backdrop */
@@ -438,7 +433,7 @@ body {
 .mermaid-container .actor-line {
     stroke: #334155 !important;
     stroke-width: 1px !important;
-    stroke-dasharray: 5,5 !important;
+    stroke-dasharray: 5, 5 !important;
 }
 
 .mermaid-container .messageLine0,

@@ -37,7 +37,7 @@ export default function Navbar() {
 
                         <a
                             href="/docs"
-                            className="hidden md:block text-sm font-medium text-slate-400 hover:text-white transition-colors"
+                            className="text-sm font-medium text-slate-400 hover:text-white transition-colors"
                         >
                             {t('nav.documentation')}
                         </a>

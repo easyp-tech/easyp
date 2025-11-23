@@ -136,8 +136,8 @@ export default function FeatureSwitcher() {
                                         <div className="pl-8 text-slate-300">- STANDARD</div>
                                         <div className="pl-8 text-slate-300">- COMMENTS</div>
                                         <div className="text-purple-400 mt-4">breaking:</div>
-                                        <div className="pl-4 text-blue-400">use:</div>
-                                        <div className="pl-8 text-slate-300">- WIRE_JSON</div>
+                                        <div className="pl-4 text-blue-400">ignore:</div>
+                                        <div className="pl-8 text-slate-300">- "proto/alfa/v1"</div>
                                     </div>
                                 ) : (
                                     <div className="space-y-2">

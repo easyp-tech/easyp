@@ -122,3 +122,36 @@ export function isPathActive(itemPath: string | undefined, currentPath: string):
     if (!itemPath) return false
     return currentPath === itemPath || currentPath.startsWith(itemPath + '/')
 }
+
+/**
+ * Returns the previous and next navigation items for the current path
+ */
+export function getPrevNext(
+    config: SidebarConfig,
+    currentPath: string
+): { prev: SidebarItem | null; next: SidebarItem | null } {
+    const flatItems: SidebarItem[] = []
+
+    function flatten(items: SidebarConfig) {
+        for (const item of items) {
+            if (item.path) {
+                flatItems.push(item)
+            }
+            if (item.children) {
+                flatten(item.children)
+            }
+        }
+    }
+
+    flatten(config)
+
+    const index = flatItems.findIndex(item => item.path === currentPath)
+    if (index === -1) {
+        return { prev: null, next: null }
+    }
+
+    return {
+        prev: index > 0 ? flatItems[index - 1] : null,
+        next: index < flatItems.length - 1 ? flatItems[index + 1] : null
+    }
+}
