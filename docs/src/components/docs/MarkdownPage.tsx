@@ -1,8 +1,11 @@
 import { useState, useEffect } from 'react'
-import { useParams } from 'react-router-dom'
+import { useParams, useLocation, Link } from 'react-router-dom'
 import { MarkdownContent } from '../../lib/markdown'
-import { Loader2, AlertCircle } from 'lucide-react'
+import { Loader2, AlertCircle, ChevronLeft, ChevronRight, Github } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
+import DocsHeader from './DocsHeader'
+import { getPrevNext, loadSidebarConfig } from '../../utils/sidebarUtils'
+import type { SidebarItem } from '../../types/sidebar'
 
 interface MarkdownPageProps {
     path?: string
@@ -16,10 +19,16 @@ export default function MarkdownPage({ path }: MarkdownPageProps) {
         section?: string;
         page?: string
     }>()
+    const location = useLocation()
     const { i18n } = useTranslation()
     const [content, setContent] = useState<string>('')
     const [isLoading, setIsLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
+    const [activeFilePath, setActiveFilePath] = useState<string>('')
+    const [prevNext, setPrevNext] = useState<{ prev: SidebarItem | null; next: SidebarItem | null }>({
+        prev: null,
+        next: null
+    })
 
     useEffect(() => {
         const loadMarkdown = async () => {
@@ -101,6 +110,14 @@ export default function MarkdownPage({ path }: MarkdownPageProps) {
                 }
 
                 setContent(text)
+                // Store the path that was actually loaded (relative to docs root)
+                // We strip /docs/ prefix if present in the url, but here we want the file path
+                // For the edit link, we'll use the candidate that worked, but we need to know which one.
+                // Since we don't track which candidate won easily without refactoring, 
+                // let's just use the logic that if it's English, it's guide/..., if Russian, it's ru-guide/...
+                // This is an approximation for the "Edit on GitHub" link.
+                const effectiveLangRoot = i18n.language === 'ru' ? 'ru-guide' : 'guide'
+                setActiveFilePath(`${effectiveLangRoot}/${baseRelative}.md`)
             } catch (err) {
                 console.error('Error loading markdown:', err)
                 setError(err instanceof Error ? err.message : 'An unexpected error occurred')
@@ -110,7 +127,13 @@ export default function MarkdownPage({ path }: MarkdownPageProps) {
         }
 
         loadMarkdown()
-    }, [path, params.category, params.subcategory, params.subsubcategory, params.section, params.page])
+    }, [path, params.category, params.subcategory, params.subsubcategory, params.section, params.page, i18n.language])
+
+    useEffect(() => {
+        const config = loadSidebarConfig()
+        const { prev, next } = getPrevNext(config, location.pathname)
+        setPrevNext({ prev, next })
+    }, [location.pathname])
 
     if (isLoading) {
         return (
@@ -143,17 +166,67 @@ export default function MarkdownPage({ path }: MarkdownPageProps) {
     }
 
     return (
-        <div className="markdown-page">
-            <MarkdownContent
-                content={content}
-                options={{
-                    enableToc: true,
-                    enableCodeFocus: true,
-                    enableHtmlBlocks: true,
-                    enableLinkProcessing: true,
-                    tocDepth: { min: 2, max: 4 }
-                }}
-            />
+        <div className="flex flex-col min-h-screen bg-white dark:bg-gray-950">
+            <DocsHeader />
+
+            <div className="flex-1 w-full max-w-4xl mx-auto px-4 md:px-8 py-8">
+                <MarkdownContent
+                    content={content}
+                    options={{
+                        enableToc: true,
+                        enableCodeFocus: true,
+                        enableHtmlBlocks: true,
+                        enableLinkProcessing: true,
+                        tocDepth: { min: 2, max: 4 }
+                    }}
+                />
+
+                <div className="mt-16 pt-8 border-t border-gray-200 dark:border-gray-800">
+                    <div className="flex justify-end mb-8">
+                        <a
+                            href={`https://github.com/easyp-tech/easyp/edit/main/docs/public/docs/${activeFilePath}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center text-sm text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400 transition-colors"
+                        >
+                            <Github className="w-4 h-4 mr-2" />
+                            Edit this page on GitHub
+                        </a>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                        {prevNext.prev ? (
+                            <Link
+                                to={prevNext.prev.path!}
+                                className="flex flex-col p-4 rounded-lg border border-gray-200 dark:border-gray-800 hover:border-blue-500 dark:hover:border-blue-500 transition-colors group"
+                            >
+                                <span className="text-xs text-gray-500 dark:text-gray-400 mb-1 flex items-center">
+                                    <ChevronLeft className="w-3 h-3 mr-1" />
+                                    Previous
+                                </span>
+                                <span className="font-medium text-blue-600 dark:text-blue-400 group-hover:underline truncate">
+                                    {prevNext.prev.title}
+                                </span>
+                            </Link>
+                        ) : <div />}
+
+                        {prevNext.next && (
+                            <Link
+                                to={prevNext.next.path!}
+                                className="flex flex-col items-end p-4 rounded-lg border border-gray-200 dark:border-gray-800 hover:border-blue-500 dark:hover:border-blue-500 transition-colors group"
+                            >
+                                <span className="text-xs text-gray-500 dark:text-gray-400 mb-1 flex items-center">
+                                    Next
+                                    <ChevronRight className="w-3 h-3 ml-1" />
+                                </span>
+                                <span className="font-medium text-blue-600 dark:text-blue-400 group-hover:underline truncate">
+                                    {prevNext.next.title}
+                                </span>
+                            </Link>
+                        )}
+                    </div>
+                </div>
+            </div>
         </div>
     )
 }
