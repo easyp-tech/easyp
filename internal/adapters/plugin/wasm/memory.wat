@@ -1,0 +1,1 @@
+(module (memory (export "memory") 8 65536 shared))
