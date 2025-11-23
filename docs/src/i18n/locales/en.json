@@ -1,0 +1,100 @@
+{
+  "nav": {
+    "features": "Features",
+    "registry": "Registry",
+    "enterprise": "Enterprise",
+    "documentation": "Docs",
+    "github": "GitHub",
+    "sponsor": "Sponsor",
+    "getStarted": "Get Started"
+  },
+  "hero": {
+    "badge": {
+      "beta": "Beta",
+      "license": "Apache 2.0 License"
+    },
+    "title": "The Modern Standard for",
+    "titleHighlight": "Protobuf Workflows",
+    "subtitle": "A unified Git-native toolkit for linting, code generation, and dependency management. Fully Open Source.",
+    "exploreDocs": "Explore Documentation"
+  },
+  "trustedBy": {
+    "title": "Trusted by engineering teams at"
+  },
+  "features": {
+    "title": "Two modes.",
+    "titleHighlight": "One platform.",
+    "subtitle": "EasyP combines a developer-friendly CLI with a powerful remote execution engine.",
+    "localDev": "Local Development",
+    "remoteInfra": "Remote Infrastructure",
+    "cli": {
+      "title": "Supercharge your workflow",
+      "description": "All tools in a single binary. Linting, formatting, and breaking change detection work instantly.",
+      "packageManager": {
+        "title": "Package Manager",
+        "desc": "Version management via easyp.lock. Like npm, but for Protobuf."
+      },
+      "linting": {
+        "title": "Instant Linting",
+        "desc": "100% compatibility with Buf rules"
+      },
+      "apiSafety": {
+        "title": "API Safety",
+        "desc": "Backward compatibility checks in CI"
+      }
+    },
+    "server": {
+      "title": "Your infrastructure, your rules",
+      "description": "Forget \"works on my machine\" problems. Centralized generation server guarantees identical results for the entire team.",
+      "dockerNative": {
+        "title": "Docker Native",
+        "desc": "Run any plugins (Java, Python, Node) in containers"
+      },
+      "airGap": {
+        "title": "Air-Gap Ready",
+        "desc": "Works in completely isolated environments"
+      },
+      "costEffective": {
+        "title": "Cost Effective",
+        "desc": "Pay for infrastructure, not per user"
+      }
+    }
+  },
+  "architecture": {
+    "title": "Why EasyP is the smarter choice",
+    "subtitle": "A fundamental shift in how you manage Protobuf infrastructure.",
+    "dataSovereignty": {
+      "title": "Data Sovereignty",
+      "description": "Unlike SaaS solutions where schemas live in the cloud, EasyP is <strong>Git-Native</strong>. Your data never leaves your secure repositories."
+    },
+    "hybridRuntime": {
+      "title": "Hybrid Runtime",
+      "description": "Don't choose between speed and compatibility. EasyP uses <strong>Wasm</strong> for speed and <strong>Docker</strong> for heavy plugins."
+    },
+    "noVendorLock": {
+      "title": "No Vendor Lock-in",
+      "description": "The entire platform is <strong>Open Source</strong> (Apache 2.0). Host the server yourself, anywhere. No per-user pricing tax."
+    }
+  },
+  "footer": {
+    "description": "The open-source standard for Protobuf workflows. Built for modern engineering teams.",
+    "product": {
+      "title": "Product",
+      "cliTool": "CLI Tool",
+      "apiService": "API Service",
+      "registry": "Registry",
+      "documentation": "Documentation",
+      "enterprise": "Enterprise"
+    },
+    "community": {
+      "title": "Community",
+      "github": "GitHub",
+      "telegram": "Telegram",
+      "youtube": "YouTube"
+    },
+    "rights": "© 2025 EasyP Tech. All rights reserved.",
+    "privacy": "Privacy",
+    "terms": "Terms",
+    "license": "Licensed under Apache 2.0"
+  }
+}

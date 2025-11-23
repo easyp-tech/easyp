@@ -1,0 +1,681 @@
+<!DOCTYPE html>
+<html lang="ru" class="dark">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EasyP | Modern Protobuf Toolkit</title>
+
+    <!-- React & ReactDOM -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+
+    <!-- Babel -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <!-- Fonts -->
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
+        rel="stylesheet">
+
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    },
+                    colors: {
+                        // Modern Palette based on Slate
+                        background: '#020617', // Slate 950
+                        surface: '#0f172a',    // Slate 900
+                        surfaceHighlight: '#1e293b', // Slate 800
+                        border: '#334155',     // Slate 700
+                        primary: '#3b82f6',    // Blue 500
+                        primaryGlow: '#60a5fa', // Blue 400
+                        secondary: '#8b5cf6',  // Violet 500
+                    },
+                    animation: {
+                        'float': 'float 6s ease-in-out infinite',
+                        'fade-in-up': 'fadeInUp 0.8s ease-out forwards',
+                    },
+                    keyframes: {
+                        float: {
+                            '0%, 100%': { transform: 'translateY(0)' },
+                            '50%': { transform: 'translateY(-20px)' },
+                        },
+                        fadeInUp: {
+                            '0%': { opacity: '0', transform: 'translateY(20px)' },
+                            '100%': { opacity: '1', transform: 'translateY(0)' },
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body {
+            background-color: #020617;
+            color: #e2e8f0;
+        }
+
+        /* Smooth Gradients */
+        .bg-glow-gradient {
+            background: radial-gradient(circle at center, rgba(59, 130, 246, 0.15) 0%, transparent 70%);
+        }
+
+        .text-gradient {
+            background: linear-gradient(to right, #60a5fa, #a78bfa);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        /* Glassmorphism */
+        .glass-panel {
+            background: rgba(15, 23, 42, 0.6);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #020617;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #334155;
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #475569;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useRef } = React;
+
+        // Helper to create Lucide icons
+        const createLucideIcon = (iconName) => ({ size = 20, className, ...props }) => {
+            const iconData = lucide.icons[iconName];
+            if (!iconData) return null;
+            return (
+                <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width={size}
+                    height={size}
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    className={className}
+                    {...props}
+                >
+                    {iconData.map((child, index) => {
+                        const [tagName, attrs] = child;
+                        return React.createElement(tagName, { ...attrs, key: index });
+                    })}
+                </svg>
+            );
+        };
+
+        const TerminalIcon = createLucideIcon('Terminal');
+        const ServerIcon = createLucideIcon('Server');
+        const ZapIcon = createLucideIcon('Zap');
+        const BoxIcon = createLucideIcon('Box');
+        const ShieldIcon = createLucideIcon('Shield');
+        const CheckCircleIcon = createLucideIcon('CheckCircle');
+        const ArrowRightIcon = createLucideIcon('ArrowRight');
+        const CopyIcon = createLucideIcon('Copy');
+        const ChevronRightIcon = createLucideIcon('ChevronRight');
+        const ChevronDownIcon = createLucideIcon('ChevronDown');
+        const GlobeIcon = createLucideIcon('Globe');
+        const GithubIcon = createLucideIcon('Github');
+        const CodeIcon = createLucideIcon('Code');
+        const LayersIcon = createLucideIcon('Layers');
+        const LockIcon = createLucideIcon('Lock');
+        const SearchIcon = createLucideIcon('Search');
+        const HeartIcon = createLucideIcon('Heart');
+        const PackageIcon = createLucideIcon('Package');
+        const BookOpenIcon = createLucideIcon('BookOpen');
+
+        // --- COMPONENTS ---
+
+        const Navbar = () => (
+            <nav className="fixed top-0 w-full z-50 glass-panel border-b-0 border-white/5">
+                <div className="max-w-7xl mx-auto px-6">
+                    <div className="flex items-center justify-between h-16">
+                        {/* Logo */}
+                        <div className="flex items-center gap-2 cursor-pointer">
+                            <div className="w-8 h-8 bg-primary/20 rounded-lg flex items-center justify-center border border-primary/30">
+                                <span className="font-bold text-primary">E</span>
+                            </div>
+                            <span className="font-semibold text-lg tracking-tight text-white">EasyP</span>
+                        </div>
+
+                        {/* Links */}
+                        <div className="hidden md:flex items-center space-x-8 text-sm font-medium text-slate-400">
+                            <a href="#features" className="hover:text-white transition-colors">Features</a>
+                            <a href="#registry" className="hover:text-white transition-colors">Registry</a>
+                            <a href="#enterprise" className="hover:text-white transition-colors">Enterprise</a>
+                            <a href="https://github.com" className="hover:text-white transition-colors flex items-center gap-2">
+                                <CodeIcon size={16} /> GitHub
+                            </a>
+                        </div>
+
+                        {/* CTA */}
+                        <div className="flex items-center gap-4">
+                            <a href="#" className="hidden sm:flex items-center gap-2 text-sm font-medium text-slate-400 hover:text-pink-400 transition-colors">
+                                <HeartIcon size={16} /> Sponsor
+                            </a>
+                            <button className="bg-white text-black px-4 py-2 rounded-full text-sm font-semibold hover:bg-slate-200 transition-all shadow-lg shadow-white/10">
+                                Get Started
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </nav>
+        );
+
+        const Hero = () => {
+            const [installMethod, setInstallMethod] = useState('brew');
+            const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+            const dropdownRef = useRef(null);
+
+            // Auto-detect OS on mount
+            useEffect(() => {
+                const platform = navigator.platform.toLowerCase();
+                const userAgent = navigator.userAgent.toLowerCase();
+
+                if (platform.includes('mac') || userAgent.includes('mac')) {
+                    setInstallMethod('brew');
+                } else if (platform.includes('linux') || userAgent.includes('linux') || platform.includes('win') || userAgent.includes('win')) {
+                    setInstallMethod('go');
+                } else {
+                    setInstallMethod('go');
+                }
+
+                const handleClickOutside = (event) => {
+                    if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+                        setIsDropdownOpen(false);
+                    }
+                };
+                document.addEventListener('mousedown', handleClickOutside);
+                return () => document.removeEventListener('mousedown', handleClickOutside);
+            }, []);
+
+            const installOptions = [
+                { id: 'brew', label: 'Brew', fullLabel: 'macOS (Homebrew)', cmd: 'brew install easyp-tech/tap/easyp' },
+                { id: 'go', label: 'Go', fullLabel: 'Go Install (Any OS)', cmd: 'go install github.com/easyp-tech/easyp/cmd/easyp@latest' },
+                { id: 'docker', label: 'Docker', fullLabel: 'Docker', cmd: 'docker pull easyp/easyp:latest' }
+            ];
+
+            const activeOption = installOptions.find(o => o.id === installMethod) || installOptions[0];
+
+            return (
+                <section className="relative pt-32 pb-20 lg:pt-48 lg:pb-32 overflow-hidden">
+                    {/* Ambient Background */}
+                    <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[1000px] h-[600px] bg-primary/20 rounded-full blur-[120px] opacity-30 pointer-events-none"></div>
+
+                    <div className="max-w-7xl mx-auto px-6 relative z-10">
+                        <div className="flex flex-col items-center text-center mb-16">
+
+                            <div className="flex gap-3 mb-8 animate-fade-in-up">
+                                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-slate-800/50 border border-slate-700/50 text-primary text-xs font-medium">
+                                    <span className="relative flex h-2 w-2">
+                                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
+                                        <span className="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
+                                    </span>
+                                    v1.0 Beta
+                                </div>
+                                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-slate-800/50 border border-slate-700/50 text-slate-300 text-xs font-medium">
+                                    <ShieldIcon size={12} className="text-emerald-400" />
+                                    Apache 2.0 License
+                                </div>
+                            </div>
+
+                            <h1 className="text-5xl lg:text-7xl font-bold text-white tracking-tight leading-[1.1] mb-6 max-w-4xl animate-fade-in-up [animation-delay:100ms]">
+                                The Modern Standard for <br />
+                                <span className="text-gradient">Protobuf Workflows</span>
+                            </h1>
+
+                            <p className="text-lg text-slate-400 max-w-2xl mb-10 leading-relaxed animate-fade-in-up [animation-delay:200ms]">
+                                Единый Git-native инструментарий для линтинга, генерации кода и управления зависимостями.
+                                Полностью Open Source. Суверенно.
+                            </p>
+
+                            <div className="flex flex-col sm:flex-row items-center gap-4 animate-fade-in-up [animation-delay:300ms] w-full max-w-2xl relative z-20">
+
+                                {/* Install Box with Integrated Dropdown */}
+                                <div className="relative w-full sm:w-auto flex-grow group" ref={dropdownRef}>
+                                    <div className="flex items-center bg-slate-900 border border-slate-800 rounded-xl px-1 py-1 pr-2 shadow-xl w-full group-hover:border-slate-600 transition-colors">
+
+                                        {/* Trigger Button */}
+                                        <button
+                                            onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                                            className="flex items-center gap-2 text-slate-300 hover:text-white hover:bg-slate-800 transition-all text-sm font-medium px-3 py-2 rounded-lg shrink-0 border-r border-slate-800/50 mr-2"
+                                            title="Select installation method"
+                                        >
+                                            <span>{activeOption.label}</span>
+                                            <ChevronDownIcon size={14} className={`text-slate-500 transition-transform duration-200 ${isDropdownOpen ? 'rotate-180' : ''}`} />
+                                        </button>
+
+                                        {/* Command Code */}
+                                        <div className="flex-grow overflow-hidden flex items-center">
+                                            <ChevronRightIcon size={14} className="text-slate-600 mr-2 shrink-0" />
+                                            <code className="font-mono text-sm text-slate-300 whitespace-nowrap overflow-x-auto no-scrollbar block selection:bg-primary/30 selection:text-white">
+                                                {activeOption.cmd}
+                                            </code>
+                                        </div>
+
+                                        {/* Copy Button */}
+                                        <button
+                                            className="p-2 hover:bg-slate-800 rounded-lg transition-colors text-slate-500 hover:text-white shrink-0 ml-2"
+                                            title="Copy to clipboard"
+                                            onClick={() => navigator.clipboard.writeText(activeOption.cmd)}
+                                        >
+                                            <CopyIcon size={16} />
+                                        </button>
+                                    </div>
+
+                                    {/* Dropdown Menu */}
+                                    {isDropdownOpen && (
+                                        <div className="absolute top-full left-0 mt-2 w-64 bg-slate-900 border border-slate-800 rounded-xl shadow-2xl overflow-hidden animate-fade-in-up z-30">
+                                            <div className="py-1">
+                                                {installOptions.map(opt => (
+                                                    <button
+                                                        key={opt.id}
+                                                        onClick={() => {
+                                                            setInstallMethod(opt.id);
+                                                            setIsDropdownOpen(false);
+                                                        }}
+                                                        className={`w-full text-left px-4 py-3 text-sm transition-colors flex items-center justify-between group ${installMethod === opt.id ? 'bg-primary/10' : 'hover:bg-slate-800'}`}
+                                                    >
+                                                        <span className={`${installMethod === opt.id ? 'text-primary font-medium' : 'text-slate-300 group-hover:text-white'}`}>
+                                                            {opt.fullLabel}
+                                                        </span>
+                                                        {installMethod === opt.id && <CheckCircleIcon size={16} className="text-primary" />}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* Explore Docs Button (Reverted to original style) */}
+                                <button className="w-full sm:w-auto px-6 py-3 rounded-full bg-primary/10 text-primary font-medium hover:bg-primary/20 transition-colors border border-primary/20 whitespace-nowrap">
+                                    Explore Documentation
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Hero Image / Visual */}
+                        <div className="relative max-w-5xl mx-auto rounded-xl border border-slate-800 bg-slate-950/80 shadow-2xl shadow-primary/10 overflow-hidden animate-fade-in-up [animation-delay:500ms]">
+                            <div className="flex items-center px-4 py-3 border-b border-slate-800 bg-slate-900/50 gap-2">
+                                <div className="w-3 h-3 rounded-full bg-slate-700"></div>
+                                <div className="w-3 h-3 rounded-full bg-slate-700"></div>
+                                <div className="w-3 h-3 rounded-full bg-slate-700"></div>
+                                <div className="ml-4 text-xs text-slate-500 font-mono">easyp — zsh</div>
+                            </div>
+                            <div className="p-6 sm:p-10 font-mono text-sm sm:text-base leading-loose">
+                                <div className="flex items-start gap-2">
+                                    <span className="text-primary font-bold">➜</span>
+                                    <span className="text-slate-300">easyp generate --remote</span>
+                                </div>
+                                <div className="text-slate-400 mt-2 pl-4 border-l-2 border-slate-800">
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-emerald-400">✔</span>
+                                        <span>Resolving dependencies from <span className="text-slate-300 underline decoration-slate-700">easyp.lock</span>...</span>
+                                    </div>
+                                    <div className="flex items-center gap-2 mt-1">
+                                        <span className="text-emerald-400">✔</span>
+                                        <span>Connecting to EasyP Service... <span className="text-xs bg-emerald-500/10 text-emerald-400 px-1.5 py-0.5 rounded">Connected</span></span>
+                                    </div>
+                                    <div className="mt-2">
+                                        <span className="text-blue-400">[INFO]</span> Dispatching plugins:
+                                        <div className="pl-4 mt-1 text-slate-500">
+                                            ├─ protoc-gen-go (v1.31) <span className="text-xs border border-slate-700 px-1 rounded text-slate-400">WASM</span><br />
+                                            └─ custom-java-gen (v2.0) <span className="text-xs border border-slate-700 px-1 rounded text-slate-400">DOCKER</span>
+                                        </div>
+                                    </div>
+                                    <div className="mt-2 text-slate-300">
+                                        ✨ Generation complete in <span className="text-primary">420ms</span>.
+                                    </div>
+                                </div>
+                                <div className="flex items-start gap-2 mt-4 animate-pulse">
+                                    <span className="text-primary font-bold">➜</span>
+                                    <span className="w-2 h-5 bg-slate-500 inline-block align-middle"></span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            );
+        };
+
+        // ... existing code for TrustedBy, FeatureSwitcher, ArchitectureComparison, RegistryPreview, Footer ...
+
+        const TrustedBy = () => (
+            <section className="py-12 border-y border-white/5 bg-slate-900/30">
+                <div className="max-w-7xl mx-auto px-6 text-center">
+                    <p className="text-sm font-medium text-slate-500 mb-8 uppercase tracking-wider">Trusted by engineering teams at</p>
+                    <div className="flex flex-wrap justify-center items-center gap-12 opacity-40 grayscale hover:grayscale-0 hover:opacity-100 transition-all duration-500">
+                        {/* Simple text placeholders for logos for clean look */}
+                        {['ACME Corp', 'TechFlow', 'DataSystems', 'CloudScale', 'DevCore'].map(name => (
+                            <span key={name} className="text-xl font-bold text-white cursor-default">{name}</span>
+                        ))}
+                    </div>
+                </div>
+            </section>
+        );
+
+        const FeatureSwitcher = () => {
+            const [activeTab, setActiveTab] = useState('cli');
+
+            return (
+                <section id="features" className="py-32 bg-background relative">
+                    <div className="max-w-7xl mx-auto px-6">
+                        <div className="text-center mb-16">
+                            <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
+                                Two modes. <span className="text-primary">One platform.</span>
+                            </h2>
+                            <p className="text-slate-400 text-lg max-w-2xl mx-auto">
+                                EasyP combines a developer-friendly CLI with a powerful remote execution engine.
+                            </p>
+                        </div>
+
+                        {/* Toggle */}
+                        <div className="flex justify-center mb-16">
+                            <div className="bg-slate-900 p-1.5 rounded-full border border-slate-800 inline-flex shadow-inner">
+                                <button
+                                    onClick={() => setActiveTab('cli')}
+                                    className={`px-8 py-2.5 rounded-full text-sm font-medium transition-all duration-300 ${activeTab === 'cli' ? 'bg-white text-black shadow-lg' : 'text-slate-400 hover:text-white'}`}
+                                >
+                                    Local Development
+                                </button>
+                                <button
+                                    onClick={() => setActiveTab('server')}
+                                    className={`px-8 py-2.5 rounded-full text-sm font-medium transition-all duration-300 ${activeTab === 'server' ? 'bg-white text-black shadow-lg' : 'text-slate-400 hover:text-white'}`}
+                                >
+                                    Remote Infrastructure
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Content Area */}
+                        <div className="grid lg:grid-cols-2 gap-12 items-center">
+
+                            {/* Left Text */}
+                            <div className="space-y-8">
+                                {activeTab === 'cli' ? (
+                                    <div className="animate-fade-in-up">
+                                        <h3 className="text-2xl font-semibold text-white mb-4">Supercharge your workflow</h3>
+                                        <p className="text-slate-400 text-lg leading-relaxed mb-8">
+                                            Все инструменты в одном бинарнике. Линтинг, форматирование и детекция breaking changes работают мгновенно.
+                                        </p>
+                                        <ul className="space-y-4">
+                                            {[
+                                                { title: 'Package Manager', desc: 'Управление версиями через easyp.lock. Как npm, но для Protobuf.' },
+                                                { title: 'Instant Linting', desc: '100% совместимость с правилами Buf' },
+                                                { title: 'API Safety', desc: 'Проверка обратной совместимости в CI' }
+                                            ].map((item, i) => (
+                                                <li key={i} className="flex gap-4">
+                                                    <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center shrink-0 text-primary mt-1">
+                                                        {i === 0 ? <PackageIcon size={14} /> : <CheckCircleIcon size={14} />}
+                                                    </div>
+                                                    <div>
+                                                        <h4 className="text-white font-medium">{item.title}</h4>
+                                                        <p className="text-sm text-slate-500">{item.desc}</p>
+                                                    </div>
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    </div>
+                                ) : (
+                                    <div className="animate-fade-in-up">
+                                        <h3 className="text-2xl font-semibold text-white mb-4">Your infrastructure, your rules</h3>
+                                        <p className="text-slate-400 text-lg leading-relaxed mb-8">
+                                            Забудьте о проблеме "works on my machine". Централизованный сервер генерации гарантирует идентичный результат для всей команды.
+                                        </p>
+                                        <ul className="space-y-4">
+                                            {[
+                                                { title: 'Docker Native', desc: 'Запуск любых плагинов (Java, Python, Node) в контейнерах' },
+                                                { title: 'Air-Gap Ready', desc: 'Работает в полностью изолированных контурах' },
+                                                { title: 'Cost Effective', desc: 'Платите за инфраструктуру, а не за пользователей' }
+                                            ].map((item, i) => (
+                                                <li key={i} className="flex gap-4">
+                                                    <div className="w-6 h-6 rounded-full bg-secondary/10 flex items-center justify-center shrink-0 text-secondary mt-1">
+                                                        <ShieldIcon size={14} />
+                                                    </div>
+                                                    <div>
+                                                        <h4 className="text-white font-medium">{item.title}</h4>
+                                                        <p className="text-sm text-slate-500">{item.desc}</p>
+                                                    </div>
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Right Visual */}
+                            <div className="relative group">
+                                <div className="absolute -inset-1 bg-gradient-to-r from-primary to-secondary rounded-2xl blur opacity-20 group-hover:opacity-40 transition duration-1000 group-hover:duration-200"></div>
+                                <div className="relative rounded-xl bg-slate-900 border border-slate-800 overflow-hidden shadow-2xl h-[400px] flex flex-col">
+                                    <div className="flex items-center px-4 py-3 border-b border-slate-800 bg-slate-900/50 gap-2">
+                                        <div className="w-3 h-3 rounded-full bg-slate-700"></div>
+                                        <div className="w-3 h-3 rounded-full bg-slate-700"></div>
+                                    </div>
+                                    <div className="p-6 font-mono text-sm flex-grow overflow-hidden">
+                                        {activeTab === 'cli' ? (
+                                            <div className="space-y-2">
+                                                <div className="text-slate-400"># easyp.yaml configuration</div>
+                                                <div className="text-purple-400">version: <span className="text-green-400">v1</span></div>
+                                                <div className="text-purple-400">deps:</div>
+                                                <div className="pl-4 text-slate-300">- github.com/googleapis/googleapis@v1.0</div>
+                                                <div className="text-purple-400 mt-2">lint:</div>
+                                                <div className="pl-4 text-blue-400">use:</div>
+                                                <div className="pl-8 text-slate-300">- STANDARD</div>
+                                                <div className="pl-8 text-slate-300">- COMMENTS</div>
+                                                <div className="text-purple-400 mt-4">breaking:</div>
+                                                <div className="pl-4 text-blue-400">use:</div>
+                                                <div className="pl-8 text-slate-300">- WIRE_JSON</div>
+                                            </div>
+                                        ) : (
+                                            <div className="space-y-2">
+                                                <div className="text-slate-400"># Server Infrastructure</div>
+                                                <div className="flex items-center gap-2 py-2 border-b border-slate-800/50">
+                                                    <BoxIcon size={16} className="text-blue-400" />
+                                                    <span className="text-slate-200">EasyP Service</span>
+                                                    <span className="ml-auto text-xs bg-green-500/10 text-green-500 px-2 rounded-full">Healthy</span>
+                                                </div>
+                                                <div className="pl-4 border-l border-slate-800 space-y-3 mt-3">
+                                                    <div className="flex items-center gap-2">
+                                                        <div className="w-2 h-2 bg-slate-600 rounded-full"></div>
+                                                        <span className="text-slate-400">Registry:</span>
+                                                        <span className="text-slate-200">Local Docker</span>
+                                                    </div>
+                                                    <div className="flex items-center gap-2">
+                                                        <div className="w-2 h-2 bg-slate-600 rounded-full"></div>
+                                                        <span className="text-slate-400">Plugins:</span>
+                                                        <span className="text-slate-200">14 Loaded</span>
+                                                    </div>
+                                                    <div className="flex items-center gap-2">
+                                                        <div className="w-2 h-2 bg-slate-600 rounded-full"></div>
+                                                        <span className="text-slate-400">Uptime:</span>
+                                                        <span className="text-slate-200">42d 12h</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            );
+        };
+
+        const ArchitectureComparison = () => (
+            <section className="py-24 border-y border-white/5 bg-slate-900/20">
+                <div className="max-w-5xl mx-auto px-6">
+                    <div className="text-center mb-16">
+                        <h2 className="text-3xl font-bold text-white">Why EasyP is the smarter choice</h2>
+                        <p className="text-slate-400 mt-4">A fundamental shift in how you manage Protobuf infrastructure.</p>
+                    </div>
+
+                    <div className="grid md:grid-cols-3 gap-8">
+                        {/* Card 1 */}
+                        <div className="glass-panel p-8 rounded-2xl hover:border-primary/30 transition-colors group">
+                            <div className="w-12 h-12 bg-blue-500/10 rounded-lg flex items-center justify-center text-blue-400 mb-6 group-hover:scale-110 transition-transform">
+                                <GlobeIcon size={24} />
+                            </div>
+                            <h3 className="text-xl font-semibold text-white mb-3">Data Sovereignty</h3>
+                            <p className="text-slate-400 text-sm leading-relaxed">
+                                Unlike SaaS solutions where schemas live in the cloud, EasyP is <strong>Git-Native</strong>. Your data never leaves your secure repositories.
+                            </p>
+                        </div>
+
+                        {/* Card 2 */}
+                        <div className="glass-panel p-8 rounded-2xl hover:border-secondary/30 transition-colors group">
+                            <div className="w-12 h-12 bg-violet-500/10 rounded-lg flex items-center justify-center text-violet-400 mb-6 group-hover:scale-110 transition-transform">
+                                <LayersIcon size={24} />
+                            </div>
+                            <h3 className="text-xl font-semibold text-white mb-3">Hybrid Runtime</h3>
+                            <p className="text-slate-400 text-sm leading-relaxed">
+                                Don't choose between speed and compatibility. EasyP uses <strong>Wasm</strong> for speed and <strong>Docker</strong> for heavy plugins.
+                            </p>
+                        </div>
+
+                        {/* Card 3 */}
+                        <div className="glass-panel p-8 rounded-2xl hover:border-emerald-500/30 transition-colors group">
+                            <div className="w-12 h-12 bg-emerald-500/10 rounded-lg flex items-center justify-center text-emerald-400 mb-6 group-hover:scale-110 transition-transform">
+                                <LockIcon size={24} />
+                            </div>
+                            <h3 className="text-xl font-semibold text-white mb-3">No Vendor Lock-in</h3>
+                            <p className="text-slate-400 text-sm leading-relaxed">
+                                The entire platform is <strong>Open Source</strong> (Apache 2.0). Host the server yourself, anywhere. No per-user pricing tax.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        );
+
+        const RegistryPreview = () => (
+            <section id="registry" className="py-24 relative overflow-hidden">
+                <div className="max-w-7xl mx-auto px-6">
+                    <div className="flex items-center justify-between mb-12">
+                        <h2 className="text-2xl font-bold text-white">Plugin Registry</h2>
+                        <a href="#" className="text-sm text-primary hover:text-primaryGlow flex items-center gap-1">
+                            View all <ArrowRightIcon size={14} />
+                        </a>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                        {[
+                            { name: 'Go', version: 'v1.36.0', type: 'Official' },
+                            { name: 'Python', version: 'v4.24.0', type: 'Docker' },
+                            { name: 'Java', version: 'v3.21.0', type: 'Community' },
+                            { name: 'TypeScript', version: 'v1.12.0', type: 'Wasm' },
+                        ].map((plugin, i) => (
+                            <div key={i} className="bg-slate-900 border border-slate-800 p-6 rounded-xl hover:border-slate-600 transition-all cursor-pointer group">
+                                <div className="flex justify-between items-start mb-4">
+                                    <div className="w-10 h-10 bg-slate-800 rounded flex items-center justify-center text-lg font-bold text-white group-hover:bg-white group-hover:text-black transition-colors">
+                                        {plugin.name[0]}
+                                    </div>
+                                    <span className="text-xs font-mono text-slate-500 bg-slate-950 px-2 py-1 rounded border border-slate-800">
+                                        {plugin.type}
+                                    </span>
+                                </div>
+                                <h4 className="text-white font-medium mb-1">{plugin.name}</h4>
+                                <p className="text-xs text-slate-500 font-mono">{plugin.version}</p>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            </section>
+        );
+
+        const Footer = () => (
+            <footer className="bg-slate-950 border-t border-slate-800 py-16">
+                <div className="max-w-7xl mx-auto px-6">
+                    <div className="grid md:grid-cols-4 gap-12">
+                        <div className="col-span-2">
+                            <div className="flex items-center gap-2 mb-6">
+                                <div className="w-6 h-6 bg-primary/20 rounded flex items-center justify-center text-primary text-xs font-bold">E</div>
+                                <span className="font-bold text-white">EasyP</span>
+                            </div>
+                            <p className="text-slate-400 text-sm max-w-xs leading-relaxed mb-4">
+                                The sovereign, open-source standard for Protobuf workflows. Built for modern engineering teams.
+                            </p>
+                            <div className="flex items-center gap-2 text-xs text-slate-500">
+                                <ShieldIcon size={12} /> Licensed under Apache 2.0
+                            </div>
+                        </div>
+                        <div>
+                            <h4 className="text-white font-medium mb-4">Product</h4>
+                            <ul className="space-y-3 text-sm text-slate-400">
+                                <li><a href="#" className="hover:text-primary">CLI Tool</a></li>
+                                <li><a href="#" className="hover:text-primary">API Service</a></li>
+                                <li><a href="#" className="hover:text-primary">Registry</a></li>
+                                <li><a href="#" className="hover:text-primary">Enterprise</a></li>
+                            </ul>
+                        </div>
+                        <div>
+                            <h4 className="text-white font-medium mb-4">Community</h4>
+                            <ul className="space-y-3 text-sm text-slate-400">
+                                <li><a href="#" className="hover:text-primary">GitHub</a></li>
+                                <li><a href="#" className="hover:text-primary">Telegram</a></li>
+                                <li><a href="#" className="hover:text-primary">Documentation</a></li>
+                            </ul>
+                        </div>
+                    </div>
+                    <div className="border-t border-slate-800 mt-16 pt-8 flex flex-col md:flex-row justify-between items-center text-xs text-slate-600">
+                        <p>&copy; 2025 EasyP Tech. All rights reserved.</p>
+                        <div className="flex gap-6 mt-4 md:mt-0">
+                            <a href="#" className="hover:text-slate-400">Privacy</a>
+                            <a href="#" className="hover:text-slate-400">Terms</a>
+                        </div>
+                    </div>
+                </div>
+            </footer>
+        );
+
+        const App = () => (
+            <div className="min-h-screen bg-background text-slate-200 font-sans selection:bg-primary/30">
+                <Navbar />
+                <Hero />
+                <TrustedBy />
+                <FeatureSwitcher />
+                <ArchitectureComparison />
+                <RegistryPreview />
+                <Footer />
+            </div>
+        );
+
+        ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+    </script>
+</body>
+
+</html>
