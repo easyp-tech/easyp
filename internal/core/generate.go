@@ -137,8 +137,6 @@ func (c *Core) Generate(ctx context.Context, root, directory string) error {
 		}
 	}
 
-	//q.Imports = append(q.Imports, "/tmp/easyp/mod/github.com/svgrafov/test-proto/v0.0.0-20251031101008-f12c7ed5e68548f8f49883482b48a1f70d39f626/proto")
-
 	c.logger.DebugContext(ctx, "data", "import", q.Imports, "files", q.Files)
 
 	compiler := protocompile.Compiler{
