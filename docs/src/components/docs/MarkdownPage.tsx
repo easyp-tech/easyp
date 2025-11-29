@@ -71,30 +71,42 @@ export default function MarkdownPage({ path }: MarkdownPageProps) {
                 };
 
                 // Determine language-specific root directory and normalize relative path
-                // filePath at this point is like "guide/introduction/what-is" or "introduction/what-is"
+                // filePath at this point is like "guide/introduction/what-is" or "introduction/what-is" or "blog/finally-give-up-gin-echo"
                 const normalizeBase = (fp: string): string => {
                     if (fp.startsWith('guide/')) return fp.slice('guide/'.length)
                     if (fp.startsWith('ru-guide/')) return fp.slice('ru-guide/'.length)
+                    if (fp.startsWith('blog/')) return fp.slice('blog/'.length)
                     return fp
                 }
 
                 const baseRelative = normalizeBase(filePath)
-                const langRoot = i18n.language === 'ru' ? 'ru-guide' : 'guide'
+
+                // Check if this is a blog path
+                const isBlogPath = filePath.startsWith('blog/')
 
                 // Build candidate paths in priority order:
-                // 1. Language-specific path (ru-guide/...)
-                // 2. English fallback (guide/...)
-                const candidates = [
-                    `/docs/${langRoot}/${baseRelative}.md`,
-                    `/docs/guide/${baseRelative}.md`
-                ]
+                let candidates: string[] = []
 
-                // Support nested structure variant: /path/to/page/page.md
-                if (params.page) {
-                    candidates.push(
-                        `/docs/${langRoot}/${baseRelative}/${params.page}.md`,
-                        `/docs/guide/${baseRelative}/${params.page}.md`
-                    )
+                if (isBlogPath) {
+                    // For blog posts, only check the blog directory
+                    candidates = [`/docs/blog/${baseRelative}.md`]
+                } else {
+                    // For regular docs:
+                    // 1. Language-specific path (ru-guide/...)
+                    // 2. English fallback (guide/...)
+                    const langRoot = i18n.language === 'ru' ? 'ru-guide' : 'guide'
+                    candidates = [
+                        `/docs/${langRoot}/${baseRelative}.md`,
+                        `/docs/guide/${baseRelative}.md`
+                    ]
+
+                    // Support nested structure variant: /path/to/page/page.md
+                    if (params.page) {
+                        candidates.push(
+                            `/docs/${langRoot}/${baseRelative}/${params.page}.md`,
+                            `/docs/guide/${baseRelative}/${params.page}.md`
+                        )
+                    }
                 }
 
                 let text: string | null = null
@@ -111,13 +123,9 @@ export default function MarkdownPage({ path }: MarkdownPageProps) {
 
                 setContent(text)
                 // Store the path that was actually loaded (relative to docs root)
-                // We strip /docs/ prefix if present in the url, but here we want the file path
-                // For the edit link, we'll use the candidate that worked, but we need to know which one.
-                // Since we don't track which candidate won easily without refactoring, 
-                // let's just use the logic that if it's English, it's guide/..., if Russian, it's ru-guide/...
-                // This is an approximation for the "Edit on GitHub" link.
-                const effectiveLangRoot = i18n.language === 'ru' ? 'ru-guide' : 'guide'
-                setActiveFilePath(`${effectiveLangRoot}/${baseRelative}.md`)
+                // For the edit link, we need to know the correct path
+                const effectivePath = isBlogPath ? `blog/${baseRelative}.md` : `${i18n.language === 'ru' ? 'ru-guide' : 'guide'}/${baseRelative}.md`
+                setActiveFilePath(effectivePath)
             } catch (err) {
                 console.error('Error loading markdown:', err)
                 setError(err instanceof Error ? err.message : 'An unexpected error occurred')

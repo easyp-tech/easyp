@@ -71,11 +71,10 @@ easyp --help
 For comprehensive usage information, consult EasyP's [documentation](https://easyp.tech), especially these guides:
 
 * [What is EasyP?](https://easyp.tech/docs/guide/introduction/what-is) - Overview and key concepts
-* [`easyp init`](https://easyp.tech/docs/guide/cli/init) - Project initialization
-* [`easyp lint`](https://easyp.tech/docs/guide/cli/lint) - Code linting and validation
-* [`easyp breaking`](https://easyp.tech/docs/guide/cli/breaking) - Breaking change detection
-* [`easyp mod`](https://easyp.tech/docs/guide/cli/mod) - Package management
-* [`easyp generate`](https://easyp.tech/docs/guide/cli/generate) - Code generation
+* [`easyp lint`](https://easyp.tech/docs/guide/cli/linter/linter) - Code linting and validation
+* [`easyp breaking`](https://easyp.tech/docs/guide/cli/breaking-changes/breaking-changes) - Breaking change detection
+* [`easyp mod`](https://easyp.tech/docs/guide/cli/package-manager/package-manager) - Package management
+* [`easyp generate`](https://easyp.tech/docs/guide/cli/generator/generator) - Code generation
 
 ## Key Features
 
