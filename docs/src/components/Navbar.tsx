@@ -41,6 +41,13 @@ export default function Navbar() {
                         >
                             {t('nav.documentation')}
                         </a>
+
+                        <a
+                            href="/blog"
+                            className="text-sm font-medium text-slate-400 hover:text-white transition-colors"
+                        >
+                            {t('nav.blog')}
+                        </a>
                     </div>
 
                     {/* Spacer */}

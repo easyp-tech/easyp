@@ -196,20 +196,55 @@ export function CodeBlock({
     const codeContent = children.toLowerCase().trim();
     const originalContent = children.trim();
 
-    // Protobuf detection (flexible patterns)
+    // Protobuf detection first (to catch proto files with go_package option)
     if (
       // Explicit protobuf syntax patterns
       /syntax\s*=\s*["']proto[23]?["']/i.test(originalContent) ||
       /import\s+["'][^"']+\.proto["']/i.test(originalContent) ||
       /package\s+[\w.]+;/i.test(originalContent) ||
-      // Common protobuf constructs
-      (codeContent.includes('message ') && /^\s*\w+\s+\w+\s+=\s+\d+;/m.test(originalContent)) ||
-      (codeContent.includes('enum ') && /^\s*\w+\s*=\s*\d+;/m.test(originalContent)) ||
-      (codeContent.includes('service ') && codeContent.includes('rpc ')) ||
+      // Proto options (like go_package)
+      /^\s*option\s+\w+/m.test(originalContent) ||
+      // Common protobuf constructs (more strict patterns)
+      (/^\s*message\s+\w+\s*\{/m.test(originalContent) && /^\s*\w+\s+\w+\s*=\s*\d+;/m.test(originalContent)) ||
+      (/^\s*enum\s+\w+\s*\{/m.test(originalContent) && /^\s*\w+\s*=\s*\d+;/m.test(originalContent)) ||
+      (/^\s*service\s+\w+\s*\{/m.test(originalContent) && /^\s*rpc\s+\w+/m.test(originalContent)) ||
       // Proto3 specific patterns
       /^\s*syntax\s*=.*proto/mi.test(originalContent)
     ) {
       extractedLanguage = 'protobuf';
+    }
+    // Go detection (check for clear Go patterns first)
+    else if (
+      // Go main function is a dead giveaway
+      /func\s+main\s*\(\s*\)/m.test(originalContent) ||
+      // Go package declaration (without semicolon, which proto has)
+      (/^\s*package\s+\w+\s*$/m.test(originalContent) && !codeContent.includes('.proto') && !codeContent.includes('syntax')) ||
+      // Go function declarations with clear patterns
+      /^\s*func\s+[\w\(\)]*\s*\w+\([^)]*\)\s*(\([^)]*\))?\s*\{?/m.test(originalContent) ||
+      // Go imports with parentheses (multi-line imports)
+      /^\s*import\s+\(/m.test(originalContent) ||
+      // Go imports with typical Go packages
+      /import\s+"(fmt|log|net|context|errors|strings|bytes|io|os|time|math|sync|reflect|encoding|crypto|database|testing)"/m.test(originalContent) ||
+      // Go short variable declaration (very Go-specific)
+      /\w+\s*:=/m.test(originalContent) ||
+      // Go defer statement
+      /^\s*defer\s+/m.test(originalContent) ||
+      // Go goroutine
+      /^\s*go\s+func/m.test(originalContent) ||
+      // Go channels
+      /make\(chan\s+/i.test(originalContent) ||
+      // Go interface{} or any
+      /interface\s*\{\s*\}/i.test(originalContent) ||
+      // Go struct definitions
+      /^\s*type\s+\w+\s+struct\s*\{/m.test(originalContent) ||
+      // Go error handling pattern
+      /if\s+err\s*!=\s*nil\s*\{/i.test(originalContent) ||
+      // Go context usage
+      /context\.(Background|TODO|WithCancel|WithTimeout)/i.test(originalContent) ||
+      // Go method receivers
+      /^\s*func\s*\(\s*\w+\s+[\*\w]+\s*\)\s*\w+/m.test(originalContent)
+    ) {
+      extractedLanguage = 'go';
     }
     // YAML detection (enhanced patterns)
     else if (
@@ -239,7 +274,7 @@ export function CodeBlock({
     else if (
       codeContent.includes('easyp ') ||
       codeContent.startsWith('npm ') ||
-      codeContent.startsWith('go ') ||
+      (codeContent.startsWith('go ') && !codeContent.includes('func')) || // go command, not Go code
       codeContent.startsWith('$ ') ||
       codeContent.startsWith('brew ') ||
       codeContent.includes('#!/bin/') ||
@@ -275,13 +310,20 @@ export function CodeBlock({
     'yml': 'yaml',
     'bash': 'bash',
     'shell': 'bash',
-    'json': 'json'
+    'json': 'json',
+    'go': 'go'
   };
 
   // Force protobuf language to be available
   if (extractedLanguage === 'protobuf' && (!Prism.languages.protobuf || !Prism.languages.proto)) {
     // Ensure protobuf is available even if async loading failed
     initPrismSync();
+  }
+
+  // Force Go language to be available
+  if (extractedLanguage === 'go' && !Prism.languages.go) {
+    // Try to load Go language support
+    console.warn('Go language support not loaded, syntax highlighting may not work');
   }
 
   // Use mapped language or fallback to original
