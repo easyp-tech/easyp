@@ -248,7 +248,7 @@ func (c *Core) Generate(ctx context.Context, root, directory string) error {
 			Options: plugin.Options,
 		}, req)
 		if err != nil {
-			return fmt.Errorf("execute plugin %s: %w", source, err)
+			return fmt.Errorf("execute plugin %s: %w, executor: %s", source, err, executor.GetName())
 		}
 
 		// Check for plugin errors
@@ -378,7 +378,6 @@ func (c *Core) getExecutor(plugin Plugin) pluginexecutor.Executor {
 	}
 
 	// Priority 2: If plugin is builtin and not found in PATH, use builtin executor
-	// (if available - built with builtin_plugins tag)
 	if pluginexecutor.IsBuiltinPlugin(plugin.Source.Name) && !c.isPluginInPath(plugin.Source.Name) {
 		return c.builtinExecutor
 	}

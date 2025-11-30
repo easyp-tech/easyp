@@ -1,6 +1,3 @@
-//go:build builtin_plugins
-// +build builtin_plugins
-
 package plugin
 
 import _ "embed"

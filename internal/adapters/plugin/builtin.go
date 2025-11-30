@@ -43,5 +43,5 @@ var builtinPlugins = map[builtinPlugin]bool{
 // IsBuiltinPlugin checks if the plugin is builtin (supported via go-protobuf-gen-builtins)
 func IsBuiltinPlugin(pluginName string) bool {
 
-	return builtinPluginExecutorEnabled() && builtinPlugins[builtinPlugin(pluginName)]
+	return builtinPlugins[builtinPlugin(pluginName)]
 }
