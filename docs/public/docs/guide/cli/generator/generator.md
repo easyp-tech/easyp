@@ -250,17 +250,37 @@ plugins:
 
 The `with_imports` parameter is crucial when you're using dependencies from the package manager. Set it to `true` to include proto files from your deps section in the generation process.
 
+#### Executing Plugin via Command
 
+You can specify a plugin as an array of commands to execute. This is useful for running plugins via `go run` without prior installation:
+
+```yaml
+plugins:
+  - command: ["go", "run", "github.com/grpc-ecosystem/grpc-gateway/v2/protoc-gen-grpc-gateway@v2.25.1"]
+    out: ./gen/go
+    opts:
+      paths: source_relative
+```
+
+**Plugin Source Priority:**
+1. `command` — execute via specified command (highest priority)
+2. `remote` — remote plugin via URL
+3. `name` — local plugin from PATH or builtin plugin
+4. `path` — path to plugin executable file
 
 **Parameters:**
 
 | Parameter | Type | Required | Default | Description |
 |-----------|------|----------|---------|-------------|
-| `name` | string | ✅ | - | Plugin name or identifier |
+| `name` | string | ❌ | - | Plugin name or identifier |
+| `command` | []string | ❌ | - | Command to execute plugin (e.g., `["go", "run", "package"]`) |
+| `remote` | string | ❌ | - | Remote plugin URL |
+| `path` | string | ❌ | - | Path to plugin executable file |
 | `out` | string | ✅ | - | Output directory for generated files |
 | `opts` | map[string]string | ❌ | `{}` | Plugin-specific options |
-
 | `with_imports` | bool | ❌ | `false` | Include proto files from dependencies |
+
+**Note:** Only one plugin source (`name`, `command`, `remote`, or `path`) should be specified.
 
 #### Builtin Plugins
 

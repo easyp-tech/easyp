@@ -214,6 +214,10 @@
               {
                 "title": "Validate",
                 "path": "/docs/guide/cli/generator/examples/validate"
+              },
+              {
+                "title": "Command",
+                "path": "/docs/guide/cli/generator/examples/command"
               }
             ]
           }

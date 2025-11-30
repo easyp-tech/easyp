@@ -29,6 +29,7 @@ type Core struct {
 	localExecutor   plugin.Executor
 	remoteExecutor  plugin.Executor
 	builtinExecutor plugin.Executor
+	commandExecutor plugin.Executor
 }
 
 var (
@@ -69,5 +70,6 @@ func New(
 		localExecutor:           plugin.NewLocalPluginExecutor(console, logger),
 		remoteExecutor:          plugin.NewRemotePluginExecutor(logger),
 		builtinExecutor:         plugin.NewBuiltinPluginExecutor(logger),
+		commandExecutor:         plugin.NewCommandPluginExecutor(console, logger),
 	}
 }

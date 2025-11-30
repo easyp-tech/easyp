@@ -15,9 +15,10 @@ import (
 type Plugin struct {
 	// Sources
 
-	Name   string `json:"name,omitempty" yaml:"name,omitempty"`
-	Remote string `json:"remote,omitempty" yaml:"remote,omitempty"`
-	Path   string `json:"path,omitempty" yaml:"path,omitempty"`
+	Name    string   `json:"name,omitempty" yaml:"name,omitempty"`
+	Remote  string   `json:"remote,omitempty" yaml:"remote,omitempty"`
+	Path    string   `json:"path,omitempty" yaml:"path,omitempty"`
+	Command []string `json:"command,omitempty" yaml:"command,omitempty"`
 
 	Out         string            `json:"out" yaml:"out"`
 	Opts        map[string]string `json:"opts,omitempty" yaml:"opts,omitempty"`
@@ -155,9 +156,16 @@ func (c *Config) Validate() error {
 		if plugin.Path != "" {
 			sourceCount++
 		}
+		if len(plugin.Command) > 0 {
+			sourceCount++
+		}
 
 		if sourceCount > 1 {
-			return fmt.Errorf("plugin %s has multiple sources", plugin.Name)
+			return fmt.Errorf("plugin has multiple sources (name, remote, path, or command)")
+		}
+
+		if sourceCount == 0 {
+			return fmt.Errorf("plugin must have one source: name, remote, path, or command")
 		}
 	}
 
