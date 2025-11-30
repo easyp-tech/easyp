@@ -58,8 +58,13 @@ func (c *Core) Generate(ctx context.Context, root, directory string) error {
 					return nil
 				}
 
-				q.Files = append(q.Files, path)
+				addedFile := stripPrefix(path, repo.Root)
+
+				q.Files = append(q.Files, addedFile)
 				q.Imports = append(q.Imports, modulePaths)
+				if repo.Root != "" {
+					q.Imports = append(q.Imports, filepath.Join(modulePaths, repo.Root))
+				}
 
 				return nil
 			}
@@ -130,6 +135,12 @@ func (c *Core) Generate(ctx context.Context, root, directory string) error {
 		if err != nil {
 			return fmt.Errorf("fsWalker.WalkDir: %w", err)
 		}
+	}
+
+	c.logger.DebugContext(ctx, "data", "import", q.Imports, "files", q.Files)
+
+	if len(q.Files) == 0 {
+		return ErrEmptyInputFiles
 	}
 
 	compiler := protocompile.Compiler{

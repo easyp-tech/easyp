@@ -103,6 +103,7 @@ func buildCore(_ context.Context, cfg config.Config, dirWalker core.DirWalker) (
 					URL:          i.GitRepo.URL,
 					SubDirectory: i.GitRepo.SubDirectory,
 					Out:          i.GitRepo.Out,
+					Root:         i.GitRepo.Root,
 				}
 			}), func(i core.InputGitRepo, _ int) bool {
 				return i.URL != ""
