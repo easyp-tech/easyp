@@ -1,6 +1,3 @@
-//go:build builtin_plugins
-// +build builtin_plugins
-
 package plugin
 
 import (
@@ -22,10 +19,6 @@ import (
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/pluginpb"
 )
-
-func builtinPluginExecutorEnabled() bool {
-	return true
-}
 
 // Mapping of plugin names to WASM modules
 var builtinPluginMap = map[builtinPlugin][]byte{
