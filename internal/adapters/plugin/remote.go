@@ -24,6 +24,10 @@ type RemotePluginExecutor struct {
 	logger *slog.Logger
 }
 
+func (e *RemotePluginExecutor) GetName() string {
+	return "RemotePluginExecutor from URL"
+}
+
 // NewRemotePluginExecutor creates a new RemotePluginExecutor
 func NewRemotePluginExecutor(logger *slog.Logger) *RemotePluginExecutor {
 	return &RemotePluginExecutor{
