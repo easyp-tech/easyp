@@ -33,6 +33,7 @@ export default function Navbar() {
                                 <span className="font-bold text-primary text-sm">EP</span>
                             </div>
                             <span className="font-semibold text-lg tracking-tight text-white">EasyP</span>
+                            <span className="text-green-400 text-sm">🎄</span>
                         </div>
 
                         <a
