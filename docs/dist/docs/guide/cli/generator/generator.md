@@ -262,7 +262,100 @@ The `with_imports` parameter is crucial when you're using dependencies from the 
 
 | `with_imports` | bool | ❌ | `false` | Include proto files from dependencies |
 
+#### Builtin Plugins
 
+EasyP includes builtin plugins for basic protobuf and gRPC languages. These plugins are embedded in the binary as WASM modules and do not require installation of external dependencies.
+
+**Benefits of builtin plugins:**
+- **Portability**: Single binary with all necessary plugins
+- **Convenience**: No need to install external dependencies
+- **Stability**: Plugin versions are fixed in the binary
+- **Isolation**: Independent of system plugin installations
+
+**Supported builtin plugins:**
+
+#### Protobuf Base Plugins
+
+The following plugins are builtin for generating base protobuf code:
+
+| Plugin Name | Description | Corresponding protoc Plugin |
+|-------------|-------------|----------------------------|
+| `cpp` | Generate C++ code from proto files | `protoc-gen-cpp` |
+| `csharp` | Generate C# code from proto files | `protoc-gen-csharp` |
+| `objc` | Generate Objective-C code from proto files | `protoc-gen-objc` |
+| `php` | Generate PHP code from proto files | `protoc-gen-php` |
+| `python` | Generate Python code from proto files | `protoc-gen-python` |
+| `ruby` | Generate Ruby code from proto files | `protoc-gen-ruby` |
+
+#### gRPC Plugins
+
+The following plugins are builtin for generating gRPC code:
+
+| Plugin Name | Description | Corresponding protoc Plugin |
+|-------------|-------------|----------------------------|
+| `grpc_cpp` | Generate gRPC code for C++ | `grpc_cpp_plugin` |
+| `grpc_csharp` | Generate gRPC code for C# | `grpc_csharp_plugin` |
+| `grpc_node` | Generate gRPC code for Node.js | `grpc_node_plugin` |
+| `grpc_objective_c` | Generate gRPC code for Objective-C | `grpc_objective_c_plugin` |
+| `grpc_php` | Generate gRPC code for PHP | `grpc_php_plugin` |
+| `grpc_python` | Generate gRPC code for Python | `grpc_python_plugin` |
+| `grpc_ruby` | Generate gRPC code for Ruby | `grpc_ruby_plugin` |
+
+**Plugin Selection Logic:**
+
+EasyP uses the following priority when selecting an executor for a plugin:
+
+1. **Remote plugin** (if `url` is specified) — always has the highest priority
+2. **Builtin plugin** (if plugin is builtin and not found in PATH) — used automatically
+3. **Local plugin** (from PATH) — used by default for backward compatibility
+
+**Usage Example:**
+
+```yaml
+generate:
+  inputs:
+    - directory: "proto"
+  plugins:
+    # Builtin Python plugin (automatically used if protoc-gen-python is not found in PATH)
+    - name: python
+      out: ./gen/python
+      opts:
+        pyi_out: ./gen/python
+    
+    # Builtin gRPC plugin for Python
+    - name: grpc_python
+      out: ./gen/python
+    
+    # Builtin C++ plugin (automatically used if protoc-gen-cpp is not found in PATH)
+    - name: cpp
+      out: ./gen/cpp
+      opts:
+        dllexport_decl: EXPORT
+    
+    # Builtin gRPC plugin for C++
+    - name: grpc_cpp
+      out: ./gen/cpp
+```
+
+**Requirements:**
+
+Builtin plugins are included in the EasyP binary:
+
+```bash
+# Build
+go build ./cmd/easyp
+
+# Install
+go install github.com/easyp-tech/easyp/cmd/easyp@latest
+```
+
+**Backward Compatibility:**
+
+Builtin plugins are fully compatible with existing configurations. If a plugin is found in PATH, it will be used instead of the builtin one. This ensures that:
+
+- Existing configurations continue to work without changes
+- You can override a builtin plugin by installing it in your system
+- Priority is given to local installations for flexibility
 
 ### Plugin Options Reference
 

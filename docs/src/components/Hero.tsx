@@ -15,7 +15,7 @@ export default function Hero() {
     const { t } = useTranslation()
     const [installMethod, setInstallMethod] = useState('brew')
     const [isDropdownOpen, setIsDropdownOpen] = useState(false)
-    const [version, setVersion] = useState('v0.8.1')
+    const [version, setVersion] = useState('vX.X.X')
     const dropdownRef = useRef<HTMLDivElement>(null)
 
     const installOptions: InstallOption[] = [
