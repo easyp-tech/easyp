@@ -8,6 +8,7 @@ import (
 	"sync"
 )
 
+// ImmutableData represents an immutable byte slice.
 type ImmutableData struct {
 	data []byte
 }
@@ -20,6 +21,8 @@ func (i *ImmutableData) Data() []byte {
 	return i.data
 }
 
+// GenerateBucket is a thread-safe in-memory bucket for storing generated files.
+// It provides methods for adding, retrieving, and removing files.
 type GenerateBucket struct {
 	filesToWrite map[string]*ImmutableData
 	lock         sync.RWMutex
@@ -34,6 +37,7 @@ func NewGenerateBucket() *GenerateBucket {
 func (b *GenerateBucket) PutFile(_ context.Context, path string, data []byte) {
 	b.lock.Lock()
 	defer b.lock.Unlock()
+
 	b.filesToWrite[path] = newImmutableData(data)
 }
 
@@ -50,7 +54,7 @@ func (b *GenerateBucket) RemoveFile(_ context.Context, path string) {
 	delete(b.filesToWrite, path)
 }
 
-func (b *GenerateBucket) DumpToFs(ctx context.Context) error {
+func (b *GenerateBucket) DumpToFs(_ context.Context) error {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
@@ -65,6 +69,7 @@ func (b *GenerateBucket) DumpToFs(ctx context.Context) error {
 		if err != nil {
 			return fmt.Errorf("os.Create %s: %w", path, err)
 		}
+
 		_, err = f.Write(file.Data())
 		if err != nil {
 			return fmt.Errorf("f.Write %s: %w", path, err)

@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
-	"os"
 	"os/exec"
 	"path"
 	"path/filepath"
@@ -288,7 +287,7 @@ func (c *Core) Generate(ctx context.Context, root, directory string) error {
 				slog.String("full_path", p),
 			)
 
-			// Пишем файл в bucket с поддержкой insertion point
+			// Write file to bucket with insertion point support
 			if err := addFileWithInsertionPoint(ctx, p, file, filesToWrite); err != nil {
 				return fmt.Errorf("addFileWithInsertionPoint: %w", err)
 			}
@@ -303,7 +302,7 @@ func (c *Core) Generate(ctx context.Context, root, directory string) error {
 	return nil
 }
 
-// addFileWithInsertionPoint добавляет файл в bucket с поддержкой insertion point
+// addFileWithInsertionPoint add file to bucket with insertion point support
 // inspired by https://github.com/bufbuild/buf/blob/v1.60.0/private/bufpkg/bufprotoplugin/response_writer.go#L75
 func addFileWithInsertionPoint(
 	ctx context.Context,
@@ -311,14 +310,14 @@ func addFileWithInsertionPoint(
 	file *pluginpb.CodeGeneratorResponse_File,
 	bucket *GenerateBucket,
 ) error {
-	// Пишем файл даже если пустой
+	// Write file to bucket with insertion point support
 	fileContent := make([]byte, 0)
 	if file.Content != nil {
 		fileContent = []byte(*file.Content)
 	}
 	if insertionPoint := file.GetInsertionPoint(); insertionPoint != "" {
-		// Если есть insertion point есть в file нужно найти уже имеющийся файл с таким же path в bucket
-		// Этот механизм может быть сломан изменённым порядком выполнения плагинов
+		// If insertion point is present, find existing file in bucket
+		// This mechanism may be broken if plugins are executed in a different order
 		// inspired by https://github.com/bufbuild/buf/blob/v1.60.0/private/pkg/storage/storagemem/bucket.go#L144
 		existsFile, ok := bucket.GetFile(ctx, filePath)
 		if !ok || len(existsFile.Data()) == 0 {

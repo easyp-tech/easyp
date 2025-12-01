@@ -13,8 +13,10 @@ import (
 	"google.golang.org/protobuf/types/pluginpb"
 )
 
+const averageGeneratedFileSize = 15 * 1024
+
 func writeInsertionPoint(
-	ctx context.Context,
+	_ context.Context,
 	insertionPointFile *pluginpb.CodeGeneratorResponse_File,
 	targetFile io.Reader,
 ) (_ []byte, retErr error) {
@@ -22,38 +24,29 @@ func writeInsertionPoint(
 	match := []byte("@@protoc_insertion_point(" + insertionPointFile.GetInsertionPoint() + ")")
 	postInsertionContent := bytes.NewBuffer(nil)
 	postInsertionContent.Grow(averageGeneratedFileSize)
-	// TODO: Мы должны учитывать окончания строк в сгенерированном файле. Это потребует
-	// либо чтобы targetFile был io.ReadSeeker и в худшем случае
-	// выполнения 2 полных сканирований файла (если это одна строка), либо реализации
-	// bufio.Scanner.Scan() встроенным образом
+	// TODO: We should account for line terminators in the generated file. This will require
+	// either that targetFile be an io.ReadSeeker and in the case of a single line file
+	// two full passes over the file, or a custom implementation of bufio.Scanner.Scan()
 	newline := []byte{'\n'}
 	var found bool
 	for i := 0; targetScanner.Scan(); i++ {
 		if i > 0 {
-			// Эти записи не могут завершиться ошибкой, они вызовут панику, если не смогут выделить память.
 			_, _ = postInsertionContent.Write(newline)
 		}
 		targetLine := targetScanner.Bytes()
 		if !bytes.Contains(targetLine, match) {
-			// Эти записи не могут завершиться ошибкой, они вызовут панику, если не смогут выделить память.
 			_, _ = postInsertionContent.Write(targetLine)
 			continue
 		}
-		// Для каждой строки в новом содержимом применяем
-		// такое же количество пробелов. Это важно
-		// для определенных языков, например Python.
+		// Add leading whitespace to the inserted content
 		whitespace := leadingWhitespace(targetLine)
 
-		// Вставляем содержимое из файла точки вставки. Обрабатываем переводы строк
-		// платформо-независимым способом.
+		// Insert the content from the insertion point file
 		insertedContentReader := strings.NewReader(insertionPointFile.GetContent())
 		writeWithPrefixAndLineEnding(postInsertionContent, insertedContentReader, whitespace, newline)
 
-		// Код, вставленный в этой точке, размещается непосредственно
-		// над строкой, содержащей точку вставки, поэтому
-		// мы включаем её последней.
-		// Эти записи не могут завершиться ошибкой, они вызовут панику, если не смогут
-		// выделить память
+		// The inserted code is placed directly above the line containing the insertion point,
+		// so we include it last.
 		_, _ = postInsertionContent.Write(targetLine)
 		found = true
 	}
@@ -66,9 +59,8 @@ func writeInsertionPoint(
 	return postInsertionContent.Bytes(), nil
 }
 
-// leadingWhitespace проходит по заданной строке
-// и возвращает подстроку начальных пробелов, если они есть,
-// с учетом кодировки utf-8.
+// leadingWhitespace iterates over the given byte slice and returns the leading whitespace
+// as a byte slice, accounting for UTF-8 encoding.
 //
 //	leadingWhitespace("\u205F   foo ") -> "\u205F   "
 func leadingWhitespace(buf []byte) []byte {
@@ -76,10 +68,10 @@ func leadingWhitespace(buf []byte) []byte {
 	iterBuf := buf
 	for len(iterBuf) > 0 {
 		r, size := utf8.DecodeRune(iterBuf)
-		// строки protobuf всегда должны быть валидным UTF8
+		// Protobuf strings must be valid UTF-8
 		// https://developers.google.com/protocol-buffers/docs/proto3#scalar
-		// Кроме того, utf8.RuneError не является пробелом, поэтому мы завершаем
-		// и возвращаем начальную, валидную, последовательность пробелов UTF8.
+		// Since utf8.RuneError is not a space, we terminate and return the leading
+		// valid sequence of UTF-8 whitespace.
 		if !unicode.IsSpace(r) {
 			out := make([]byte, leadingSize)
 			copy(out, buf)
@@ -91,8 +83,8 @@ func leadingWhitespace(buf []byte) []byte {
 	return buf
 }
 
-// writeWithPrefixAndLineEnding проходит по каждой строке заданного reader'а,
-// добавляет префикс в начало и добавляет последовательность перевода строки в конец.
+// writeWithPrefixAndLineEnding iterates over each line of the given reader,
+// adding the prefix to the beginning and the newline to the end.
 func writeWithPrefixAndLineEnding(dst *bytes.Buffer, src io.Reader, prefix, newline []byte) {
 	scanner := bufio.NewScanner(src)
 	for scanner.Scan() {
