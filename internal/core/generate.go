@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
-	"os"
 	"os/exec"
 	"path"
 	"path/filepath"
@@ -231,6 +230,8 @@ func (c *Core) Generate(ctx context.Context, root, directory string) error {
 		c.logger.DebugContext(ctx, fmt.Sprintf("%d: %s", i, fd.GetName()))
 	}
 
+	filesToWrite := NewGenerateBucket()
+
 	for _, plugin := range c.plugins {
 		filesToGenerate := q.Files
 
@@ -286,28 +287,57 @@ func (c *Core) Generate(ctx context.Context, root, directory string) error {
 				slog.String("full_path", p),
 			)
 
-			// Check and create directory if it doesn't exist (cross-platform)
-			dir := filepath.Dir(p)
-			if err := os.MkdirAll(dir, 0755); err != nil {
-				return fmt.Errorf("os.MkdirAll %s: %w", dir, err)
-			}
-
-			f, err := os.Create(p)
-			if err != nil {
-				return fmt.Errorf("os.Create: %w", err)
-			}
-
-			if file.Content == nil {
-				continue
-			}
-
-			_, err = f.WriteString(*file.Content)
-			if err != nil {
-				return fmt.Errorf("f.WriteString: %w", err)
+			// Write file to bucket with insertion point support
+			if err := addFileWithInsertionPoint(ctx, p, file, filesToWrite); err != nil {
+				return fmt.Errorf("addFileWithInsertionPoint: %w", err)
 			}
 		}
 	}
 
+	err = filesToWrite.DumpToFs(ctx)
+	if err != nil {
+		return fmt.Errorf("filesToWrite.DumpToFs: %w", err)
+	}
+
+	return nil
+}
+
+// addFileWithInsertionPoint add file to bucket with insertion point support
+// inspired by https://github.com/bufbuild/buf/blob/v1.60.0/private/bufpkg/bufprotoplugin/response_writer.go#L75
+func addFileWithInsertionPoint(
+	ctx context.Context,
+	filePath string,
+	file *pluginpb.CodeGeneratorResponse_File,
+	bucket *GenerateBucket,
+) error {
+	// Write file to bucket with insertion point support
+	fileContent := make([]byte, 0)
+	if file.Content != nil {
+		fileContent = []byte(*file.Content)
+	}
+	if insertionPoint := file.GetInsertionPoint(); insertionPoint != "" {
+		// If insertion point is present, find existing file in bucket
+		// This mechanism may be broken if plugins are executed in a different order
+		// inspired by https://github.com/bufbuild/buf/blob/v1.60.0/private/pkg/storage/storagemem/bucket.go#L144
+		existsFile, ok := bucket.GetFile(ctx, filePath)
+		if !ok || len(existsFile.Data()) == 0 {
+			return fmt.Errorf("file not found (bucket): %s", filePath)
+		}
+
+		newFileContent, err := writeInsertionPoint(
+			ctx,
+			file,
+			bytes.NewReader(existsFile.Data()),
+		)
+		if err != nil {
+			return fmt.Errorf("writeInsertionPoint: %w", err)
+		}
+
+		bucket.PutFile(ctx, filePath, newFileContent)
+		return nil
+	}
+
+	bucket.PutFile(ctx, filePath, fileContent)
 	return nil
 }
 
