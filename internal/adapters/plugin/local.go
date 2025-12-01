@@ -17,6 +17,7 @@ import (
 
 type Info struct {
 	Source  string
+	Command []string
 	Options map[string]string
 }
 

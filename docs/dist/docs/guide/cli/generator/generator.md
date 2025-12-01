@@ -223,24 +223,33 @@ inputs:
 
 Plugin configuration is where you specify which code generators to run and how they should behave. EasyP supports any protoc plugin, making it extremely flexible for different language ecosystems and use cases.
 
-#### Local Plugin Execution
+At a high level, there are **four ways to specify how a plugin should be executed**:
 
-Local plugin execution is the standard approach where plugins are installed on your system and executed directly by EasyP.
+- **`name`** – run plugin by name from `PATH` or use a builtin plugin.
+- **`path`** – run plugin by absolute/relative path to an executable file.
+- **`remote`** – run plugin via remote URL (EasyP remote executor).
+- **`command`** – run plugin via arbitrary command (for example, `go run ...`).
 
-**When to use local plugins:**
+Only **one** of `name`, `path`, `remote`, or `command` must be specified for each plugin.
+
+#### Plugin by Name (`name`)
+
+Local plugin execution by name is the standard approach where plugins are installed on your system and executed directly by EasyP.
+
+**When to use `name`:**
 - Standard language support (Go, Python, TypeScript, etc.)
 - You have control over the build environment
 - Performance is critical (no network overhead)
-- Working with well-established, stable plugins
+- You want to rely on PATH or builtin plugins
 
 **Installation requirements:**
-- Plugins must be installed and available in your PATH
-- Plugin names follow the `protoc-gen-{name}` convention
-- Use package managers (go install, npm install, pip install) for installation
+- Plugins must be installed and available in your PATH (if not using builtin plugins).
+- Plugin names follow the `protoc-gen-{name}` convention.
+- Use package managers (go install, npm install, pip install) for installation.
 
 ```yaml
 plugins:
-  - name: go                              # Plugin name (must be installed locally)
+  - name: go                              # Plugin name (must be installed locally or builtin)
     out: ./generated                      # Output directory
     opts:                                 # Plugin-specific options
       paths: source_relative
@@ -248,19 +257,116 @@ plugins:
     with_imports: true                    # Include dependency imports
 ```
 
-The `with_imports` parameter is crucial when you're using dependencies from the package manager. Set it to `true` to include proto files from your deps section in the generation process.
+The `with_imports` parameter is crucial when you're using dependencies from the package manager. Set it to `true` to include proto files from your `deps` section in the generation process.
 
+#### Plugin by Path (`path`)
 
+Sometimes you need to run a plugin from a specific binary without putting it into `PATH` (for example, a binary in your repo or in a build directory). In this case you can specify an explicit path:
 
-**Parameters:**
+```yaml
+plugins:
+  - path: ./bin/protoc-gen-my-custom
+    out: ./gen/custom
+    opts:
+      foo: bar
+```
+
+**When to use `path`:**
+- You keep plugin binaries in the repository (for reproducible builds).
+- You use different plugin versions side-by-side.
+- You don't want to pollute the global `PATH`.
+
+#### Remote Plugin (`remote`)
+
+Remote plugins are executed via a remote URL. EasyP will send a `CodeGeneratorRequest` to the remote endpoint and receive a `CodeGeneratorResponse` back.
+
+Below is a real example of using the EasyP API Service as a remote plugin executor (same format as in the API Service docs):
+
+```yaml
+generate:
+  plugins:
+    # Remote plugin execution via EasyP API Service
+    - remote: api.easyp.tech/protobuf/go:v1.36.10
+      out: .
+      opts:
+        paths: source_relative
+
+    - remote: api.easyp.tech/grpc/go:v1.5.1
+      out: .
+      opts:
+        paths: source_relative
+```
+
+**Typical use cases for `remote`:**
+- Centralized plugin service inside your organization (e.g. EasyP API Service).
+- Running heavy plugins on a dedicated server instead of CI agents.
+- Sharing the same plugin implementation across multiple teams.
+
+#### Executing Plugin via Command (`command`)
+
+You can specify a plugin as an array of commands to execute. This is useful for running plugins via `go run` or any other tool without prior installation of the plugin binary:
+
+```yaml
+plugins:
+  - command: ["go", "run", "github.com/grpc-ecosystem/grpc-gateway/v2/protoc-gen-grpc-gateway@v2.25.1"]
+    out: ./gen/go
+    opts:
+      paths: source_relative
+```
+
+In this mode EasyP:
+- **builds and runs the command** you provide as a child process;
+- **writes `CodeGeneratorRequest` to stdin** of the process;
+- **reads `CodeGeneratorResponse` from stdout**, just like with regular protoc plugins.
+
+**Plugin Source Priority:**
+1. `command` — execute via specified command (highest priority)
+2. `remote` — remote plugin via URL
+3. `name` — local plugin from PATH or builtin plugin
+4. `path` — path to plugin executable file
+
+**Parameters (plugin sources and common options):**
 
 | Parameter | Type | Required | Default | Description |
 |-----------|------|----------|---------|-------------|
-| `name` | string | ✅ | - | Plugin name or identifier |
+| `name` | string | ❌ | - | Plugin name or identifier (e.g. `go`, `go-grpc`, `grpc-gateway`) |
+| `command` | []string | ❌ | - | Command to execute plugin (e.g., `["go", "run", "package"]`) |
+| `remote` | string | ❌ | - | Remote plugin URL |
+| `path` | string | ❌ | - | Path to plugin executable file |
 | `out` | string | ✅ | - | Output directory for generated files |
-| `opts` | map[string]string | ❌ | `{}` | Plugin-specific options |
-
+| `opts` | map[string]string | ❌ | `{}` | Plugin-specific options (mapped to `--opt=value`) |
 | `with_imports` | bool | ❌ | `false` | Include proto files from dependencies |
+
+**Note:** Only one plugin source (`name`, `command`, `remote`, or `path`) must be specified for each plugin.
+
+**Command source examples:**
+
+```yaml
+generate:
+  inputs:
+    - directory: "proto"
+
+  plugins:
+    # 1) gRPC-Gateway via go run (no pre-installed binary required)
+    - command: ["go", "run", "github.com/grpc-ecosystem/grpc-gateway/v2/protoc-gen-grpc-gateway@v2.25.1"]
+      out: ./gen/go
+      opts:
+        paths: source_relative
+        generate_unbound_methods: true
+
+    # 2) protoc-gen-validate via go run
+    - command: ["go", "run", "github.com/bufbuild/protoc-gen-validate@v0.10.1"]
+      out: ./gen/go
+      opts:
+        paths: source_relative
+        lang: go
+
+    # 3) Any custom wrapper script
+    - command: ["bash", "./scripts/custom-protoc-plugin.sh"]
+      out: ./gen/custom
+      opts:
+        foo: bar
+```
 
 #### Builtin Plugins
 

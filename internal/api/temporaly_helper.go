@@ -88,9 +88,10 @@ func buildCore(_ context.Context, cfg config.Config, dirWalker core.DirWalker) (
 		lo.Map(cfg.Generate.Plugins, func(p config.Plugin, _ int) core.Plugin {
 			return core.Plugin{
 				Source: core.PluginSource{
-					Name:   p.Name,
-					Remote: p.Remote,
-					Path:   p.Path,
+					Name:    p.Name,
+					Remote:  p.Remote,
+					Path:    p.Path,
+					Command: p.Command,
 				},
 				Out:         p.Out,
 				Options:     p.Opts,

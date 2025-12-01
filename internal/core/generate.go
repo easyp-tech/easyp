@@ -257,6 +257,7 @@ func (c *Core) Generate(ctx context.Context, root, directory string) error {
 
 		resp, err := executor.Execute(ctx, pluginexecutor.Info{
 			Source:  source,
+			Command: plugin.Source.Command,
 			Options: plugin.Options,
 		}, req)
 		if err != nil {
@@ -414,15 +415,21 @@ func (c *Core) isPluginInPath(pluginName string) bool {
 }
 
 func (c *Core) getExecutor(plugin Plugin) pluginexecutor.Executor {
+	// Priority 1: If command is specified, use command executor
+	if len(plugin.Source.Command) > 0 {
+		return c.commandExecutor
+	}
+
+	// Priority 2: If remote URL is specified, use remote executor
 	if plugin.Source.Remote != "" {
 		return c.remoteExecutor
 	}
 
-	// Priority 2: If plugin is builtin and not found in PATH, use builtin executor
+	// Priority 3: If plugin is builtin and not found in PATH, use builtin executor
 	if pluginexecutor.IsBuiltinPlugin(plugin.Source.Name) && !c.isPluginInPath(plugin.Source.Name) {
 		return c.builtinExecutor
 	}
 
-	// Priority 3: Otherwise use local executor (backward compatibility)
+	// Priority 4: Otherwise use local executor (backward compatibility)
 	return c.localExecutor
 }

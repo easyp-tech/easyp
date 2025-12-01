@@ -203,9 +203,10 @@ func ConvertImportPath(source string) ImportPath {
 type (
 	// PluginSource is the source of the plugin.
 	PluginSource struct {
-		Name   string
-		Remote string
-		Path   string
+		Name    string
+		Remote  string
+		Path    string
+		Command []string
 	}
 	// Plugin is a plugin for gRPC generator.
 	Plugin struct {
