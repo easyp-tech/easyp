@@ -1,0 +1,349 @@
+[
+  {
+    "title": "Введение",
+    "icon": "BookOpen",
+    "children": [
+      {
+        "title": "Что такое EasyP?",
+        "path": "/docs/guide/introduction/what-is"
+      },
+      {
+        "title": "Быстрый старт",
+        "path": "/docs/guide/introduction/quickstart"
+      },
+      {
+        "title": "Установка",
+        "path": "/docs/guide/introduction/install"
+      }
+    ]
+  },
+  {
+    "title": "CLI EasyP",
+    "icon": "Terminal",
+    "children": [
+      {
+        "title": "Linter",
+        "path": "/docs/guide/cli/linter/linter",
+        "children": [
+          {
+            "title": "Rules",
+            "children": [
+              {
+                "title": "Comment Enum Value",
+                "path": "/docs/guide/cli/linter/rules/comment-enum-value"
+              },
+              {
+                "title": "Comment Enum",
+                "path": "/docs/guide/cli/linter/rules/comment-enum"
+              },
+              {
+                "title": "Comment Field",
+                "path": "/docs/guide/cli/linter/rules/comment-field"
+              },
+              {
+                "title": "Comment Message",
+                "path": "/docs/guide/cli/linter/rules/comment-message"
+              },
+              {
+                "title": "Comment Oneof",
+                "path": "/docs/guide/cli/linter/rules/comment-oneof"
+              },
+              {
+                "title": "Comment RPC",
+                "path": "/docs/guide/cli/linter/rules/comment-rpc"
+              },
+              {
+                "title": "Comment Service",
+                "path": "/docs/guide/cli/linter/rules/comment-service"
+              },
+              {
+                "title": "Directory Same Package",
+                "path": "/docs/guide/cli/linter/rules/directory-same-package"
+              },
+              {
+                "title": "Enum First Value Zero",
+                "path": "/docs/guide/cli/linter/rules/enum-first-value-zero"
+              },
+              {
+                "title": "Enum No Allow Alias",
+                "path": "/docs/guide/cli/linter/rules/enum-no-allow-alias"
+              },
+              {
+                "title": "Enum Pascal Case",
+                "path": "/docs/guide/cli/linter/rules/enum-pascal-case"
+              },
+              {
+                "title": "Enum Value Prefix",
+                "path": "/docs/guide/cli/linter/rules/enum-value-prefix"
+              },
+              {
+                "title": "Enum Value Upper Snake Case",
+                "path": "/docs/guide/cli/linter/rules/enum-value-upper-snake-case"
+              },
+              {
+                "title": "Enum Zero Value Suffix",
+                "path": "/docs/guide/cli/linter/rules/enum-zero-value-suffix"
+              },
+              {
+                "title": "Field Lower Snake Case",
+                "path": "/docs/guide/cli/linter/rules/field-lower-snake-case"
+              },
+              {
+                "title": "File Lower Snake Case",
+                "path": "/docs/guide/cli/linter/rules/file-lower-snake-case"
+              },
+              {
+                "title": "Import No Public",
+                "path": "/docs/guide/cli/linter/rules/import-no-public"
+              },
+              {
+                "title": "Import No Weak",
+                "path": "/docs/guide/cli/linter/rules/import-no-weak"
+              },
+              {
+                "title": "Import Used",
+                "path": "/docs/guide/cli/linter/rules/import-used"
+              },
+              {
+                "title": "Message Pascal Case",
+                "path": "/docs/guide/cli/linter/rules/message-pascal-case"
+              },
+              {
+                "title": "Oneof Lower Snake Case",
+                "path": "/docs/guide/cli/linter/rules/oneof-lower-snake-case"
+              },
+              {
+                "title": "Package Defined",
+                "path": "/docs/guide/cli/linter/rules/package-defined"
+              },
+              {
+                "title": "Package Directory Match",
+                "path": "/docs/guide/cli/linter/rules/package-directory-match"
+              },
+              {
+                "title": "Package Lower Snake Case",
+                "path": "/docs/guide/cli/linter/rules/package-lower-snake-case"
+              },
+              {
+                "title": "Package Same C# Namespace",
+                "path": "/docs/guide/cli/linter/rules/package-same-csharp-namespace"
+              },
+              {
+                "title": "Package Same Directory",
+                "path": "/docs/guide/cli/linter/rules/package-same-directory"
+              },
+              {
+                "title": "Package Same Go Package",
+                "path": "/docs/guide/cli/linter/rules/package-same-go-package"
+              },
+              {
+                "title": "Package Same Java Multiple Files",
+                "path": "/docs/guide/cli/linter/rules/package-same-java-multiple-files"
+              },
+              {
+                "title": "Package Same Java Package",
+                "path": "/docs/guide/cli/linter/rules/package-same-java-package"
+              },
+              {
+                "title": "Package Same PHP Namespace",
+                "path": "/docs/guide/cli/linter/rules/package-same-php-namespace"
+              },
+              {
+                "title": "Package Same Ruby Package",
+                "path": "/docs/guide/cli/linter/rules/package-same-ruby-package"
+              },
+              {
+                "title": "Package Same Swift Prefix",
+                "path": "/docs/guide/cli/linter/rules/package-same-swift-prefix"
+              },
+              {
+                "title": "Package Version Suffix",
+                "path": "/docs/guide/cli/linter/rules/package-version-suffix"
+              },
+              {
+                "title": "RPC No Client Streaming",
+                "path": "/docs/guide/cli/linter/rules/rpc-no-client-streaming"
+              },
+              {
+                "title": "RPC No Server Streaming",
+                "path": "/docs/guide/cli/linter/rules/rpc-no-server-streaming"
+              },
+              {
+                "title": "RPC Pascal Case",
+                "path": "/docs/guide/cli/linter/rules/rpc-pascal-case"
+              },
+              {
+                "title": "RPC Request Response Unique",
+                "path": "/docs/guide/cli/linter/rules/rpc-request-response-unique"
+              },
+              {
+                "title": "RPC Request Standard Name",
+                "path": "/docs/guide/cli/linter/rules/rpc-request-standard-name"
+              },
+              {
+                "title": "RPC Response Standard Name",
+                "path": "/docs/guide/cli/linter/rules/rpc-response-standard-name"
+              },
+              {
+                "title": "Service Pascal Case",
+                "path": "/docs/guide/cli/linter/rules/service-pascal-case"
+              },
+              {
+                "title": "Service Suffix",
+                "path": "/docs/guide/cli/linter/rules/service-suffix"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "title": "Generator",
+        "path": "/docs/guide/cli/generator/generator",
+        "children": [
+          {
+            "title": "Примеры",
+            "children": [
+              {
+                "title": "Go",
+                "path": "/docs/guide/cli/generator/examples/go"
+              },
+              {
+                "title": "gRPC Gateway",
+                "path": "/docs/guide/cli/generator/examples/grpc-gateway"
+              },
+              {
+                "title": "Validate",
+                "path": "/docs/guide/cli/generator/examples/validate"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "title": "Package Manager",
+        "path": "/docs/guide/cli/package-manager/package-manager"
+      },
+      {
+        "title": "Breaking Changes",
+        "path": "/docs/guide/cli/breaking-changes/breaking-changes",
+        "children": [
+          {
+            "title": "Rules",
+            "children": [
+              {
+                "title": "Enum No Delete",
+                "path": "/docs/guide/cli/breaking-changes/rules/enum-no-delete"
+              },
+              {
+                "title": "Enum Value No Delete",
+                "path": "/docs/guide/cli/breaking-changes/rules/enum-value-no-delete"
+              },
+              {
+                "title": "Enum Value Same Name",
+                "path": "/docs/guide/cli/breaking-changes/rules/enum-value-same-name"
+              },
+              {
+                "title": "Field No Delete",
+                "path": "/docs/guide/cli/breaking-changes/rules/field-no-delete"
+              },
+              {
+                "title": "Field Same Cardinality",
+                "path": "/docs/guide/cli/breaking-changes/rules/field-same-cardinality"
+              },
+              {
+                "title": "Field Same Type",
+                "path": "/docs/guide/cli/breaking-changes/rules/field-same-type"
+              },
+              {
+                "title": "Import No Delete",
+                "path": "/docs/guide/cli/breaking-changes/rules/import-no-delete"
+              },
+              {
+                "title": "Message No Delete",
+                "path": "/docs/guide/cli/breaking-changes/rules/message-no-delete"
+              },
+              {
+                "title": "Oneof Field No Delete",
+                "path": "/docs/guide/cli/breaking-changes/rules/oneof-field-no-delete"
+              },
+              {
+                "title": "Oneof Field Same Type",
+                "path": "/docs/guide/cli/breaking-changes/rules/oneof-field-same-type"
+              },
+              {
+                "title": "Oneof No Delete",
+                "path": "/docs/guide/cli/breaking-changes/rules/oneof-no-delete"
+              },
+              {
+                "title": "RPC No Delete",
+                "path": "/docs/guide/cli/breaking-changes/rules/rpc-no-delete"
+              },
+              {
+                "title": "RPC Same Request Type",
+                "path": "/docs/guide/cli/breaking-changes/rules/rpc-same-request-type"
+              },
+              {
+                "title": "RPC Same Response Type",
+                "path": "/docs/guide/cli/breaking-changes/rules/rpc-same-response-type"
+              },
+              {
+                "title": "Service No Delete",
+                "path": "/docs/guide/cli/breaking-changes/rules/service-no-delete"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "title": "Автодополнение",
+        "path": "/docs/guide/cli/auto-completion/auto-completion"
+      },
+      {
+        "title": "Конфигурация",
+        "path": "/docs/guide/cli/configuration/configuration"
+      }
+    ]
+  },
+  {
+    "title": "EasyP API Service",
+    "icon": "Server",
+    "children": [
+      {
+        "title": "Обзор",
+        "path": "/docs/guide/api-service/overview"
+      }
+    ]
+  },
+  {
+    "title": "Migration",
+    "icon": "ArrowRightLeft",
+    "children": [
+      {
+        "title": "Buf CLI",
+        "path": "/docs/guide/migration/buf-cli"
+      },
+      {
+        "title": "Protoc",
+        "path": "/docs/guide/migration/protoc"
+      },
+      {
+        "title": "Prototool",
+        "path": "/docs/guide/migration/prototool"
+      }
+    ]
+  },
+  {
+    "title": "CI/CD",
+    "icon": "Workflow",
+    "children": [
+      {
+        "title": "GitHub Actions",
+        "path": "/docs/guide/ci-cd/github-actions"
+      },
+      {
+        "title": "GitLab CI",
+        "path": "/docs/guide/ci-cd/gitlab"
+      }
+    ]
+  }
+]

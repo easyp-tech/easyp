@@ -1,212 +1,165 @@
-# Easyp
+# EasyP
 
-`easyp` is a cli tool for workflows with `proto` files.
+[![License](https://img.shields.io/github/license/easyp-tech/easyp?color=blue)](https://github.com/easyp-tech/easyp/blob/main/LICENSE)
+[![Release](https://img.shields.io/github/v/release/easyp-tech/easyp?include_prereleases)](https://github.com/easyp-tech/easyp/releases)
+[![CI](https://github.com/easyp-tech/easyp/workflows/ci/badge.svg)](https://github.com/easyp-tech/easyp/actions?workflow=ci)
 
-For now, it's just linter and package manager, but... who knows, who knows...
+**Modern Protocol Buffers toolkit for streamlined development workflows**
 
-## Community
+The `easyp` CLI is a comprehensive tool for working with [Protocol Buffers](https://protobuf.dev). It provides:
 
-### Official site
+- A **linter** that enforces good API design choices and structure
+- A **breaking change detector** that ensures compatibility at the source code level
+- A **generator** that invokes plugins based on configuration files
+- A **package manager** with Git-based dependency management
+- **Integration with remote plugins** for consistent, isolated execution
 
-https://easyp.tech/
+## Installation
 
-### Telegram chat
+### Homebrew
 
-https://t.me/easyptech
+You can install `easyp` using [Homebrew](https://brew.sh) (macOS or Linux):
 
-## Install
-
-### Build from source
-
-1. Clone repository
-2. Build
-```bash
-go build ./cmd/easyp
+```sh
+brew install easyp-tech/tap/easyp
 ```
 
-### Install from github
+### Go Install
 
-```bash
+```sh
 go install github.com/easyp-tech/easyp/cmd/easyp@latest
 ```
 
-## Init
+### Other methods
 
-Creates empty `easyp` project.
+For other installation methods, see our [official documentation](https://easyp.tech/docs/guide/introduction/install), which covers:
 
-Creates `easyp.yaml` (by default) and `easyp.lock` files.
+- Installing `easyp` via npm
+- Using `easyp` as a Docker image
+- Installing as a binary from GitHub Releases
 
-### Usage
+## Quick Start
 
-```bash
+```sh
+# Initialize a new project
+mkdir my-proto-project && cd my-proto-project
 easyp init
+
+# Add your .proto files to the project
+mkdir api
+# ... add your .proto files to api/ ...
+
+# Download dependencies and generate code
+easyp mod download
+easyp generate
+
+# Lint your proto files
+easyp lint
+
+# Check for breaking changes
+easyp breaking --against main
 ```
 
-## Linter
+## Usage
 
-`easyp` support `buf's` linter rules.
+EasyP's help interface provides summaries for commands and flags:
 
-### Usage
-
-```bash
-easyp lint -cfg example.easyp.yaml
-```
-## Breaking check
-
-Checking your current API on backward compatibility with API from another branch.
-
-### Usage
-
-```bash
-easyp breaking --against $BRANCH_TO_COMPARE_WITH
+```sh
+easyp --help
 ```
 
-## Generate
+For comprehensive usage information, consult EasyP's [documentation](https://easyp.tech), especially these guides:
 
-Generate proto files. 
+* [What is EasyP?](https://easyp.tech/docs/guide/introduction/what-is) - Overview and key concepts
+* [`easyp lint`](https://easyp.tech/docs/guide/cli/linter/linter) - Code linting and validation
+* [`easyp breaking`](https://easyp.tech/docs/guide/cli/breaking-changes/breaking-changes) - Breaking change detection
+* [`easyp mod`](https://easyp.tech/docs/guide/cli/package-manager/package-manager) - Package management
+* [`easyp generate`](https://easyp.tech/docs/guide/cli/generator/generator) - Code generation
 
-### Usage
+## Key Features
 
-There are several ways to get proto files to generate:
-1. from current local repository:
+- **🔍 Comprehensive Linting** - Built-in support for buf's linting rules with customizable configurations
+- **📦 Smart Package Manager** - Git-based dependency management with lock file support
+- **⚡ Code Generation** - Multi-language generation with local and remote plugin support
+- **🔄 Breaking Change Detection** - Automated API compatibility verification against Git branches
+- **🌐 Remote Plugin Support** - Execute plugins via centralized EasyP API service
+- **🎯 Developer Experience** - Auto-completion, intuitive commands, and clear error messages
+
+## Why choose EasyP over buf.build?
+
+While buf.build provides excellent protobuf tooling, EasyP offers several key advantages:
+
+| Feature | EasyP | buf.build |
+|---------|--------|-----------|
+| **Dependencies** | Any Git repository | Buf Schema Registry (BSR) required |
+| **Vendor Lock-in** | None | Tied to BSR for full features |
+| **Plugin Execution** | Local + Remote plugins | local + BSR |
+| **Enterprise** | Works with existing Git infrastructure | Requires BSR setup |
+
+**Key Benefits:**
+- **No infrastructure changes**: Use your existing Git repositories for proto dependencies
+- **Enhanced flexibility**: Execute plugins both locally and remotely for consistent results
+- **Simplified configuration**: Single file for all protobuf operations
+- **Full buf compatibility**: Drop-in replacement with familiar rule sets and configuration
+
+## Our goals for Protobuf
+
+EasyP's goal is to make Protocol Buffers development more accessible and reliable by providing a **unified toolkit** that eliminates the complexity of traditional protobuf workflows. We've built on the proven foundation of Protocol Buffers and buf's excellent design principles to create a modern development experience.
+
+While Protocol Buffers offer significant technical advantages over REST/JSON, actually _using_ them has traditionally been more challenging than necessary. EasyP aims to change that by consolidating the entire protobuf workflow into a single, intuitive tool with Git-native dependency management and both local and remote plugin execution.
+
+## Configuration
+
+EasyP uses a single `easyp.yaml` file for all configuration:
+
 ```yaml
+version: v1alpha
+
+# Dependencies
+deps:
+  - github.com/googleapis/googleapis@common-protos-1_3_1
+  - github.com/bufbuild/protoc-gen-validate@v0.9.1
+
+# Code generation
 generate:
   inputs:
-    - directory: WHERE YOUR PROTO FILES ARE
-```
-2. from remote git repository:
-```yaml
-generate:
-  inputs:
-    - git_repo:
-        url: "URL TO REMOTE REPO"
-        sub_directory: DIR WITH PROTO FILES ON REMOTE REPO
-```
-**NOTE:** format `url` the same as in `deps` section.
-
-`plugins` section: config for `protoc`
-
-Example:
-```yaml
+    - directory: "api"
   plugins:
     - name: go
       out: .
       opts:
         paths: source_relative
-    - name: go-grpc
-      out: .
-      opts:
-        paths: source_relative
-        require_unimplemented_servers: false
+    - remote: api.easyp.tech/protoc-gen-typescript:latest
+      out: ./web/generated
+
+# Linting
+lint:
+  use:
+    - DIRECTORY_SAME_PACKAGE
+    - PACKAGE_DEFINED
+    - FIELD_LOWER_SNAKE_CASE
+    - MESSAGE_PASCAL_CASE
 ```
 
-## Package manager
+## Community
 
-Install dependence from `easyp` config (or lock file).
+For help and discussion around EasyP and Protocol Buffers best practices:
 
-### Usage
+- **📖 [Documentation](https://easyp.tech)** - Comprehensive guides and API reference
+- **💬 [Telegram Chat](https://t.me/easyptech)** - Community discussion and support
+- **🐛 [GitHub Issues](https://github.com/easyp-tech/easyp/issues)** - Bug reports and feature requests
+- **✉️ [Contact](mailto:support@easyp.tech)** - Direct contact for enterprise support
 
-* download
+## Next steps
 
-```bash
-easyp -cfg example.easyp.yaml mod download
-```
+Once you've installed `easyp`, we recommend completing the [Quick Start tutorial](https://easyp.tech/docs/guide/introduction/quickstart), which provides a hands-on overview of the core functionality. The tutorial takes about 10 minutes to complete.
 
-Read your dependencies from `easyp.lock` file and install them.
+After completing the tutorial, check out the [documentation](https://easyp.tech) for your specific areas of interest.
 
+## License
 
-If `easyp.lock` is empty or doesn't exist `easyp` read dependencies from `easyp.yaml` config file (`deps` section).
+EasyP is released under the [Apache License 2.0](LICENSE).
 
-* update
-```bash
-easyp -cfg example.easyp.yaml mod update
-```
+---
 
-Read dependencies from `easyp.yaml` config file and ignore `easyp.lock` file.
-
-Could be used for update versions: set version in `easyp.yaml` file and run `update` command.
-
-* vendor
-```bash
-easyp -cfg example.easyp.yaml mod vendor
-```
-
-Copy all your proto files dependencies to local dir (like `go mod vendor` command).
-
-
-### Configuration
-
-Write list of your dependencies in `easyp.yaml` config with in section `deps`.
-
-For example:
-
-```yaml
-deps:
-  - github.com/googleapis/googleapis@common-protos-1_3_1
-```
-
-**NOTE:** Use only git tag or full hash of commit version.
-
-By default, `easyp` use `$HOME/.easyp` dir to storage cache and downloaded modules, you could override it with `EASYPPATH` env var.
-
-### Install from private repositories
-
-There are two ways to install from private repository.
-
-1. Use `.netrc`
-
-Create `.netrc` in your home dir:
-```
-machine $GIT_HOSTING
-login $YOUR_LOGIN
-password $YOUR_API_TOKEN
-```
-
-In that case you have to create API token on git hosting
-
-2. Use ssh keys
-
-* Configure your `ssh` config (`~/.ssh/config`) with path to private key and git hosting's params
-
-* Configure your git config (`~/.gitconfig`):
-```
-[url "ssh://git@$GIT_HOSTING/"]
-    insteadOf = https://$GIT_HOSTING/
-```
-
-for example:
-```
-[url "ssh://git@github.com/"]
-    insteadOf = https://github.com/
-```
-
-## Auto-completion
-
-### zsh auto-completion
-
-1. Add the following line to your ~/.zshrc startup script:
-
-```bash
-source <(easyp completion zsh)
-```
-
-2. Re-launch your shell or run:
-
-```bash
-source ~/.zshrc
-```
-
-### Bash auto-completion
-
-1. Install [bash-completion](https://github.com/scop/bash-completion#installation) and add the software to your `~/.bashrc`.
-2. Add the following line to your ~/.bashrc startup script:
-
-```bash
-source <(easyp completion bash)
-```
-
-3. Re-launch your shell or run:
-
-```bash
-source ~/.bashrc
-```
+*Built with ❤️ for the Protocol Buffers community*

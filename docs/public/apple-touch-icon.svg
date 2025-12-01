@@ -1,0 +1,32 @@
+<svg width="180" height="180" viewBox="0 0 180 180" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="appleIconGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#60a5fa"/>
+      <stop offset="100%" style="stop-color:#3b82f6"/>
+    </linearGradient>
+    <linearGradient id="appleBgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#1e293b"/>
+      <stop offset="100%" style="stop-color:#0f172a"/>
+    </linearGradient>
+    <filter id="appleShadow">
+      <feDropShadow dx="0" dy="4" stdDeviation="8" floodOpacity="0.3"/>
+    </filter>
+  </defs>
+
+  <!-- Background with rounded corners for Apple style -->
+  <rect width="180" height="180" rx="40" fill="url(#appleBgGradient)" filter="url(#appleShadow)"/>
+
+  <!-- Subtle inner glow -->
+  <rect width="180" height="180" rx="40" fill="url(#appleIconGradient)" opacity="0.1"/>
+
+  <!-- Letter E -->
+  <path d="M45 50h50v15h-30v20h25v15h-25v20h30v15H45V50z" fill="url(#appleIconGradient)"/>
+
+  <!-- Letter P -->
+  <path d="M105 50h35c8 0 15 7 15 15v10c0 8-7 15-15 15h-20v45h-15V50zm15 25h20c3 0 5-2 5-5v-5c0-3-2-5-5-5h-20v15z" fill="url(#appleIconGradient)"/>
+
+  <!-- Decorative accent dots -->
+  <circle cx="150" cy="30" r="8" fill="#60a5fa" opacity="0.8"/>
+  <circle cx="30" cy="150" r="6" fill="#8b5cf6" opacity="0.7"/>
+  <circle cx="160" cy="140" r="4" fill="#06b6d4" opacity="0.6"/>
+</svg>

@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"os"
 	"os/exec"
 	"path"
 	"path/filepath"
@@ -22,17 +23,11 @@ import (
 	"github.com/easyp-tech/easyp/internal/fs/fs"
 )
 
-const (
-	defaultCompiler          = "protoc"
-	averageGeneratedFileSize = 15 * 1024
-)
-
 // Generate generates files.
 func (c *Core) Generate(ctx context.Context, root, directory string) error {
 	q := Query{
-		Compiler: defaultCompiler,
-		Imports:  []string{},
-		Plugins:  c.plugins,
+		Imports: []string{},
+		Plugins: c.plugins,
 	}
 
 	for _, dep := range c.deps {
@@ -63,8 +58,13 @@ func (c *Core) Generate(ctx context.Context, root, directory string) error {
 					return nil
 				}
 
-				q.Files = append(q.Files, path)
+				addedFile := stripPrefix(path, repo.Root)
+
+				q.Files = append(q.Files, addedFile)
 				q.Imports = append(q.Imports, modulePaths)
+				if repo.Root != "" {
+					q.Imports = append(q.Imports, filepath.Join(modulePaths, repo.Root))
+				}
 
 				return nil
 			}
@@ -137,11 +137,17 @@ func (c *Core) Generate(ctx context.Context, root, directory string) error {
 		}
 	}
 
+	c.logger.DebugContext(ctx, "data", "import", q.Imports, "files", q.Files)
+
+	if len(q.Files) == 0 {
+		return ErrEmptyInputFiles
+	}
+
 	compiler := protocompile.Compiler{
 		Resolver: protocompile.CompositeResolver{
 			wellknownimports.WithStandardImports(
 				&protocompile.SourceResolver{
-					ImportPaths: append(q.Imports),
+					ImportPaths: q.Imports,
 				},
 			),
 		},
@@ -153,20 +159,20 @@ func (c *Core) Generate(ctx context.Context, root, directory string) error {
 		return fmt.Errorf("compiler.Compile: %w", err)
 	}
 
-	// Используем slice для сохранения правильного порядка
+	// Use slice to preserve correct order
 	var fileDescriptors []*descriptorpb.FileDescriptorProto
 	processedFiles := make(map[string]bool)
 	dependencyFiles := make([]string, 0)
 
-	// Рекурсивная функция для добавления файла и его зависимостей в правильном порядке
+	// Recursive function to add file and its dependencies in correct order
 	var addFileWithDeps func(string) error
 	addFileWithDeps = func(fileName string) error {
-		// Если уже обработали - пропускаем
+		// If already processed - skip
 		if processedFiles[fileName] {
 			return nil
 		}
 
-		// Компилируем файл
+		// Compile file
 		depRes, err := compiler.Compile(ctx, fileName)
 		if err != nil {
 			return fmt.Errorf("compile %s: %w", fileName, err)
@@ -178,17 +184,17 @@ func (c *Core) Generate(ctx context.Context, root, directory string) error {
 
 		descriptor := protoutil.ProtoFromFileDescriptor(depRes[0])
 
-		// ВАЖНО: сначала рекурсивно добавляем все зависимости
+		// IMPORTANT: first recursively add all dependencies
 		for _, dep := range descriptor.Dependency {
 			if err := addFileWithDeps(dep); err != nil {
-				// Игнорируем ошибки для опциональных зависимостей
+				// Ignore errors for optional dependencies
 				c.logger.DebugContext(ctx, "Warning: could not compile dependency",
 					slog.String("dependency", dep),
 					slog.String("error", err.Error()))
 			}
 		}
 
-		// Только после зависимостей добавляем сам файл (если еще не добавлен)
+		// Only after dependencies add the file itself (if not already added)
 		if !processedFiles[fileName] {
 			fileDescriptors = append(fileDescriptors, descriptor)
 			processedFiles[fileName] = true
@@ -198,11 +204,11 @@ func (c *Core) Generate(ctx context.Context, root, directory string) error {
 		return nil
 	}
 
-	// Обрабатываем все файлы и их зависимости
+	// Process all files and their dependencies
 	for _, file := range res {
 		descriptor := protoutil.ProtoFromFileDescriptor(file)
 
-		// Сначала добавляем все зависимости этого файла
+		// First add all dependencies of this file
 		for _, dep := range descriptor.Dependency {
 			if err := addFileWithDeps(dep); err != nil {
 				c.logger.DebugContext(ctx, "Warning: could not compile dependency",
@@ -211,7 +217,7 @@ func (c *Core) Generate(ctx context.Context, root, directory string) error {
 			}
 		}
 
-		// Потом добавляем сам файл (если еще не добавлен)
+		// Then add the file itself (if not already added)
 		fileName := descriptor.GetName()
 		if !processedFiles[fileName] {
 			fileDescriptors = append(fileDescriptors, descriptor)
@@ -219,7 +225,7 @@ func (c *Core) Generate(ctx context.Context, root, directory string) error {
 		}
 	}
 
-	// Логируем порядок файлов для отладки
+	// Log file order for debugging
 	c.logger.DebugContext(ctx, "File order in request:")
 	for i, fd := range fileDescriptors {
 		c.logger.DebugContext(ctx, fmt.Sprintf("%d: %s", i, fd.GetName()))
@@ -233,33 +239,39 @@ func (c *Core) Generate(ctx context.Context, root, directory string) error {
 		if plugin.WithImports {
 			filesToGenerate = append(filesToGenerate, dependencyFiles...)
 		}
-		// Создаем запрос для плагина
+
 		req := &pluginpb.CodeGeneratorRequest{
 			FileToGenerate: filesToGenerate,
 			ProtoFile:      fileDescriptors,
 		}
 
-		// Получаем подходящий executor для плагина
 		executor := c.getExecutor(plugin)
 
-		// Выполняем плагин
+		source := plugin.Source.Name
+		if plugin.Source.Remote != "" {
+			source = plugin.Source.Remote
+		}
+
+		if plugin.Source.Path != "" {
+			source = plugin.Source.Path
+		}
+
 		resp, err := executor.Execute(ctx, pluginexecutor.Info{
-			Name:    plugin.Name,
+			Source:  source,
 			Options: plugin.Options,
-			URL:     plugin.URL,
 		}, req)
 		if err != nil {
-			return fmt.Errorf("execute plugin %s: %w", plugin.Name, err)
+			return fmt.Errorf("execute plugin %s: %w, executor: %s", source, err, executor.GetName())
 		}
 
-		// Проверяем на ошибки от плагина
+		// Check for plugin errors
 		if resp.Error != nil {
-			return fmt.Errorf("plugin error: %s", *resp.Error)
+			return fmt.Errorf("plugin %s error: %s, executor: %s", plugin.Source, *resp.Error, executor.GetName())
 		}
 
-		// Выводим информацию о сгенерированных файлах (для отладки)
+		// Output information about generated files (for debugging)
 		for _, file := range resp.File {
-			// Определяем базовую директорию для вывода файлов с учетом plugin.Out
+			// Determine base directory for output files considering plugin.Out
 			var baseDir string
 			if plugin.Out != "" {
 				baseDir = filepath.Join(directory, plugin.Out)
@@ -270,7 +282,7 @@ func (c *Core) Generate(ctx context.Context, root, directory string) error {
 			p := filepath.Join(baseDir, file.GetName())
 
 			c.logger.DebugContext(ctx, "generated file",
-				slog.String("plugin", plugin.Name),
+				slog.String("plugin", source),
 				slog.String("file", file.GetName()),
 				slog.String("plugin_out", plugin.Out),
 				slog.String("full_path", p),
@@ -395,10 +407,23 @@ func runCmd(ctx context.Context, dir string, command string, stdIn *bytes.Buffer
 	return stdout.String(), nil
 }
 
+// isPluginInPath checks if the plugin is available in PATH
+func (c *Core) isPluginInPath(pluginName string) bool {
+	pluginCmd := fmt.Sprintf("protoc-gen-%s", pluginName)
+	_, err := exec.LookPath(pluginCmd)
+	return err == nil
+}
+
 func (c *Core) getExecutor(plugin Plugin) pluginexecutor.Executor {
-	if plugin.URL != "" {
+	if plugin.Source.Remote != "" {
 		return c.remoteExecutor
 	}
 
+	// Priority 2: If plugin is builtin and not found in PATH, use builtin executor
+	if pluginexecutor.IsBuiltinPlugin(plugin.Source.Name) && !c.isPluginInPath(plugin.Source.Name) {
+		return c.builtinExecutor
+	}
+
+	// Priority 3: Otherwise use local executor (backward compatibility)
 	return c.localExecutor
 }

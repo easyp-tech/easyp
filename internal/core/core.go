@@ -26,13 +26,15 @@ type Core struct {
 	breakingCheckConfig     BreakingCheckConfig
 	currentProjectGitWalker CurrentProjectGitWalker
 
-	localExecutor  plugin.Executor
-	remoteExecutor plugin.Executor
+	localExecutor   plugin.Executor
+	remoteExecutor  plugin.Executor
+	builtinExecutor plugin.Executor
 }
 
 var (
 	ErrInvalidRule            = errors.New("invalid rule")
 	ErrRepositoryDoesNotExist = errors.New("repository does not exist")
+	ErrEmptyInputFiles        = errors.New("empty input files")
 )
 
 func New(
@@ -66,5 +68,6 @@ func New(
 		breakingCheckConfig:     breakingCheckConfig,
 		localExecutor:           plugin.NewLocalPluginExecutor(console, logger),
 		remoteExecutor:          plugin.NewRemotePluginExecutor(logger),
+		builtinExecutor:         plugin.NewBuiltinPluginExecutor(logger),
 	}
 }

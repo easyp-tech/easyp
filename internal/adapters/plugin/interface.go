@@ -8,4 +8,5 @@ import (
 
 type Executor interface {
 	Execute(ctx context.Context, plugin Info, request *pluginpb.CodeGeneratorRequest) (*pluginpb.CodeGeneratorResponse, error)
+	GetName() string
 }

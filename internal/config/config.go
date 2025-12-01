@@ -13,14 +13,15 @@ import (
 
 // Plugin is the configuration of the plugin.
 type Plugin struct {
-	Name string            `json:"name" yaml:"name"`
-	Out  string            `json:"out" yaml:"out"`
-	Opts map[string]string `json:"opts" yaml:"opts"`
-	// URL для удаленного плагина (опционально).
-	// Если указан, то плагин вызывается через HTTP вместо локального выполнения.
-	// Формат: "host:port/plugin_name:version" или "http://host:port/plugin_name:version"
-	URL         string `json:"url,omitempty" yaml:"url,omitempty"`
-	WithImports bool   `json:"with_imports,omitempty" yaml:"with_imports,omitempty"`
+	// Sources
+
+	Name   string `json:"name,omitempty" yaml:"name,omitempty"`
+	Remote string `json:"remote,omitempty" yaml:"remote,omitempty"`
+	Path   string `json:"path,omitempty" yaml:"path,omitempty"`
+
+	Out         string            `json:"out" yaml:"out"`
+	Opts        map[string]string `json:"opts,omitempty" yaml:"opts,omitempty"`
+	WithImports bool              `json:"with_imports,omitempty" yaml:"with_imports,omitempty"`
 }
 
 // Generate is the configuration of the generate command.
@@ -40,6 +41,7 @@ type InputGitRepo struct {
 	URL          string `yaml:"url"`
 	SubDirectory string `yaml:"sub_directory"`
 	Out          string `yaml:"out"`
+	Root         string `yaml:"root"`
 }
 
 // InputDirectory is the configuration of the directory.
@@ -99,6 +101,11 @@ func New(_ context.Context, filepath string) (*Config, error) {
 		return nil, fmt.Errorf("yaml.Unmarshal: %w", err)
 	}
 
+	err = cfg.Validate()
+	if err != nil {
+		return nil, fmt.Errorf("config validation: %w", err)
+	}
+
 	return cfg, nil
 }
 
@@ -126,5 +133,33 @@ func (d *InputFilesDir) UnmarshalYAML(value *yaml.Node) error {
 	default:
 		return fmt.Errorf("unsupported type for directory: %v", value.Kind)
 	}
+	return nil
+}
+
+// Validate validates the configuration.
+func (c *Config) Validate() error {
+	if c == nil {
+		return errors.New("config is nil")
+	}
+
+	// Validate plugins
+	for _, plugin := range c.Generate.Plugins {
+		// Only one source allowed.
+		var sourceCount int
+		if plugin.Name != "" {
+			sourceCount++
+		}
+		if plugin.Remote != "" {
+			sourceCount++
+		}
+		if plugin.Path != "" {
+			sourceCount++
+		}
+
+		if sourceCount > 1 {
+			return fmt.Errorf("plugin %s has multiple sources", plugin.Name)
+		}
+	}
+
 	return nil
 }

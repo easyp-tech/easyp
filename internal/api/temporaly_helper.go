@@ -87,10 +87,13 @@ func buildCore(_ context.Context, cfg config.Config, dirWalker core.DirWalker) (
 		slog.Default(), // TODO: remove global state
 		lo.Map(cfg.Generate.Plugins, func(p config.Plugin, _ int) core.Plugin {
 			return core.Plugin{
-				Name:        p.Name,
+				Source: core.PluginSource{
+					Name:   p.Name,
+					Remote: p.Remote,
+					Path:   p.Path,
+				},
 				Out:         p.Out,
 				Options:     p.Opts,
-				URL:         p.URL,
 				WithImports: p.WithImports,
 			}
 		}),
@@ -100,6 +103,7 @@ func buildCore(_ context.Context, cfg config.Config, dirWalker core.DirWalker) (
 					URL:          i.GitRepo.URL,
 					SubDirectory: i.GitRepo.SubDirectory,
 					Out:          i.GitRepo.Out,
+					Root:         i.GitRepo.Root,
 				}
 			}), func(i core.InputGitRepo, _ int) bool {
 				return i.URL != ""
