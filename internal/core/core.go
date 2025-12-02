@@ -22,6 +22,7 @@ type Core struct {
 	storage      Storage
 	moduleConfig ModuleConfig
 	lockFile     LockFile
+	managedMode  ManagedModeConfig
 
 	breakingCheckConfig     BreakingCheckConfig
 	currentProjectGitWalker CurrentProjectGitWalker
@@ -52,6 +53,7 @@ func New(
 	lockFile LockFile,
 	currentProjectGitWalker CurrentProjectGitWalker,
 	breakingCheckConfig BreakingCheckConfig,
+	managedMode ManagedModeConfig,
 ) *Core {
 	return &Core{
 		rules:                   rules,
@@ -67,6 +69,7 @@ func New(
 		lockFile:                lockFile,
 		currentProjectGitWalker: currentProjectGitWalker,
 		breakingCheckConfig:     breakingCheckConfig,
+		managedMode:             managedMode,
 		localExecutor:           plugin.NewLocalPluginExecutor(console, logger),
 		remoteExecutor:          plugin.NewRemotePluginExecutor(logger),
 		builtinExecutor:         plugin.NewBuiltinPluginExecutor(logger),
