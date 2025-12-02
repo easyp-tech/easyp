@@ -217,9 +217,11 @@ func (r *ManagedDisableRule) matchesContext(filePath, module string) bool {
 		return false
 	}
 
-	// Check path match - use prefix matching for paths
-	if r.Path != "" && !strings.HasPrefix(filePath, r.Path) {
-		return false
+	// Check path match - uses buf's path matching behavior
+	if r.Path != "" {
+		if !matchesPath(filePath, r.Path) {
+			return false
+		}
 	}
 
 	return true
@@ -233,9 +235,11 @@ func (r *ManagedOverrideRule) matchesFileContext(filePath, module string) bool {
 		return false
 	}
 
-	// Check path match - use prefix matching for paths
-	if r.Path != "" && !strings.HasPrefix(filePath, r.Path) {
-		return false
+	// Check path match - uses buf's path matching behavior
+	if r.Path != "" {
+		if !matchesPath(filePath, r.Path) {
+			return false
+		}
 	}
 
 	return true
@@ -263,7 +267,8 @@ type FileOptionHandler struct {
 	// Only options listed in buf documentation as having defaults should have this set to true.
 	HasDefault bool
 	// Apply applies the option value to the file descriptor.
-	Apply func(fd *descriptorpb.FileDescriptorProto, value any, pkg string)
+	// filePath is the path to the proto file (e.g., "internal/cms/as.proto").
+	Apply func(fd *descriptorpb.FileDescriptorProto, value any, pkg, filePath string)
 	// Default returns the default value for this option (if HasDefault is true).
 	// This is called only when HasDefault is true and no override is specified.
 	Default func(fd *descriptorpb.FileDescriptorProto, pkg string) any
@@ -311,7 +316,7 @@ var fileOptionHandlers = []FileOptionHandler{
 	{
 		Option:     FileOptionGoPackage,
 		HasDefault: false,
-		Apply: func(fd *descriptorpb.FileDescriptorProto, value any, _ string) {
+		Apply: func(fd *descriptorpb.FileDescriptorProto, value any, _, _ string) {
 			if v, ok := value.(string); ok {
 				fd.Options.GoPackage = proto.String(v)
 			}
@@ -321,11 +326,87 @@ var fileOptionHandlers = []FileOptionHandler{
 		Option:        FileOptionGoPackagePrefix,
 		HasDefault:    false,
 		AffectsOption: FileOptionGoPackage,
-		Apply: func(fd *descriptorpb.FileDescriptorProto, value any, pkg string) {
+		Apply: func(fd *descriptorpb.FileDescriptorProto, value any, pkg, filePath string) {
 			if prefix, ok := value.(string); ok {
 				// go_package_prefix sets go_package to <prefix>/<proto_package with dots replaced by slashes>
-				pkgPath := strings.ReplaceAll(pkg, ".", "/")
-				fd.Options.GoPackage = proto.String(prefix + "/" + pkgPath)
+				// If the value contains {{file_path}} or {{file_path_spec}}, use file path instead
+				if strings.Contains(prefix, "{{file_path}}") || strings.Contains(prefix, "{{file_path_spec}}") {
+					// Marker for generating paths based on file path
+					// Uses the file path directly, removing .proto extension
+					// {{file_path_spec}} is an alias for {{file_path}} - kept for backward compatibility
+					pathWithoutExt := strings.TrimSuffix(filePath, ".proto")
+					replaced := strings.ReplaceAll(prefix, "{{file_path}}", pathWithoutExt)
+					replaced = strings.ReplaceAll(replaced, "{{file_path_spec}}", pathWithoutExt)
+					fd.Options.GoPackage = proto.String(replaced)
+				} else if strings.Contains(prefix, "{{file_dir}}") {
+					// Marker for using only the directory path, without filename
+					// Example: internal/cms/as_service.proto -> internal/cms
+					dir := filepath.Dir(filePath)
+					replaced := strings.ReplaceAll(prefix, "{{file_dir}}", dir)
+					fd.Options.GoPackage = proto.String(replaced)
+				} else if strings.Contains(prefix, "{{file_dir_without:") {
+					// Marker for using directory path with prefix removal: {{file_dir_without:prefix/}}
+					// Example: {{file_dir_without:internal/}} for internal/cms/as_service.proto -> cms
+					dir := filepath.Dir(filePath)
+					base := strings.TrimSuffix(filepath.Base(filePath), ".proto")
+					// Remove common suffixes like _service, _grpc to get base name
+					baseName := base
+					if strings.HasSuffix(baseName, "_service") {
+						baseName = strings.TrimSuffix(baseName, "_service")
+					} else if strings.HasSuffix(baseName, "_grpc") {
+						baseName = strings.TrimSuffix(baseName, "_grpc")
+					}
+					// Use directory + base name for path
+					pathWithBase := filepath.Join(dir, baseName)
+					// Find all {{file_dir_without:...}} markers and replace them
+					replaced := prefix
+					for {
+						start := strings.Index(replaced, "{{file_dir_without:")
+						if start == -1 {
+							break
+						}
+						end := strings.Index(replaced[start:], "}}")
+						if end == -1 {
+							break
+						}
+						end += start + 2
+						marker := replaced[start:end]
+						prefixToRemove := strings.TrimPrefix(marker, "{{file_dir_without:")
+						prefixToRemove = strings.TrimSuffix(prefixToRemove, "}}")
+						transformedPath := strings.TrimPrefix(pathWithBase, prefixToRemove)
+						// Normalize path separators
+						transformedPath = strings.ReplaceAll(transformedPath, "\\", "/")
+						replaced = strings.ReplaceAll(replaced, marker, transformedPath)
+					}
+					fd.Options.GoPackage = proto.String(replaced)
+				} else if strings.Contains(prefix, "{{file_path_without:") {
+					// Marker for generating paths with prefix removal: {{file_path_without:prefix/}}
+					// Example: {{file_path_without:internal/}} removes "internal/" from the beginning
+					pathWithoutExt := strings.TrimSuffix(filePath, ".proto")
+					// Find all {{file_path_without:...}} markers and replace them
+					replaced := prefix
+					for {
+						start := strings.Index(replaced, "{{file_path_without:")
+						if start == -1 {
+							break
+						}
+						end := strings.Index(replaced[start:], "}}")
+						if end == -1 {
+							break
+						}
+						end += start + 2
+						marker := replaced[start:end]
+						prefixToRemove := strings.TrimPrefix(marker, "{{file_path_without:")
+						prefixToRemove = strings.TrimSuffix(prefixToRemove, "}}")
+						transformedPath := strings.TrimPrefix(pathWithoutExt, prefixToRemove)
+						replaced = strings.ReplaceAll(replaced, marker, transformedPath)
+					}
+					fd.Options.GoPackage = proto.String(replaced)
+				} else {
+					// Default behavior: use package name
+					pkgPath := strings.ReplaceAll(pkg, ".", "/")
+					fd.Options.GoPackage = proto.String(prefix + "/" + pkgPath)
+				}
 			}
 		},
 	},
@@ -334,7 +415,7 @@ var fileOptionHandlers = []FileOptionHandler{
 	{
 		Option:     FileOptionJavaPackage,
 		HasDefault: false, // No default - only java_package_prefix has default
-		Apply: func(fd *descriptorpb.FileDescriptorProto, value any, _ string) {
+		Apply: func(fd *descriptorpb.FileDescriptorProto, value any, _, _ string) {
 			if v, ok := value.(string); ok {
 				fd.Options.JavaPackage = proto.String(v)
 			}
@@ -347,7 +428,7 @@ var fileOptionHandlers = []FileOptionHandler{
 		Default: func(_ *descriptorpb.FileDescriptorProto, _ string) any {
 			return "com" // buf default prefix
 		},
-		Apply: func(fd *descriptorpb.FileDescriptorProto, value any, pkg string) {
+		Apply: func(fd *descriptorpb.FileDescriptorProto, value any, pkg, _ string) {
 			// java_package_prefix sets java_package to <prefix>.<proto_package>
 			if prefix, ok := value.(string); ok {
 				fd.Options.JavaPackage = proto.String(prefix + "." + pkg)
@@ -358,7 +439,7 @@ var fileOptionHandlers = []FileOptionHandler{
 		Option:        FileOptionJavaPackageSuffix,
 		HasDefault:    false, // No default
 		AffectsOption: FileOptionJavaPackage,
-		Apply: func(fd *descriptorpb.FileDescriptorProto, value any, pkg string) {
+		Apply: func(fd *descriptorpb.FileDescriptorProto, value any, pkg, _ string) {
 			// java_package_suffix sets java_package to <proto_package>.<suffix>
 			if suffix, ok := value.(string); ok {
 				fd.Options.JavaPackage = proto.String(pkg + "." + suffix)
@@ -369,7 +450,7 @@ var fileOptionHandlers = []FileOptionHandler{
 		Option:     FileOptionJavaMultipleFiles,
 		HasDefault: true,
 		Default:    func(_ *descriptorpb.FileDescriptorProto, _ string) any { return true },
-		Apply: func(fd *descriptorpb.FileDescriptorProto, value any, _ string) {
+		Apply: func(fd *descriptorpb.FileDescriptorProto, value any, _, _ string) {
 			if v, ok := value.(bool); ok {
 				fd.Options.JavaMultipleFiles = proto.Bool(v)
 			}
@@ -384,7 +465,7 @@ var fileOptionHandlers = []FileOptionHandler{
 			name := strings.TrimSuffix(base, filepath.Ext(base))
 			return toPascalCase(name) + "Proto"
 		},
-		Apply: func(fd *descriptorpb.FileDescriptorProto, value any, _ string) {
+		Apply: func(fd *descriptorpb.FileDescriptorProto, value any, _, _ string) {
 			if v, ok := value.(string); ok {
 				fd.Options.JavaOuterClassname = proto.String(v)
 			}
@@ -393,7 +474,7 @@ var fileOptionHandlers = []FileOptionHandler{
 	{
 		Option:     FileOptionJavaStringCheckUtf8,
 		HasDefault: false, // No default
-		Apply: func(fd *descriptorpb.FileDescriptorProto, value any, _ string) {
+		Apply: func(fd *descriptorpb.FileDescriptorProto, value any, _, _ string) {
 			if v, ok := value.(bool); ok {
 				fd.Options.JavaStringCheckUtf8 = proto.Bool(v)
 			}
@@ -409,7 +490,7 @@ var fileOptionHandlers = []FileOptionHandler{
 			// e.g., acme.weather.v1 -> Acme.Weather.V1
 			return toPascalCaseWithSeparator(pkg, ".")
 		},
-		Apply: func(fd *descriptorpb.FileDescriptorProto, value any, _ string) {
+		Apply: func(fd *descriptorpb.FileDescriptorProto, value any, _, _ string) {
 			if v, ok := value.(string); ok {
 				fd.Options.CsharpNamespace = proto.String(v)
 			}
@@ -419,7 +500,7 @@ var fileOptionHandlers = []FileOptionHandler{
 		Option:        FileOptionCsharpNamespacePrefix,
 		HasDefault:    false, // No default
 		AffectsOption: FileOptionCsharpNamespace,
-		Apply: func(fd *descriptorpb.FileDescriptorProto, value any, pkg string) {
+		Apply: func(fd *descriptorpb.FileDescriptorProto, value any, pkg, _ string) {
 			// csharp_namespace_prefix sets csharp_namespace to <prefix>.<PascalCase(package)>
 			if prefix, ok := value.(string); ok {
 				fd.Options.CsharpNamespace = proto.String(prefix + "." + toPascalCaseWithSeparator(pkg, "."))
@@ -436,7 +517,7 @@ var fileOptionHandlers = []FileOptionHandler{
 			// e.g., acme.weather.v1 -> Acme::Weather::V1
 			return toPascalCaseWithSeparator(pkg, "::")
 		},
-		Apply: func(fd *descriptorpb.FileDescriptorProto, value any, _ string) {
+		Apply: func(fd *descriptorpb.FileDescriptorProto, value any, _, _ string) {
 			if v, ok := value.(string); ok {
 				fd.Options.RubyPackage = proto.String(v)
 			}
@@ -446,7 +527,7 @@ var fileOptionHandlers = []FileOptionHandler{
 		Option:        FileOptionRubyPackageSuffix,
 		HasDefault:    false, // No default
 		AffectsOption: FileOptionRubyPackage,
-		Apply: func(fd *descriptorpb.FileDescriptorProto, value any, pkg string) {
+		Apply: func(fd *descriptorpb.FileDescriptorProto, value any, pkg, _ string) {
 			// ruby_package_suffix sets ruby_package to <PascalCase(package)>::<suffix>
 			if suffix, ok := value.(string); ok {
 				fd.Options.RubyPackage = proto.String(toPascalCaseWithSeparator(pkg, "::") + "::" + suffix)
@@ -463,7 +544,7 @@ var fileOptionHandlers = []FileOptionHandler{
 			// e.g., acme.weather.v1 -> Acme\Weather\V1
 			return toPascalCaseWithSeparator(pkg, `\`)
 		},
-		Apply: func(fd *descriptorpb.FileDescriptorProto, value any, _ string) {
+		Apply: func(fd *descriptorpb.FileDescriptorProto, value any, _, _ string) {
 			if v, ok := value.(string); ok {
 				fd.Options.PhpNamespace = proto.String(v)
 			}
@@ -472,7 +553,7 @@ var fileOptionHandlers = []FileOptionHandler{
 	{
 		Option:     FileOptionPhpMetadataNamespace,
 		HasDefault: false, // No default
-		Apply: func(fd *descriptorpb.FileDescriptorProto, value any, _ string) {
+		Apply: func(fd *descriptorpb.FileDescriptorProto, value any, _, _ string) {
 			if v, ok := value.(string); ok {
 				fd.Options.PhpMetadataNamespace = proto.String(v)
 			}
@@ -482,7 +563,7 @@ var fileOptionHandlers = []FileOptionHandler{
 		Option:        FileOptionPhpMetadataNamespaceSuffix,
 		HasDefault:    false, // No default
 		AffectsOption: FileOptionPhpMetadataNamespace,
-		Apply: func(fd *descriptorpb.FileDescriptorProto, value any, pkg string) {
+		Apply: func(fd *descriptorpb.FileDescriptorProto, value any, pkg, _ string) {
 			// php_metadata_namespace_suffix sets php_metadata_namespace to <PascalCase(package)>\<suffix>
 			if suffix, ok := value.(string); ok {
 				fd.Options.PhpMetadataNamespace = proto.String(toPascalCaseWithSeparator(pkg, `\`) + `\` + suffix)
@@ -501,7 +582,7 @@ var fileOptionHandlers = []FileOptionHandler{
 			// "GPB" is reserved by Google Protobuf, changed to "GPX"
 			return generateObjcClassPrefix(pkg)
 		},
-		Apply: func(fd *descriptorpb.FileDescriptorProto, value any, _ string) {
+		Apply: func(fd *descriptorpb.FileDescriptorProto, value any, _, _ string) {
 			if v, ok := value.(string); ok {
 				fd.Options.ObjcClassPrefix = proto.String(v)
 			}
@@ -512,7 +593,7 @@ var fileOptionHandlers = []FileOptionHandler{
 	{
 		Option:     FileOptionSwiftPrefix,
 		HasDefault: false,
-		Apply: func(fd *descriptorpb.FileDescriptorProto, value any, _ string) {
+		Apply: func(fd *descriptorpb.FileDescriptorProto, value any, _, _ string) {
 			if v, ok := value.(string); ok {
 				fd.Options.SwiftPrefix = proto.String(v)
 			}
@@ -523,7 +604,7 @@ var fileOptionHandlers = []FileOptionHandler{
 	{
 		Option:     FileOptionOptimizeFor,
 		HasDefault: false,
-		Apply: func(fd *descriptorpb.FileDescriptorProto, value any, _ string) {
+		Apply: func(fd *descriptorpb.FileDescriptorProto, value any, _, _ string) {
 			if v, ok := value.(string); ok {
 				switch OptimizeMode(v) {
 				case OptimizeModeSpeed:
@@ -542,7 +623,7 @@ var fileOptionHandlers = []FileOptionHandler{
 		Option:     FileOptionCcEnableArenas,
 		HasDefault: true,
 		Default:    func(_ *descriptorpb.FileDescriptorProto, _ string) any { return true },
-		Apply: func(fd *descriptorpb.FileDescriptorProto, value any, _ string) {
+		Apply: func(fd *descriptorpb.FileDescriptorProto, value any, _, _ string) {
 			if v, ok := value.(bool); ok {
 				fd.Options.CcEnableArenas = proto.Bool(v)
 			}
@@ -615,6 +696,13 @@ func ApplyManagedMode(
 		module := fileToModule[filePath]
 		pkg := fd.GetPackage()
 
+		// For files from external dependencies (module != ""), managed mode should
+		// only be applied if there's an explicit rule for that module.
+		// Local project files (module == "") are always processed.
+		if module != "" && !hasModuleRule(config, module) {
+			continue
+		}
+
 		// Ensure Options is initialized
 		if fd.Options == nil {
 			fd.Options = &descriptorpb.FileOptions{}
@@ -628,6 +716,25 @@ func ApplyManagedMode(
 	}
 
 	return nil
+}
+
+// hasModuleRule checks if there are any disable or override rules for the given module.
+func hasModuleRule(config ManagedModeConfig, module string) bool {
+	// Check disable rules
+	for _, rule := range config.Disable {
+		if rule.Module == module {
+			return true
+		}
+	}
+
+	// Check override rules
+	for _, rule := range config.Override {
+		if rule.Module == module {
+			return true
+		}
+	}
+
+	return false
 }
 
 // applyFileOptions applies all registered file options.
@@ -669,7 +776,7 @@ func applyFileOptions(
 		}
 
 		// Apply the override
-		handler.Apply(fd, override.Value, pkg)
+		handler.Apply(fd, override.Value, pkg, filePath)
 		appliedOptions[override.FileOption] = true
 
 		// If this handler affects another option (e.g., go_package_prefix affects go_package),
@@ -707,7 +814,7 @@ func applyFileOptions(
 
 		// Apply default value
 		defaultValue := handler.Default(fd, pkg)
-		handler.Apply(fd, defaultValue, pkg)
+		handler.Apply(fd, defaultValue, pkg, filePath)
 		appliedOptions[handler.Option] = true
 
 		// Mark affected option as applied
@@ -776,6 +883,40 @@ func applyFieldOptions(
 // ============================================================================
 // Helper Functions
 // ============================================================================
+
+// matchesPath implements buf's path matching behavior for managed mode rules.
+// Path matching behavior in buf:
+//   - path: "internal/cms/" matches all files in that directory and subdirectories
+//     (e.g., "internal/cms/as.proto", "internal/cms/node.proto", "internal/cms/v1/service.proto")
+//   - path: "internal/cms/as.proto" matches only that exact file
+//   - path: "internal/cms" matches "internal/cms/as.proto" but also "internal/cmsv2/file.proto"
+//     (prefix matching, not directory-aware)
+//
+// This function implements the same behavior as buf:
+//   - If path ends with "/", it's treated as a directory path (prefix match)
+//   - If path ends with ".proto", it's treated as an exact file match
+//   - Otherwise, it's treated as a prefix match (not directory-aware)
+func matchesPath(filePath, rulePath string) bool {
+	if rulePath == "" {
+		return true
+	}
+
+	// Exact file match: if rule path ends with .proto, require exact match
+	if strings.HasSuffix(rulePath, ".proto") {
+		return filePath == rulePath
+	}
+
+	// Directory path: if rule path ends with "/", match all files in that directory
+	if strings.HasSuffix(rulePath, "/") {
+		return strings.HasPrefix(filePath, rulePath)
+	}
+
+	// Prefix match: for paths without trailing "/" or ".proto", use prefix matching
+	// This matches buf's behavior where "internal/cms" matches both:
+	//   - "internal/cms/as.proto" (correct)
+	//   - "internal/cmsv2/file.proto" (also matches, as buf uses prefix matching)
+	return strings.HasPrefix(filePath, rulePath)
+}
 
 // generateObjcClassPrefix generates the default Objective-C class prefix.
 func generateObjcClassPrefix(pkg string) string {

@@ -77,7 +77,22 @@ generate:
       opts:
         paths: source_relative
         require_unimplemented_servers: false
-    
+
+  # Managed mode - автоматическая установка file и field опций
+  managed:
+    enabled: true
+    disable:
+      - module: github.com/googleapis/googleapis  # Отключить для конкретного модуля
+    override:
+      - file_option: go_package_prefix
+        value: github.com/mycompany/myproject/gen/go
+      - file_option: java_package_prefix
+        value: com.mycompany
+      - file_option: csharp_namespace_prefix
+        value: MyCompany
+      - field_option: jstype
+        value: JS_STRING
+        path: api/v1/  # Применить к конкретному пути
 
 ```
 
@@ -544,6 +559,265 @@ plugins:
       import_style: typescript           # Стиль импорта
       mode: grpcweb                      # Режим транспорта
 ```
+
+## Managed Mode
+
+Managed mode автоматически устанавливает file и field опции в protobuf дескрипторах во время генерации кода без изменения исходных `.proto` файлов. Эта функция совместима с managed mode в `buf` и обеспечивает единообразный способ управления языково-специфичными опциями в вашей кодовой базе.
+
+**Ключевые преимущества:**
+- **Без изменений proto файлов**: Опции применяются во время генерации, proto файлы остаются чистыми
+- **Согласованные значения по умолчанию**: Автоматическое применение языковых соглашений об именовании
+- **Централизованная конфигурация**: Управление всеми опциями в одном месте (`easyp.yaml`)
+- **Правила для модулей**: Применение разных опций к разным модулям или путям
+- **Совместимость с buf**: Работает так же, как managed mode в `buf`
+
+### Как это работает
+
+Когда managed mode включён, EasyP автоматически применяет file и field опции к protobuf дескрипторам перед генерацией кода. Это происходит в памяти, поэтому исходные `.proto` файлы остаются неизменными.
+
+**Значения по умолчанию** применяются для определённых опций на основе языковых соглашений:
+- Java: `java_package_prefix` по умолчанию `"com"`, `java_multiple_files` по умолчанию `true`
+- C#: `csharp_namespace` по умолчанию PascalCase имени пакета
+- Ruby: `ruby_package` по умолчанию PascalCase с разделителем `::`
+- PHP: `php_namespace` по умолчанию PascalCase с разделителем `\`
+- Objective-C: `objc_class_prefix` по умолчанию первые буквы частей пакета
+- C++: `cc_enable_arenas` по умолчанию `true`
+
+**Overrides** позволяют установить конкретные значения для опций с поддержкой фильтрации по модулю, пути или полю.
+
+**Disables** позволяют предотвратить изменение managed mode определённых опций или файлов.
+
+### Конфигурация
+
+```yaml
+generate:
+  managed:
+    enabled: true
+    disable:
+      # Отключить managed mode для конкретного модуля
+      - module: github.com/googleapis/googleapis
+      
+      # Отключить конкретную опцию глобально
+      - file_option: java_package_prefix
+      
+      # Отключить для конкретного пути
+      - path: legacy/
+        file_option: go_package
+      
+      # Отключить field опцию для конкретного поля
+      - field_option: jstype
+        field: com.example.User.id
+    
+    override:
+      # Переопределить go_package_prefix для всех файлов
+      - file_option: go_package_prefix
+        value: github.com/mycompany/myproject/gen/go
+      
+      # Переопределить для конкретного модуля
+      - file_option: java_package_prefix
+        value: com.mycompany
+        module: github.com/mycompany/internal-protos
+      
+      # Переопределить для конкретного пути
+      - file_option: csharp_namespace_prefix
+        value: MyCompany
+        path: api/v1/
+      
+      # Переопределить для нескольких файлов с одинаковым значением используя префиксный путь
+      # Это совпадет и с internal/cms/bmi.proto, и с internal/cms/bmi_service.proto
+      - file_option: go_package
+        value: spec/cms/bmi
+        path: "internal/cms/bmi"
+      
+      # Переопределить field опцию для конкретного пути
+      - field_option: jstype
+        value: JS_STRING
+        path: api/v1/
+      
+      # Переопределить для конкретного поля
+      - field_option: jstype
+        value: JS_NUMBER
+        field: com.example.User.big_id
+```
+
+### Поддерживаемые File Options
+
+| Опция | Описание | Есть значение по умолчанию? |
+|-------|----------|----------------------------|
+| `go_package` | Go import path | ❌ |
+| `go_package_prefix` | Префикс для Go import paths | ❌ |
+| `java_package` | Имя Java пакета | ❌ |
+| `java_package_prefix` | Префикс для Java пакетов | ✅ (`"com"`) |
+| `java_package_suffix` | Суффикс для Java пакетов | ❌ |
+| `java_multiple_files` | Генерировать несколько Java файлов | ✅ (`true`) |
+| `java_outer_classname` | Имя внешнего класса | ✅ (PascalCase + "Proto") |
+| `java_string_check_utf8` | UTF-8 валидация | ❌ |
+| `csharp_namespace` | C# namespace | ✅ (PascalCase) |
+| `csharp_namespace_prefix` | Префикс для C# namespaces | ❌ |
+| `ruby_package` | Имя Ruby модуля | ✅ (PascalCase с `::`) |
+| `ruby_package_suffix` | Суффикс для Ruby пакетов | ❌ |
+| `php_namespace` | PHP namespace | ✅ (PascalCase с `\`) |
+| `php_metadata_namespace` | PHP metadata namespace | ❌ |
+| `php_metadata_namespace_suffix` | Суффикс для PHP metadata | ❌ |
+| `objc_class_prefix` | Objective-C префикс класса | ✅ (Первые буквы) |
+| `swift_prefix` | Swift префикс | ❌ |
+| `optimize_for` | Оптимизация генерации кода | ❌ |
+| `cc_enable_arenas` | C++ arena аллокация | ✅ (`true`) |
+
+### Поддерживаемые Field Options
+
+| Опция | Описание | Применяется к |
+|-------|----------|---------------|
+| `jstype` | JavaScript тип для 64-битных целых чисел | `int64`, `uint64`, `sint64`, `fixed64`, `sfixed64` |
+
+### Примеры
+
+#### Базовая настройка со значениями по умолчанию
+
+Включите managed mode для получения автоматических значений по умолчанию для всех поддерживаемых языков:
+
+```yaml
+generate:
+  inputs:
+    - directory: "proto"
+  plugins:
+    - name: go
+      out: ./gen/go
+    - name: java
+      out: ./gen/java
+    - name: csharp
+      out: ./gen/csharp
+  managed:
+    enabled: true
+```
+
+Это автоматически установит:
+- `java_package` в `com.<package>` для всех файлов
+- `java_multiple_files` в `true`
+- `csharp_namespace` в PascalCase имени пакета
+- `ruby_package` в PascalCase с разделителем `::`
+- И многое другое...
+
+#### Кастомный префикс Go пакета
+
+Переопределите префикс Go пакета для вашего проекта:
+
+```yaml
+generate:
+  managed:
+    enabled: true
+    override:
+      - file_option: go_package_prefix
+        value: github.com/mycompany/myproject/gen/go
+```
+
+Это установит `go_package` в `github.com/mycompany/myproject/gen/go/<package>` для всех файлов.
+
+#### Динамические пути Go пакетов с маркерами
+
+Для более сложной генерации путей можно использовать маркеры в значениях `go_package_prefix` или `go_package`:
+
+```yaml
+generate:
+  managed:
+    enabled: true
+    override:
+      # Использовать путь файла напрямую (без расширения .proto)
+      - file_option: go_package_prefix
+        value: github.com/mycompany/{{file_path}}
+      
+      # Использовать только путь директории
+      - file_option: go_package_prefix
+        value: github.com/mycompany/{{file_dir}}
+      
+      # Удалить префикс из пути директории
+      - file_option: go_package_prefix
+        value: github.com/mycompany/{{file_dir_without:internal/}}
+      
+      # Удалить префикс из полного пути файла
+      - file_option: go_package_prefix
+        value: github.com/mycompany/{{file_path_without:internal/}}
+```
+
+**Доступные маркеры:**
+- `{{file_path}}` - Полный путь файла без расширения `.proto`
+  - Пример: `internal/cms/as.proto` → `internal/cms/as`
+- `{{file_dir}}` - Только путь директории, без имени файла
+  - Пример: `internal/cms/as.proto` → `internal/cms`
+- `{{file_dir_without:prefix/}}` - Путь директории с удалением префикса и базового имени файла без суффиксов `_service`/`_grpc`
+  - Пример: `{{file_dir_without:internal/}}` для `internal/cms/as_service.proto` → `cms/as`
+- `{{file_path_without:prefix/}}` - Полный путь файла с удалением префикса
+  - Пример: `{{file_path_without:internal/}}` для `internal/cms/as.proto` → `cms/as`
+
+#### Переопределения для конкретных модулей
+
+Примените разные опции к разным модулям:
+
+```yaml
+generate:
+  managed:
+    enabled: true
+    override:
+      # Значение по умолчанию для всех файлов
+      - file_option: go_package_prefix
+        value: github.com/mycompany/myproject/gen/go
+      
+      # Конкретное переопределение для внутреннего модуля
+      - file_option: go_package_prefix
+        value: github.com/mycompany/internal/gen/go
+        module: github.com/mycompany/internal-protos
+```
+
+#### Отключение для внешних зависимостей
+
+Отключите managed mode для внешних зависимостей, у которых уже установлены опции:
+
+```yaml
+generate:
+  managed:
+    enabled: true
+    disable:
+      - module: github.com/googleapis/googleapis
+      - module: github.com/grpc-ecosystem/grpc-gateway
+```
+
+#### Типобезопасность JavaScript
+
+Установите `jstype` в `JS_STRING` для всех 64-битных целочисленных полей, чтобы предотвратить потерю точности в JavaScript:
+
+```yaml
+generate:
+  managed:
+    enabled: true
+    override:
+      - field_option: jstype
+        value: JS_STRING
+        path: api/v1/  # Применить к конкретному пути
+```
+
+### Совпадение путей
+
+Совпадение путей в managed mode использует префиксное совпадение (как в `buf`):
+
+- **Путь директории** (заканчивается на `/`): Совпадает со всеми файлами в этой директории и поддиректориях
+  - Пример: `path: "internal/cms/"` совпадает с `internal/cms/as.proto`, `internal/cms/node.proto`, `internal/cms/v1/service.proto`
+- **Точный путь файла** (заканчивается на `.proto`): Совпадает только с этим конкретным файлом
+  - Пример: `path: "internal/cms/as.proto"` совпадает только с `internal/cms/as.proto`
+- **Префиксный путь** (без завершающего `/` или `.proto`): Использует префиксное совпадение (не директориально-осознанное)
+  - Пример: `path: "internal/cms"` совпадает с `internal/cms/as.proto`, но также с `internal/cmsv2/file.proto`
+  - **Совет**: Используйте префиксные пути для группировки нескольких файлов с одинаковым значением. Например, `path: "internal/cms/bmi"` совпадает и с `internal/cms/bmi.proto`, и с `internal/cms/bmi_service.proto`, что позволяет установить одно и то же значение `go_package` для обоих файлов одним правилом.
+
+### Приоритет правил
+
+Когда несколько правил соответствуют одному файлу или полю, применяется следующий приоритет:
+
+1. **Disable правила** имеют приоритет — если опция отключена, она не будет применена
+2. **Override правила** применяются по порядку — последнее совпадающее правило побеждает
+3. **Значения по умолчанию** применяются только если нет совпадающего override и опция не отключена
+
+### Совместимость с buf
+
+Managed mode в EasyP совместим с managed mode в `buf`. Тот же формат конфигурации и поведение применяются, что упрощает миграцию между инструментами или использование обоих в одном workflow.
 
 ## Интеграция с менеджером пакетов
 

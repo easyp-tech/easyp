@@ -485,7 +485,162 @@ func TestApplyManagedMode_FieldOptions(t *testing.T) {
 	}
 }
 
+func TestApplyManagedMode_ExternalModules(t *testing.T) {
+	// Files from external modules should only be processed if there's an explicit rule
+	localFile := &descriptorpb.FileDescriptorProto{
+		Name:    strPtr("api/v1/service.proto"),
+		Package: strPtr("api.v1"),
+		Options: &descriptorpb.FileOptions{},
+	}
+
+	externalFile := &descriptorpb.FileDescriptorProto{
+		Name:    strPtr("google/api/annotations.proto"),
+		Package: strPtr("google.api"),
+		Options: &descriptorpb.FileOptions{
+			GoPackage: strPtr("google.golang.org/genproto/googleapis/api/annotations"),
+		},
+	}
+
+	config := ManagedModeConfig{
+		Enabled: true,
+		Override: []ManagedOverrideRule{
+			{
+				FileOption: FileOptionGoPackagePrefix,
+				Value:      "github.com/example/ec-code/gen/go",
+			},
+		},
+	}
+
+	fileToModule := map[string]string{
+		"api/v1/service.proto":         "",                                 // Local file
+		"google/api/annotations.proto": "github.com/googleapis/googleapis", // External module
+	}
+
+	err := ApplyManagedMode([]*descriptorpb.FileDescriptorProto{localFile, externalFile}, config, fileToModule)
+	require.NoError(t, err)
+
+	// Local file should get go_package from managed mode
+	assert.Equal(t, "github.com/example/ec-code/gen/go/api/v1", localFile.Options.GetGoPackage())
+
+	// External file should keep its original go_package (no rule for this module)
+	assert.Equal(t, "google.golang.org/genproto/googleapis/api/annotations", externalFile.Options.GetGoPackage())
+}
+
+func TestApplyManagedMode_ExternalModuleWithRule(t *testing.T) {
+	// External module file should be processed if there's an explicit rule
+	externalFile := &descriptorpb.FileDescriptorProto{
+		Name:    strPtr("google/api/annotations.proto"),
+		Package: strPtr("google.api"),
+		Options: &descriptorpb.FileOptions{},
+	}
+
+	config := ManagedModeConfig{
+		Enabled: true,
+		Override: []ManagedOverrideRule{
+			{
+				FileOption: FileOptionGoPackagePrefix,
+				Value:      "github.com/example/ec-code/gen/go",
+				Module:     "github.com/googleapis/googleapis", // Explicit rule for this module
+			},
+		},
+	}
+
+	fileToModule := map[string]string{
+		"google/api/annotations.proto": "github.com/googleapis/googleapis",
+	}
+
+	err := ApplyManagedMode([]*descriptorpb.FileDescriptorProto{externalFile}, config, fileToModule)
+	require.NoError(t, err)
+
+	// External file should get go_package from managed mode because there's a rule for its module
+	assert.Equal(t, "github.com/example/ec-code/gen/go/google/api", externalFile.Options.GetGoPackage())
+}
+
 // Helper functions
+func TestMatchesPath(t *testing.T) {
+	tests := []struct {
+		name     string
+		filePath string
+		rulePath string
+		expected bool
+	}{
+		// Directory path ending with "/"
+		{
+			name:     "directory path matches file in directory",
+			filePath: "internal/cms/as.proto",
+			rulePath: "internal/cms/",
+			expected: true,
+		},
+		{
+			name:     "directory path matches file in subdirectory",
+			filePath: "internal/cms/v1/service.proto",
+			rulePath: "internal/cms/",
+			expected: true,
+		},
+		{
+			name:     "directory path does not match file outside",
+			filePath: "internal/cmsv2/file.proto",
+			rulePath: "internal/cms/",
+			expected: false,
+		},
+		// Exact file path ending with ".proto"
+		{
+			name:     "exact file path matches",
+			filePath: "internal/cms/as.proto",
+			rulePath: "internal/cms/as.proto",
+			expected: true,
+		},
+		{
+			name:     "exact file path does not match different file",
+			filePath: "internal/cms/node.proto",
+			rulePath: "internal/cms/as.proto",
+			expected: false,
+		},
+		// Prefix path (no trailing "/" or ".proto")
+		{
+			name:     "prefix path matches file in directory",
+			filePath: "internal/cms/as.proto",
+			rulePath: "internal/cms",
+			expected: true,
+		},
+		{
+			name:     "prefix path matches file with similar prefix (buf behavior)",
+			filePath: "internal/cmsv2/file.proto",
+			rulePath: "internal/cms",
+			expected: true, // buf uses prefix matching, not directory-aware
+		},
+		{
+			name:     "prefix path does not match different prefix",
+			filePath: "internal/svc/service.proto",
+			rulePath: "internal/cms",
+			expected: false,
+		},
+		// Edge cases
+		{
+			name:     "empty rule path matches all",
+			filePath: "any/path/file.proto",
+			rulePath: "",
+			expected: true,
+		},
+		{
+			name:     "exact match with same prefix",
+			filePath: "internal/cms",
+			rulePath: "internal/cms",
+			expected: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			rule := ManagedOverrideRule{
+				Path: tt.rulePath,
+			}
+			result := rule.matchesFileContext(tt.filePath, "")
+			assert.Equal(t, tt.expected, result, "filePath: %s, rulePath: %s", tt.filePath, tt.rulePath)
+		})
+	}
+}
+
 func strPtr(s string) *string {
 	return &s
 }
