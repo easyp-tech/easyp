@@ -25,10 +25,52 @@ type Plugin struct {
 	WithImports bool              `json:"with_imports,omitempty" yaml:"with_imports,omitempty"`
 }
 
+// ManagedDisableRule defines a rule to disable managed mode for specific conditions.
+type ManagedDisableRule struct {
+	// Module disables managed mode for all files in the specified module.
+	Module string `json:"module,omitempty" yaml:"module,omitempty"`
+	// Path disables managed mode for files matching the specified path (directory or file).
+	Path string `json:"path,omitempty" yaml:"path,omitempty"`
+	// FileOption disables a specific file option from being modified.
+	FileOption string `json:"file_option,omitempty" yaml:"file_option,omitempty"`
+	// FieldOption disables a specific field option from being modified.
+	FieldOption string `json:"field_option,omitempty" yaml:"field_option,omitempty"`
+	// Field disables a specific field (fully qualified name: package.Message.field).
+	Field string `json:"field,omitempty" yaml:"field,omitempty"`
+}
+
+// ManagedOverrideRule defines a rule to override file or field options.
+type ManagedOverrideRule struct {
+	// FileOption specifies which file option to override.
+	FileOption string `json:"file_option,omitempty" yaml:"file_option,omitempty"`
+	// FieldOption specifies which field option to override.
+	FieldOption string `json:"field_option,omitempty" yaml:"field_option,omitempty"`
+	// Value is the value to set for the option.
+	Value any `json:"value,omitempty" yaml:"value,omitempty"`
+	// Module applies this override only to files in the specified module.
+	Module string `json:"module,omitempty" yaml:"module,omitempty"`
+	// Path applies this override only to files matching the specified path.
+	Path string `json:"path,omitempty" yaml:"path,omitempty"`
+	// Field applies this override only to the specified field (fully qualified name).
+	Field string `json:"field,omitempty" yaml:"field,omitempty"`
+}
+
+// ManagedMode is the configuration for managed mode which automatically
+// sets file and field options without modifying the original proto files.
+type ManagedMode struct {
+	// Enabled activates managed mode.
+	Enabled bool `json:"enabled" yaml:"enabled"`
+	// Disable contains rules to disable managed mode for specific conditions.
+	Disable []ManagedDisableRule `json:"disable,omitempty" yaml:"disable,omitempty"`
+	// Override contains rules to override file and field options.
+	Override []ManagedOverrideRule `json:"override,omitempty" yaml:"override,omitempty"`
+}
+
 // Generate is the configuration of the generate command.
 type Generate struct {
-	Inputs  []Input  `json:"inputs" yaml:"inputs"`
-	Plugins []Plugin `json:"plugins" yaml:"plugins"`
+	Inputs  []Input     `json:"inputs" yaml:"inputs"`
+	Plugins []Plugin    `json:"plugins" yaml:"plugins"`
+	Managed ManagedMode `json:"managed,omitempty" yaml:"managed,omitempty"`
 }
 
 // Input source for generating code.
@@ -167,6 +209,75 @@ func (c *Config) Validate() error {
 		if sourceCount == 0 {
 			return fmt.Errorf("plugin must have one source: name, remote, path, or command")
 		}
+	}
+
+	// Validate managed mode
+	if err := c.Generate.Managed.Validate(); err != nil {
+		return fmt.Errorf("managed mode validation: %w", err)
+	}
+
+	return nil
+}
+
+// Validate validates the managed mode configuration.
+func (m *ManagedMode) Validate() error {
+	// Validate disable rules
+	for i, rule := range m.Disable {
+		if err := rule.Validate(); err != nil {
+			return fmt.Errorf("disable rule %d: %w", i, err)
+		}
+	}
+
+	// Validate override rules
+	for i, rule := range m.Override {
+		if err := rule.Validate(); err != nil {
+			return fmt.Errorf("override rule %d: %w", i, err)
+		}
+	}
+
+	return nil
+}
+
+// Validate validates a disable rule.
+func (r *ManagedDisableRule) Validate() error {
+	// At least one field must be set
+	if r.Module == "" && r.Path == "" && r.FileOption == "" && r.FieldOption == "" && r.Field == "" {
+		return errors.New("disable rule must have at least one field set")
+	}
+
+	// Cannot have both file_option and field_option
+	if r.FileOption != "" && r.FieldOption != "" {
+		return errors.New("disable rule cannot have both file_option and field_option")
+	}
+
+	// Field can only be used with field_option
+	if r.Field != "" && r.FieldOption == "" {
+		return errors.New("field can only be used with field_option in disable rule")
+	}
+
+	return nil
+}
+
+// Validate validates an override rule.
+func (r *ManagedOverrideRule) Validate() error {
+	// Must have either file_option or field_option
+	if r.FileOption == "" && r.FieldOption == "" {
+		return errors.New("override rule must have either file_option or field_option")
+	}
+
+	// Cannot have both file_option and field_option
+	if r.FileOption != "" && r.FieldOption != "" {
+		return errors.New("override rule cannot have both file_option and field_option")
+	}
+
+	// Must have a value
+	if r.Value == nil {
+		return errors.New("override rule must have a value")
+	}
+
+	// Field can only be used with field_option
+	if r.Field != "" && r.FieldOption == "" {
+		return errors.New("field can only be used with field_option in override rule")
 	}
 
 	return nil

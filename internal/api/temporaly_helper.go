@@ -79,6 +79,9 @@ func buildCore(_ context.Context, cfg config.Config, dirWalker core.DirWalker) (
 		AgainstGitRef: cfg.BreakingCheck.AgainstGitRef,
 	}
 
+	// Convert managed mode configuration
+	managedMode := convertManagedModeConfig(cfg.Generate.Managed)
+
 	app := core.New(
 		lintRules,
 		cfg.Lint.Ignore,
@@ -124,9 +127,36 @@ func buildCore(_ context.Context, cfg config.Config, dirWalker core.DirWalker) (
 		lockFile,
 		currentProjectGitWalker,
 		breakingCheckConfig,
+		managedMode,
 	)
 
 	return app, nil
+}
+
+// convertManagedModeConfig converts config.ManagedMode to core.ManagedModeConfig.
+func convertManagedModeConfig(cfg config.ManagedMode) core.ManagedModeConfig {
+	return core.ManagedModeConfig{
+		Enabled: cfg.Enabled,
+		Disable: lo.Map(cfg.Disable, func(r config.ManagedDisableRule, _ int) core.ManagedDisableRule {
+			return core.ManagedDisableRule{
+				Module:      r.Module,
+				Path:        r.Path,
+				FileOption:  core.FileOptionType(r.FileOption),
+				FieldOption: core.FieldOptionType(r.FieldOption),
+				Field:       r.Field,
+			}
+		}),
+		Override: lo.Map(cfg.Override, func(r config.ManagedOverrideRule, _ int) core.ManagedOverrideRule {
+			return core.ManagedOverrideRule{
+				FileOption:  core.FileOptionType(r.FileOption),
+				FieldOption: core.FieldOptionType(r.FieldOption),
+				Value:       r.Value,
+				Module:      r.Module,
+				Path:        r.Path,
+				Field:       r.Field,
+			}
+		}),
+	}
 }
 
 func IsExistingDir(path string) bool {
