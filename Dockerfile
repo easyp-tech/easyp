@@ -1,10 +1,10 @@
-FROM --platform=${BUILDPLATFORM} golang:1.25.2-alpine3.22 AS builder
+FROM --platform=${BUILDPLATFORM} golang:1.25-alpine AS builder
 
 LABEL stage=gobuilder
 
-ENV CGO_ENABLED 0
+ENV CGO_ENABLED=0
 
-ENV GOOS linux
+ENV GOOS=linux
 
 RUN apk update --no-cache
 
@@ -22,6 +22,8 @@ RUN go build -o /easyp  ./cmd/easyp
 
 FROM alpine:3.22
 
-RUN apk update --no-cache
+RUN apk add --no-cache ca-certificates tzdata
 
 COPY --from=builder /easyp /easyp
+
+ENTRYPOINT ["/easyp"]
