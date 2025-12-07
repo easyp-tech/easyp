@@ -77,7 +77,22 @@ generate:
       opts:
         paths: source_relative
         require_unimplemented_servers: false
-    
+
+  # Managed mode - automatically set file and field options
+  managed:
+    enabled: true
+    disable:
+      - module: github.com/googleapis/googleapis  # Disable for specific module
+    override:
+      - file_option: go_package_prefix
+        value: github.com/mycompany/myproject/gen/go
+      - file_option: java_package_prefix
+        value: com.mycompany
+      - file_option: csharp_namespace_prefix
+        value: MyCompany
+      - field_option: jstype
+        value: JS_STRING
+        path: api/v1/  # Apply to specific path
 
 ```
 
@@ -544,6 +559,264 @@ plugins:
       import_style: typescript           # Module system for generated code
       mode: grpcweb                      # Transport mode for gRPC-Web
 ```
+
+## Managed Mode
+
+Managed mode automatically sets file and field options in your protobuf descriptors during code generation without modifying the original `.proto` files. This feature is compatible with `buf`'s managed mode and provides a consistent way to manage language-specific options across your codebase.
+
+**Key benefits:**
+- **No proto file modifications**: Options are applied at generation time, keeping your proto files clean
+- **Consistent defaults**: Automatic application of language-specific naming conventions
+- **Centralized configuration**: Manage all options in one place (`easyp.yaml`)
+- **Module-specific rules**: Apply different options to different modules or paths
+- **buf compatibility**: Works the same way as `buf` managed mode
+
+### How It Works
+
+When managed mode is enabled, EasyP automatically applies file and field options to your protobuf descriptors before code generation. This happens in memory, so your original `.proto` files remain unchanged.
+
+**Default values** are applied for certain options based on language conventions:
+- Java: `java_package_prefix` defaults to `"com"`, `java_multiple_files` defaults to `true`
+- C#: `csharp_namespace` defaults to PascalCase of package name
+- Ruby: `ruby_package` defaults to PascalCase with `::` separator
+- PHP: `php_namespace` defaults to PascalCase with `\` separator
+- Objective-C: `objc_class_prefix` defaults to first letters of package parts
+- C++: `cc_enable_arenas` defaults to `true`
+
+**Overrides** allow you to set specific values for options, with support for filtering by module, path, or field.
+
+**Disables** allow you to prevent managed mode from modifying specific options or files.
+
+### Configuration
+
+```yaml
+generate:
+  managed:
+    enabled: true
+    disable:
+      # Disable managed mode for specific module
+      - module: github.com/googleapis/googleapis
+      
+      # Disable specific option globally
+      - file_option: java_package_prefix
+      
+      # Disable for specific path
+      - path: legacy/
+        file_option: go_package
+      
+      # Disable field option for specific field
+      - field_option: jstype
+        field: com.example.User.id
+    
+    override:
+      # Override go_package_prefix for all files
+      - file_option: go_package_prefix
+        value: github.com/mycompany/myproject/gen/go
+      
+      # Override for specific module
+      - file_option: java_package_prefix
+        value: com.mycompany
+        module: github.com/mycompany/internal-protos
+      
+      # Override for specific path
+      - file_option: csharp_namespace_prefix
+        value: MyCompany
+        path: api/v1/
+      
+      # Override for multiple files with same value using prefix path
+      # This matches both internal/cms/bmi.proto and internal/cms/bmi_service.proto
+      - file_option: go_package
+        value: spec/cms/bmi
+        path: "internal/cms/bmi"
+      
+      # Override field option for specific path
+      - field_option: jstype
+        value: JS_STRING
+        path: api/v1/
+      
+      # Override for specific field
+      - field_option: jstype
+        value: JS_NUMBER
+        field: com.example.User.big_id
+```
+
+### Supported File Options
+
+| Option | Description | Has Default? |
+|--------|-------------|--------------|
+| `go_package` | Go import path | ❌ |
+| `go_package_prefix` | Prefix for Go import paths | ❌ |
+| `java_package` | Java package name | ❌ |
+| `java_package_prefix` | Prefix for Java packages | ✅ (`"com"`) |
+| `java_package_suffix` | Suffix for Java packages | ❌ |
+| `java_multiple_files` | Generate multiple Java files | ✅ (`true`) |
+| `java_outer_classname` | Outer class name | ✅ (PascalCase + "Proto") |
+| `java_string_check_utf8` | UTF-8 validation | ❌ |
+| `csharp_namespace` | C# namespace | ✅ (PascalCase) |
+| `csharp_namespace_prefix` | Prefix for C# namespaces | ❌ |
+| `ruby_package` | Ruby module name | ✅ (PascalCase with `::`) |
+| `ruby_package_suffix` | Suffix for Ruby packages | ❌ |
+| `php_namespace` | PHP namespace | ✅ (PascalCase with `\`) |
+| `php_metadata_namespace` | PHP metadata namespace | ❌ |
+| `php_metadata_namespace_suffix` | Suffix for PHP metadata | ❌ |
+| `objc_class_prefix` | Objective-C class prefix | ✅ (First letters) |
+| `swift_prefix` | Swift prefix | ❌ |
+| `optimize_for` | Code generation optimization | ❌ |
+| `cc_enable_arenas` | C++ arena allocation | ✅ (`true`) |
+
+### Supported Field Options
+
+| Option | Description | Applies To |
+|--------|-------------|------------|
+| `jstype` | JavaScript type for 64-bit integers | `int64`, `uint64`, `sint64`, `fixed64`, `sfixed64` |
+
+### Examples
+
+#### Basic Setup with Defaults
+
+Enable managed mode to get automatic defaults for all supported languages:
+
+```yaml
+generate:
+  inputs:
+    - directory: "proto"
+  plugins:
+    - name: go
+      out: ./gen/go
+    - name: java
+      out: ./gen/java
+    - name: csharp
+      out: ./gen/csharp
+  managed:
+    enabled: true
+```
+
+This will automatically:
+- Set `java_package` to `com.<package>` for all files
+- Set `java_multiple_files` to `true`
+- Set `csharp_namespace` to PascalCase of package name
+- Set `ruby_package` to PascalCase with `::` separator
+- And more...
+
+#### Custom Go Package Prefix
+
+Override the Go package prefix for your project:
+
+```yaml
+generate:
+  managed:
+    enabled: true
+    override:
+      - file_option: go_package_prefix
+        value: github.com/mycompany/myproject/gen/go
+```
+
+This will set `go_package` to `github.com/mycompany/myproject/gen/go/<package>` for all files.
+
+#### Dynamic Go Package Paths with Markers
+
+For more complex path generation, you can use markers in `go_package_prefix` or `go_package` values:
+
+```yaml
+generate:
+  managed:
+    enabled: true
+    override:
+      # Use file path directly (without .proto extension)
+      - file_option: go_package_prefix
+        value: github.com/mycompany/{{file_path}}
+      
+      # Use only directory path
+      - file_option: go_package_prefix
+        value: github.com/mycompany/{{file_dir}}
+      
+      # Remove prefix from directory path
+      - file_option: go_package_prefix
+        value: github.com/mycompany/{{file_dir_without:internal/}}
+      
+      # Remove prefix from full file path
+      - file_option: go_package_prefix
+        value: github.com/mycompany/{{file_path_without:internal/}}
+```
+
+**Available markers:**
+- `{{file_path}}` - Full file path without `.proto` extension
+  - Example: `internal/cms/as.proto` → `internal/cms/as`
+- `{{file_dir}}` - Directory path only, without filename
+  - Example: `internal/cms/as.proto` → `internal/cms`
+- `{{file_dir_without:prefix/}}` - Directory path with prefix removed, and base filename without `_service`/`_grpc` suffixes
+  - Example: `{{file_dir_without:internal/}}` for `internal/cms/as_service.proto` → `cms/as`
+- `{{file_path_without:prefix/}}` - Full file path with prefix removed
+  - Example: `{{file_path_without:internal/}}` for `internal/cms/as.proto` → `cms/as`
+
+#### Module-Specific Overrides
+
+Apply different options to different modules:
+
+```yaml
+generate:
+  managed:
+    enabled: true
+    override:
+      # Default for all files
+      - file_option: go_package_prefix
+        value: github.com/mycompany/myproject/gen/go
+      
+      # Specific override for internal module
+      - file_option: go_package_prefix
+        value: github.com/mycompany/internal/gen/go
+        module: github.com/mycompany/internal-protos
+```
+
+#### Disabling for External Dependencies
+
+Disable managed mode for external dependencies that already have their options set:
+
+```yaml
+generate:
+  managed:
+    enabled: true
+    disable:
+      - module: github.com/googleapis/googleapis
+      - module: github.com/grpc-ecosystem/grpc-gateway
+```
+
+#### JavaScript Type Safety
+
+Set `jstype` to `JS_STRING` for all 64-bit integer fields to prevent precision loss in JavaScript:
+
+```yaml
+generate:
+  managed:
+    enabled: true
+    override:
+      - field_option: jstype
+        value: JS_STRING
+        path: api/v1/  # Apply to specific path
+```
+
+### Path Matching
+
+Path matching in managed mode uses prefix-based matching (same as `buf`):
+
+- **Directory path** (ending with `/`): Matches all files in that directory and subdirectories
+  - Example: `path: "internal/cms/"` matches `internal/cms/as.proto`, `internal/cms/node.proto`, `internal/cms/v1/service.proto`
+- **Exact file path** (ending with `.proto`): Matches only that specific file
+  - Example: `path: "internal/cms/as.proto"` matches only `internal/cms/as.proto`
+- **Prefix path** (no trailing `/` or `.proto`): Uses prefix matching (not directory-aware)
+  - Example: `path: "internal/cms"` matches `internal/cms/as.proto` but also `internal/cmsv2/file.proto`
+
+### Rule Precedence
+
+When multiple rules match the same file or field, the following precedence applies:
+
+1. **Disable rules** take precedence - if an option is disabled, it won't be applied
+2. **Override rules** are applied in order - the last matching rule wins
+3. **Default values** are applied only if no override matches and the option isn't disabled
+
+### Compatibility with buf
+
+EasyP's managed mode is compatible with `buf`'s managed mode. The same configuration format and behavior apply, making it easy to migrate between tools or use both in the same workflow.
 
 ## Package Manager Integration
 

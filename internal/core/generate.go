@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"os"
 	"os/exec"
 	"path"
 	"path/filepath"
@@ -230,6 +231,17 @@ func (c *Core) Generate(ctx context.Context, root, directory string) error {
 		c.logger.DebugContext(ctx, fmt.Sprintf("%d: %s", i, fd.GetName()))
 	}
 
+	// Build file to module mapping for managed mode
+	fileToModule := c.buildFileToModuleMap(q.Files)
+
+	// Apply managed mode to file descriptors
+	if c.managedMode.Enabled {
+		c.logger.DebugContext(ctx, "Applying managed mode to file descriptors")
+		if err := ApplyManagedMode(fileDescriptors, c.managedMode, fileToModule); err != nil {
+			return fmt.Errorf("ApplyManagedMode: %w", err)
+		}
+	}
+
 	filesToWrite := NewGenerateBucket()
 
 	for _, plugin := range c.plugins {
@@ -432,4 +444,82 @@ func (c *Core) getExecutor(plugin Plugin) pluginexecutor.Executor {
 
 	// Priority 4: Otherwise use local executor (backward compatibility)
 	return c.localExecutor
+}
+
+// buildFileToModuleMap creates a mapping from file paths to their module names.
+// This is used by managed mode to apply module-specific rules.
+//
+// The mapping works by scanning installed dependency directories and mapping
+// relative proto file paths to their source module. For example:
+//   - Module "github.com/googleapis/googleapis" installed at ~/.easyp/mod/github.com/googleapis/googleapis/v1/
+//   - Contains file: google/api/annotations.proto
+//   - Mapping: "google/api/annotations.proto" → "github.com/googleapis/googleapis"
+func (c *Core) buildFileToModuleMap(files []string) map[string]string {
+	fileToModule := make(map[string]string)
+
+	// Map main files - they belong to the local project (empty module)
+	for _, file := range files {
+		fileToModule[file] = ""
+	}
+
+	// Build mapping from dependency install directories
+	// For each dependency, scan its install dir and map relative paths to module name
+	for _, dep := range c.deps {
+		module := models.NewModule(dep)
+		c.mapModuleFiles(module.Name, fileToModule)
+	}
+
+	// Also map files from git repo inputs
+	for _, repo := range c.inputs.InputGitRepos {
+		module := models.NewModule(repo.URL)
+		c.mapModuleFiles(module.Name, fileToModule)
+	}
+
+	return fileToModule
+}
+
+// mapModuleFiles scans a module's install directory and adds proto file mappings.
+func (c *Core) mapModuleFiles(moduleName string, fileToModule map[string]string) {
+	// Get module version from lock file
+	lockInfo, err := c.lockFile.Read(moduleName)
+	if err != nil {
+		// Module not installed or not in lock file - skip
+		return
+	}
+
+	// Get install directory
+	installDir := c.storage.GetInstallDir(moduleName, lockInfo.Version)
+
+	// Walk the install directory and map all .proto files
+	err = filepath.WalkDir(installDir, func(filePath string, d os.DirEntry, err error) error {
+		if err != nil {
+			return nil // Skip errors
+		}
+
+		if d.IsDir() || filepath.Ext(filePath) != ".proto" {
+			return nil
+		}
+
+		// Get relative path from install dir (this is the import path)
+		relPath, err := filepath.Rel(installDir, filePath)
+		if err != nil {
+			return nil
+		}
+
+		// Normalize to forward slashes (proto import paths use forward slashes)
+		relPath = filepath.ToSlash(relPath)
+
+		// Map this file to its module
+		fileToModule[relPath] = moduleName
+
+		return nil
+	})
+
+	if err != nil {
+		// Log error but don't fail - managed mode can work without module mapping
+		c.logger.Debug("Failed to scan module directory",
+			"module", moduleName,
+			"installDir", installDir,
+			"error", err)
+	}
 }
