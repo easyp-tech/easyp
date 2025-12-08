@@ -71,49 +71,26 @@ source:
   enabled: true
   name_template: '{{ .ProjectName }}-{{ .Version }}-source'
 
-dockers:
-  - image_templates:
-      - "ghcr.io/easyp-tech/easyp:{{ .Tag }}-amd64"
+dockers_v2:
+  - images:
+      - "ghcr.io/easyp-tech/easyp"
+    tags:
+      - "{{ .Tag }}"
+      - "latest"
     dockerfile: Dockerfile
-    use: buildx
-    build_flag_templates:
-      - "--platform=linux/amd64"
-      - "--label=org.opencontainers.image.title={{ .ProjectName }}"
-      - "--label=org.opencontainers.image.version={{ .Version }}"
-      - "--label=org.opencontainers.image.source=https://github.com/easyp-tech/easyp"
+    platforms:
+      - linux/amd64
+      - linux/arm64
+    labels:
+      "org.opencontainers.image.title": "{{ .ProjectName }}"
+      "org.opencontainers.image.version": "{{ .Version }}"
+      "org.opencontainers.image.source": "https://github.com/easyp-tech/easyp"
     extra_files:
       - go.mod
       - go.sum
       - cmd
       - internal
       - wellknownimports
-
-  - image_templates:
-      - "ghcr.io/easyp-tech/easyp:{{ .Tag }}-arm64"
-    dockerfile: Dockerfile
-    use: buildx
-    build_flag_templates:
-      - "--platform=linux/arm64"
-      - "--label=org.opencontainers.image.title={{ .ProjectName }}"
-      - "--label=org.opencontainers.image.version={{ .Version }}"
-      - "--label=org.opencontainers.image.source=https://github.com/easyp-tech/easyp"
-    extra_files:
-      - go.mod
-      - go.sum
-      - cmd
-      - internal
-      - wellknownimports
-
-docker_manifests:
-  - name_template: "ghcr.io/easyp-tech/easyp:{{ .Tag }}"
-    image_templates:
-      - "ghcr.io/easyp-tech/easyp:{{ .Tag }}-amd64"
-      - "ghcr.io/easyp-tech/easyp:{{ .Tag }}-arm64"
-
-  - name_template: "ghcr.io/easyp-tech/easyp:latest"
-    image_templates:
-      - "ghcr.io/easyp-tech/easyp:{{ .Tag }}-amd64"
-      - "ghcr.io/easyp-tech/easyp:{{ .Tag }}-arm64"
 
 brews:
   - description: Easy modern protobuf tooling for all your needs.
