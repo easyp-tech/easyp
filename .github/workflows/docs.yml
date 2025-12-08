@@ -36,7 +36,7 @@ jobs:
       - name: Check for changes
         id: verify-changed-files
         run: |
-          if git diff --quiet; then
+          if git diff --quiet docs/dist/; then
             echo "changed=false" >> $GITHUB_OUTPUT
           else
             echo "changed=true" >> $GITHUB_OUTPUT

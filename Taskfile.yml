@@ -126,28 +126,28 @@ tasks:
           GIT_TAG: "{{.GIT_TAG}}"
 
   goreleaser:check:
-    desc: Проверка синтаксиса конфигурации GoReleaser
+    desc: Check GoReleaser configuration syntax
     cmds:
       - goreleaser check
 
   goreleaser:test:
-    desc: Тестовая сборка GoReleaser (snapshot, без публикации)
+    desc: Test GoReleaser build (snapshot, no publish)
     cmds:
       - |
         if ! docker buildx ls | grep -q multiarch; then
-          echo "Создание Docker buildx builder для multi-arch..."
+          echo "Creating Docker buildx builder for multi-arch..."
           docker buildx create --name multiarch --use --bootstrap || docker buildx use multiarch
         fi
         goreleaser release --snapshot --clean
 
   goreleaser:test-docker:
-    desc: Тестовая сборка Docker образов (snapshot, локально)
+    desc: Test Docker images build (snapshot, locally)
     cmds:
       - |
         if ! docker buildx ls | grep -q multiarch; then
-          echo "Создание Docker buildx builder для multi-arch..."
+          echo "Creating Docker buildx builder for multi-arch..."
           docker buildx create --name multiarch --use --bootstrap || docker buildx use multiarch
         fi
-        echo "Примечание: В snapshot режиме GoReleaser создает отдельные образы с суффиксами платформ"
-        echo "В реальном релизе будет создан multi-arch manifest без суффиксов"
+        echo "Note: In snapshot mode GoReleaser creates separate images with platform suffixes"
+        echo "In a real release, a multi-arch manifest will be created without suffixes"
         goreleaser release --snapshot --clean
