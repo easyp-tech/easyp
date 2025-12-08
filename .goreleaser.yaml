@@ -83,8 +83,14 @@ dockers_v2:
       - linux/arm64
     labels:
       "org.opencontainers.image.title": "{{ .ProjectName }}"
+      "org.opencontainers.image.description": "Easy modern protobuf tooling for all your needs."
       "org.opencontainers.image.version": "{{ .Version }}"
       "org.opencontainers.image.source": "https://github.com/easyp-tech/easyp"
+    annotations:
+      "org.opencontainers.image.description": "Easy modern protobuf tooling for all your needs."
+    sbom: false
+    flags:
+      - "--provenance=false"
     extra_files:
       - go.mod
       - go.sum
