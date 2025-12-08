@@ -67,7 +67,7 @@ func (g Generate) Action(ctx *cli.Context) error {
 	}
 
 	dir := ctx.String(flagGenerateDirectoryPath.Name)
-	err = app.Generate(ctx.Context, ".", dir)
+	err = app.Generate(ctx.Context, workingDir, dir)
 	if err != nil {
 		if errors.Is(err, core.ErrEmptyInputFiles) {
 			logger.Warn("empty input files!")
