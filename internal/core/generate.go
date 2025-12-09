@@ -8,8 +8,8 @@ import (
 	"log/slog"
 	"os"
 	"os/exec"
-	"path"
 	"path/filepath"
+	"regexp"
 	"strings"
 
 	"github.com/bufbuild/protocompile"
@@ -110,7 +110,18 @@ func (c *Core) Generate(ctx context.Context, root, directory string) error {
 	}
 
 	for _, inputFilesDir := range c.inputs.InputFilesDir {
-		fsWalker := fs.NewFSWalker(directory, inputFilesDir.Root)
+		searchPath := filepath.Join(inputFilesDir.Root, inputFilesDir.Path)
+		// Skip if inputFilesDir.Root and directory don't overlap
+		if directory != "." && !pathsOverlap(directory, searchPath) {
+			c.logger.DebugContext(ctx, "skipping inputFilesDir",
+				slog.String("directory", directory),
+				slog.String("searchPath", searchPath),
+				slog.String("reason", "paths don't overlap"),
+			)
+			continue
+		}
+
+		fsWalker := fs.NewFSWalker(root, searchPath)
 		q.Imports = append(q.Imports, inputFilesDir.Root)
 
 		err := fsWalker.WalkDir(func(walkPath string, err error) error {
@@ -121,12 +132,13 @@ func (c *Core) Generate(ctx context.Context, root, directory string) error {
 				return ctx.Err()
 			case filepath.Ext(walkPath) != ".proto":
 				return nil
-			case shouldIgnore(walkPath, []string{path.Join(inputFilesDir.Root, inputFilesDir.Path)}):
-				c.logger.DebugContext(ctx, "ignore", slog.String("walkPath", walkPath))
-
+			case shouldIgnore(walkPath, []string{directory}):
+				c.logger.DebugContext(ctx, "ignore", slog.String("walkPath", walkPath), slog.String("directory", directory))
 				return nil
 			}
 
+			// Get file path relative to inputFilesDir.Root
+			// walkPath starts with inputFilesDir.Root
 			addedFile := stripPrefix(walkPath, inputFilesDir.Root)
 			q.Files = append(q.Files, addedFile)
 
@@ -286,9 +298,9 @@ func (c *Core) Generate(ctx context.Context, root, directory string) error {
 			// Determine base directory for output files considering plugin.Out
 			var baseDir string
 			if plugin.Out != "" {
-				baseDir = filepath.Join(directory, plugin.Out)
+				baseDir = filepath.Join(root, plugin.Out)
 			} else {
-				baseDir = directory
+				baseDir = root
 			}
 
 			p := filepath.Join(baseDir, file.GetName())
@@ -354,14 +366,69 @@ func addFileWithInsertionPoint(
 	return nil
 }
 
+// pathsOverlap checks if two paths overlap (one is within another or they are equal).
+// It is recommended to pass absolute paths.
+func pathsOverlap(a, b string) bool {
+	na := filepath.Clean(a)
+	nb := filepath.Clean(b)
+
+	// Full match is always overlap
+	if na == nb {
+		return true
+	}
+
+	// Add separator at the end to distinguish "/foo/bar" from "/foo/bark"
+	naSlash := na + string(filepath.Separator)
+	nbSlash := nb + string(filepath.Separator)
+
+	// na is parent of nb
+	if strings.HasPrefix(nbSlash, naSlash) {
+		return true
+	}
+
+	// nb is parent of na
+	if strings.HasPrefix(naSlash, nbSlash) {
+		return true
+	}
+
+	return false
+}
+
 func shouldIgnore(path string, dirs []string) bool {
+	path = filepath.Clean(path)
 	if len(dirs) == 0 {
 		return true
 	}
 
 	for _, dir := range dirs {
-		if strings.HasPrefix(path, dir) {
-			return false
+		dir = filepath.Clean(dir)
+
+		// Special case: if dir is ".", match everything
+		if dir == "." {
+			slog.Debug("shouldIgnore: dir is '.', matching all paths", "path", path)
+			return false // Don't ignore - match everything
+		}
+
+		// Check if path starts with dir (prefix matching)
+		if strings.HasPrefix(path, dir+"/") || path == dir {
+			slog.Debug("shouldIgnore: path starts with dir", "path", path, "dir", dir)
+			return false // Don't ignore - path is within directory
+		}
+
+		// Check regex pattern (for wildcard patterns)
+		// QuoteMeta escapes all special chars (including *), then we convert \* back to .* for wildcard matching
+		pattern := regexp.QuoteMeta(dir)
+		pattern = strings.ReplaceAll(pattern, "\\*", ".*")
+		regexPattern := "^" + pattern
+
+		matched, err := regexp.MatchString(regexPattern, path)
+		if err != nil {
+			slog.Warn("shouldIgnore: regex match error", "path", path, "dir", dir, "regex", regexPattern, "error", err)
+			continue
+		}
+		if matched {
+			slog.Debug("shouldIgnore: path matches regex pattern", "path", path, "dir", dir, "regex", regexPattern)
+			return false // Don't ignore - path matches pattern
 		}
 	}
 
@@ -395,6 +462,8 @@ func (c *Core) getModulePath(ctx context.Context, requestedDependency string) (s
 func stripPrefix(path, prefix string) string {
 	normalizedPath := filepath.ToSlash(path)
 	normalizedPrefix := filepath.ToSlash(prefix)
+	// Remove trailing slash from prefix if present
+	normalizedPrefix = strings.TrimSuffix(normalizedPrefix, "/")
 
 	return strings.TrimPrefix(normalizedPath, normalizedPrefix+"/")
 }
