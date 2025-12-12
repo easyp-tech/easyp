@@ -23,6 +23,7 @@ type Core struct {
 	moduleConfig ModuleConfig
 	lockFile     LockFile
 	managedMode  ManagedModeConfig
+	vendorDir    string
 
 	breakingCheckConfig     BreakingCheckConfig
 	currentProjectGitWalker CurrentProjectGitWalker
@@ -54,6 +55,7 @@ func New(
 	currentProjectGitWalker CurrentProjectGitWalker,
 	breakingCheckConfig BreakingCheckConfig,
 	managedMode ManagedModeConfig,
+	vendorDir string,
 ) *Core {
 	return &Core{
 		rules:                   rules,
@@ -74,5 +76,6 @@ func New(
 		remoteExecutor:          plugin.NewRemotePluginExecutor(logger),
 		builtinExecutor:         plugin.NewBuiltinPluginExecutor(logger),
 		commandExecutor:         plugin.NewCommandPluginExecutor(console, logger),
+		vendorDir:               vendorDir,
 	}
 }

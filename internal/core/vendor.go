@@ -7,11 +7,6 @@ import (
 	cp "github.com/otiai10/copy"
 )
 
-const (
-	// TODO: move to config
-	easypVendorDir = "easyp_vendor"
-)
-
 // Vendor copy all proto files from deps to local dir
 func (c *Core) Vendor(ctx context.Context) error {
 	if err := c.Download(ctx, c.deps); err != nil {
@@ -24,7 +19,7 @@ func (c *Core) Vendor(ctx context.Context) error {
 			return fmt.Errorf("c.moduleReflect.GetModulePath: %w", err)
 		}
 
-		if err := cp.Copy(depPath, easypVendorDir); err != nil {
+		if err := cp.Copy(depPath, c.vendorDir); err != nil {
 			return fmt.Errorf("c.Copy: %w", err)
 		}
 	}
