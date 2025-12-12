@@ -28,6 +28,7 @@ var (
 const (
 	envEasypPath     = "EASYPPATH"
 	defaultEasypPath = ".easyp"
+	defaultVendorDir = "easyp_vendor"
 )
 
 func errExit(code int, msg string, args ...any) {
@@ -57,6 +58,8 @@ func getEasypPath() (string, error) {
 }
 
 func buildCore(_ context.Context, cfg config.Config, dirWalker core.DirWalker) (*core.Core, error) {
+	vendorPath := defaultVendorDir // TODO: read from config
+
 	lintRules, ignoreOnly, err := rules.New(cfg.Lint)
 	if err != nil {
 		return nil, fmt.Errorf("cfg.BuildLinterRules: %w", err)
@@ -74,8 +77,12 @@ func buildCore(_ context.Context, cfg config.Config, dirWalker core.DirWalker) (
 
 	currentProjectGitWalker := go_git.New()
 
+	// always ignore vendor dir for linter and breakinf check
+	linterIgnoreDirs := append(cfg.Lint.Ignore, vendorPath)
+	breakingCheckIgnoreDirs := append(cfg.BreakingCheck.Ignore, vendorPath)
+
 	breakingCheckConfig := core.BreakingCheckConfig{
-		IgnoreDirs:    cfg.BreakingCheck.Ignore,
+		IgnoreDirs:    breakingCheckIgnoreDirs,
 		AgainstGitRef: cfg.BreakingCheck.AgainstGitRef,
 	}
 
@@ -84,7 +91,7 @@ func buildCore(_ context.Context, cfg config.Config, dirWalker core.DirWalker) (
 
 	app := core.New(
 		lintRules,
-		cfg.Lint.Ignore,
+		linterIgnoreDirs,
 		cfg.Deps,
 		ignoreOnly,
 		slog.Default(), // TODO: remove global state
@@ -128,6 +135,7 @@ func buildCore(_ context.Context, cfg config.Config, dirWalker core.DirWalker) (
 		currentProjectGitWalker,
 		breakingCheckConfig,
 		managedMode,
+		vendorPath, // vendorDir
 	)
 
 	return app, nil
