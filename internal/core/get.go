@@ -12,14 +12,32 @@ import (
 
 // Get download package.
 func (c *Core) Get(ctx context.Context, requestedModule models.Module) error {
-	isInstalled, err := c.storage.IsModuleInstalled(requestedModule)
+	cacheDownloadPaths := c.storage.GetCacheDownloadPaths(requestedModule.Name, string(requestedModule.Version))
+
+	var installedModuleInfo models.InstalledModuleInfo
+	var err error
+	needToInstall := false
+
+	installedModuleInfo, err = c.storage.ReadInstalledModuleInfo(cacheDownloadPaths)
 	if err != nil {
-		return fmt.Errorf("c.storage.IsModuleInstalled: %w", err)
+		if !errors.Is(err, models.ErrModuleInfoFileNotFound) {
+			return fmt.Errorf("c.storage.ReadInstalledModuleInfo: %w", err)
+		}
+
+		needToInstall = true
+	} else {
+		// check hash sum
 	}
 
-	installedModuleInfo, err := c.get(ctx, requestedModule)
-	if err != nil {
-		return fmt.Errorf("c.get: %w", err)
+	if needToInstall {
+		installedModuleInfo, err = c.get(ctx, requestedModule)
+		if err != nil {
+			return fmt.Errorf("c.get: %w", err)
+		}
+	} else {
+		c.logger.Debug("Module is installed",
+			"name", requestedModule.Name, "version", requestedModule.Version,
+		)
 	}
 
 	if err := c.lockFile.Write(
@@ -97,6 +115,7 @@ func (c *Core) get(ctx context.Context, requestedModule models.Module) (models.I
 	slog.Debug("HASH", "hash", moduleHash)
 
 	installedModuleInfo := models.InstalledModuleInfo{
+		ModuleName:      requestedModule.Name,
 		Hash:            moduleHash,
 		RevisionVersion: revision.Version,
 	}

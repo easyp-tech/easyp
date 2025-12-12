@@ -38,6 +38,7 @@ type Module struct {
 
 // InstalledModuleInfo contain info about installed module (dep) in system (near the zip archive)
 type InstalledModuleInfo struct {
+	ModuleName      string
 	Hash            ModuleHash
 	RevisionVersion string
 }

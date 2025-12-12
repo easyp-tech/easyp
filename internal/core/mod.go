@@ -24,6 +24,10 @@ type (
 		GetInstalledModuleHash(moduleName string, revisionVersion string) (models.ModuleHash, error)
 		IsModuleInstalled(module models.Module) (bool, error)
 		GetInstallDir(moduleName string, revisionVersion string) string
+
+		ReadInstalledModuleInfo(
+			cacheDownloadPaths models.CacheDownloadPaths,
+		) (models.InstalledModuleInfo, error)
 		WriteInstalledModuleInfo(
 			cacheDownloadPaths models.CacheDownloadPaths, installedModuleInfo models.InstalledModuleInfo,
 		) error
