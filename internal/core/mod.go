@@ -14,7 +14,7 @@ type (
 	Storage interface {
 		CreateCacheRepositoryDir(name string) (string, error)
 		CreateCacheDownloadDir(models.CacheDownloadPaths) error
-		GetCacheDownloadPaths(module models.Module, revision models.Revision) models.CacheDownloadPaths
+		GetCacheDownloadPaths(moduleName, version string) models.CacheDownloadPaths
 		Install(
 			cacheDownloadPaths models.CacheDownloadPaths,
 			module models.Module,

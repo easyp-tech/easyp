@@ -7,10 +7,10 @@ import (
 )
 
 // GetDownloadArchivePath returns full path to download archive (include extension)
-func (s *Storage) GetCacheDownloadPaths(module models.Module, revision models.Revision) models.CacheDownloadPaths {
-	cacheDownloadDir := filepath.Join(s.rootDir, cacheDir, cacheDownloadDir, module.Name)
+func (s *Storage) GetCacheDownloadPaths(moduleName, version string) models.CacheDownloadPaths {
+	cacheDownloadDir := filepath.Join(s.rootDir, cacheDir, cacheDownloadDir, moduleName)
 
-	fileName := sanitizePath(revision.Version)
+	fileName := sanitizePath(version)
 
 	archiveFile := filepath.Join(cacheDownloadDir, fileName) + ".zip"
 	archiveHashFile := filepath.Join(cacheDownloadDir, fileName) + ".ziphash"

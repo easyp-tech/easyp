@@ -28,7 +28,7 @@ func (c *Core) Get(ctx context.Context, requestedModule models.Module) error {
 		return fmt.Errorf("repository.ReadRevision: %w", err)
 	}
 
-	cacheDownloadPaths := c.storage.GetCacheDownloadPaths(requestedModule, revision)
+	cacheDownloadPaths := c.storage.GetCacheDownloadPaths(requestedModule.Name, revision.Version)
 
 	if err := c.storage.CreateCacheDownloadDir(cacheDownloadPaths); err != nil {
 		return fmt.Errorf("c.storage.CreateCacheDownloadDir: %w", err)

@@ -14,7 +14,7 @@ func (s *storageSuite) Test_GetCacheDownloadPaths() {
 	expectedArchiveHashFile := filepath.Join(expectedCacheDownloadDir, revision.Version) + ".ziphash"
 	expectedModuleInfoFile := filepath.Join(expectedCacheDownloadDir, revision.Version) + ".info"
 
-	res := s.storage.GetCacheDownloadPaths(module, revision)
+	res := s.storage.GetCacheDownloadPaths(module.Name, revision.Version)
 
 	s.Equal(expectedCacheDownloadDir, res.CacheDownloadDir)
 	s.Equal(expectedArchiveFile, res.ArchiveFile)
