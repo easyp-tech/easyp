@@ -34,5 +34,6 @@ func New(rootDir string, lockFile LockFile) *Storage {
 }
 
 const (
-	dirPerm = 0755
+	dirPerm      = 0755
+	infoFilePerm = 0644
 )

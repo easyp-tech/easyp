@@ -9,6 +9,19 @@ import (
 )
 
 func (s *Storage) IsModuleInstalled(module models.Module) (bool, error) {
+	return false, nil // TODO: TEMP!
+
+	cacheDownloadPaths := s.GetCacheDownloadPaths(module.Name, string(module.Version))
+
+	installedModuleInfo, err := s.ReadInstalledModuleInfo(cacheDownloadPaths)
+	if err != nil {
+		if errors.Is(err, models.ErrModuleInfoFileNotFound) {
+			return false, nil
+		}
+
+		return false, fmt.Errorf("s.ReadInstalledModuleInfo: %w", err)
+	}
+
 	lockFileInfo, err := s.lockFile.Read(module.Name)
 	if err != nil {
 		if errors.Is(err, models.ErrModuleNotFoundInLockFile) {
@@ -17,6 +30,10 @@ func (s *Storage) IsModuleInstalled(module models.Module) (bool, error) {
 
 		return false, fmt.Errorf("c.lockFile.Read: %w", err)
 	}
+
+	slog.Debug("dsfsdf", "module", module,
+		"cacheDownloadPaths", cacheDownloadPaths, "installedModuleInfo", installedModuleInfo,
+	)
 
 	if !isVersionsMatched(module.Version, lockFileInfo.Version) {
 		return false, nil

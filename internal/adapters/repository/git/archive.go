@@ -8,10 +8,10 @@ import (
 )
 
 func (r *gitRepo) Archive(
-	ctx context.Context, revision models.Revision, cacheDownloadPaths models.CacheDownloadPaths,
+	ctx context.Context, revision models.Revision, archiveFilePath string,
 ) error {
 	params := []string{
-		"archive", "--format=zip", revision.CommitHash, "-o", cacheDownloadPaths.ArchiveFile, "*.proto",
+		"archive", "--format=zip", revision.CommitHash, "-o", archiveFilePath, "*.proto",
 	}
 
 	if _, err := r.console.RunCmd(ctx, r.cacheDir, "git", params...); err != nil {

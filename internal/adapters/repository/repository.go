@@ -15,7 +15,7 @@ type Repo interface {
 
 	// Archive passed storage to archive and return full path to archive
 	Archive(
-		ctx context.Context, revision models.Revision, cacheDownloadPaths models.CacheDownloadPaths,
+		ctx context.Context, revision models.Revision, archiveFilePath string,
 	) error
 
 	// ReadRevision reads commit's revision by passed version

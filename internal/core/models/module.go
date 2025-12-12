@@ -36,6 +36,12 @@ type Module struct {
 	Version RequestedVersion // Version obtained from config (Omitted if version was omitted)
 }
 
+// InstalledModuleInfo contain info about installed module (dep) in system (near the zip archive)
+type InstalledModuleInfo struct {
+	Hash            ModuleHash
+	RevisionVersion string
+}
+
 type GeneratedVersionParts struct {
 	Datetime   string
 	CommitHash string
