@@ -248,6 +248,49 @@ breaking:
 }
 ```
 
+### Environment Variables in Configuration
+
+EasyP supports environment variable expansion directly in the `easyp.yaml` configuration file. This allows you to use environment variables for dynamic configuration values.
+
+**Example with all supported features:**
+```yaml
+version: v1alpha
+
+deps:
+  # Basic expansion: ${VAR} - expands to the value of VAR
+  - ${GOOGLEAPIS_REPO}@${GOOGLEAPIS_VERSION}
+  
+  # Default value: ${VAR:-default} - uses default if VAR is unset or empty
+  - ${GNOSTIC_REPO:-github.com/google/gnostic}@${GNOSTIC_VERSION:-v0.7.0}
+
+generate:
+  inputs:
+    # Default value if INPUT_DIR is not set
+    - directory: ${INPUT_DIR:-proto}
+  plugins:
+    - name: go
+      # Basic expansion
+      out: ${OUTPUT_DIR}
+      opts:
+        # Default value
+        module: ${MODULE_NAME:-github.com/example/project}
+        timeout: ${TIMEOUT:-30}
+        
+        # Escaping: $$ becomes literal $, $${VAR} becomes literal ${VAR}
+        path: "${BASE_DIR}/$${TEMP}/file"     # Result: "/tmp/${TEMP}/file" (if BASE_DIR=/tmp)
+        literal: "$$"                         # Result: "$"
+```
+
+**Supported syntax:**
+- `${VAR}` - expands to the value of `VAR`
+- `${VAR:-default}` - uses `default` if `VAR` is unset or empty
+- `${VAR:=default}` - uses `default` if `VAR` is unset or empty
+- `${VAR-default}` - uses `default` if `VAR` is unset (empty string is kept)
+- `$${VAR}` or `$$VAR` - escapes to literal `${VAR}` or `$VAR`
+- `$$` - escapes to literal `$`
+
+**Note:** Environment variables are expanded before YAML parsing, so any `${STRING}` pattern will be processed. Use `$$` to escape dollar signs when you need literal values.
+
 ## Configuration Fields
 
 ### `version`
