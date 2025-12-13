@@ -2,9 +2,7 @@ package moduleconfig
 
 import (
 	"context"
-	"errors"
 	"fmt"
-	"log/slog"
 
 	"github.com/easyp-tech/easyp/internal/adapters/repository"
 	"github.com/easyp-tech/easyp/internal/config"
@@ -12,27 +10,30 @@ import (
 )
 
 // readEasyp read easyp's config from repository
-func readEasyp(ctx context.Context, repo repository.Repo, revision models.Revision) ([]models.Module, error) {
+func readEasyp(ctx context.Context, repo repository.Repo, revision models.Revision) (models.ModuleConfig, error) {
 	content, err := repo.ReadFile(ctx, revision, config.DefaultFileName)
 	if err != nil {
-		if errors.Is(err, models.ErrFileNotFound) {
-			slog.Debug("easyp.yaml not found in dependency (this is normal)")
-			return nil, nil
-		}
-		return nil, fmt.Errorf("repo.ReadFile: %w", err)
+		return models.ModuleConfig{}, fmt.Errorf("repo.ReadFile: %w", err)
 	}
 
-	// Use unified parsing function with environment variable support
-	cfg, err := config.ParseConfig([]byte(content))
+	easyp, err := config.ParseConfig([]byte(content))
 	if err != nil {
-		return nil, fmt.Errorf("config.ParseConfig: %w", err)
+		return models.ModuleConfig{}, fmt.Errorf("config.ParseConfig: %w", err)
 	}
 
-	modules := make([]models.Module, 0, len(cfg.Deps))
-	for _, dep := range cfg.Deps {
+	modules := make([]models.Module, 0, len(easyp.Deps))
+	for _, dep := range easyp.Deps {
 		module := models.NewModule(dep)
 		modules = append(modules, module)
 	}
 
-	return modules, nil
+	dirs := make([]string, 0, len(easyp.Generate.Inputs))
+	for _, input := range easyp.Generate.Inputs {
+		dirs = append(dirs, input.InputFilesDir.Root)
+	}
+
+	return models.ModuleConfig{
+		Dependencies: modules,
+		Directories:  dirs,
+	}, nil
 }

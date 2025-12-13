@@ -2,7 +2,9 @@ package moduleconfig
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"log/slog"
 
 	"github.com/easyp-tech/easyp/internal/adapters/repository"
 	"github.com/easyp-tech/easyp/internal/core/models"
@@ -12,19 +14,27 @@ import (
 func (c *ModuleConfig) ReadFromRepo(
 	ctx context.Context, repo repository.Repo, revision models.Revision,
 ) (models.ModuleConfig, error) {
+	// buf
+	slog.Debug("Start read buf config")
+
 	buf, err := readBufWork(ctx, repo, revision)
-	if err != nil {
+	if err == nil {
+		return buf, nil
+	}
+	if !errors.Is(err, models.ErrFileNotFound) {
 		return models.ModuleConfig{}, fmt.Errorf("readBufWork: %w", err)
 	}
 
-	modules, err := readEasyp(ctx, repo, revision)
-	if err != nil {
+	// easyp
+	slog.Debug("Start read easyp config")
+
+	easyp, err := readEasyp(ctx, repo, revision)
+	if err == nil {
+		return easyp, nil
+	}
+	if !errors.Is(err, models.ErrFileNotFound) {
 		return models.ModuleConfig{}, fmt.Errorf("readEasyp: %w", err)
 	}
 
-	moduleConfig := models.ModuleConfig{
-		Directories:  buf.Directories,
-		Dependencies: modules,
-	}
-	return moduleConfig, nil
+	return models.ModuleConfig{}, nil
 }
