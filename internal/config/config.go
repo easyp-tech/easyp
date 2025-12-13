@@ -8,6 +8,7 @@ import (
 	"log/slog"
 	"os"
 
+	"github.com/a8m/envsubst"
 	"gopkg.in/yaml.v3"
 )
 
@@ -137,6 +138,20 @@ func New(_ context.Context, filepath string) (*Config, error) {
 	if err != nil {
 		return nil, fmt.Errorf("io.ReadAll: %w", err)
 	}
+
+	return ParseConfig(buf)
+}
+
+// ParseConfig parses configuration from bytes with environment variable expansion.
+// Supports escaping via $$ (e.g., $$var becomes $var, $${VAR} becomes ${VAR})
+// This is the unified function for parsing easyp.yaml used throughout the codebase.
+func ParseConfig(buf []byte) (*Config, error) {
+	// Expand environment variables in the config file
+	expanded, err := envsubst.String(string(buf))
+	if err != nil {
+		return nil, fmt.Errorf("envsubst.String: %w", err)
+	}
+	buf = []byte(expanded)
 
 	cfg := &Config{}
 	err = yaml.Unmarshal(buf, &cfg)
