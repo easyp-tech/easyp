@@ -27,6 +27,7 @@ func (c *Core) Get(ctx context.Context, requestedModule models.Module) error {
 		needToInstall = true
 	} else {
 		// check hash sum
+		// compare from lock file and from local cache
 	}
 
 	if needToInstall {
