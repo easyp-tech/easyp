@@ -36,12 +36,16 @@ easyp lint [flags]
 | Flag | Short | Environment | Description | Default |
 |------|-------|-------------|-------------|---------|
 | `--path` | `-p` | | Directory path to lint | `.` |
+| `--root` | `-r` | | Base directory for file search | Current working directory |
 | `--format` | `-f` | `EASYP_FORMAT` | Output format (text/json) | `text` |
 
 **Examples:**
 ```bash
 # Lint specific directory
 easyp lint --path proto/
+
+# Lint from subdirectory with proper import resolution
+easyp lint --root src/IPC/Contracts --path .
 
 # JSON output format
 easyp lint --format json
@@ -58,11 +62,15 @@ easyp generate [flags]
 | Flag | Short | Environment | Description | Default |
 |------|-------|-------------|-------------|---------|
 | `--path` | `-p` | `EASYP_ROOT_GENERATE_PATH` | Root path for generation | `.` |
+| `--root` | `-r` | | Base directory for file search | Current working directory |
 
 **Examples:**
 ```bash
 # Generate from specific path
 easyp generate --path api/
+
+# Generate from subdirectory with proper import resolution
+easyp generate --root src/IPC/Contracts --path .
 
 # Using environment variable
 EASYP_ROOT_GENERATE_PATH=proto/ easyp generate
