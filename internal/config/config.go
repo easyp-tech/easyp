@@ -139,12 +139,13 @@ func New(_ context.Context, filepath string) (*Config, error) {
 		return nil, fmt.Errorf("io.ReadAll: %w", err)
 	}
 
-	return parseConfig(buf)
+	return ParseConfig(buf)
 }
 
-// parseConfig parses configuration from bytes with environment variable expansion.
+// ParseConfig parses configuration from bytes with environment variable expansion.
 // Supports escaping via $$ (e.g., $$var becomes $var, $${VAR} becomes ${VAR})
-func parseConfig(buf []byte) (*Config, error) {
+// This is the unified function for parsing easyp.yaml used throughout the codebase.
+func ParseConfig(buf []byte) (*Config, error) {
 	// Expand environment variables in the config file
 	expanded, err := envsubst.String(string(buf))
 	if err != nil {

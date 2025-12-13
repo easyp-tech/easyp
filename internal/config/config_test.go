@@ -209,8 +209,8 @@ generate:
 				defer os.Unsetenv(key)
 			}
 
-			// Парсим конфигурацию напрямую через parseConfig
-			cfg, err := parseConfig([]byte(tt.configContent))
+			// Парсим конфигурацию напрямую через ParseConfig
+			cfg, err := ParseConfig([]byte(tt.configContent))
 			require.NoError(t, err)
 
 			// Проверяем ожидаемые значения
