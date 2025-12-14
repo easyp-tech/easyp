@@ -3,9 +3,11 @@ package plugin
 type builtinPlugin string
 
 const (
-	// Protobuf base plugins (only for languages with gRPC support)
+	// Protobuf base plugins
 	builtinPluginCpp    builtinPlugin = "cpp"
 	builtinPluginCsharp builtinPlugin = "csharp"
+	builtinPluginJava   builtinPlugin = "java"
+	builtinPluginKotlin builtinPlugin = "kotlin"
 	builtinPluginObjc   builtinPlugin = "objc"
 	builtinPluginPhp    builtinPlugin = "php"
 	builtinPluginPython builtinPlugin = "python"
@@ -14,17 +16,19 @@ const (
 	// gRPC plugins
 	builtinPluginGrpcCpp        builtinPlugin = "grpc_cpp"
 	builtinPluginGrpcCsharp     builtinPlugin = "grpc_csharp"
-	builtinPluginGrpcNode       builtinPlugin = "grpc_node"
-	builtinPluginGrpcObjectiveC builtinPlugin = "grpc_objective_c"
+	builtinPluginGrpcObjectiveC builtinPlugin = "grpc_objc"
 	builtinPluginGrpcPhp        builtinPlugin = "grpc_php"
 	builtinPluginGrpcPython     builtinPlugin = "grpc_python"
 	builtinPluginGrpcRuby       builtinPlugin = "grpc_ruby"
+	builtinPluginGrpcJava       builtinPlugin = "grpc_java"
 )
 
 var builtinPlugins = map[builtinPlugin]bool{
-	// Protobuf base plugins (only for languages with gRPC support)
+	// Protobuf base plugins
 	builtinPluginCpp:    true,
 	builtinPluginCsharp: true,
+	builtinPluginJava:   true,
+	builtinPluginKotlin: true,
 	builtinPluginObjc:   true,
 	builtinPluginPhp:    true,
 	builtinPluginPython: true,
@@ -33,11 +37,11 @@ var builtinPlugins = map[builtinPlugin]bool{
 	// gRPC plugins
 	builtinPluginGrpcCpp:        true,
 	builtinPluginGrpcCsharp:     true,
-	builtinPluginGrpcNode:       true,
 	builtinPluginGrpcObjectiveC: true,
 	builtinPluginGrpcPhp:        true,
 	builtinPluginGrpcPython:     true,
 	builtinPluginGrpcRuby:       true,
+	builtinPluginGrpcJava:       true,
 }
 
 // IsBuiltinPlugin checks if the plugin is builtin (supported via go-protobuf-gen-builtins)

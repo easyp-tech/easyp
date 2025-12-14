@@ -20,38 +20,23 @@ import (
 	"google.golang.org/protobuf/types/pluginpb"
 )
 
-// Mapping of plugin names to WASM modules
-var builtinPluginMap = map[builtinPlugin][]byte{
-	// Protobuf base plugins (only for languages with gRPC support)
-	builtinPluginCpp:    protocGenCpp,
-	builtinPluginCsharp: protocGenCsharp,
-	builtinPluginObjc:   protocGenObjc,
-	builtinPluginPhp:    protocGenPhp,
-	builtinPluginPython: protocGenPython,
-	builtinPluginRuby:   protocGenRuby,
-
-	// gRPC plugins
-	builtinPluginGrpcCpp:        grpcCppPlugin,
-	builtinPluginGrpcCsharp:     grpcCsharpPlugin,
-	builtinPluginGrpcNode:       grpcNodePlugin,
-	builtinPluginGrpcObjectiveC: grpcObjectiveCPlugin,
-	builtinPluginGrpcPhp:        grpcPhpPlugin,
-	builtinPluginGrpcPython:     grpcPythonPlugin,
-	builtinPluginGrpcRuby:       grpcRubyPlugin,
-}
-
-// getWasmModule gets the WASM module by plugin name
-func getWasmModule(pluginName string) ([]byte, error) {
+// getWasmModule gets the WASM module and arguments by plugin name
+// All plugins (protobuf and gRPC) use protoc-gen-universal.wasm
+// Base protobuf plugins use plugin name as argument (e.g., "cpp")
+// gRPC plugins use plugin name with grpc_ prefix as argument (e.g., "grpc_cpp")
+func getWasmModule(pluginName string) ([]byte, []string, error) {
 	if pluginName == "memory" {
-		return wasmMemory, nil
+		return wasmMemory, nil, nil
 	}
 
-	wasmData, ok := builtinPluginMap[builtinPlugin(pluginName)]
-	if !ok {
-		return nil, fmt.Errorf("plugin %s is not supported", pluginName)
+	// Check if plugin is supported
+	if !IsBuiltinPlugin(pluginName) {
+		return nil, nil, fmt.Errorf("plugin %s is not supported", pluginName)
 	}
 
-	return wasmData, nil
+	// All builtin plugins use protoc-gen-universal.wasm with plugin name as argument
+	args := []string{"protoc-gen-universal", pluginName}
+	return protocGenUniversal, args, nil
 }
 
 // BuiltinPluginExecutor executes builtin plugins via WASM
@@ -77,12 +62,6 @@ func (e *BuiltinPluginExecutor) Execute(ctx context.Context, plugin Info, reques
 		slog.String("plugin", plugin.Source),
 	)
 
-	// Get WASM module for the plugin
-	wasmBin, err := getWasmModule(plugin.Source)
-	if err != nil {
-		return nil, fmt.Errorf("get wasm module for plugin %s: %w", plugin.Source, err)
-	}
-
 	// Prepare plugin parameters
 	options := lo.MapToSlice(plugin.Options, func(k string, v string) string {
 		if v == "" {
@@ -106,7 +85,7 @@ func (e *BuiltinPluginExecutor) Execute(ctx context.Context, plugin Info, reques
 	stdIn := bytes.NewReader(reqData)
 
 	// Run WASM plugin
-	stdout, err := e.runWasmPlugin(ctx, plugin.Source, wasmBin, stdIn)
+	stdout, err := e.runWasmPlugin(ctx, plugin.Source, stdIn)
 	if err != nil {
 		return nil, fmt.Errorf("run wasm plugin %s: %w", plugin.Source, err)
 	}
@@ -121,7 +100,13 @@ func (e *BuiltinPluginExecutor) Execute(ctx context.Context, plugin Info, reques
 }
 
 // runWasmPlugin runs WASM module with custom stdin/stdout
-func (e *BuiltinPluginExecutor) runWasmPlugin(ctx context.Context, pluginName string, wasmBin []byte, stdin io.Reader) ([]byte, error) {
+func (e *BuiltinPluginExecutor) runWasmPlugin(ctx context.Context, pluginName string, stdin io.Reader) ([]byte, error) {
+	// Get WASM module and arguments for the plugin
+	wasmBin, args, err := getWasmModule(pluginName)
+	if err != nil {
+		return nil, fmt.Errorf("get wasm module for plugin %s: %w", pluginName, err)
+	}
+
 	// Create context with allocator
 	ctx = experimental.WithMemoryAllocator(ctx, allocator.NewNonMoving())
 
@@ -136,14 +121,14 @@ func (e *BuiltinPluginExecutor) runWasmPlugin(ctx context.Context, pluginName st
 
 	// Instantiate memory module
 	if len(wasmMemory) > 0 {
-		if _, err := rt.InstantiateWithConfig(ctx, wasmMemory, wazero.NewModuleConfig().WithName("env")); err != nil {
+		if _, err = rt.InstantiateWithConfig(ctx, wasmMemory, wazero.NewModuleConfig().WithName("env")); err != nil {
 			return nil, fmt.Errorf("failed to instantiate memory module: %w", err)
 		}
 	}
 
 	// Read stdin into buffer
 	var stdinBuf bytes.Buffer
-	if _, err := io.Copy(&stdinBuf, stdin); err != nil {
+	if _, err = io.Copy(&stdinBuf, stdin); err != nil {
 		return nil, fmt.Errorf("failed to read stdin: %w", err)
 	}
 
@@ -151,7 +136,6 @@ func (e *BuiltinPluginExecutor) runWasmPlugin(ctx context.Context, pluginName st
 	var stdoutBuf bytes.Buffer
 
 	// Configure module
-	args := []string{fmt.Sprintf("protoc-gen-%s", pluginName)}
 	cfg := wazero.NewModuleConfig().
 		WithSysNanosleep().
 		WithSysNanotime().
@@ -163,7 +147,7 @@ func (e *BuiltinPluginExecutor) runWasmPlugin(ctx context.Context, pluginName st
 		WithArgs(args...)
 
 	// Instantiate WASM module
-	_, err := rt.InstantiateWithConfig(ctx, wasmBin, cfg)
+	_, err = rt.InstantiateWithConfig(ctx, wasmBin, cfg)
 	if err != nil {
 		if sErr, ok := err.(*sys.ExitError); ok { //nolint:errorlint
 			return nil, fmt.Errorf("wasm plugin exited with code %d", sErr.ExitCode())
