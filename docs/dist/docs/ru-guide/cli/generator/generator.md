@@ -403,6 +403,8 @@ EasyP поддерживает встроенные плагины для баз
 |-------------|----------|-------------------------------|
 | `cpp` | Генерация C++ кода из proto файлов | `protoc-gen-cpp` |
 | `csharp` | Генерация C# кода из proto файлов | `protoc-gen-csharp` |
+| `java` | Генерация Java кода из proto файлов | `protoc-gen-java` |
+| `kotlin` | Генерация Kotlin кода из proto файлов | `protoc-gen-kotlin` |
 | `objc` | Генерация Objective-C кода из proto файлов | `protoc-gen-objc` |
 | `php` | Генерация PHP кода из proto файлов | `protoc-gen-php` |
 | `python` | Генерация Python кода из proto файлов | `protoc-gen-python` |
@@ -416,8 +418,9 @@ EasyP поддерживает встроенные плагины для баз
 |-------------|----------|-------------------------------|
 | `grpc_cpp` | Генерация gRPC кода для C++ | `grpc_cpp_plugin` |
 | `grpc_csharp` | Генерация gRPC кода для C# | `grpc_csharp_plugin` |
+| `grpc_java` | Генерация gRPC кода для Java | `grpc_java_plugin` |
 | `grpc_node` | Генерация gRPC кода для Node.js | `grpc_node_plugin` |
-| `grpc_objective_c` | Генерация gRPC кода для Objective-C | `grpc_objective_c_plugin` |
+| `grpc_objc` | Генерация gRPC кода для Objective-C | `grpc_objective_c_plugin` |
 | `grpc_php` | Генерация gRPC кода для PHP | `grpc_php_plugin` |
 | `grpc_python` | Генерация gRPC кода для Python | `grpc_python_plugin` |
 | `grpc_ruby` | Генерация gRPC кода для Ruby | `grpc_ruby_plugin` |

@@ -403,6 +403,8 @@ The following plugins are builtin for generating base protobuf code:
 |-------------|-------------|----------------------------|
 | `cpp` | Generate C++ code from proto files | `protoc-gen-cpp` |
 | `csharp` | Generate C# code from proto files | `protoc-gen-csharp` |
+| `java` | Generate Java code from proto files | `protoc-gen-java` |
+| `kotlin` | Generate Kotlin code from proto files | `protoc-gen-kotlin` |
 | `objc` | Generate Objective-C code from proto files | `protoc-gen-objc` |
 | `php` | Generate PHP code from proto files | `protoc-gen-php` |
 | `python` | Generate Python code from proto files | `protoc-gen-python` |
@@ -416,8 +418,9 @@ The following plugins are builtin for generating gRPC code:
 |-------------|-------------|----------------------------|
 | `grpc_cpp` | Generate gRPC code for C++ | `grpc_cpp_plugin` |
 | `grpc_csharp` | Generate gRPC code for C# | `grpc_csharp_plugin` |
+| `grpc_java` | Generate gRPC code for Java | `grpc_java_plugin` |
 | `grpc_node` | Generate gRPC code for Node.js | `grpc_node_plugin` |
-| `grpc_objective_c` | Generate gRPC code for Objective-C | `grpc_objective_c_plugin` |
+| `grpc_objc` | Generate gRPC code for Objective-C | `grpc_objective_c_plugin` |
 | `grpc_php` | Generate gRPC code for PHP | `grpc_php_plugin` |
 | `grpc_python` | Generate gRPC code for Python | `grpc_python_plugin` |
 | `grpc_ruby` | Generate gRPC code for Ruby | `grpc_ruby_plugin` |

@@ -74,7 +74,7 @@ source:
 dockers_v2:
   - images:
       - "ghcr.io/easyp-tech/easyp"
-      - "{{ .Env.DOCKERHUB_IMAGE }}"
+#      - "{{ .Env.DOCKERHUB_IMAGE }}"
     tags:
       - "{{ .Tag }}"
       - "latest"
