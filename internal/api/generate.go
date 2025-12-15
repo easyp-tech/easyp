@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"path/filepath"
 
 	"github.com/urfave/cli/v2"
 
@@ -29,6 +30,15 @@ var (
 		Aliases:    []string{"p"},
 		EnvVars:    []string{"EASYP_ROOT_GENERATE_PATH"},
 	}
+
+	flagGenerateRoot = &cli.StringFlag{
+		Name:       "root",
+		Usage:      "set root directory for file search (default: current working directory)",
+		Required:   false,
+		HasBeenSet: false,
+		Value:      "",
+		Aliases:    []string{"r"},
+	}
 )
 
 // Command implements Handler.
@@ -42,6 +52,7 @@ func (g Generate) Command() *cli.Command {
 		Action:      g.Action,
 		Flags: []cli.Flag{
 			flagGenerateDirectoryPath,
+			flagGenerateRoot,
 		},
 		HelpName: "help",
 	}
@@ -56,18 +67,39 @@ func (g Generate) Action(ctx *cli.Context) error {
 		return fmt.Errorf("os.Getwd: %w", err)
 	}
 
+	root := ctx.String(flagGenerateRoot.Name)
+
+	// Determine root directory for file search
+	// If --root is not specified, use workingDir (default behavior)
+	rootDir := workingDir
+	if root != "" {
+		if filepath.IsAbs(root) {
+			// If root is absolute, use it as is
+			rootDir = root
+		} else {
+			// If root is relative, concatenate with workingDir
+			rootDir = filepath.Join(workingDir, root)
+		}
+	}
+
+	// Normalize the root directory path
+	rootDir, err = filepath.Abs(rootDir)
+	if err != nil {
+		return fmt.Errorf("filepath.Abs(rootDir): %w", err)
+	}
+
 	cfg, err := config.New(ctx.Context, ctx.String(flags.Config.Name))
 	if err != nil {
 		return fmt.Errorf("config.New: %w", err)
 	}
-	dirWalker := fs.NewFSWalker(workingDir, ".")
+	dirWalker := fs.NewFSWalker(rootDir, ".")
 	app, err := buildCore(ctx.Context, *cfg, dirWalker)
 	if err != nil {
 		return fmt.Errorf("buildCore: %w", err)
 	}
 
 	dir := ctx.String(flagGenerateDirectoryPath.Name)
-	err = app.Generate(ctx.Context, workingDir, dir)
+	err = app.Generate(ctx.Context, rootDir, dir)
 	if err != nil {
 		if errors.Is(err, core.ErrEmptyInputFiles) {
 			logger.Warn("empty input files!")

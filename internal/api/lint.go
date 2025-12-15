@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 
 	"github.com/urfave/cli/v2"
 
@@ -35,6 +36,15 @@ var (
 		HasBeenSet: true,
 		Value:      ".",
 		Aliases:    []string{"p"},
+	}
+
+	flagLintRoot = &cli.StringFlag{
+		Name:       "root",
+		Usage:      "set root directory for file search (default: current working directory)",
+		Required:   false,
+		HasBeenSet: false,
+		Value:      "",
+		Aliases:    []string{"r"},
 	}
 
 	flagFormat = &cli.GenericFlag{
@@ -71,6 +81,7 @@ func (l Lint) Command() *cli.Command {
 		Subcommands:  nil,
 		Flags: []cli.Flag{
 			flagLintDirectoryPath,
+			flagLintRoot,
 			flagFormat,
 		},
 		SkipFlagParsing:        false,
@@ -109,6 +120,26 @@ func (l Lint) action(ctx *cli.Context) error {
 	}
 
 	path := ctx.String(flagLintDirectoryPath.Name)
+	root := ctx.String(flagLintRoot.Name)
+
+	// Determine root directory for file search
+	// If --root is not specified, use workingDir (default behavior)
+	rootDir := workingDir
+	if root != "" {
+		if filepath.IsAbs(root) {
+			// If root is absolute, use it as is
+			rootDir = root
+		} else {
+			// If root is relative, concatenate with workingDir
+			rootDir = filepath.Join(workingDir, root)
+		}
+	}
+
+	// Normalize the root directory path
+	rootDir, err = filepath.Abs(rootDir)
+	if err != nil {
+		return fmt.Errorf("filepath.Abs(rootDir): %w", err)
+	}
 
 	cfg, err := config.New(ctx.Context, ctx.String(flags.Config.Name))
 	if err != nil {
@@ -116,7 +147,7 @@ func (l Lint) action(ctx *cli.Context) error {
 	}
 	core.SetAllowCommentIgnores(cfg.Lint.AllowCommentIgnores)
 
-	fsWalker := fs.NewFSWalker(workingDir, path)
+	fsWalker := fs.NewFSWalker(rootDir, path)
 
 	app, err := buildCore(ctx.Context, *cfg, fsWalker)
 	if err != nil {
