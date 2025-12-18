@@ -10,6 +10,7 @@ import (
 	"github.com/yoheimuta/go-protoparser/v4"
 	"github.com/yoheimuta/go-protoparser/v4/interpret/unordered"
 
+	"github.com/easyp-tech/easyp/internal/core/models"
 	"github.com/easyp-tech/easyp/wellknownimports"
 )
 
@@ -86,10 +87,14 @@ func (c *Core) readFileFromImport(ctx context.Context, disk FS, importName strin
 	}
 
 	for _, dep := range c.deps {
-		modulePath, err := c.getModulePath(ctx, dep)
+		module := models.NewModule(dep)
+
+		lockFileInfo, err := c.lockFile.Read(module.Name)
 		if err != nil {
-			return nil, fmt.Errorf("c.moduleReflect.GetModulePath: %w", err)
+			return nil, fmt.Errorf("lockFile.Read: %w", err)
 		}
+
+		modulePath := c.storage.GetInstallDir(lockFileInfo.Name, lockFileInfo.Version)
 
 		fullPath := filepath.Join(modulePath, importName)
 		f, err = os.Open(fullPath)

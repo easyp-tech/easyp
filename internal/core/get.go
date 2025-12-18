@@ -25,26 +25,30 @@ func (c *Core) Get(ctx context.Context, requestedModule models.Module) error {
 		}
 
 		needToInstall = true
-	} else {
-		// check hash sum
-		// compare from lock file and from local cache
 	}
 
-	if needToInstall {
-		installedModuleInfo, err = c.get(ctx, requestedModule)
+	if !needToInstall {
+		lockFileInfo, err := c.lockFile.Read(requestedModule.Name)
 		if err != nil {
-			return fmt.Errorf("c.get: %w", err)
+			return fmt.Errorf("c.lockFile.Read: %w", err)
 		}
-	} else {
+
+		if lockFileInfo.Hash != installedModuleInfo.Hash {
+			return fmt.Errorf("c.lockFile.Read: lock file hash mismatch")
+		}
+
+		// TODO: calc hash
+
 		c.logger.Debug("Module is installed",
 			"name", requestedModule.Name, "version", requestedModule.Version,
 		)
+		return nil
 	}
+	_ = installedModuleInfo
 
-	if err := c.lockFile.Write(
-		requestedModule.Name, installedModuleInfo.RevisionVersion, installedModuleInfo.Hash,
-	); err != nil {
-		return fmt.Errorf("c.lockFile.Write: %w", err)
+	installedModuleInfo, err = c.get(ctx, requestedModule)
+	if err != nil {
+		return fmt.Errorf("c.get: %w", err)
 	}
 
 	return nil
@@ -122,6 +126,12 @@ func (c *Core) get(ctx context.Context, requestedModule models.Module) (models.I
 	}
 	if err := c.storage.WriteInstalledModuleInfo(cacheDownloadPaths, installedModuleInfo); err != nil {
 		return models.InstalledModuleInfo{}, fmt.Errorf("c.storage.WriteInstalledModuleInfo: %w", err)
+	}
+
+	if err := c.lockFile.Write(
+		requestedModule.Name, installedModuleInfo.RevisionVersion, installedModuleInfo.Hash,
+	); err != nil {
+		return models.InstalledModuleInfo{}, fmt.Errorf("c.lockFile.Write: %w", err)
 	}
 
 	return installedModuleInfo, nil

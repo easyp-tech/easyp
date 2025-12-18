@@ -3,7 +3,6 @@ package core
 import (
 	"bytes"
 	"context"
-	"errors"
 	"fmt"
 	"log/slog"
 	"os"
@@ -25,28 +24,19 @@ import (
 
 // Generate generates files.
 func (c *Core) Generate(ctx context.Context, root, directory string) error {
+	// TODO: call download before
 	q := Query{
 		Imports: []string{},
 		Plugins: c.plugins,
 	}
 
-	for _, dep := range c.deps {
-		modulePaths, err := c.getModulePath(ctx, dep)
-		if err != nil {
-			return fmt.Errorf("g.moduleReflect.GetModulePath: %w", err)
-		}
+	for lockFileInfo := range c.lockFile.DepsIter() {
+		modulePath := c.storage.GetInstallDir(lockFileInfo.Name, lockFileInfo.Version)
 
-		q.Imports = append(q.Imports, modulePaths)
+		q.Imports = append(q.Imports, modulePath)
 	}
 
 	for _, repo := range c.inputs.InputGitRepos {
-		module := models.NewModule(repo.URL)
-
-		isInstalled, err := c.storage.IsModuleInstalled(module)
-		if err != nil {
-			return fmt.Errorf("c.isModuleInstalled: %w", err)
-		}
-
 		gitGenerateCb := func(modulePaths string) func(path string, err error) error {
 			return func(path string, err error) error {
 				switch {
@@ -70,37 +60,14 @@ func (c *Core) Generate(ctx context.Context, root, directory string) error {
 			}
 		}
 
-		if isInstalled {
-			modulePaths, err := c.getModulePath(ctx, module.Name)
-			if err != nil {
-				return fmt.Errorf("g.moduleReflect.GetModulePath: %w", err)
-			}
+		module := models.NewModule(repo.URL)
 
-			fsWalker := fs.NewFSWalker(modulePaths, repo.SubDirectory)
-
-			err = fsWalker.WalkDir(gitGenerateCb(modulePaths))
-			if err != nil {
-				return fmt.Errorf("fsWalker.WalkDir1: %w", err)
-			}
-
-			continue
-		}
-
-		err = c.Get(ctx, module)
+		lockFileInfo, err := c.lockFile.Read(module.Name)
 		if err != nil {
-			if errors.Is(err, models.ErrVersionNotFound) {
-				slog.Error("Version not found", "dependency", module.Name, "version", module.Version)
-
-				return fmt.Errorf("models.ErrVersionNotFound: %w", err)
-			}
-
-			return fmt.Errorf("c.Get: %w", err)
+			return fmt.Errorf("c.lockFile.Read: %w", err)
 		}
 
-		modulePaths, err := c.getModulePath(ctx, module.Name)
-		if err != nil {
-			return fmt.Errorf("g.moduleReflect.GetModulePath: %w", err)
-		}
+		modulePaths := c.storage.GetInstallDir(lockFileInfo.Name, lockFileInfo.Version)
 
 		fsWalker := fs.NewFSWalker(modulePaths, repo.SubDirectory)
 		err = fsWalker.WalkDir(gitGenerateCb(modulePaths))
@@ -433,30 +400,6 @@ func shouldIgnore(path string, dirs []string) bool {
 	}
 
 	return true
-}
-
-func (c *Core) getModulePath(ctx context.Context, requestedDependency string) (string, error) {
-	module := models.NewModule(requestedDependency)
-
-	isInstalled, err := c.storage.IsModuleInstalled(module)
-	if err != nil {
-		return "", fmt.Errorf("h.storage.IsModuleInstalled: %w", err)
-	}
-
-	if !isInstalled {
-		if err := c.Get(ctx, module); err != nil {
-			return "", fmt.Errorf("h.mod.Get: %w", err)
-		}
-	}
-
-	lockFileInfo, err := c.lockFile.Read(module.Name)
-	if err != nil {
-		return "", fmt.Errorf("lockFile.Read: %w", err)
-	}
-
-	installedPath := c.storage.GetInstallDir(module.Name, lockFileInfo.Version)
-
-	return installedPath, nil
 }
 
 func stripPrefix(path, prefix string) string {
