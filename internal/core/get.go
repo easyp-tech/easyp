@@ -86,15 +86,6 @@ func (c *Core) get(ctx context.Context, requestedModule models.Module) (models.I
 	}
 
 	for _, indirectDep := range moduleConfig.Dependencies {
-		isInstalled, err := c.storage.IsModuleInstalled(indirectDep)
-		if err != nil {
-			return models.InstalledModuleInfo{}, fmt.Errorf("c.storage.IsModuleInstalled: %w", err)
-		}
-
-		if isInstalled {
-			continue
-		}
-
 		if err := c.Get(ctx, indirectDep); err != nil {
 			if errors.Is(err, models.ErrVersionNotFound) {
 				slog.Error("Version not found", "dependency", indirectDep)
