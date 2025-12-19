@@ -13,13 +13,11 @@ func (s *Storage) GetCacheDownloadPaths(moduleName, version string) models.Cache
 	fileName := sanitizePath(version)
 
 	archiveFile := filepath.Join(cacheDownloadDir, fileName) + ".zip"
-	archiveHashFile := filepath.Join(cacheDownloadDir, fileName) + ".ziphash"
 	moduleInfoFile := filepath.Join(cacheDownloadDir, fileName) + ".info"
 
 	return models.CacheDownloadPaths{
 		CacheDownloadDir: cacheDownloadDir,
 		ArchiveFile:      archiveFile,
-		ArchiveHashFile:  archiveHashFile,
 		ModuleInfoFile:   moduleInfoFile,
 	}
 }

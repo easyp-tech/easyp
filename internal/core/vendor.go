@@ -13,11 +13,8 @@ func (c *Core) Vendor(ctx context.Context) error {
 		return fmt.Errorf("c.Download: %w", err)
 	}
 
-	for dep := range c.lockFile.DepsIter() {
-		depPath, err := c.getModulePath(ctx, dep.Name)
-		if err != nil {
-			return fmt.Errorf("c.moduleReflect.GetModulePath: %w", err)
-		}
+	for lockFileInfo := range c.lockFile.DepsIter() {
+		depPath := c.storage.GetInstallDir(lockFileInfo.Name, lockFileInfo.Version)
 
 		if err := cp.Copy(depPath, c.vendorDir); err != nil {
 			return fmt.Errorf("c.Copy: %w", err)

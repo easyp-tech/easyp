@@ -11,9 +11,6 @@ type CacheDownloadPaths struct {
 	// ArchiveFile full path to downloaded archive of module
 	ArchiveFile string
 
-	// ArchiveHashFile full path to file with hash of archive
-	ArchiveHashFile string
-
 	// ModuleInfoFile full path to file with info about downloaded module
 	ModuleInfoFile string
 }
