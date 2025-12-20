@@ -7,13 +7,11 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"path/filepath"
 
 	"github.com/urfave/cli/v2"
 
 	"github.com/easyp-tech/easyp/internal/config"
 	"github.com/easyp-tech/easyp/internal/core"
-	"github.com/easyp-tech/easyp/internal/flags"
 	"github.com/easyp-tech/easyp/internal/fs/fs"
 )
 
@@ -114,46 +112,29 @@ func (l Lint) Action(ctx *cli.Context) error {
 }
 
 func (l Lint) action(ctx *cli.Context) error {
-	workingDir, err := os.Getwd()
+	configPath, projectRoot, lintRoot, err := resolveRoots(ctx, flagLintRoot.Name)
 	if err != nil {
-		return fmt.Errorf("os.Getwd: %w", err)
+		return err
 	}
 
-	path := ctx.String(flagLintDirectoryPath.Name)
-	root := ctx.String(flagLintRoot.Name)
-
-	// Determine root directory for file search
-	// If --root is not specified, use workingDir (default behavior)
-	rootDir := workingDir
-	if root != "" {
-		if filepath.IsAbs(root) {
-			// If root is absolute, use it as is
-			rootDir = root
-		} else {
-			// If root is relative, concatenate with workingDir
-			rootDir = filepath.Join(workingDir, root)
-		}
-	}
-
-	// Normalize the root directory path
-	rootDir, err = filepath.Abs(rootDir)
-	if err != nil {
-		return fmt.Errorf("filepath.Abs(rootDir): %w", err)
-	}
-
-	cfg, err := config.New(ctx.Context, ctx.String(flags.Config.Name))
+	cfg, err := config.New(ctx.Context, configPath)
 	if err != nil {
 		return fmt.Errorf("config.New: %w", err)
 	}
 	core.SetAllowCommentIgnores(cfg.Lint.AllowCommentIgnores)
 
-	fsWalker := fs.NewFSWalker(rootDir, path)
-
-	app, err := buildCore(ctx.Context, *cfg, fsWalker)
+	// Walker for Core (lockfile etc) - strictly based on project root
+	projectWalker := fs.NewFSWalker(projectRoot, ".")
+	app, err := buildCore(ctx.Context, *cfg, projectWalker)
 	if err != nil {
 		return fmt.Errorf("buildCore: %w", err)
 	}
-	issues, err := app.Lint(ctx.Context, fsWalker)
+
+	path := ctx.String(flagLintDirectoryPath.Name)
+
+	// Walker for Linting - based on requested root and path
+	lintWalker := fs.NewFSWalker(lintRoot, path)
+	issues, err := app.Lint(ctx.Context, lintWalker)
 	if err != nil {
 		return fmt.Errorf("c.Lint: %w", err)
 	}

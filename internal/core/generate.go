@@ -31,7 +31,10 @@ func (c *Core) Generate(ctx context.Context, root, directory string) error {
 	}
 
 	for lockFileInfo := range c.lockFile.DepsIter() {
-		modulePath := c.storage.GetInstallDir(lockFileInfo.Name, lockFileInfo.Version)
+		modulePath, err := c.modulePath(models.NewModule(lockFileInfo.Name))
+		if err != nil {
+			return fmt.Errorf("modulePath: %w", err)
+		}
 
 		q.Imports = append(q.Imports, modulePath)
 	}
@@ -62,12 +65,10 @@ func (c *Core) Generate(ctx context.Context, root, directory string) error {
 
 		module := models.NewModule(repo.URL)
 
-		lockFileInfo, err := c.lockFile.Read(module.Name)
+		modulePaths, err := c.modulePath(module)
 		if err != nil {
-			return fmt.Errorf("c.lockFile.Read: %w", err)
+			return fmt.Errorf("modulePath: %w", err)
 		}
-
-		modulePaths := c.storage.GetInstallDir(lockFileInfo.Name, lockFileInfo.Version)
 
 		fsWalker := fs.NewFSWalker(modulePaths, repo.SubDirectory)
 		err = fsWalker.WalkDir(gitGenerateCb(modulePaths))

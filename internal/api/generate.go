@@ -62,52 +62,68 @@ func (g Generate) Command() *cli.Command {
 func (g Generate) Action(ctx *cli.Context) error {
 	logger := slog.Default()
 
-	workingDir, err := os.Getwd()
+	configPath, projectRoot, generateRoot, err := resolveRoots(ctx, flagGenerateRoot.Name)
 	if err != nil {
-		return fmt.Errorf("os.Getwd: %w", err)
+		return err
 	}
 
-	root := ctx.String(flagGenerateRoot.Name)
-
-	// Determine root directory for file search
-	// If --root is not specified, use workingDir (default behavior)
-	rootDir := workingDir
-	if root != "" {
-		if filepath.IsAbs(root) {
-			// If root is absolute, use it as is
-			rootDir = root
-		} else {
-			// If root is relative, concatenate with workingDir
-			rootDir = filepath.Join(workingDir, root)
-		}
-	}
-
-	// Normalize the root directory path
-	rootDir, err = filepath.Abs(rootDir)
-	if err != nil {
-		return fmt.Errorf("filepath.Abs(rootDir): %w", err)
-	}
-
-	cfg, err := config.New(ctx.Context, ctx.String(flags.Config.Name))
+	cfg, err := config.New(ctx.Context, configPath)
 	if err != nil {
 		return fmt.Errorf("config.New: %w", err)
 	}
-	dirWalker := fs.NewFSWalker(rootDir, ".")
-	app, err := buildCore(ctx.Context, *cfg, dirWalker)
+
+	// Walker for Core (lockfile etc) - strictly based on project root
+	projectWalker := fs.NewFSWalker(projectRoot, ".")
+	app, err := buildCore(ctx.Context, *cfg, projectWalker)
 	if err != nil {
 		return fmt.Errorf("buildCore: %w", err)
 	}
 
 	dir := ctx.String(flagGenerateDirectoryPath.Name)
-	err = app.Generate(ctx.Context, rootDir, dir)
-	if err != nil {
+	if err := app.Generate(ctx.Context, generateRoot, dir); err != nil {
 		if errors.Is(err, core.ErrEmptyInputFiles) {
 			logger.Warn("empty input files!")
 			return nil
 		}
-
 		return fmt.Errorf("generator.Generate: %w", err)
 	}
 
 	return nil
+}
+
+// resolveRoots computes configPath (absolute), projectRoot (dir of config), and operation root based on provided root flag.
+func resolveRoots(ctx *cli.Context, rootFlagName string) (string, string, string, error) {
+	workingDir, err := os.Getwd()
+	if err != nil {
+		return "", "", "", fmt.Errorf("os.Getwd: %w", err)
+	}
+
+	root := ctx.String(rootFlagName)
+	configPath := ctx.String(flags.Config.Name)
+
+	// 1. Determine Project Root (for config and lockfile)
+	if !filepath.IsAbs(configPath) {
+		configPath = filepath.Join(workingDir, configPath)
+	}
+	projectRoot := filepath.Dir(configPath)
+
+	// 2. Determine operation root (where to search for files)
+	var opRoot string
+	if root != "" {
+		if filepath.IsAbs(root) {
+			opRoot = root
+		} else {
+			opRoot = filepath.Join(workingDir, root)
+		}
+	} else {
+		opRoot = projectRoot
+	}
+
+	// Normalize to absolute path
+	opRoot, err = filepath.Abs(opRoot)
+	if err != nil {
+		return "", "", "", fmt.Errorf("filepath.Abs(opRoot): %w", err)
+	}
+
+	return configPath, projectRoot, opRoot, nil
 }
