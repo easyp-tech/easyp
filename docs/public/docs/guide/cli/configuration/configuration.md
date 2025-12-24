@@ -117,6 +117,25 @@ easyp init
 easyp init --dir proto-project/
 ```
 
+**Validate-config command:**
+```bash
+easyp validate-config [flags]
+```
+
+| Flag | Short | Environment | Description | Default |
+|------|-------|-------------|-------------|---------|
+| `--config` | `-c` | `EASYP_CFG` | Configuration file path | `easyp.yaml` |
+| `--format` | `-f` | | Output format (`json` or `text`) | `json` |
+
+**Examples:**
+```bash
+# Validate default config with JSON output (exit 0 when no errors)
+easyp validate-config
+
+# Validate a different file with text output
+easyp validate-config --config example.easyp.yaml --format text
+```
+
 **Package management commands:**
 
 #### `easyp mod download`
