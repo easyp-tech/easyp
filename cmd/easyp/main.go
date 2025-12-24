@@ -52,6 +52,7 @@ func main() {
 			api.Init{},
 			api.Generate{},
 			api.LsFiles{},
+			api.Validate{},
 			api.BreakingCheck{},
 		),
 		Flags: []cli.Flag{

@@ -3,6 +3,8 @@ module github.com/easyp-tech/easyp
 go 1.24.0
 
 require (
+	github.com/Yakwilik/go-yamlvalidator v0.1.0
+	github.com/a8m/envsubst v1.4.3
 	github.com/brianvoe/gofakeit/v6 v6.28.0
 	github.com/bufbuild/protocompile v0.14.1
 	github.com/codeclysm/extract/v3 v3.1.1
@@ -25,7 +27,6 @@ require (
 	dario.cat/mergo v1.0.2 // indirect
 	github.com/Microsoft/go-winio v0.6.2 // indirect
 	github.com/ProtonMail/go-crypto v1.3.0 // indirect
-	github.com/a8m/envsubst v1.4.3 // indirect
 	github.com/cloudflare/circl v1.6.1 // indirect
 	github.com/cpuguy83/go-md2man/v2 v2.0.7 // indirect
 	github.com/cyphar/filepath-securejoin v0.6.0 // indirect
