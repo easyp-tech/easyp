@@ -188,8 +188,8 @@ func buildSchema() *v.FieldSchema {
 	generateSchema := &v.FieldSchema{
 		Type: v.TypeMap,
 		AllowedKeys: map[string]*v.FieldSchema{
-			"inputs":  {Type: v.TypeSequence, ItemSchema: inputSchema, Required: true, MinItems: v.Ptr[int](1)},
-			"plugins": {Type: v.TypeSequence, ItemSchema: pluginSchema, Required: true, MinItems: v.Ptr[int](1)},
+			"inputs":  {Type: v.TypeSequence, ItemSchema: inputSchema, Required: true, MinItems: v.Ptr(1)},
+			"plugins": {Type: v.TypeSequence, ItemSchema: pluginSchema, Required: true, MinItems: v.Ptr(1)},
 			"managed": managedSchema,
 		},
 		UnknownKeyPolicy: v.UnknownKeyWarn,
