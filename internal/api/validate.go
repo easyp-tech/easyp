@@ -15,20 +15,6 @@ import (
 
 type Validate struct{}
 
-var (
-	flagValidateFormat = &cli.GenericFlag{
-		Name:       "format",
-		Usage:      "output format: json or text",
-		Required:   false,
-		HasBeenSet: false,
-		Value: &EnumValue{
-			Enum:    []string{JSONFormat, TextFormat},
-			Default: JSONFormat,
-		},
-		Aliases: []string{"f"},
-	}
-)
-
 func (v Validate) Command() *cli.Command {
 	return &cli.Command{
 		Name:        "validate-config",
@@ -38,7 +24,6 @@ func (v Validate) Command() *cli.Command {
 		UsageText:   "validate-config [--config path] [--format json|text]",
 		Flags: []cli.Flag{
 			flags.Config,
-			flagValidateFormat,
 		},
 		Action: v.Action,
 	}
@@ -73,26 +58,25 @@ func (v Validate) Action(ctx *cli.Context) error {
 		Errors: issues,
 	}
 
-	format := ctx.String(flagValidateFormat.Name)
+	format := flags.GetFormat(ctx, flags.JSONFormat)
 	switch format {
-	case JSONFormat:
+	case flags.JSONFormat:
 		enc := json.NewEncoder(os.Stdout)
 		enc.SetIndent("", "  ")
 		if err := enc.Encode(result); err != nil {
 			return fmt.Errorf("json.Encode: %w", err)
 		}
-	case TextFormat:
+	case flags.TextFormat:
 		printValidateText(result)
 	default:
 		return fmt.Errorf("unsupported format: %s", format)
 	}
 
-	if !result.Valid {
-		// Non-zero exit code on validation failure
-		os.Exit(1)
+	if result.Valid {
+		return nil
 	}
 
-	return nil
+	return ErrHasValidateIssue
 }
 
 func printValidateText(res validateResult) {
