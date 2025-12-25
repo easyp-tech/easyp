@@ -76,6 +76,7 @@ For comprehensive usage information, consult EasyP's [documentation](https://eas
 * [`easyp mod`](https://easyp.tech/docs/guide/cli/package-manager/package-manager) - Package management
 * [`easyp generate`](https://easyp.tech/docs/guide/cli/generator/generator) - Code generation
 * `easyp validate-config` - Validate `easyp.yaml` structure and types (JSON or text output)
+* Global flag: `--format, -f` / env `EASYP_FORMAT` (`text` or `json`) for commands that support formatted output
 
 ## Key Features
 

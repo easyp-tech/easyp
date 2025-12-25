@@ -10,6 +10,7 @@ import (
 
 	"github.com/easyp-tech/easyp/internal/config"
 	"github.com/easyp-tech/easyp/internal/core"
+	"github.com/easyp-tech/easyp/internal/flags"
 	"github.com/easyp-tech/easyp/internal/fs/fs"
 )
 
@@ -22,18 +23,6 @@ var (
 		Value:   true,
 		Aliases: []string{"I"},
 	}
-
-	flagLsFilesFormat = &cli.GenericFlag{
-		Name:       "format",
-		Usage:      "output format: text or json",
-		Required:   false,
-		HasBeenSet: false,
-		Value: &EnumValue{
-			Enum:    []string{TextFormat, JSONFormat},
-			Default: JSONFormat,
-		},
-		Aliases: []string{"f"},
-	}
 )
 
 func (l LsFiles) Command() *cli.Command {
@@ -45,7 +34,6 @@ func (l LsFiles) Command() *cli.Command {
 		Action:      l.Action,
 		Flags: []cli.Flag{
 			flagLsFilesIncludeImports,
-			flagLsFilesFormat,
 		},
 		Aliases: []string{"ls"},
 	}
@@ -83,15 +71,15 @@ func (l LsFiles) Action(ctx *cli.Context) error {
 		return fmt.Errorf("app.ListFiles: %w", err)
 	}
 
-	format := ctx.String(flagLsFilesFormat.Name)
+	format := flags.GetFormat(ctx, flags.JSONFormat)
 	switch format {
-	case JSONFormat:
+	case flags.JSONFormat:
 		enc := json.NewEncoder(os.Stdout)
 		enc.SetIndent("", "  ")
 		if err := enc.Encode(res); err != nil {
 			return fmt.Errorf("json.Encode: %w", err)
 		}
-	case TextFormat:
+	case flags.TextFormat:
 		if err := printLsFilesText(res); err != nil {
 			return fmt.Errorf("printLsFilesText: %w", err)
 		}

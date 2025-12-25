@@ -13,6 +13,7 @@ Available for all commands:
 | `--cfg` | `-c` | `EASYP_CFG` | Configuration file path | `easyp.yaml` |
 | `--config` | | `EASYP_CFG` | Alias for `--cfg` | `easyp.yaml` |
 | `--debug` | `-d` | `EASYP_DEBUG` | Enable debug mode | `false` |
+| `--format` | `-f` | `EASYP_FORMAT` | Формат вывода для команд с поддержкой нескольких форматов (`text`/`json`) | значение по умолчанию зависит от команды |
 
 **Examples:**
 ```bash
@@ -37,7 +38,7 @@ easyp lint [flags]
 |------|-------|-------------|-------------|---------|
 | `--path` | `-p` | | Directory path to lint | `.` |
 | `--root` | `-r` | | Базовая директория для поиска файлов | Текущая рабочая директория |
-| `--format` | `-f` | `EASYP_FORMAT` | Output format (text/json) | `text` |
+| `--format` | `-f` | `EASYP_FORMAT` | Использует глобальный флаг формата (`text`/`json`) | Использует глобальное значение по умолчанию |
 
 **Examples:**
 ```bash
@@ -48,7 +49,7 @@ easyp lint --path proto/
 easyp lint --root src/IPC/Contracts --path .
 
 # JSON output format
-easyp lint --format json
+easyp lint --format json   # глобальный флаг
 
 # Combined flags
 easyp lint -p proto/ -f json
@@ -85,7 +86,7 @@ easyp breaking [flags]
 |------|-------|-------------|-------------|---------|
 | `--against` | | | Git ref to compare against | (required) |
 | `--path` | `-p` | | Directory path to check | `.` |
-| `--format` | `-f` | `EASYP_FORMAT` | Output format (text/json) | `text` |
+| `--format` | `-f` | `EASYP_FORMAT` | Использует глобальный флаг формата (`text`/`json`) | Использует глобальное значение по умолчанию |
 
 **Examples:**
 ```bash
@@ -96,7 +97,7 @@ easyp breaking --against main
 easyp breaking --against develop --path proto/
 
 # JSON output
-easyp breaking --against main --format json
+easyp breaking --against main --format json   # глобальный флаг
 ```
 
 **Init command:**
@@ -180,7 +181,7 @@ EasyP supports environment variables for configuration:
 | `EASYP_CFG` | Path to configuration file | `easyp.yaml` |
 | `EASYP_DEBUG` | Enable debug logging | `false` |
 | `EASYPPATH` | Cache and modules storage directory | `$HOME/.easyp` |
-| `EASYP_FORMAT` | Output format for lint command | `text` |
+| `EASYP_FORMAT` | Формат вывода для поддерживаемых команд (`text`/`json`). Если не указан, каждая команда использует своё значение по умолчанию. | значение по умолчанию зависит от команды |
 | `EASYP_ROOT_GENERATE_PATH` | Root path for generate command | `.` |
 | `EASYP_INIT_DIR` | Directory for init command | `.` |
 
