@@ -46,7 +46,6 @@ func (b BreakingCheck) Command() *cli.Command {
 		Subcommands:  nil,
 		Flags: []cli.Flag{
 			flagLintDirectoryPath,
-			flagFormat,
 			flagAgainstBranchName,
 		},
 		SkipFlagParsing:        false,
@@ -114,7 +113,7 @@ func (b BreakingCheck) action(ctx *cli.Context) error {
 		return nil
 	}
 
-	format := ctx.String(flagFormat.Name)
+	format := flags.GetFormat(ctx, flags.TextFormat)
 	if err := printIssues(
 		format,
 		os.Stdout,

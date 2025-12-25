@@ -12,6 +12,7 @@ import (
 
 	"github.com/easyp-tech/easyp/internal/config"
 	"github.com/easyp-tech/easyp/internal/core"
+	"github.com/easyp-tech/easyp/internal/flags"
 	"github.com/easyp-tech/easyp/internal/fs/fs"
 )
 
@@ -19,12 +20,6 @@ var _ Handler = (*Lint)(nil)
 
 // Lint is a handler for lint command.
 type Lint struct{}
-
-// Format is the format of output.
-const (
-	TextFormat = "text"
-	JSONFormat = "json"
-)
 
 var (
 	flagLintDirectoryPath = &cli.StringFlag{
@@ -45,20 +40,8 @@ var (
 		Aliases:    []string{"r"},
 	}
 
-	flagFormat = &cli.GenericFlag{
-		Name:       "format",
-		Usage:      "set format of output",
-		Required:   false,
-		HasBeenSet: false,
-		Value: &EnumValue{
-			Enum:    []string{TextFormat, JSONFormat},
-			Default: TextFormat,
-		},
-		Aliases: []string{"f"},
-		EnvVars: []string{"EASYP_FORMAT"},
-	}
-
-	ErrHasLintIssue = errors.New("has lint issue")
+	ErrHasLintIssue     = errors.New("has lint issue")
+	ErrHasValidateIssue = errors.New("has validate issue")
 )
 
 // Command implements Handler.
@@ -80,7 +63,6 @@ func (l Lint) Command() *cli.Command {
 		Flags: []cli.Flag{
 			flagLintDirectoryPath,
 			flagLintRoot,
-			flagFormat,
 		},
 		SkipFlagParsing:        false,
 		HideHelp:               false,
@@ -143,7 +125,7 @@ func (l Lint) action(ctx *cli.Context) error {
 		return nil
 	}
 
-	format := ctx.String(flagFormat.Name)
+	format := flags.GetFormat(ctx, flags.TextFormat)
 	if err := printIssues(
 		format,
 		os.Stdout,
@@ -157,9 +139,9 @@ func (l Lint) action(ctx *cli.Context) error {
 
 func printIssues(format string, w io.Writer, issues []core.IssueInfo) error {
 	switch format {
-	case TextFormat:
+	case flags.TextFormat:
 		return textPrinter(w, issues)
-	case JSONFormat:
+	case flags.JSONFormat:
 		return jsonPrinter(w, issues)
 	default:
 		return fmt.Errorf("unsupported format: %s", format)
