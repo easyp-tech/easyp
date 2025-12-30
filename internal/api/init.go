@@ -55,7 +55,7 @@ func (i Init) Action(ctx *cli.Context) error {
 
 	err = app.Initialize(ctx.Context, dirFS, []string{"DEFAULT"})
 	if err != nil {
-		return fmt.Errorf("initer.Initialize: %w", err)
+		return fmt.Errorf("app.Initialize: %w", err)
 	}
 
 	return nil
