@@ -4,6 +4,7 @@ import (
 	"io"
 	"io/fs"
 	"os"
+	"path/filepath"
 )
 
 type FS interface {
@@ -15,6 +16,9 @@ func NewFSWalker(root, path string) *FSWalker {
 	if path == "" {
 		path = "."
 	}
+
+	// os.DirFS always expects forward slashes, even on Windows
+	path = filepath.ToSlash(path)
 
 	diskFS := os.DirFS(root)
 	return &FSWalker{
