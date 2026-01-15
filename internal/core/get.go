@@ -28,27 +28,24 @@ func (c *Core) Get(ctx context.Context, requestedModule models.Module) error {
 	}
 
 	if !needToInstall {
-		lockFileInfo, err := c.lockFile.Read(requestedModule.Name)
-		if err != nil {
-			return fmt.Errorf("c.lockFile.Read: %w", err)
+		if err := c.checkInstalledPackage(requestedModule, installedModuleInfo); err != nil {
+			return fmt.Errorf("c.checkInstalledPackage: %w", err)
 		}
-
-		if lockFileInfo.Hash != installedModuleInfo.Hash {
-			return fmt.Errorf("c.lockFile.Read: lock file hash mismatch")
-		}
-
-		// TODO: calc hash
 
 		c.logger.Debug("Module is installed",
 			"name", requestedModule.Name, "version", requestedModule.Version,
 		)
-		return nil
+	} else {
+		installedModuleInfo, err = c.get(ctx, requestedModule)
+		if err != nil {
+			return fmt.Errorf("c.get: %w", err)
+		}
 	}
-	_ = installedModuleInfo
 
-	installedModuleInfo, err = c.get(ctx, requestedModule)
-	if err != nil {
-		return fmt.Errorf("c.get: %w", err)
+	if err := c.lockFile.Write(
+		requestedModule.Name, installedModuleInfo.RevisionVersion, installedModuleInfo.Hash,
+	); err != nil {
+		return fmt.Errorf("c.lockFile.Write: %w", err)
 	}
 
 	return nil
@@ -119,11 +116,32 @@ func (c *Core) get(ctx context.Context, requestedModule models.Module) (models.I
 		return models.InstalledModuleInfo{}, fmt.Errorf("c.storage.WriteInstalledModuleInfo: %w", err)
 	}
 
-	if err := c.lockFile.Write(
-		requestedModule.Name, installedModuleInfo.RevisionVersion, installedModuleInfo.Hash,
-	); err != nil {
-		return models.InstalledModuleInfo{}, fmt.Errorf("c.lockFile.Write: %w", err)
+	return installedModuleInfo, nil
+}
+
+// checkInstalledPackage checked if installed version is valid
+func (c *Core) checkInstalledPackage(
+	requestedModule models.Module, installedModuleInfo models.InstalledModuleInfo,
+) error {
+	lockFileInfo, err := c.lockFile.Read(requestedModule.Name)
+	if err != nil {
+		if errors.Is(err, models.ErrModuleNotFoundInLockFile) {
+			// not in lock file have no to compare with
+			return nil
+		}
+
+		return fmt.Errorf("c.lockFile.Read: %w", err)
 	}
 
-	return installedModuleInfo, nil
+	if lockFileInfo.Version == string(requestedModule.Version) {
+		c.logger.Debug("version is match check hash")
+
+		if lockFileInfo.Hash != installedModuleInfo.Hash {
+			return models.ErrHashDependencyMismatch
+		}
+	}
+
+	// TODO: calc hash
+
+	return nil
 }
