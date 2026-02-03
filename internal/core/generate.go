@@ -9,6 +9,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"strings"
 
 	"github.com/bufbuild/protocompile"
@@ -20,7 +21,6 @@ import (
 	pluginexecutor "github.com/easyp-tech/easyp/internal/adapters/plugin"
 	"github.com/easyp-tech/easyp/internal/core/models"
 	"github.com/easyp-tech/easyp/internal/fs/fs"
-	"slices"
 )
 
 // Generate generates files.
