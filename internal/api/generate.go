@@ -39,6 +39,18 @@ var (
 		Value:      "",
 		Aliases:    []string{"r"},
 	}
+
+	flagGenerateDescriptorSetOut = &cli.StringFlag{
+		Name:     "descriptor_set_out",
+		Usage:    "output path for the binary FileDescriptorSet",
+		Required: false,
+	}
+
+	flagGenerateIncludeImports = &cli.BoolFlag{
+		Name:     "include_imports",
+		Usage:    "include all transitive dependencies in the FileDescriptorSet",
+		Required: false,
+	}
 )
 
 // Command implements Handler.
@@ -53,6 +65,8 @@ func (g Generate) Command() *cli.Command {
 		Flags: []cli.Flag{
 			flagGenerateDirectoryPath,
 			flagGenerateRoot,
+			flagGenerateDescriptorSetOut,
+			flagGenerateIncludeImports,
 		},
 		HelpName: "help",
 	}
@@ -80,7 +94,10 @@ func (g Generate) Action(ctx *cli.Context) error {
 	}
 
 	dir := ctx.String(flagGenerateDirectoryPath.Name)
-	if err := app.Generate(ctx.Context, generateRoot, dir); err != nil {
+	descriptorSetOut := ctx.String(flagGenerateDescriptorSetOut.Name)
+	includeImports := ctx.Bool(flagGenerateIncludeImports.Name)
+
+	if err := app.Generate(ctx.Context, generateRoot, dir, descriptorSetOut, includeImports); err != nil {
 		if errors.Is(err, core.ErrEmptyInputFiles) {
 			logger.Warn("empty input files!")
 			return nil

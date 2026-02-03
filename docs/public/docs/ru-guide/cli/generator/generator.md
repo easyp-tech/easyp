@@ -822,6 +822,29 @@ generate:
 
 Managed mode в EasyP совместим с managed mode в `buf`. Тот же формат конфигурации и поведение применяются, что упрощает миграцию между инструментами или использование обоих в одном workflow.
 
+## Генерация Descriptor Set
+
+**https://protobuf.dev/programming-guides/techniques/#self-description**
+
+EasyP поддерживает генерацию бинарных FileDescriptorSet файлов с помощью флага `--descriptor_set_out`. Это позволяет создавать самоописывающиеся protobuf сообщения, которые включают информацию о схеме вместе с данными.
+
+**Флаги CLI:**
+
+- `--descriptor_set_out <путь>` - Путь для вывода бинарного FileDescriptorSet
+- `--include_imports` - Включить все транзитивные зависимости в FileDescriptorSet
+
+**Пример:**
+
+```bash
+# Генерация descriptor set только с целевыми файлами
+easyp generate --descriptor_set_out=./schema.pb
+
+# Генерация descriptor set со всеми зависимостями
+easyp generate --descriptor_set_out=./schema.pb --include_imports
+```
+
+Самоописывающиеся сообщения полезны для динамического парсинга сообщений, валидации схемы во время выполнения, реестров схем и создания универсальных gRPC клиентов. Для получения дополнительной информации см. [документацию Protocol Buffers о самоописании](https://protobuf.dev/programming-guides/techniques/#self-description).
+
 ## Интеграция с менеджером пакетов
 
 Одной из самых мощных возможностей EasyP является бесшовная интеграция генератора кода с менеджером пакетов. Это устраняет проблему ручного управления proto‑зависимостями и гарантирует, что при генерации используются корректные (зафиксированные) версии импортируемых файлов.
