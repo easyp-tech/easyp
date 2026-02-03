@@ -20,6 +20,7 @@ import (
 	pluginexecutor "github.com/easyp-tech/easyp/internal/adapters/plugin"
 	"github.com/easyp-tech/easyp/internal/core/models"
 	"github.com/easyp-tech/easyp/internal/fs/fs"
+	"slices"
 )
 
 // Generate generates files.
@@ -122,6 +123,8 @@ func (c *Core) Generate(ctx context.Context, root, directory string) error {
 	if len(q.Files) == 0 {
 		return ErrEmptyInputFiles
 	}
+
+	slices.Reverse(q.Imports) // local first, dependencies last
 
 	compiler := protocompile.Compiler{
 		Resolver: protocompile.CompositeResolver{
