@@ -9,6 +9,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"strings"
 
 	"github.com/bufbuild/protocompile"
@@ -122,6 +123,8 @@ func (c *Core) Generate(ctx context.Context, root, directory string) error {
 	if len(q.Files) == 0 {
 		return ErrEmptyInputFiles
 	}
+
+	slices.Reverse(q.Imports) // local first, dependencies last
 
 	compiler := protocompile.Compiler{
 		Resolver: protocompile.CompositeResolver{
