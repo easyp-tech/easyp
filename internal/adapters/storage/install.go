@@ -3,7 +3,6 @@ package storage
 import (
 	"context"
 	"fmt"
-	"log/slog"
 	"os"
 	"strings"
 
@@ -21,7 +20,8 @@ func (s *Storage) Install(
 	revision models.Revision,
 	moduleConfig models.ModuleConfig,
 ) (models.ModuleHash, error) {
-	slog.Info(
+	s.logger.Info(
+		context.Background(),
 		"Install package",
 		"package", module.Name,
 		"version", revision.Version,
@@ -43,7 +43,7 @@ func (s *Storage) Install(
 
 	renamer := getRenamer(moduleConfig)
 
-	slog.Debug("Starting extract", "installedDirPath", installedDirPath)
+	s.logger.Debug(context.Background(), "Starting extract", "installedDirPath", installedDirPath)
 
 	if err := extract.Archive(context.TODO(), fp, installedDirPath, renamer); err != nil {
 		return "", fmt.Errorf("extract.Archive: %w", err)

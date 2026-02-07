@@ -81,7 +81,7 @@ func (c *Core) Generate(ctx context.Context, root, directory string) error {
 		searchPath := filepath.Join(inputFilesDir.Root, inputFilesDir.Path)
 		// Skip if inputFilesDir.Root and directory don't overlap
 		if directory != "." && !pathsOverlap(directory, searchPath) {
-			c.logger.DebugContext(ctx, "skipping inputFilesDir",
+			c.logger.Debug(ctx, "skipping inputFilesDir",
 				slog.String("directory", directory),
 				slog.String("searchPath", searchPath),
 				slog.String("reason", "paths don't overlap"),
@@ -101,7 +101,7 @@ func (c *Core) Generate(ctx context.Context, root, directory string) error {
 			case filepath.Ext(walkPath) != ".proto":
 				return nil
 			case shouldIgnore(walkPath, []string{directory}):
-				c.logger.DebugContext(ctx, "ignore", slog.String("walkPath", walkPath), slog.String("directory", directory))
+				c.logger.Debug(ctx, "ignore", slog.String("walkPath", walkPath), slog.String("directory", directory))
 				return nil
 			}
 
@@ -117,7 +117,7 @@ func (c *Core) Generate(ctx context.Context, root, directory string) error {
 		}
 	}
 
-	c.logger.DebugContext(ctx, "data", "import", q.Imports, "files", q.Files)
+	c.logger.Debug(ctx, "data", "import", q.Imports, "files", q.Files)
 
 	if len(q.Files) == 0 {
 		return ErrEmptyInputFiles
@@ -168,7 +168,7 @@ func (c *Core) Generate(ctx context.Context, root, directory string) error {
 		for _, dep := range descriptor.Dependency {
 			if err := addFileWithDeps(dep); err != nil {
 				// Ignore errors for optional dependencies
-				c.logger.DebugContext(ctx, "Warning: could not compile dependency",
+				c.logger.Debug(ctx, "Warning: could not compile dependency",
 					slog.String("dependency", dep),
 					slog.String("error", err.Error()))
 			}
@@ -191,7 +191,7 @@ func (c *Core) Generate(ctx context.Context, root, directory string) error {
 		// First add all dependencies of this file
 		for _, dep := range descriptor.Dependency {
 			if err := addFileWithDeps(dep); err != nil {
-				c.logger.DebugContext(ctx, "Warning: could not compile dependency",
+				c.logger.Debug(ctx, "Warning: could not compile dependency",
 					slog.String("dependency", dep),
 					slog.String("error", err.Error()))
 			}
@@ -206,9 +206,9 @@ func (c *Core) Generate(ctx context.Context, root, directory string) error {
 	}
 
 	// Log file order for debugging
-	c.logger.DebugContext(ctx, "File order in request:")
+	c.logger.Debug(ctx, "File order in request:")
 	for i, fd := range fileDescriptors {
-		c.logger.DebugContext(ctx, fmt.Sprintf("%d: %s", i, fd.GetName()))
+		c.logger.Debug(ctx, fmt.Sprintf("%d: %s", i, fd.GetName()))
 	}
 
 	// Build file to module mapping for managed mode
@@ -216,7 +216,7 @@ func (c *Core) Generate(ctx context.Context, root, directory string) error {
 
 	// Apply managed mode to file descriptors
 	if c.managedMode.Enabled {
-		c.logger.DebugContext(ctx, "Applying managed mode to file descriptors")
+		c.logger.Debug(ctx, "Applying managed mode to file descriptors")
 		if err := ApplyManagedMode(fileDescriptors, c.managedMode, fileToModule); err != nil {
 			return fmt.Errorf("ApplyManagedMode: %w", err)
 		}
@@ -273,7 +273,7 @@ func (c *Core) Generate(ctx context.Context, root, directory string) error {
 
 			p := filepath.Join(baseDir, file.GetName())
 
-			c.logger.DebugContext(ctx, "generated file",
+			c.logger.Debug(ctx, "generated file",
 				slog.String("plugin", source),
 				slog.String("file", file.GetName()),
 				slog.String("plugin_out", plugin.Out),
@@ -530,7 +530,7 @@ func (c *Core) mapModuleFiles(moduleName string, fileToModule map[string]string)
 
 	if err != nil {
 		// Log error but don't fail - managed mode can work without module mapping
-		c.logger.Debug("Failed to scan module directory",
+		c.logger.Debug(context.Background(), "Failed to scan module directory",
 			"module", moduleName,
 			"installDir", installDir,
 			"error", err)

@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log/slog"
 	"strings"
 
 	"github.com/easyp-tech/easyp/internal/core/models"
@@ -52,7 +51,6 @@ func (r *gitRepo) ReadRevision(ctx context.Context, requestedVersion models.Requ
 		CommitHash: revParts.CommitHash,
 		Version:    revParts.Version,
 	}
-	slog.Debug("Revision", "value", revision)
 
 	return revision, nil
 }

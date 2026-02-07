@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log/slog"
 
 	"github.com/samber/lo"
 
@@ -21,11 +20,11 @@ func (c *Core) Update(ctx context.Context, dependencies []string) error {
 
 		module := models.NewModule(dependency)
 
-		c.logger.Debug("Updating dependency", "name", module.Name, "version", module.Version)
+		c.logger.Debug(ctx, "Updating dependency", "name", module.Name, "version", module.Version)
 
 		if err := c.Get(ctx, module); err != nil {
 			if errors.Is(err, models.ErrVersionNotFound) {
-				slog.Error("Version not found", "dependency", dependency)
+				c.logger.Error(ctx, "Version not found", "dependency", dependency)
 				return models.ErrVersionNotFound
 			}
 

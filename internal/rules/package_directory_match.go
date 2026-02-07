@@ -16,7 +16,7 @@ type PackageDirectoryMatch struct {
 
 // Message implements lint.Rule.
 func (d *PackageDirectoryMatch) Message() string {
-	return "package is not matched with path"
+	return "package does not match directory path"
 }
 
 // Validate implements lint.Rule.

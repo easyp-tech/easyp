@@ -9,6 +9,7 @@ import (
 
 	"github.com/easyp-tech/easyp/internal/adapters/storage/mocks"
 	"github.com/easyp-tech/easyp/internal/core/models"
+	"github.com/easyp-tech/easyp/internal/logger"
 )
 
 type storageSuite struct {
@@ -39,7 +40,7 @@ func (s *storageSuite) SetupTest() {
 	s.rootDir = "/" + path.Join(gofakeit.Word(), gofakeit.Word())
 	s.lockFile = mocks.NewLockFile(s.T())
 
-	s.storage = New(s.rootDir, s.lockFile)
+	s.storage = New(s.rootDir, s.lockFile, logger.NewNop())
 }
 
 func TestRunSuite(t *testing.T) {

@@ -12,16 +12,17 @@ import (
 	"google.golang.org/protobuf/types/pluginpb"
 
 	"github.com/easyp-tech/easyp/internal/adapters/console"
+	"github.com/easyp-tech/easyp/internal/logger"
 )
 
 // CommandPluginExecutor executes plugins via custom command
 type CommandPluginExecutor struct {
 	console console.Console
-	logger  *slog.Logger
+	logger  logger.Logger
 }
 
 // NewCommandPluginExecutor creates a new CommandPluginExecutor
-func NewCommandPluginExecutor(console console.Console, logger *slog.Logger) *CommandPluginExecutor {
+func NewCommandPluginExecutor(console console.Console, logger logger.Logger) *CommandPluginExecutor {
 	return &CommandPluginExecutor{
 		console: console,
 		logger:  logger,
@@ -46,7 +47,7 @@ func (e *CommandPluginExecutor) Execute(ctx context.Context, plugin Info, reques
 		return nil, fmt.Errorf("empty command")
 	}
 
-	e.logger.DebugContext(ctx, "executing plugin via command",
+	e.logger.Debug(ctx, "executing plugin via command",
 		slog.String("command", strings.Join(commandParts, " ")),
 	)
 

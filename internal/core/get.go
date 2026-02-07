@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log/slog"
 
 	"github.com/easyp-tech/easyp/internal/adapters/repository/git"
 	"github.com/easyp-tech/easyp/internal/core/models"
@@ -28,11 +27,11 @@ func (c *Core) Get(ctx context.Context, requestedModule models.Module) error {
 	}
 
 	if !needToInstall {
-		if err := c.checkInstalledPackage(requestedModule, installedModuleInfo); err != nil {
+		if err := c.checkInstalledPackage(ctx, requestedModule, installedModuleInfo); err != nil {
 			return fmt.Errorf("c.checkInstalledPackage: %w", err)
 		}
 
-		c.logger.Debug("Module is installed",
+		c.logger.Debug(ctx, "Module is installed",
 			"name", requestedModule.Name, "version", requestedModule.Version,
 		)
 	} else {
@@ -85,7 +84,7 @@ func (c *Core) get(ctx context.Context, requestedModule models.Module) (models.I
 	for _, indirectDep := range moduleConfig.Dependencies {
 		if err := c.Get(ctx, indirectDep); err != nil {
 			if errors.Is(err, models.ErrVersionNotFound) {
-				slog.Error("Version not found", "dependency", indirectDep)
+				c.logger.Error(ctx, "Version not found", "dependency", indirectDep)
 				return models.InstalledModuleInfo{}, models.ErrVersionNotFound
 			}
 
@@ -105,7 +104,7 @@ func (c *Core) get(ctx context.Context, requestedModule models.Module) (models.I
 		return models.InstalledModuleInfo{}, fmt.Errorf("c.storage.Install: %w", err)
 	}
 
-	slog.Debug("HASH", "hash", moduleHash)
+	c.logger.Debug(ctx, "HASH", "hash", moduleHash)
 
 	installedModuleInfo := models.InstalledModuleInfo{
 		ModuleName:      requestedModule.Name,
@@ -121,7 +120,7 @@ func (c *Core) get(ctx context.Context, requestedModule models.Module) (models.I
 
 // checkInstalledPackage checked if installed version is valid
 func (c *Core) checkInstalledPackage(
-	requestedModule models.Module, installedModuleInfo models.InstalledModuleInfo,
+	ctx context.Context, requestedModule models.Module, installedModuleInfo models.InstalledModuleInfo,
 ) error {
 	lockFileInfo, err := c.lockFile.Read(requestedModule.Name)
 	if err != nil {
@@ -134,7 +133,7 @@ func (c *Core) checkInstalledPackage(
 	}
 
 	if lockFileInfo.Version == string(requestedModule.Version) {
-		c.logger.Debug("version is match check hash")
+		c.logger.Debug(ctx, "version is match check hash")
 
 		if lockFileInfo.Hash != installedModuleInfo.Hash {
 			return models.ErrHashDependencyMismatch
