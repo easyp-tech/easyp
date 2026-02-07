@@ -33,7 +33,7 @@ const (
 )
 
 func errExit(code int, msg string, args ...any) {
-	slog.Info(msg, args...)
+	slog.Error(msg, args...)
 	os.Exit(code)
 }
 
