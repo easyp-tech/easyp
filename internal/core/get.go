@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 
 	"github.com/easyp-tech/easyp/internal/adapters/repository/git"
 	"github.com/easyp-tech/easyp/internal/core/models"
@@ -11,6 +12,7 @@ import (
 
 // Get download package.
 func (c *Core) Get(ctx context.Context, requestedModule models.Module) error {
+	log := c.logger.With(slog.String("module", requestedModule.Name), slog.String("version", string(requestedModule.Version)))
 	cacheDownloadPaths := c.storage.GetCacheDownloadPaths(requestedModule.Name, string(requestedModule.Version))
 
 	var installedModuleInfo models.InstalledModuleInfo
@@ -31,9 +33,7 @@ func (c *Core) Get(ctx context.Context, requestedModule models.Module) error {
 			return fmt.Errorf("c.checkInstalledPackage: %w", err)
 		}
 
-		c.logger.Debug(ctx, "Module is installed",
-			"name", requestedModule.Name, "version", requestedModule.Version,
-		)
+		log.Debug(ctx, "module already installed")
 	} else {
 		installedModuleInfo, err = c.get(ctx, requestedModule)
 		if err != nil {
@@ -81,10 +81,12 @@ func (c *Core) get(ctx context.Context, requestedModule models.Module) (models.I
 		return models.InstalledModuleInfo{}, fmt.Errorf("c.moduleConfig.Read: %w", err)
 	}
 
+	log := c.logger.With(slog.String("module", requestedModule.Name), slog.String("version", string(requestedModule.Version)))
+
 	for _, indirectDep := range moduleConfig.Dependencies {
 		if err := c.Get(ctx, indirectDep); err != nil {
 			if errors.Is(err, models.ErrVersionNotFound) {
-				c.logger.Error(ctx, "Version not found", "dependency", indirectDep)
+				log.Error(ctx, "indirect dependency version not found", slog.Any("dependency", indirectDep))
 				return models.InstalledModuleInfo{}, models.ErrVersionNotFound
 			}
 
@@ -99,12 +101,14 @@ func (c *Core) get(ctx context.Context, requestedModule models.Module) (models.I
 		return models.InstalledModuleInfo{}, fmt.Errorf("repository.Archive: %w", err)
 	}
 
-	moduleHash, err := c.storage.Install(cacheDownloadPaths, requestedModule, revision, moduleConfig)
+	moduleHash, err := c.storage.Install(ctx, cacheDownloadPaths, requestedModule, revision, moduleConfig)
 	if err != nil {
 		return models.InstalledModuleInfo{}, fmt.Errorf("c.storage.Install: %w", err)
 	}
 
-	c.logger.Debug(ctx, "HASH", "hash", moduleHash)
+	log.Debug(ctx, "module installed",
+		slog.String("hash", string(moduleHash)),
+	)
 
 	installedModuleInfo := models.InstalledModuleInfo{
 		ModuleName:      requestedModule.Name,
@@ -133,7 +137,10 @@ func (c *Core) checkInstalledPackage(
 	}
 
 	if lockFileInfo.Version == string(requestedModule.Version) {
-		c.logger.Debug(ctx, "version is match check hash")
+		c.logger.Debug(ctx, "version matched, checking hash",
+			slog.String("module", requestedModule.Name),
+			slog.String("version", string(requestedModule.Version)),
+		)
 
 		if lockFileInfo.Hash != installedModuleInfo.Hash {
 			return models.ErrHashDependencyMismatch

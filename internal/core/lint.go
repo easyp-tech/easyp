@@ -15,6 +15,8 @@ import (
 
 // Lint lints the proto file.
 func (c *Core) Lint(ctx context.Context, fsWalker DirWalker) ([]IssueInfo, error) {
+	c.logger.Info(ctx, "starting lint")
+
 	var res []IssueInfo
 
 	err := fsWalker.WalkDir(func(path string, err error) error {
@@ -62,6 +64,8 @@ func (c *Core) Lint(ctx context.Context, fsWalker DirWalker) ([]IssueInfo, error
 		return nil, fmt.Errorf("fs.WalkDir: %w", err)
 	}
 
+	c.logger.Info(ctx, "lint completed", slog.Int("issues", len(res)))
+
 	return res, nil
 }
 
@@ -84,17 +88,11 @@ func (c *Core) shouldIgnore(rule Rule, path string) bool {
 func (c *Core) close(ctx context.Context, f io.Closer, path string) {
 	err := f.Close()
 	if err != nil {
-		c.logger.Debug(
+		c.logger.Warn(
 			ctx,
-			"incorrect closing",
-			slog.String(
-				"err",
-				err.Error(),
-			),
-			slog.String(
-				"path",
-				path,
-			),
+			"failed to close file",
+			slog.Any("error", err),
+			slog.String("path", path),
 		)
 	}
 }

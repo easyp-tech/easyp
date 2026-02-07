@@ -14,22 +14,22 @@ func New(l *slog.Logger) Logger {
 	return &slogLogger{l: l}
 }
 
-func (s *slogLogger) Debug(ctx context.Context, msg string, args ...any) {
-	s.l.DebugContext(ctx, msg, args...)
+func (s *slogLogger) Debug(ctx context.Context, msg string, attrs ...slog.Attr) {
+	s.l.LogAttrs(ctx, slog.LevelDebug, msg, attrs...)
 }
 
-func (s *slogLogger) Info(ctx context.Context, msg string, args ...any) {
-	s.l.InfoContext(ctx, msg, args...)
+func (s *slogLogger) Info(ctx context.Context, msg string, attrs ...slog.Attr) {
+	s.l.LogAttrs(ctx, slog.LevelInfo, msg, attrs...)
 }
 
-func (s *slogLogger) Warn(ctx context.Context, msg string, args ...any) {
-	s.l.WarnContext(ctx, msg, args...)
+func (s *slogLogger) Warn(ctx context.Context, msg string, attrs ...slog.Attr) {
+	s.l.LogAttrs(ctx, slog.LevelWarn, msg, attrs...)
 }
 
-func (s *slogLogger) Error(ctx context.Context, msg string, args ...any) {
-	s.l.ErrorContext(ctx, msg, args...)
+func (s *slogLogger) Error(ctx context.Context, msg string, attrs ...slog.Attr) {
+	s.l.LogAttrs(ctx, slog.LevelError, msg, attrs...)
 }
 
-func (s *slogLogger) With(args ...any) Logger {
-	return &slogLogger{l: s.l.With(args...)}
+func (s *slogLogger) With(attrs ...slog.Attr) Logger {
+	return &slogLogger{l: slog.New(s.l.Handler().WithAttrs(attrs))}
 }

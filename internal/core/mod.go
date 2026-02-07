@@ -16,6 +16,7 @@ type (
 		CreateCacheDownloadDir(models.CacheDownloadPaths) error
 		GetCacheDownloadPaths(moduleName, version string) models.CacheDownloadPaths
 		Install(
+			ctx context.Context,
 			cacheDownloadPaths models.CacheDownloadPaths,
 			module models.Module,
 			revision models.Revision,

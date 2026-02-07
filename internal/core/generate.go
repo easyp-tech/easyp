@@ -25,6 +25,8 @@ import (
 
 // Generate generates files.
 func (c *Core) Generate(ctx context.Context, root, directory string) error {
+	c.logger.Info(ctx, "starting code generation", slog.String("directory", directory))
+
 	// TODO: call download before
 	q := Query{
 		Imports: []string{},
@@ -101,7 +103,7 @@ func (c *Core) Generate(ctx context.Context, root, directory string) error {
 				return ctx.Err()
 			case filepath.Ext(walkPath) != ".proto":
 				return nil
-			case shouldIgnore(walkPath, []string{directory}):
+			case c.shouldIgnoreGenerate(ctx, walkPath, []string{directory}):
 				c.logger.Debug(ctx, "ignore", slog.String("walkPath", walkPath), slog.String("directory", directory))
 				return nil
 			}
@@ -118,7 +120,7 @@ func (c *Core) Generate(ctx context.Context, root, directory string) error {
 		}
 	}
 
-	c.logger.Debug(ctx, "data", "import", q.Imports, "files", q.Files)
+	c.logger.Debug(ctx, "resolved imports and files", slog.Any("imports", q.Imports), slog.Any("files", q.Files))
 
 	if len(q.Files) == 0 {
 		return ErrEmptyInputFiles
@@ -171,9 +173,9 @@ func (c *Core) Generate(ctx context.Context, root, directory string) error {
 		for _, dep := range descriptor.Dependency {
 			if err := addFileWithDeps(dep); err != nil {
 				// Ignore errors for optional dependencies
-				c.logger.Debug(ctx, "Warning: could not compile dependency",
+				c.logger.Warn(ctx, "could not compile dependency",
 					slog.String("dependency", dep),
-					slog.String("error", err.Error()))
+					slog.Any("error", err))
 			}
 		}
 
@@ -194,9 +196,9 @@ func (c *Core) Generate(ctx context.Context, root, directory string) error {
 		// First add all dependencies of this file
 		for _, dep := range descriptor.Dependency {
 			if err := addFileWithDeps(dep); err != nil {
-				c.logger.Debug(ctx, "Warning: could not compile dependency",
+				c.logger.Warn(ctx, "could not compile dependency",
 					slog.String("dependency", dep),
-					slog.String("error", err.Error()))
+					slog.Any("error", err))
 			}
 		}
 
@@ -209,17 +211,18 @@ func (c *Core) Generate(ctx context.Context, root, directory string) error {
 	}
 
 	// Log file order for debugging
-	c.logger.Debug(ctx, "File order in request:")
+	fileNames := make([]string, len(fileDescriptors))
 	for i, fd := range fileDescriptors {
-		c.logger.Debug(ctx, fmt.Sprintf("%d: %s", i, fd.GetName()))
+		fileNames[i] = fd.GetName()
 	}
+	c.logger.Debug(ctx, "resolved file descriptor order", slog.Int("file_count", len(fileDescriptors)), slog.Any("files", fileNames))
 
 	// Build file to module mapping for managed mode
-	fileToModule := c.buildFileToModuleMap(q.Files)
+	fileToModule := c.buildFileToModuleMap(ctx, q.Files)
 
 	// Apply managed mode to file descriptors
 	if c.managedMode.Enabled {
-		c.logger.Debug(ctx, "Applying managed mode to file descriptors")
+		c.logger.Debug(ctx, "applying managed mode to file descriptors")
 		if err := ApplyManagedMode(fileDescriptors, c.managedMode, fileToModule); err != nil {
 			return fmt.Errorf("ApplyManagedMode: %w", err)
 		}
@@ -295,6 +298,8 @@ func (c *Core) Generate(ctx context.Context, root, directory string) error {
 		return fmt.Errorf("filesToWrite.DumpToFs: %w", err)
 	}
 
+	c.logger.Info(ctx, "code generation completed")
+
 	return nil
 }
 
@@ -365,7 +370,7 @@ func pathsOverlap(a, b string) bool {
 	return false
 }
 
-func shouldIgnore(path string, dirs []string) bool {
+func (c *Core) shouldIgnoreGenerate(ctx context.Context, path string, dirs []string) bool {
 	path = filepath.Clean(path)
 	if len(dirs) == 0 {
 		return true
@@ -376,13 +381,13 @@ func shouldIgnore(path string, dirs []string) bool {
 
 		// Special case: if dir is ".", match everything
 		if dir == "." {
-			slog.Debug("shouldIgnore: dir is '.', matching all paths", "path", path)
+			c.logger.Debug(ctx, "shouldIgnore: dir is '.', matching all paths", slog.String("path", path))
 			return false // Don't ignore - match everything
 		}
 
 		// Check if path starts with dir (prefix matching)
 		if strings.HasPrefix(path, dir+"/") || path == dir {
-			slog.Debug("shouldIgnore: path starts with dir", "path", path, "dir", dir)
+			c.logger.Debug(ctx, "shouldIgnore: path starts with dir", slog.String("path", path), slog.String("dir", dir))
 			return false // Don't ignore - path is within directory
 		}
 
@@ -394,11 +399,11 @@ func shouldIgnore(path string, dirs []string) bool {
 
 		matched, err := regexp.MatchString(regexPattern, path)
 		if err != nil {
-			slog.Warn("shouldIgnore: regex match error", "path", path, "dir", dir, "regex", regexPattern, "error", err)
+			c.logger.Warn(ctx, "shouldIgnore: regex match error", slog.String("path", path), slog.String("dir", dir), slog.String("regex", regexPattern), slog.Any("error", err))
 			continue
 		}
 		if matched {
-			slog.Debug("shouldIgnore: path matches regex pattern", "path", path, "dir", dir, "regex", regexPattern)
+			c.logger.Debug(ctx, "shouldIgnore: path matches regex pattern", slog.String("path", path), slog.String("dir", dir), slog.String("regex", regexPattern))
 			return false // Don't ignore - path matches pattern
 		}
 	}
@@ -470,7 +475,7 @@ func (c *Core) getExecutor(plugin Plugin) pluginexecutor.Executor {
 //   - Module "github.com/googleapis/googleapis" installed at ~/.easyp/mod/github.com/googleapis/googleapis/v1/
 //   - Contains file: google/api/annotations.proto
 //   - Mapping: "google/api/annotations.proto" → "github.com/googleapis/googleapis"
-func (c *Core) buildFileToModuleMap(files []string) map[string]string {
+func (c *Core) buildFileToModuleMap(ctx context.Context, files []string) map[string]string {
 	fileToModule := make(map[string]string)
 
 	// Map main files - they belong to the local project (empty module)
@@ -482,20 +487,20 @@ func (c *Core) buildFileToModuleMap(files []string) map[string]string {
 	// For each dependency, scan its install dir and map relative paths to module name
 	for _, dep := range c.deps {
 		module := models.NewModule(dep)
-		c.mapModuleFiles(module.Name, fileToModule)
+		c.mapModuleFiles(ctx, module.Name, fileToModule)
 	}
 
 	// Also map files from git repo inputs
 	for _, repo := range c.inputs.InputGitRepos {
 		module := models.NewModule(repo.URL)
-		c.mapModuleFiles(module.Name, fileToModule)
+		c.mapModuleFiles(ctx, module.Name, fileToModule)
 	}
 
 	return fileToModule
 }
 
 // mapModuleFiles scans a module's install directory and adds proto file mappings.
-func (c *Core) mapModuleFiles(moduleName string, fileToModule map[string]string) {
+func (c *Core) mapModuleFiles(ctx context.Context, moduleName string, fileToModule map[string]string) {
 	// Get module version from lock file
 	lockInfo, err := c.lockFile.Read(moduleName)
 	if err != nil {
@@ -533,9 +538,9 @@ func (c *Core) mapModuleFiles(moduleName string, fileToModule map[string]string)
 
 	if err != nil {
 		// Log error but don't fail - managed mode can work without module mapping
-		c.logger.Debug(context.Background(), "Failed to scan module directory",
-			"module", moduleName,
-			"installDir", installDir,
-			"error", err)
+		c.logger.Warn(ctx, "failed to scan module directory",
+			slog.String("module", moduleName),
+			slog.String("installDir", installDir),
+			slog.Any("error", err))
 	}
 }

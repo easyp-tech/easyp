@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 
 	"github.com/easyp-tech/easyp/internal/core/models"
 )
@@ -24,33 +25,31 @@ func (c *Core) Download(ctx context.Context, dependencies []string) error {
 	// install from lock file at first
 	for lockFileInfo := range c.lockFile.DepsIter() {
 		module := models.NewModuleFromLockFileInfo(lockFileInfo)
+		log := c.logger.With(slog.String("module", module.Name), slog.String("version", string(module.Version)))
 
-		c.logger.Debug(
-			ctx, "start download module from lockfile", "name", module.Name, "version", module.Version,
-		)
+		log.Debug(ctx, "downloading module from lockfile")
 		if err := c.Get(ctx, module); err != nil {
 			return fmt.Errorf("c.Get: %w", err)
 		}
 	}
 
-	c.logger.Debug(ctx, "Start install other deps")
+	c.logger.Debug(ctx, "installing remaining dependencies not in lock file")
 
 	// install from remote generator sections
 	for _, dependency := range dependencies {
 		module := models.NewModule(dependency)
+		log := c.logger.With(slog.String("module", module.Name), slog.String("version", string(module.Version)))
 
 		_, err := c.lockFile.Read(module.Name)
 		if err == nil {
-			c.logger.Debug(ctx, "already is in lock file", "name", module.Name, "version", module.Version)
+			log.Debug(ctx, "already in lock file")
 			continue
 		}
 		if !errors.Is(err, models.ErrModuleNotFoundInLockFile) {
 			return fmt.Errorf("c.lockFile.Read: %w", err)
 		}
 
-		c.logger.Debug(
-			ctx, "start download module from deps", "name", module.Name, "version", module.Version,
-		)
+		log.Debug(ctx, "downloading module from deps")
 		if err := c.Get(ctx, module); err != nil {
 			return fmt.Errorf("c.Get: %w", err)
 		}

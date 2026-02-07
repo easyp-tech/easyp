@@ -3,6 +3,7 @@ package storage
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"os"
 	"strings"
 
@@ -15,17 +16,18 @@ import (
 // Install package from archive
 // and calculateds hash of installed package
 func (s *Storage) Install(
+	ctx context.Context,
 	cacheDownloadPaths models.CacheDownloadPaths,
 	module models.Module,
 	revision models.Revision,
 	moduleConfig models.ModuleConfig,
 ) (models.ModuleHash, error) {
 	s.logger.Info(
-		context.Background(),
+		ctx,
 		"Install package",
-		"package", module.Name,
-		"version", revision.Version,
-		"commit", revision.CommitHash,
+		slog.String("package", module.Name),
+		slog.String("version", revision.Version),
+		slog.String("commit", revision.CommitHash),
 	)
 
 	version := sanitizePath(revision.Version)
@@ -43,7 +45,7 @@ func (s *Storage) Install(
 
 	renamer := getRenamer(moduleConfig)
 
-	s.logger.Debug(context.Background(), "Starting extract", "installedDirPath", installedDirPath)
+	s.logger.Debug(ctx, "Starting extract", slog.String("installedDirPath", installedDirPath))
 
 	if err := extract.Archive(context.TODO(), fp, installedDirPath, renamer); err != nil {
 		return "", fmt.Errorf("extract.Archive: %w", err)
