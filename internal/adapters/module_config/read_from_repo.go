@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log/slog"
 
 	"github.com/easyp-tech/easyp/internal/adapters/repository"
 	"github.com/easyp-tech/easyp/internal/core/models"
@@ -15,7 +14,7 @@ func (c *ModuleConfig) ReadFromRepo(
 	ctx context.Context, repo repository.Repo, revision models.Revision,
 ) (models.ModuleConfig, error) {
 	// buf
-	slog.Debug("Start read buf config")
+	c.logger.Debug(ctx, "Start read buf config")
 
 	buf, err := readBufWork(ctx, repo, revision)
 	if err == nil {
@@ -26,7 +25,7 @@ func (c *ModuleConfig) ReadFromRepo(
 	}
 
 	// easyp
-	slog.Debug("Start read easyp config")
+	c.logger.Debug(ctx, "Start read easyp config")
 
 	easyp, err := readEasyp(ctx, repo, revision)
 	if err == nil {

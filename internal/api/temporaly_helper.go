@@ -18,6 +18,7 @@ import (
 	"github.com/easyp-tech/easyp/internal/adapters/storage"
 	"github.com/easyp-tech/easyp/internal/config"
 	"github.com/easyp-tech/easyp/internal/core"
+	"github.com/easyp-tech/easyp/internal/logger"
 	"github.com/easyp-tech/easyp/internal/rules"
 )
 
@@ -58,6 +59,7 @@ func getEasypPath() (string, error) {
 }
 
 func buildCore(_ context.Context, cfg config.Config, dirWalker core.DirWalker) (*core.Core, error) {
+	log := logger.New(slog.Default())
 	vendorPath := defaultVendorDir // TODO: read from config
 
 	lintRules, ignoreOnly, err := rules.New(cfg.Lint)
@@ -71,9 +73,9 @@ func buildCore(_ context.Context, cfg config.Config, dirWalker core.DirWalker) (
 		return nil, fmt.Errorf("getEasypPath: %w", err)
 	}
 
-	store := storage.New(easypPath, lockFile)
+	store := storage.New(easypPath, lockFile, log)
 
-	moduleCfg := moduleconfig.New()
+	moduleCfg := moduleconfig.New(log)
 
 	currentProjectGitWalker := go_git.New()
 
@@ -94,7 +96,7 @@ func buildCore(_ context.Context, cfg config.Config, dirWalker core.DirWalker) (
 		linterIgnoreDirs,
 		cfg.Deps,
 		ignoreOnly,
-		slog.Default(), // TODO: remove global state
+		log,
 		lo.Map(cfg.Generate.Plugins, func(p config.Plugin, _ int) core.Plugin {
 			return core.Plugin{
 				Source: core.PluginSource{

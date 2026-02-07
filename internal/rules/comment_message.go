@@ -11,7 +11,7 @@ type CommentMessage struct{}
 
 // Message implements lint.Rule.
 func (c *CommentMessage) Message() string {
-	return "message comment is empty"
+	return "message comments must not be empty"
 }
 
 // Validate implements lint.Rule.

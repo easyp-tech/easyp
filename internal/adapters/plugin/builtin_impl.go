@@ -18,6 +18,8 @@ import (
 	"github.com/wasilibs/wazero-helpers/allocator"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/pluginpb"
+
+	"github.com/easyp-tech/easyp/internal/logger"
 )
 
 // getWasmModule gets the WASM module and arguments by plugin name
@@ -41,11 +43,11 @@ func getWasmModule(pluginName string) ([]byte, []string, error) {
 
 // BuiltinPluginExecutor executes builtin plugins via WASM
 type BuiltinPluginExecutor struct {
-	logger *slog.Logger
+	logger logger.Logger
 }
 
 // NewBuiltinPluginExecutor creates a new BuiltinPluginExecutor
-func NewBuiltinPluginExecutor(logger *slog.Logger) *BuiltinPluginExecutor {
+func NewBuiltinPluginExecutor(logger logger.Logger) *BuiltinPluginExecutor {
 	return &BuiltinPluginExecutor{
 		logger: logger,
 	}
@@ -58,7 +60,7 @@ func (e *BuiltinPluginExecutor) GetName() string {
 
 // Execute executes a builtin plugin via WASM
 func (e *BuiltinPluginExecutor) Execute(ctx context.Context, plugin Info, request *pluginpb.CodeGeneratorRequest) (*pluginpb.CodeGeneratorResponse, error) {
-	e.logger.DebugContext(ctx, "executing builtin plugin",
+	e.logger.Debug(ctx, "executing builtin plugin",
 		slog.String("plugin", plugin.Source),
 	)
 

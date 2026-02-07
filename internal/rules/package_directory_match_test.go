@@ -15,7 +15,7 @@ func TestPackageDirectoryMatch_Message(t *testing.T) {
 
 	assert := require.New(t)
 
-	const expMessage = "package is not matched with path"
+	const expMessage = "package does not match directory path"
 
 	rule := rules.PackageDirectoryMatch{}
 	message := rule.Message()
@@ -41,7 +41,7 @@ func TestPackageDirectoryMatch_Validate(t *testing.T) {
 					Column:   1,
 				},
 				SourceName: "./../../testdata/auth/service.proto",
-				Message:    "package is not matched with path",
+				Message:    "package does not match directory path",
 				RuleName:   "PACKAGE_DIRECTORY_MATCH",
 			},
 			wantErr: nil,

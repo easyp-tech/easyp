@@ -3,10 +3,10 @@ package core
 
 import (
 	"errors"
-	"log/slog"
 
 	"github.com/easyp-tech/easyp/internal/adapters/console"
 	"github.com/easyp-tech/easyp/internal/adapters/plugin"
+	"github.com/easyp-tech/easyp/internal/logger"
 )
 
 // Core provide to business logic of EasyP.
@@ -15,7 +15,7 @@ type Core struct {
 	ignore       []string
 	deps         []string
 	ignoreOnly   map[string][]string
-	logger       *slog.Logger
+	logger       logger.Logger
 	plugins      []Plugin
 	inputs       Inputs
 	console      console.Console
@@ -45,7 +45,7 @@ func New(
 	ignore []string,
 	deps []string,
 	ignoreOnly map[string][]string,
-	logger *slog.Logger,
+	logger logger.Logger,
 	plugins []Plugin,
 	inputs Inputs,
 	console console.Console,

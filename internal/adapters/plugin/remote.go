@@ -17,11 +17,13 @@ import (
 
 	plugingeneratorv1 "github.com/easyp-tech/service/api/generator/v1"
 	"github.com/samber/lo"
+
+	"github.com/easyp-tech/easyp/internal/logger"
 )
 
 // RemotePluginExecutor executes plugins remotely via gRPC
 type RemotePluginExecutor struct {
-	logger *slog.Logger
+	logger logger.Logger
 }
 
 func (e *RemotePluginExecutor) GetName() string {
@@ -29,7 +31,7 @@ func (e *RemotePluginExecutor) GetName() string {
 }
 
 // NewRemotePluginExecutor creates a new RemotePluginExecutor
-func NewRemotePluginExecutor(logger *slog.Logger) *RemotePluginExecutor {
+func NewRemotePluginExecutor(logger logger.Logger) *RemotePluginExecutor {
 	return &RemotePluginExecutor{
 		logger: logger,
 	}
@@ -43,7 +45,7 @@ func (e *RemotePluginExecutor) Execute(ctx context.Context, plugin Info, request
 		return nil, fmt.Errorf("parse plugin URL %s: %w", plugin.Source, err)
 	}
 
-	e.logger.DebugContext(ctx, "executing remote plugin via gRPC",
+	e.logger.Debug(ctx, "executing remote plugin via gRPC",
 		slog.String("plugin", plugin.Source),
 		slog.String("host", host),
 		slog.String("plugin_name", pluginName),
@@ -101,7 +103,7 @@ func (e *RemotePluginExecutor) Execute(ctx context.Context, plugin Info, request
 
 	err = conn.Close()
 	if err != nil {
-		e.logger.WarnContext(ctx, "failed to close gRPC connection",
+		e.logger.Warn(ctx, "failed to close gRPC connection",
 			slog.String("plugin", plugin.Source),
 			slog.String("error", err.Error()),
 		)

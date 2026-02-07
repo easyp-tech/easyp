@@ -84,7 +84,7 @@ func (c *Core) shouldIgnore(rule Rule, path string) bool {
 func (c *Core) close(ctx context.Context, f io.Closer, path string) {
 	err := f.Close()
 	if err != nil {
-		c.logger.DebugContext(
+		c.logger.Debug(
 			ctx,
 			"incorrect closing",
 			slog.String(

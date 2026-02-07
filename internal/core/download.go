@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log/slog"
 
 	"github.com/easyp-tech/easyp/internal/core/models"
 )
@@ -16,17 +15,17 @@ func (c *Core) Download(ctx context.Context, dependencies []string) error {
 	if c.lockFile.IsEmpty() {
 		// if lock file is empty or doesn't exist install versions
 		// from easyp.yaml config and create lock file
-		slog.Debug("Lock file is empty")
+		c.logger.Debug(ctx, "Lock file is empty")
 		return c.Update(ctx, dependencies)
 	}
 
-	slog.Debug("Lock file is not empty. Install deps from it")
+	c.logger.Debug(ctx, "Lock file is not empty. Install deps from it")
 
 	// install from lock file at first
 	for lockFileInfo := range c.lockFile.DepsIter() {
 		module := models.NewModuleFromLockFileInfo(lockFileInfo)
 
-		c.logger.DebugContext(
+		c.logger.Debug(
 			ctx, "start download module from lockfile", "name", module.Name, "version", module.Version,
 		)
 		if err := c.Get(ctx, module); err != nil {
@@ -34,7 +33,7 @@ func (c *Core) Download(ctx context.Context, dependencies []string) error {
 		}
 	}
 
-	slog.Debug("Start install other deps")
+	c.logger.Debug(ctx, "Start install other deps")
 
 	// install from remote generator sections
 	for _, dependency := range dependencies {
@@ -42,16 +41,14 @@ func (c *Core) Download(ctx context.Context, dependencies []string) error {
 
 		_, err := c.lockFile.Read(module.Name)
 		if err == nil {
-			c.logger.DebugContext(
-				ctx, "already is in lock file", "name", module.Name, "version", module.Version,
-			)
+			c.logger.Debug(ctx, "already is in lock file", "name", module.Name, "version", module.Version)
 			continue
 		}
 		if !errors.Is(err, models.ErrModuleNotFoundInLockFile) {
 			return fmt.Errorf("c.lockFile.Read: %w", err)
 		}
 
-		c.logger.DebugContext(
+		c.logger.Debug(
 			ctx, "start download module from deps", "name", module.Name, "version", module.Version,
 		)
 		if err := c.Get(ctx, module); err != nil {

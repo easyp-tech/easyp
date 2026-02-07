@@ -13,6 +13,7 @@ import (
 	"google.golang.org/protobuf/types/pluginpb"
 
 	"github.com/easyp-tech/easyp/internal/adapters/console"
+	"github.com/easyp-tech/easyp/internal/logger"
 )
 
 type Info struct {
@@ -24,7 +25,7 @@ type Info struct {
 // LocalPluginExecutor executes plugins locally via terminal
 type LocalPluginExecutor struct {
 	console console.Console
-	logger  *slog.Logger
+	logger  logger.Logger
 }
 
 func (e *LocalPluginExecutor) GetName() string {
@@ -32,7 +33,7 @@ func (e *LocalPluginExecutor) GetName() string {
 }
 
 // NewLocalPluginExecutor creates a new LocalPluginExecutor
-func NewLocalPluginExecutor(console console.Console, logger *slog.Logger) *LocalPluginExecutor {
+func NewLocalPluginExecutor(console console.Console, logger logger.Logger) *LocalPluginExecutor {
 	return &LocalPluginExecutor{
 		console: console,
 		logger:  logger,
@@ -47,7 +48,7 @@ func (e *LocalPluginExecutor) isPluginInPath(source string) (string, bool) {
 
 // Execute executes a local plugin via terminal
 func (e *LocalPluginExecutor) Execute(ctx context.Context, plugin Info, request *pluginpb.CodeGeneratorRequest) (*pluginpb.CodeGeneratorResponse, error) {
-	e.logger.DebugContext(ctx, "executing local plugin",
+	e.logger.Debug(ctx, "executing local plugin",
 		slog.String("plugin", plugin.Source),
 	)
 

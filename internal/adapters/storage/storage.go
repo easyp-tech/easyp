@@ -2,6 +2,7 @@ package storage
 
 import (
 	"github.com/easyp-tech/easyp/internal/core/models"
+	"github.com/easyp-tech/easyp/internal/logger"
 )
 
 const (
@@ -23,13 +24,15 @@ type (
 	Storage struct {
 		rootDir  string
 		lockFile LockFile
+		logger   logger.Logger
 	}
 )
 
-func New(rootDir string, lockFile LockFile) *Storage {
+func New(rootDir string, lockFile LockFile, logger logger.Logger) *Storage {
 	return &Storage{
 		rootDir:  rootDir,
 		lockFile: lockFile,
+		logger:   logger,
 	}
 }
 

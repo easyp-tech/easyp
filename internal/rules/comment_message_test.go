@@ -15,7 +15,7 @@ func TestCommentMessage_Message(t *testing.T) {
 
 	assert := require.New(t)
 
-	const expMessage = "message comment is empty"
+	const expMessage = "message comments must not be empty"
 
 	rule := rules.CommentMessage{}
 	message := rule.Message()
@@ -42,7 +42,7 @@ func TestCommentMessage_Validate(t *testing.T) {
 					Column:   1,
 				},
 				SourceName: "TokenData",
-				Message:    "message comment is empty",
+				Message:    "message comments must not be empty",
 				RuleName:   "COMMENT_MESSAGE",
 			},
 			wantErr: nil,
