@@ -3,6 +3,8 @@
 package mocks
 
 import (
+	"context"
+
 	models "github.com/easyp-tech/easyp/internal/core/models"
 	mock "github.com/stretchr/testify/mock"
 )
@@ -273,9 +275,9 @@ func (_c *Storage_GetInstalledModuleHash_Call) RunAndReturn(run func(string, str
 	return _c
 }
 
-// Install provides a mock function with given fields: cacheDownloadPaths, module, revision, moduleConfig
-func (_m *Storage) Install(cacheDownloadPaths models.CacheDownloadPaths, module models.Module, revision models.Revision, moduleConfig models.ModuleConfig) (models.ModuleHash, error) {
-	ret := _m.Called(cacheDownloadPaths, module, revision, moduleConfig)
+// Install provides a mock function with given fields: ctx, cacheDownloadPaths, module, revision, moduleConfig
+func (_m *Storage) Install(ctx context.Context, cacheDownloadPaths models.CacheDownloadPaths, module models.Module, revision models.Revision, moduleConfig models.ModuleConfig) (models.ModuleHash, error) {
+	ret := _m.Called(ctx, cacheDownloadPaths, module, revision, moduleConfig)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Install")
@@ -283,17 +285,17 @@ func (_m *Storage) Install(cacheDownloadPaths models.CacheDownloadPaths, module 
 
 	var r0 models.ModuleHash
 	var r1 error
-	if rf, ok := ret.Get(0).(func(models.CacheDownloadPaths, models.Module, models.Revision, models.ModuleConfig) (models.ModuleHash, error)); ok {
-		return rf(cacheDownloadPaths, module, revision, moduleConfig)
+	if rf, ok := ret.Get(0).(func(context.Context, models.CacheDownloadPaths, models.Module, models.Revision, models.ModuleConfig) (models.ModuleHash, error)); ok {
+		return rf(ctx, cacheDownloadPaths, module, revision, moduleConfig)
 	}
-	if rf, ok := ret.Get(0).(func(models.CacheDownloadPaths, models.Module, models.Revision, models.ModuleConfig) models.ModuleHash); ok {
-		r0 = rf(cacheDownloadPaths, module, revision, moduleConfig)
+	if rf, ok := ret.Get(0).(func(context.Context, models.CacheDownloadPaths, models.Module, models.Revision, models.ModuleConfig) models.ModuleHash); ok {
+		r0 = rf(ctx, cacheDownloadPaths, module, revision, moduleConfig)
 	} else {
 		r0 = ret.Get(0).(models.ModuleHash)
 	}
 
-	if rf, ok := ret.Get(1).(func(models.CacheDownloadPaths, models.Module, models.Revision, models.ModuleConfig) error); ok {
-		r1 = rf(cacheDownloadPaths, module, revision, moduleConfig)
+	if rf, ok := ret.Get(1).(func(context.Context, models.CacheDownloadPaths, models.Module, models.Revision, models.ModuleConfig) error); ok {
+		r1 = rf(ctx, cacheDownloadPaths, module, revision, moduleConfig)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -307,17 +309,18 @@ type Storage_Install_Call struct {
 }
 
 // Install is a helper method to define mock.On call
+//   - ctx context.Context
 //   - cacheDownloadPaths models.CacheDownloadPaths
 //   - module models.Module
 //   - revision models.Revision
 //   - moduleConfig models.ModuleConfig
-func (_e *Storage_Expecter) Install(cacheDownloadPaths interface{}, module interface{}, revision interface{}, moduleConfig interface{}) *Storage_Install_Call {
-	return &Storage_Install_Call{Call: _e.mock.On("Install", cacheDownloadPaths, module, revision, moduleConfig)}
+func (_e *Storage_Expecter) Install(ctx interface{}, cacheDownloadPaths interface{}, module interface{}, revision interface{}, moduleConfig interface{}) *Storage_Install_Call {
+	return &Storage_Install_Call{Call: _e.mock.On("Install", ctx, cacheDownloadPaths, module, revision, moduleConfig)}
 }
 
-func (_c *Storage_Install_Call) Run(run func(cacheDownloadPaths models.CacheDownloadPaths, module models.Module, revision models.Revision, moduleConfig models.ModuleConfig)) *Storage_Install_Call {
+func (_c *Storage_Install_Call) Run(run func(ctx context.Context, cacheDownloadPaths models.CacheDownloadPaths, module models.Module, revision models.Revision, moduleConfig models.ModuleConfig)) *Storage_Install_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(models.CacheDownloadPaths), args[1].(models.Module), args[2].(models.Revision), args[3].(models.ModuleConfig))
+		run(args[0].(context.Context), args[1].(models.CacheDownloadPaths), args[2].(models.Module), args[3].(models.Revision), args[4].(models.ModuleConfig))
 	})
 	return _c
 }
@@ -327,7 +330,7 @@ func (_c *Storage_Install_Call) Return(_a0 models.ModuleHash, _a1 error) *Storag
 	return _c
 }
 
-func (_c *Storage_Install_Call) RunAndReturn(run func(models.CacheDownloadPaths, models.Module, models.Revision, models.ModuleConfig) (models.ModuleHash, error)) *Storage_Install_Call {
+func (_c *Storage_Install_Call) RunAndReturn(run func(context.Context, models.CacheDownloadPaths, models.Module, models.Revision, models.ModuleConfig) (models.ModuleHash, error)) *Storage_Install_Call {
 	_c.Call.Return(run)
 	return _c
 }

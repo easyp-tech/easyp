@@ -105,7 +105,7 @@ func (e *RemotePluginExecutor) Execute(ctx context.Context, plugin Info, request
 	if err != nil {
 		e.logger.Warn(ctx, "failed to close gRPC connection",
 			slog.String("plugin", plugin.Source),
-			slog.String("error", err.Error()),
+			slog.Any("error", err),
 		)
 	}
 
