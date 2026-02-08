@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"os"
 
 	"github.com/urfave/cli/v2"
@@ -13,6 +14,7 @@ import (
 	"github.com/easyp-tech/easyp/internal/config"
 	"github.com/easyp-tech/easyp/internal/core"
 	"github.com/easyp-tech/easyp/internal/fs/fs"
+	"github.com/easyp-tech/easyp/internal/logger"
 )
 
 var _ Handler = (*Lint)(nil)
@@ -94,7 +96,9 @@ func (l Lint) Command() *cli.Command {
 
 // Action implements Handler.
 func (l Lint) Action(ctx *cli.Context) error {
-	err := l.action(ctx)
+	log := getLogger(ctx)
+
+	err := l.action(ctx, log)
 	if err != nil {
 		var e *core.OpenImportFileError
 
@@ -102,7 +106,7 @@ func (l Lint) Action(ctx *cli.Context) error {
 		case errors.Is(err, ErrHasLintIssue):
 			os.Exit(1)
 		case errors.As(err, &e):
-			errExit(2, "Cannot import file", "file name", e.FileName)
+			errExit(log, 2, "Cannot import file", slog.String("file name", e.FileName))
 		default:
 			return err
 		}
@@ -111,7 +115,7 @@ func (l Lint) Action(ctx *cli.Context) error {
 	return nil
 }
 
-func (l Lint) action(ctx *cli.Context) error {
+func (l Lint) action(ctx *cli.Context, log logger.Logger) error {
 	configPath, projectRoot, lintRoot, err := resolveRoots(ctx, flagLintRoot.Name)
 	if err != nil {
 		return err
@@ -125,7 +129,7 @@ func (l Lint) action(ctx *cli.Context) error {
 
 	// Walker for Core (lockfile etc) - strictly based on project root
 	projectWalker := fs.NewFSWalker(projectRoot, ".")
-	app, err := buildCore(ctx.Context, *cfg, projectWalker)
+	app, err := buildCore(ctx.Context, log, *cfg, projectWalker)
 	if err != nil {
 		return fmt.Errorf("buildCore: %w", err)
 	}

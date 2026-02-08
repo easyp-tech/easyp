@@ -3,6 +3,7 @@ package api
 import (
 	"errors"
 	"fmt"
+	"log/slog"
 	"os"
 
 	"github.com/urfave/cli/v2"
@@ -11,6 +12,7 @@ import (
 	"github.com/easyp-tech/easyp/internal/core"
 	"github.com/easyp-tech/easyp/internal/flags"
 	"github.com/easyp-tech/easyp/internal/fs/fs"
+	"github.com/easyp-tech/easyp/internal/logger"
 )
 
 var _ Handler = (*BreakingCheck)(nil)
@@ -60,7 +62,9 @@ func (b BreakingCheck) Command() *cli.Command {
 }
 
 func (b BreakingCheck) Action(ctx *cli.Context) error {
-	err := b.action(ctx)
+	log := getLogger(ctx)
+
+	err := b.action(ctx, log)
 	if err != nil {
 		var e *core.OpenImportFileError
 		var g *core.GitRefNotFoundError
@@ -69,11 +73,11 @@ func (b BreakingCheck) Action(ctx *cli.Context) error {
 		case errors.Is(err, ErrBreakingCheckIssue):
 			os.Exit(1)
 		case errors.As(err, &e):
-			errExit(2, "Cannot import file", "file name", e.FileName)
+			errExit(log, 2, "Cannot import file", slog.String("file name", e.FileName))
 		case errors.As(err, &g):
-			errExit(2, "Cannot find git ref", "ref", g.GitRef)
+			errExit(log, 2, "Cannot find git ref", slog.String("ref", g.GitRef))
 		case errors.Is(err, core.ErrRepositoryDoesNotExist):
-			errExit(2, "Repository does not exist in current directory")
+			errExit(log, 2, "Repository does not exist in current directory")
 		default:
 			return err
 		}
@@ -82,7 +86,7 @@ func (b BreakingCheck) Action(ctx *cli.Context) error {
 	return nil
 }
 
-func (b BreakingCheck) action(ctx *cli.Context) error {
+func (b BreakingCheck) action(ctx *cli.Context, log logger.Logger) error {
 	workingDir, err := os.Getwd()
 	if err != nil {
 		return fmt.Errorf("os.Getwd: %w", err)
@@ -100,7 +104,7 @@ func (b BreakingCheck) action(ctx *cli.Context) error {
 	}
 
 	dirWalker := fs.NewFSWalker(workingDir, ".")
-	app, err := buildCore(ctx.Context, *cfg, dirWalker)
+	app, err := buildCore(ctx.Context, log, *cfg, dirWalker)
 	if err != nil {
 		return fmt.Errorf("buildCore: %w", err)
 	}

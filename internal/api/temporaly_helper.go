@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/samber/lo"
+	"github.com/urfave/cli/v2"
 
 	"github.com/easyp-tech/easyp/internal/adapters/console"
 	"github.com/easyp-tech/easyp/internal/adapters/go_git"
@@ -22,6 +23,15 @@ import (
 	"github.com/easyp-tech/easyp/internal/rules"
 )
 
+// getLogger extracts the logger.Logger from CLI context metadata.
+// Falls back to a no-op logger if not found.
+func getLogger(ctx *cli.Context) logger.Logger {
+	if l, ok := ctx.App.Metadata["logger"].(logger.Logger); ok {
+		return l
+	}
+	return logger.NewNop()
+}
+
 var (
 	ErrPathNotAbsolute = errors.New("path is not absolute")
 )
@@ -32,13 +42,13 @@ const (
 	defaultVendorDir = "easyp_vendor"
 )
 
-func errExit(code int, msg string, args ...any) {
-	slog.Error(msg, args...)
+func errExit(log logger.Logger, code int, msg string, attrs ...slog.Attr) {
+	log.Error(context.Background(), msg, attrs...)
 	os.Exit(code)
 }
 
 // getEasypPath return path for cache, modules storage
-func getEasypPath() (string, error) {
+func getEasypPath(log logger.Logger) (string, error) {
 	easypPath := os.Getenv(envEasypPath)
 	if easypPath == "" {
 		userHomeDir, err := os.UserHomeDir()
@@ -53,13 +63,12 @@ func getEasypPath() (string, error) {
 		return "", ErrPathNotAbsolute
 	}
 
-	slog.Debug("Use storage", "path", easypPath)
+	log.Debug(context.Background(), "Use storage", slog.String("path", easypPath))
 
 	return easypPath, nil
 }
 
-func buildCore(_ context.Context, cfg config.Config, dirWalker core.DirWalker) (*core.Core, error) {
-	log := logger.New(slog.Default())
+func buildCore(_ context.Context, log logger.Logger, cfg config.Config, dirWalker core.DirWalker) (*core.Core, error) {
 	vendorPath := defaultVendorDir // TODO: read from config
 
 	lintRules, ignoreOnly, err := rules.New(cfg.Lint)
@@ -68,7 +77,7 @@ func buildCore(_ context.Context, cfg config.Config, dirWalker core.DirWalker) (
 	}
 
 	lockFile := lockfile.New(dirWalker)
-	easypPath, err := getEasypPath()
+	easypPath, err := getEasypPath(log)
 	if err != nil {
 		return nil, fmt.Errorf("getEasypPath: %w", err)
 	}

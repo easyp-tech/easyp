@@ -52,6 +52,8 @@ func (l LsFiles) Command() *cli.Command {
 }
 
 func (l LsFiles) Action(ctx *cli.Context) error {
+	log := getLogger(ctx)
+
 	// Resolve config path, project root and operation root (search root).
 	// Pass empty string for rootFlagName because this command doesn't declare its own --root flag.
 	configPath, projectRoot, opRoot, err := resolveRoots(ctx, "")
@@ -66,7 +68,7 @@ func (l LsFiles) Action(ctx *cli.Context) error {
 
 	// Walker for Core (lockfile etc) - strictly based on project root
 	dirWalker := fs.NewFSWalker(projectRoot, ".")
-	app, err := buildCore(ctx.Context, *cfg, dirWalker)
+	app, err := buildCore(ctx.Context, log, *cfg, dirWalker)
 	if err != nil {
 		return fmt.Errorf("buildCore: %w", err)
 	}

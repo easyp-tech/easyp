@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log/slog"
 	"os"
 
 	"github.com/a8m/envsubst"
@@ -128,10 +127,7 @@ func New(_ context.Context, filepath string) (*Config, error) {
 	}
 
 	defer func() {
-		err := cfgFile.Close()
-		if err != nil {
-			slog.Debug("cfgFile.Close", slog.String("filepath", filepath))
-		}
+		_ = cfgFile.Close()
 	}()
 
 	buf, err := io.ReadAll(cfgFile)

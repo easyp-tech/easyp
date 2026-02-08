@@ -43,12 +43,14 @@ func (i Init) Command() *cli.Command {
 
 // Action implements Handler.
 func (i Init) Action(ctx *cli.Context) error {
+	log := getLogger(ctx)
+
 	rootPath := ctx.String(flagInitDirectoryPath.Name)
 	dirFS := fs.NewFSWalker(rootPath, ".")
 
 	cfg := &config.Config{}
 
-	app, err := buildCore(ctx.Context, *cfg, dirFS)
+	app, err := buildCore(ctx.Context, log, *cfg, dirFS)
 	if err != nil {
 		return fmt.Errorf("buildCore: %w", err)
 	}
