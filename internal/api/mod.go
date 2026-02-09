@@ -69,6 +69,8 @@ func (m Mod) Command() *cli.Command {
 }
 
 func (m Mod) Download(ctx *cli.Context) error {
+	log := getLogger(ctx)
+
 	workingDir, err := os.Getwd()
 	if err != nil {
 		return fmt.Errorf("os.Getwd: %w", err)
@@ -81,7 +83,7 @@ func (m Mod) Download(ctx *cli.Context) error {
 	}
 	core.SetAllowCommentIgnores(cfg.Lint.AllowCommentIgnores)
 
-	app, err := buildCore(ctx.Context, *cfg, dirWalker)
+	app, err := buildCore(ctx.Context, log, *cfg, dirWalker)
 	if err != nil {
 		return fmt.Errorf("buildCore: %w", err)
 	}
@@ -100,6 +102,8 @@ func (m Mod) Download(ctx *cli.Context) error {
 }
 
 func (m Mod) Update(ctx *cli.Context) error {
+	log := getLogger(ctx)
+
 	workingDir, err := os.Getwd()
 	if err != nil {
 		return fmt.Errorf("os.Getwd: %w", err)
@@ -112,7 +116,7 @@ func (m Mod) Update(ctx *cli.Context) error {
 	}
 	core.SetAllowCommentIgnores(cfg.Lint.AllowCommentIgnores)
 
-	app, err := buildCore(ctx.Context, *cfg, dirWalker)
+	app, err := buildCore(ctx.Context, log, *cfg, dirWalker)
 	if err != nil {
 		return fmt.Errorf("buildCore: %w", err)
 	}
@@ -131,6 +135,8 @@ func (m Mod) Update(ctx *cli.Context) error {
 }
 
 func (m Mod) Vendor(ctx *cli.Context) error {
+	log := getLogger(ctx)
+
 	workingDir, err := os.Getwd()
 	if err != nil {
 		return fmt.Errorf("os.Getwd: %w", err)
@@ -143,7 +149,7 @@ func (m Mod) Vendor(ctx *cli.Context) error {
 	}
 	core.SetAllowCommentIgnores(cfg.Lint.AllowCommentIgnores)
 
-	app, err := buildCore(ctx.Context, *cfg, dirWalker)
+	app, err := buildCore(ctx.Context, log, *cfg, dirWalker)
 	if err != nil {
 		return fmt.Errorf("buildCore: %w", err)
 	}

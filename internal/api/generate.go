@@ -3,7 +3,6 @@ package api
 import (
 	"errors"
 	"fmt"
-	"log/slog"
 	"os"
 	"path/filepath"
 
@@ -60,7 +59,7 @@ func (g Generate) Command() *cli.Command {
 
 // Action implements Handler.
 func (g Generate) Action(ctx *cli.Context) error {
-	logger := slog.Default()
+	log := getLogger(ctx)
 
 	configPath, projectRoot, generateRoot, err := resolveRoots(ctx, flagGenerateRoot.Name)
 	if err != nil {
@@ -74,7 +73,7 @@ func (g Generate) Action(ctx *cli.Context) error {
 
 	// Walker for Core (lockfile etc) - strictly based on project root
 	projectWalker := fs.NewFSWalker(projectRoot, ".")
-	app, err := buildCore(ctx.Context, *cfg, projectWalker)
+	app, err := buildCore(ctx.Context, log, *cfg, projectWalker)
 	if err != nil {
 		return fmt.Errorf("buildCore: %w", err)
 	}
@@ -82,7 +81,7 @@ func (g Generate) Action(ctx *cli.Context) error {
 	dir := ctx.String(flagGenerateDirectoryPath.Name)
 	if err := app.Generate(ctx.Context, generateRoot, dir); err != nil {
 		if errors.Is(err, core.ErrEmptyInputFiles) {
-			logger.Warn("empty input files!")
+			log.Warn(ctx.Context, "empty input files!")
 			return nil
 		}
 		return fmt.Errorf("generator.Generate: %w", err)

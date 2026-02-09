@@ -10,10 +10,11 @@ import (
 
 	"github.com/easyp-tech/easyp/internal/api"
 	"github.com/easyp-tech/easyp/internal/flags"
+	"github.com/easyp-tech/easyp/internal/logger"
 	"github.com/easyp-tech/easyp/internal/version"
 )
 
-func initLogger(isDebug bool) *slog.Logger {
+func initLogger(isDebug bool) logger.Logger {
 	// use info as default level
 	level := slog.LevelInfo
 
@@ -21,7 +22,7 @@ func initLogger(isDebug bool) *slog.Logger {
 		level = slog.LevelDebug
 	}
 
-	logger := slog.New(
+	return logger.New(slog.New(
 		slog.NewTextHandler(
 			os.Stderr,
 			&slog.HandlerOptions{
@@ -29,11 +30,7 @@ func initLogger(isDebug bool) *slog.Logger {
 				Level:     level,
 			},
 		),
-	)
-
-	slog.SetDefault(logger) // TODO: remove global state
-
-	return logger
+	))
 }
 
 func main() {
@@ -59,7 +56,10 @@ func main() {
 			flags.DebugMode,
 		},
 		Before: func(ctx *cli.Context) error {
-			initLogger(ctx.Bool(flags.DebugMode.Name))
+			log := initLogger(ctx.Bool(flags.DebugMode.Name))
+			ctx.App.Metadata = map[string]interface{}{
+				"logger": log,
+			}
 			return nil
 		},
 		EnableBashCompletion: true,
