@@ -93,7 +93,8 @@ func (c *Core) Generate(ctx context.Context, root, directory string) error {
 		}
 
 		fsWalker := fs.NewFSWalker(root, searchPath)
-		q.Imports = append(q.Imports, inputFilesDir.Root)
+		importRoot := filepath.Join(root, inputFilesDir.Root)
+		q.Imports = append(q.Imports, importRoot)
 
 		err := fsWalker.WalkDir(func(walkPath string, err error) error {
 			switch {
@@ -108,8 +109,7 @@ func (c *Core) Generate(ctx context.Context, root, directory string) error {
 				return nil
 			}
 
-			// Get file path relative to inputFilesDir.Root
-			// walkPath starts with inputFilesDir.Root
+			// Convert to relative path matching proto import format
 			addedFile := stripPrefix(walkPath, inputFilesDir.Root)
 			q.Files = append(q.Files, addedFile)
 
@@ -411,9 +411,10 @@ func (c *Core) shouldIgnoreGenerate(ctx context.Context, path string, dirs []str
 	return true
 }
 
+// stripPrefix removes prefix from path and normalizes to forward slashes.
 func stripPrefix(path, prefix string) string {
 	normalizedPath := filepath.ToSlash(path)
-	normalizedPrefix := filepath.ToSlash(prefix)
+	normalizedPrefix := filepath.ToSlash(filepath.Clean(prefix))
 	// Remove trailing slash from prefix if present
 	normalizedPrefix = strings.TrimSuffix(normalizedPrefix, "/")
 
