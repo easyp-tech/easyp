@@ -14,4 +14,6 @@ type DirWalker interface {
 type FS interface {
 	Open(name string) (io.ReadCloser, error)
 	Create(name string) (io.WriteCloser, error)
+	Exists(name string) bool
+	Remove(name string) error
 }

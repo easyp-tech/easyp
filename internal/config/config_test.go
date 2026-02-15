@@ -19,8 +19,7 @@ func TestParseConfig_EnvironmentVariables(t *testing.T) {
 	}{
 		{
 			name: "simple environment variable expansion",
-			configContent: `version: v1alpha
-lint:
+			configContent: `lint:
   use:
     - DIRECTORY_SAME_PACKAGE
 deps:
@@ -55,8 +54,7 @@ generate:
 		},
 		{
 			name: "escape with double dollar sign",
-			configContent: `version: v1alpha
-lint:
+			configContent: `lint:
   use:
     - DIRECTORY_SAME_PACKAGE
 deps: []
@@ -88,8 +86,7 @@ generate:
 		},
 		{
 			name: "mixed expansion and escape",
-			configContent: `version: v1alpha
-lint:
+			configContent: `lint:
   use:
     - DIRECTORY_SAME_PACKAGE
 deps:
@@ -126,8 +123,7 @@ generate:
 		},
 		{
 			name: "unset variable becomes empty",
-			configContent: `version: v1alpha
-lint:
+			configContent: `lint:
   use:
     - DIRECTORY_SAME_PACKAGE
 deps: []
@@ -147,8 +143,7 @@ generate:
 		},
 		{
 			name: "default values with :- syntax",
-			configContent: `version: v1alpha
-lint:
+			configContent: `lint:
   use:
     - DIRECTORY_SAME_PACKAGE
 deps: []
@@ -175,8 +170,7 @@ generate:
 		},
 		{
 			name: "default values with set variable",
-			configContent: `version: v1alpha
-lint:
+			configContent: `lint:
   use:
     - DIRECTORY_SAME_PACKAGE
 deps: []
