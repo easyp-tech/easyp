@@ -23,3 +23,12 @@ func (a *GitTreeDiskAdapter) Open(name string) (io.ReadCloser, error) {
 func (a *GitTreeDiskAdapter) Create(name string) (io.WriteCloser, error) {
 	return nil, errors.New("not implemented")
 }
+
+func (a *GitTreeDiskAdapter) Exists(name string) bool {
+	_, err := a.File(name)
+	return err == nil
+}
+
+func (a *GitTreeDiskAdapter) Remove(_ string) error {
+	return errors.New("not implemented")
+}
