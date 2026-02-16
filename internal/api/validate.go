@@ -30,8 +30,9 @@ func (v Validate) Command() *cli.Command {
 }
 
 type validateResult struct {
-	Valid  bool                     `json:"valid"`
-	Errors []config.ValidationIssue `json:"errors,omitempty"`
+	Valid    bool                     `json:"valid"`
+	Errors   []config.ValidationIssue `json:"errors,omitempty"`
+	Warnings []config.ValidationIssue `json:"warnings,omitempty"`
 }
 
 func (v Validate) Action(ctx *cli.Context) error {
@@ -53,9 +54,20 @@ func (v Validate) Action(ctx *cli.Context) error {
 		return fmt.Errorf("validate config: %w", err)
 	}
 
+	// Separate errors from warnings - only errors cause validation failure
+	var errors, warnings []config.ValidationIssue
+	for _, issue := range issues {
+		if issue.Severity == config.SeverityError {
+			errors = append(errors, issue)
+		} else {
+			warnings = append(warnings, issue)
+		}
+	}
+
 	result := validateResult{
-		Valid:  len(issues) == 0,
-		Errors: issues,
+		Valid:    !config.HasErrors(issues),
+		Errors:   errors,
+		Warnings: warnings,
 	}
 
 	format := flags.GetFormat(ctx, flags.JSONFormat)
@@ -82,19 +94,27 @@ func (v Validate) Action(ctx *cli.Context) error {
 func printValidateText(res validateResult) {
 	if res.Valid {
 		fmt.Println("VALID: true")
-		return
-	}
-
-	fmt.Println("VALID: false")
-	if len(res.Errors) == 0 {
-		return
+	} else {
+		fmt.Println("VALID: false")
 	}
 
 	w := tabwriter.NewWriter(os.Stdout, 0, 4, 2, ' ', 0)
-	fmt.Fprintln(w, "ERRORS:")
-	fmt.Fprintln(w, "  #\tCODE\tMESSAGE")
-	for i, e := range res.Errors {
-		fmt.Fprintf(w, "  %d\t%s\t%s\n", i+1, e.Code, e.Message)
+
+	if len(res.Errors) > 0 {
+		fmt.Fprintln(w, "ERRORS:")
+		fmt.Fprintln(w, "  #\tCODE\tMESSAGE")
+		for i, e := range res.Errors {
+			fmt.Fprintf(w, "  %d\t%s\t%s\n", i+1, e.Code, e.Message)
+		}
 	}
+
+	if len(res.Warnings) > 0 {
+		fmt.Fprintln(w, "WARNINGS:")
+		fmt.Fprintln(w, "  #\tCODE\tMESSAGE")
+		for i, e := range res.Warnings {
+			fmt.Fprintf(w, "  %d\t%s\t%s\n", i+1, e.Code, e.Message)
+		}
+	}
+
 	_ = w.Flush()
 }

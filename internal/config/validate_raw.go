@@ -8,13 +8,19 @@ import (
 	"github.com/a8m/envsubst"
 )
 
+// Severity levels for validation issues.
+const (
+	SeverityError = "error"
+	SeverityWarn  = "warn"
+)
+
 // ValidationIssue describes a single validation problem with the config.
 type ValidationIssue struct {
 	Code     string `json:"code" yaml:"code"`
 	Message  string `json:"message" yaml:"message"`
 	Line     int    `json:"line,omitempty" yaml:"line,omitempty"`
 	Column   int    `json:"column,omitempty" yaml:"column,omitempty"`
-	Severity string `json:"severity,omitempty" yaml:"severity,omitempty"` // "error" or "warn"
+	Severity string `json:"severity,omitempty" yaml:"severity,omitempty"` // SeverityError or SeverityWarn
 }
 
 // ValidateRaw validates config bytes using go-yamlvalidator schema.
@@ -24,7 +30,7 @@ func ValidateRaw(buf []byte) ([]ValidationIssue, error) {
 
 	expanded, err := envsubst.String(string(buf))
 	if err != nil {
-		issues = append(issues, newIssue("envsubst_error", err.Error(), "error"))
+		issues = append(issues, newIssue("envsubst_error", err.Error(), SeverityError))
 		return issues, nil
 	}
 	buf = []byte(expanded)
@@ -37,9 +43,9 @@ func ValidateRaw(buf []byte) ([]ValidationIssue, error) {
 	result := validator.ValidateWithOptions(buf, ctx)
 
 	for _, e := range result.Collector.All() {
-		severity := "warn"
+		severity := SeverityWarn
 		if e.Level == v.LevelError {
-			severity = "error"
+			severity = SeverityError
 		}
 
 		msg := e.Message
@@ -218,4 +224,15 @@ func newIssue(code, msg, severity string) ValidationIssue {
 		Message:  msg,
 		Severity: severity,
 	}
+}
+
+// HasErrors returns true if any issue has severity SeverityError.
+// Warnings alone do not constitute a validation failure.
+func HasErrors(issues []ValidationIssue) bool {
+	for _, issue := range issues {
+		if issue.Severity == SeverityError {
+			return true
+		}
+	}
+	return false
 }
