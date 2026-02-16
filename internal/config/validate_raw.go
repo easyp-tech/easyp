@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"os"
 
-	v "github.com/Yakwilik/go-yamlvalidator"
 	"github.com/a8m/envsubst"
+	v "github.com/yakwilikk/go-yamlvalidator"
 )
 
 // Severity levels for validation issues.

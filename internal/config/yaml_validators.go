@@ -3,7 +3,7 @@ package config
 import (
 	"fmt"
 
-	v "github.com/Yakwilik/go-yamlvalidator"
+	v "github.com/yakwilikk/go-yamlvalidator"
 	"gopkg.in/yaml.v3"
 )
 
