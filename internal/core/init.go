@@ -3,7 +3,6 @@ package core
 import (
 	"context"
 	"fmt"
-	"path/filepath"
 
 	"gopkg.in/yaml.v3"
 
@@ -55,65 +54,98 @@ type (
 	}
 )
 
+// InitOptions contains options for the Initialize command.
+type InitOptions struct {
+	TemplateData InitTemplateData
+	Prompter     Prompter
+}
+
+// Prompter provides an interface for interactive user interaction.
+type Prompter interface {
+	// Confirm asks a yes/no question. Returns true if the user answered "yes".
+	Confirm(ctx context.Context, message string, defaultValue bool) (bool, error)
+}
+
 // Initialize initializes the EasyP configuration.
-func (c *Core) Initialize(ctx context.Context, disk DirWalker, defaultLinters []string) error {
-	cfg := defaultConfig(defaultLinters)
+func (c *Core) Initialize(ctx context.Context, disk DirWalker, opts InitOptions) (err error) {
+	cfg := configFromTemplateData(opts.TemplateData)
 
+	// Check for buf config only in root directory (not recursive).
 	var migrated bool
-	err := disk.WalkDir(func(path string, err error) error {
-		switch {
-		case err != nil:
-			return err
-		case ctx.Err() != nil:
-			return ctx.Err()
+	for _, bufConfigName := range []string{"buf.yml", "buf.yaml"} {
+		if !disk.Exists(bufConfigName) {
+			continue
 		}
 
-		defaultConfiguration := defaultConfig(defaultLinters)
-		if filepath.Base(path) == "buf.yml" || filepath.Base(path) == "buf.yaml" {
-			migrated = true
-			err = migrateFromBUF(disk, path, defaultConfiguration)
-			if err != nil {
-				return fmt.Errorf("migrateFromBUF: %w", err)
-			}
+		migrate, promptErr := opts.Prompter.Confirm(ctx, "Found "+bufConfigName+". Migrate configuration?", true)
+		if promptErr != nil {
+			return fmt.Errorf("prompter.Confirm: %w", promptErr)
+		}
+		if !migrate {
+			continue
 		}
 
-		return nil
-	})
-	if err != nil {
-		return fmt.Errorf("fs.WalkDir: %w", err)
+		migrated = true
+		if migrateErr := c.migrateFromBUF(ctx, disk, bufConfigName, cfg); migrateErr != nil {
+			return fmt.Errorf("migrateFromBUF: %w", migrateErr)
+		}
+
+		break
 	}
 
 	if !migrated {
 		filename := "easyp.yaml"
-		res, err := disk.Create(filename)
-		if err != nil {
-			return fmt.Errorf("disk.Create: %w", err)
+
+		// Check for existing config (overwrite protection).
+		if disk.Exists(filename) {
+			overwrite, promptErr := opts.Prompter.Confirm(ctx, filename+" already exists. Overwrite?", false)
+			if promptErr != nil {
+				return fmt.Errorf("prompter.Confirm: %w", promptErr)
+			}
+			if !overwrite {
+				return nil
+			}
 		}
 
-		err = yaml.NewEncoder(res).Encode(cfg)
-		if err != nil {
-			return fmt.Errorf("yaml.NewEncoder.Encode: %w", err)
+		res, createErr := disk.Create(filename)
+		if createErr != nil {
+			return fmt.Errorf("disk.Create: %w", createErr)
+		}
+		defer func() {
+			if closeErr := res.Close(); closeErr != nil && err == nil {
+				err = fmt.Errorf("res.Close: %w", closeErr)
+			}
+		}()
+
+		if renderErr := renderInitConfig(res, opts.TemplateData); renderErr != nil {
+			return fmt.Errorf("renderInitConfig: %w", renderErr)
 		}
 	}
 
 	return nil
 }
 
-func defaultConfig(defaultLinters []string) config.Config {
+// configFromTemplateData creates a config.Config from template data (used for buf migration).
+func configFromTemplateData(data InitTemplateData) config.Config {
+	var allRules []string
+	for _, g := range data.LintGroups {
+		allRules = append(allRules, g.Rules...)
+	}
+
 	return config.Config{
 		Lint: config.LintConfig{
-			Use:                 defaultLinters,
+			Use:                 allRules,
 			AllowCommentIgnores: false,
-			EnumZeroValueSuffix: "_NONE",
-			ServiceSuffix:       "API",
+			EnumZeroValueSuffix: data.EnumZeroValueSuffix,
+			ServiceSuffix:       data.ServiceSuffix,
 		},
 		BreakingCheck: config.BreakingCheck{
-			AgainstGitRef: "master",
+			AgainstGitRef: data.AgainstGitRef,
 		},
 	}
 }
 
-func migrateFromBUF(disk FS, path string, defaultConfiguration config.Config) error {
+func (c *Core) migrateFromBUF(ctx context.Context, disk FS, path string, defaultConfiguration config.Config) (err error) {
 	f, err := disk.Open(path)
 	if err != nil {
 		return fmt.Errorf("disk.Open: %w", err)
@@ -132,17 +164,27 @@ func migrateFromBUF(disk FS, path string, defaultConfiguration config.Config) er
 		return fmt.Errorf("yaml.NewDecoder.Decode: %w", err)
 	}
 
-	config := buildCfgFromBUF(defaultConfiguration, b)
+	// Log unsupported fields.
+	if len(b.Build.Excludes) > 0 {
+		c.logger.Warn(ctx, "buf build.excludes is not supported in easyp, skipping")
+	}
+	if len(b.Breaking.Use) > 0 {
+		c.logger.Warn(ctx, "buf breaking.use granular rules not yet supported, using default breaking check")
+	}
 
-	dir := filepath.Dir(path)
+	migratedCfg := buildCfgFromBUF(defaultConfiguration, b)
 
-	filename := filepath.Join(dir, "easyp.yaml")
-	res, err := disk.Create(filename)
+	res, err := disk.Create("easyp.yaml")
 	if err != nil {
 		return fmt.Errorf("disk.Create: %w", err)
 	}
+	defer func() {
+		if closeErr := res.Close(); closeErr != nil && err == nil {
+			err = fmt.Errorf("res.Close: %w", closeErr)
+		}
+	}()
 
-	err = yaml.NewEncoder(res).Encode(config)
+	err = yaml.NewEncoder(res).Encode(migratedCfg)
 	if err != nil {
 		return fmt.Errorf("yaml.NewEncoder.Encode: %w", err)
 	}
@@ -151,8 +193,8 @@ func migrateFromBUF(disk FS, path string, defaultConfiguration config.Config) er
 }
 
 func buildCfgFromBUF(cfg config.Config, bufConfig BUFConfig) config.Config {
-	return config.Config{
-		Deps: nil,
+	result := config.Config{
+		Deps: bufConfig.Deps,
 		Lint: config.LintConfig{
 			Use:                 bufConfig.Lint.Use,
 			Except:              bufConfig.Lint.Except,
@@ -162,5 +204,19 @@ func buildCfgFromBUF(cfg config.Config, bufConfig BUFConfig) config.Config {
 			EnumZeroValueSuffix: bufConfig.Lint.EnumZeroValueSuffix,
 			ServiceSuffix:       bufConfig.Lint.ServiceSuffix,
 		},
+		BreakingCheck: config.BreakingCheck{
+			AgainstGitRef: cfg.BreakingCheck.AgainstGitRef,
+			Ignore:        bufConfig.Breaking.Ignore,
+		},
 	}
+
+	// Use defaults from the base config when buf config has empty values.
+	if result.Lint.EnumZeroValueSuffix == "" {
+		result.Lint.EnumZeroValueSuffix = cfg.Lint.EnumZeroValueSuffix
+	}
+	if result.Lint.ServiceSuffix == "" {
+		result.Lint.ServiceSuffix = cfg.Lint.ServiceSuffix
+	}
+
+	return result
 }

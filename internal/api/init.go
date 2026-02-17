@@ -5,8 +5,11 @@ import (
 
 	"github.com/urfave/cli/v2"
 
+	"github.com/easyp-tech/easyp/internal/adapters/prompter"
 	"github.com/easyp-tech/easyp/internal/config"
+	"github.com/easyp-tech/easyp/internal/core"
 	"github.com/easyp-tech/easyp/internal/fs/fs"
+	"github.com/easyp-tech/easyp/internal/rules"
 )
 
 var _ Handler = (*Init)(nil)
@@ -55,10 +58,34 @@ func (i Init) Action(ctx *cli.Context) error {
 		return fmt.Errorf("buildCore: %w", err)
 	}
 
-	err = app.Initialize(ctx.Context, dirFS, []string{"DEFAULT"})
+	opts := core.InitOptions{
+		TemplateData: defaultTemplateData(),
+		Prompter:     prompter.InteractivePrompter{},
+	}
+
+	err = app.Initialize(ctx.Context, dirFS, opts)
 	if err != nil {
 		return fmt.Errorf("app.Initialize: %w", err)
 	}
 
 	return nil
+}
+
+// defaultTemplateData builds InitTemplateData from all available rule groups.
+func defaultTemplateData() core.InitTemplateData {
+	groups := rules.AllGroups()
+	lintGroups := make([]core.LintGroup, len(groups))
+	for i, g := range groups {
+		lintGroups[i] = core.LintGroup{
+			Name:  g.Name,
+			Rules: g.Rules,
+		}
+	}
+
+	return core.InitTemplateData{
+		LintGroups:          lintGroups,
+		EnumZeroValueSuffix: "_NONE",
+		ServiceSuffix:       "API",
+		AgainstGitRef:       "master",
+	}
 }

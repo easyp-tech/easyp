@@ -1,0 +1,21 @@
+# EasyP configuration file.
+# Documentation: https://easyp.tech/docs/guide/introduction/what-is
+
+lint:
+  use:
+{{- range .LintGroups }}
+    # {{ .Name }}
+  {{- range .Rules }}
+    - {{ . }}
+  {{- end }}
+{{ end }}
+  # Suffix for the zero value of enums (e.g. MY_ENUM_UNSPECIFIED, MY_ENUM_NONE).
+  enum_zero_value_suffix: {{ .EnumZeroValueSuffix }}
+
+  # Suffix that all services must have (e.g. UserAPI, OrderAPI).
+  service_suffix: {{ .ServiceSuffix }}
+
+# Breaking change detection settings.
+breaking:
+  # Git ref (branch, tag, commit) to compare against.
+  against_git_ref: {{ .AgainstGitRef }}
