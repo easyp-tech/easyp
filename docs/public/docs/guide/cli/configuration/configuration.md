@@ -13,6 +13,7 @@ Available for all commands:
 | `--cfg` | `-c` | `EASYP_CFG` | Configuration file path | `easyp.yaml` |
 | `--config` | | `EASYP_CFG` | Alias for `--cfg` | `easyp.yaml` |
 | `--debug` | `-d` | `EASYP_DEBUG` | Enable debug mode | `false` |
+| `--format` | `-f` | `EASYP_FORMAT` | Output format for commands that support multiple formats (`text`/`json`) | command-specific default |
 
 **Examples:**
 ```bash
@@ -37,7 +38,7 @@ easyp lint [flags]
 |------|-------|-------------|-------------|---------|
 | `--path` | `-p` | | Directory path to lint | `.` |
 | `--root` | `-r` | | Base directory for file search | Current working directory |
-| `--format` | `-f` | `EASYP_FORMAT` | Output format (text/json) | `text` |
+| `--format` | `-f` | `EASYP_FORMAT` | Uses global format flag (`text`/`json`) | Inherits global default |
 
 **Examples:**
 ```bash
@@ -48,7 +49,7 @@ easyp lint --path proto/
 easyp lint --root src/IPC/Contracts --path .
 
 # JSON output format
-easyp lint --format json
+easyp lint --format json   # global flag
 
 # Combined flags
 easyp lint -p proto/ -f json
@@ -85,7 +86,7 @@ easyp breaking [flags]
 |------|-------|-------------|-------------|---------|
 | `--against` | | | Git ref to compare against | (required) |
 | `--path` | `-p` | | Directory path to check | `.` |
-| `--format` | `-f` | `EASYP_FORMAT` | Output format (text/json) | `text` |
+| `--format` | `-f` | `EASYP_FORMAT` | Uses global format flag (`text`/`json`) | Inherits global default |
 
 **Examples:**
 ```bash
@@ -96,7 +97,7 @@ easyp breaking --against main
 easyp breaking --against develop --path proto/
 
 # JSON output
-easyp breaking --against main --format json
+easyp breaking --against main --format json   # global flag
 ```
 
 **Init command:**
@@ -115,6 +116,25 @@ easyp init
 
 # Initialize specific directory
 easyp init --dir proto-project/
+```
+
+**Validate-config command:**
+```bash
+easyp validate-config [flags]
+```
+
+| Flag | Short | Environment | Description | Default |
+|------|-------|-------------|-------------|---------|
+| `--config` | `-c` | `EASYP_CFG` | Configuration file path | `easyp.yaml` |
+| `--format` | `-f` | | Output format (`json` or `text`) | `json` |
+
+**Examples:**
+```bash
+# Validate default config with JSON output (exit 0 when no errors)
+easyp validate-config
+
+# Validate a different file with text output
+easyp validate-config --config example.easyp.yaml --format text
 ```
 
 **Package management commands:**
@@ -161,7 +181,7 @@ EasyP supports environment variables for configuration:
 | `EASYP_CFG` | Path to configuration file | `easyp.yaml` |
 | `EASYP_DEBUG` | Enable debug logging | `false` |
 | `EASYPPATH` | Cache and modules storage directory | `$HOME/.easyp` |
-| `EASYP_FORMAT` | Output format for lint command | `text` |
+| `EASYP_FORMAT` | Output format for supported commands (`text`/`json`). If not set, each command uses its own default. | command-specific default |
 | `EASYP_ROOT_GENERATE_PATH` | Root path for generate command | `.` |
 | `EASYP_INIT_DIR` | Directory for init command | `.` |
 

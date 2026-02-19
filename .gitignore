@@ -8,3 +8,4 @@ easyp.lock
 .DS_Store
 node_modules
 *.tsbuildinfo
+.rules-mcp

@@ -117,6 +117,8 @@ github.com/xanzy/ssh-agent v0.3.3 h1:+/15pJfg/RsTxqYcX6fHqOXZwwMP+2VyYWJeWM2qQFM
 github.com/xanzy/ssh-agent v0.3.3/go.mod h1:6dzNDKs0J9rVPHPhaGCukekBHKqfl+L3KghI1Bc68Uw=
 github.com/xrash/smetrics v0.0.0-20250705151800-55b8f293f342 h1:FnBeRrxr7OU4VvAzt5X7s6266i6cSVkkFPS0TuXWbIg=
 github.com/xrash/smetrics v0.0.0-20250705151800-55b8f293f342/go.mod h1:Ohn+xnUBiLI6FVj/9LpzZWtj1/D6lUovWYBkxHVV3aM=
+github.com/yakwilikk/go-yamlvalidator v0.0.0-20260216223344-568790865548 h1:wKohzDUpJJIQ+Tqbo1FvOsi/T3DNYOVceq6pXeGGh8o=
+github.com/yakwilikk/go-yamlvalidator v0.0.0-20260216223344-568790865548/go.mod h1:JIBeXFmTJyghm8crrAhNGhVxsNpCFSmuPLjz2spSBVU=
 github.com/yoheimuta/go-protoparser/v4 v4.14.2 h1:/P/LlX1CF9NaTWEltGcIZVvNlPbhABuAnBtAWpb3+74=
 github.com/yoheimuta/go-protoparser/v4 v4.14.2/go.mod h1:AHNNnSWnb0UoL4QgHPiOAg2BniQceFscPI5X/BZNHl8=
 go.opentelemetry.io/auto/sdk v1.1.0 h1:cH53jehLUN6UFLY71z+NDOiNJqDdPRaXzTel0sJySYA=

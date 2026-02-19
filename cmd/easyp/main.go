@@ -49,11 +49,13 @@ func main() {
 			api.Init{},
 			api.Generate{},
 			api.LsFiles{},
+			api.Validate{},
 			api.BreakingCheck{},
 		),
 		Flags: []cli.Flag{
 			flags.Config,
 			flags.DebugMode,
+			flags.Format,
 		},
 		Before: func(ctx *cli.Context) error {
 			log := initLogger(ctx.Bool(flags.DebugMode.Name))

@@ -75,6 +75,8 @@ For comprehensive usage information, consult EasyP's [documentation](https://eas
 * [`easyp breaking`](https://easyp.tech/docs/guide/cli/breaking-changes/breaking-changes) - Breaking change detection
 * [`easyp mod`](https://easyp.tech/docs/guide/cli/package-manager/package-manager) - Package management
 * [`easyp generate`](https://easyp.tech/docs/guide/cli/generator/generator) - Code generation
+* `easyp validate-config` - Validate `easyp.yaml` structure and types (JSON or text output)
+* Global flag: `--format, -f` / env `EASYP_FORMAT` (`text` or `json`) for commands that support formatted output
 
 ## Key Features
 
@@ -139,6 +141,18 @@ lint:
     - PACKAGE_DEFINED
     - FIELD_LOWER_SNAKE_CASE
     - MESSAGE_PASCAL_CASE
+
+# Configuration validation
+
+`easyp validate-config` validates `easyp.yaml` (or a custom path passed via `--config`). It expands env vars, checks required fields and types, warns on unknown keys, and exits with a non-zero status when errors are found.
+
+```sh
+# Validate the default easyp.yaml with JSON output (default)
+easyp validate-config
+
+# Validate a custom file with text output
+easyp validate-config --config example.easyp.yaml --format text
+```
 ```
 
 ## Community

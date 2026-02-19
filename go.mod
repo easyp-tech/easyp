@@ -3,6 +3,7 @@ module github.com/easyp-tech/easyp
 go 1.24.0
 
 require (
+	github.com/a8m/envsubst v1.4.3
 	github.com/brianvoe/gofakeit/v6 v6.28.0
 	github.com/bufbuild/protocompile v0.14.1
 	github.com/codeclysm/extract/v3 v3.1.1
@@ -14,6 +15,7 @@ require (
 	github.com/tetratelabs/wazero v1.9.0
 	github.com/urfave/cli/v2 v2.27.7
 	github.com/wasilibs/wazero-helpers v0.0.0-20250123031827-cd30c44769bb
+	github.com/yakwilikk/go-yamlvalidator v0.0.0-20260216223344-568790865548
 	github.com/yoheimuta/go-protoparser/v4 v4.14.2
 	golang.org/x/mod v0.30.0
 	google.golang.org/grpc v1.76.0
@@ -25,7 +27,6 @@ require (
 	dario.cat/mergo v1.0.2 // indirect
 	github.com/Microsoft/go-winio v0.6.2 // indirect
 	github.com/ProtonMail/go-crypto v1.3.0 // indirect
-	github.com/a8m/envsubst v1.4.3 // indirect
 	github.com/cloudflare/circl v1.6.1 // indirect
 	github.com/cpuguy83/go-md2man/v2 v2.0.7 // indirect
 	github.com/cyphar/filepath-securejoin v0.6.0 // indirect

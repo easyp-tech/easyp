@@ -1,4 +1,4 @@
-package api
+package flags
 
 import (
 	"fmt"
@@ -22,7 +22,7 @@ func (e *EnumValue) Set(value string) error {
 	return fmt.Errorf("allowed values are %s", strings.Join(e.Enum, ", "))
 }
 
-func (e EnumValue) String() string {
+func (e *EnumValue) String() string {
 	if e.selected == "" {
 		return e.Default
 	}
