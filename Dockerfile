@@ -20,7 +20,7 @@ COPY . .
 
 RUN go build -trimpath -o /easyp ./cmd/easyp
 
-FROM alpine:3.22
+FROM golang:1.25-alpine
 
 RUN apk add --no-cache ca-certificates tzdata git bash
 
