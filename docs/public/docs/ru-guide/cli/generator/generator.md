@@ -349,10 +349,11 @@ plugins:
 | `remote` | string | ❌ | - | URL удалённого плагина |
 | `path` | string | ❌ | - | Путь к исполняемому файлу плагина |
 | `out` | string | ✅ | - | Директория для сгенерированных файлов |
-| `opts` | map[string]string | ❌ | `{}` | Специфичные опции плагина (преобразуются в `--opt=value`) |
+| `opts` | map[string](string \| []string) | ❌ | `{}` | Специфичные опции плагина; значения-списки передаются как повторяющиеся `key=value` |
 | `with_imports` | bool | ❌ | `false` | Включать proto из зависимостей |
 
 **Примечание:** Для каждого плагина должен быть указан ровно один источник (`name`, `command`, `remote` или `path`).
+Если `opts.outputServices` задан как `["grpc-js", "generic-definitions"]`, EasyP передаст `outputServices=grpc-js,outputServices=generic-definitions`.
 
 **Примеры использования источника `command`:**
 

@@ -349,10 +349,11 @@ In this mode EasyP:
 | `remote` | string | ❌ | - | Remote plugin URL |
 | `path` | string | ❌ | - | Path to plugin executable file |
 | `out` | string | ✅ | - | Output directory for generated files |
-| `opts` | map[string]string | ❌ | `{}` | Plugin-specific options (mapped to `--opt=value`) |
+| `opts` | map[string](string \| []string) | ❌ | `{}` | Plugin-specific options; list values are emitted as repeated `key=value` params |
 | `with_imports` | bool | ❌ | `false` | Include proto files from dependencies |
 
 **Note:** Only one plugin source (`name`, `command`, `remote`, or `path`) must be specified for each plugin.
+If `opts.outputServices` is set to `["grpc-js", "generic-definitions"]`, EasyP sends `outputServices=grpc-js,outputServices=generic-definitions`.
 
 **Command source examples:**
 
@@ -820,6 +821,29 @@ When multiple rules match the same file or field, the following precedence appli
 ### Compatibility with buf
 
 EasyP's managed mode is compatible with `buf`'s managed mode. The same configuration format and behavior apply, making it easy to migrate between tools or use both in the same workflow.
+
+## Descriptor Set Generation
+
+**https://protobuf.dev/programming-guides/techniques/#self-description**
+
+EasyP supports generating binary FileDescriptorSet files using the `--descriptor_set_out` flag. This allows you to create self-describing protobuf messages that include schema information alongside the data.
+
+**CLI flags:**
+
+- `--descriptor_set_out <path>` - Output path for the binary FileDescriptorSet
+- `--include_imports` - Include all transitive dependencies in the FileDescriptorSet
+
+**Example:**
+
+```bash
+# Generate descriptor set with only target files
+easyp generate --descriptor_set_out=./schema.pb
+
+# Generate descriptor set with all dependencies
+easyp generate --descriptor_set_out=./schema.pb --include_imports
+```
+
+Self-describing messages are useful for dynamic message parsing, runtime schema validation, schema registries, and building generic gRPC clients. For more information, see the [Protocol Buffers documentation on self-description](https://protobuf.dev/programming-guides/techniques/#self-description).
 
 ## Package Manager Integration
 

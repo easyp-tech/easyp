@@ -7,7 +7,6 @@ import (
 	"log/slog"
 	"strings"
 
-	"github.com/samber/lo"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/pluginpb"
 
@@ -52,15 +51,8 @@ func (e *CommandPluginExecutor) Execute(ctx context.Context, plugin Info, reques
 	)
 
 	// Prepare plugin parameters
-	options := lo.MapToSlice(plugin.Options, func(k string, v string) string {
-		if v == "" {
-			return k
-		}
-		return k + "=" + v
-	})
-
-	if len(options) > 0 {
-		request.Parameter = proto.String(strings.Join(options, ","))
+	if parameter, ok := flattenOptions(plugin.Options); ok {
+		request.Parameter = proto.String(parameter)
 	}
 
 	reqData, err := proto.Marshal(request)

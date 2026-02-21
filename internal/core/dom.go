@@ -212,7 +212,7 @@ type (
 	Plugin struct {
 		Source      PluginSource
 		Out         string
-		Options     map[string]string
+		Options     map[string][]string
 		WithImports bool
 	}
 	// InputGitRepo is the configuration of the git repository.

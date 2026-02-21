@@ -7,9 +7,7 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
-	"strings"
 
-	"github.com/samber/lo"
 	"github.com/tetratelabs/wazero"
 	"github.com/tetratelabs/wazero/api"
 	"github.com/tetratelabs/wazero/experimental"
@@ -64,17 +62,9 @@ func (e *BuiltinPluginExecutor) Execute(ctx context.Context, plugin Info, reques
 		slog.String("plugin", plugin.Source),
 	)
 
-	// Prepare plugin parameters
-	options := lo.MapToSlice(plugin.Options, func(k string, v string) string {
-		if v == "" {
-			return k
-		}
-		return k + "=" + v
-	})
-
 	// Update parameter in request
-	if len(options) > 0 {
-		request.Parameter = proto.String(strings.Join(options, ","))
+	if parameter, ok := flattenOptions(plugin.Options); ok {
+		request.Parameter = proto.String(parameter)
 	}
 
 	// Marshal request to protobuf

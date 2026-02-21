@@ -349,10 +349,11 @@ plugins:
 | `remote` | string | ❌ | - | URL удалённого плагина |
 | `path` | string | ❌ | - | Путь к исполняемому файлу плагина |
 | `out` | string | ✅ | - | Директория для сгенерированных файлов |
-| `opts` | map[string]string | ❌ | `{}` | Специфичные опции плагина (преобразуются в `--opt=value`) |
+| `opts` | map[string](string \| []string) | ❌ | `{}` | Специфичные опции плагина; значения-списки передаются как повторяющиеся `key=value` |
 | `with_imports` | bool | ❌ | `false` | Включать proto из зависимостей |
 
 **Примечание:** Для каждого плагина должен быть указан ровно один источник (`name`, `command`, `remote` или `path`).
+Если `opts.outputServices` задан как `["grpc-js", "generic-definitions"]`, EasyP передаст `outputServices=grpc-js,outputServices=generic-definitions`.
 
 **Примеры использования источника `command`:**
 
@@ -821,6 +822,29 @@ generate:
 ### Совместимость с buf
 
 Managed mode в EasyP совместим с managed mode в `buf`. Тот же формат конфигурации и поведение применяются, что упрощает миграцию между инструментами или использование обоих в одном workflow.
+
+## Генерация Descriptor Set
+
+**https://protobuf.dev/programming-guides/techniques/#self-description**
+
+EasyP поддерживает генерацию бинарных FileDescriptorSet файлов с помощью флага `--descriptor_set_out`. Это позволяет создавать самоописывающиеся protobuf сообщения, которые включают информацию о схеме вместе с данными.
+
+**Флаги CLI:**
+
+- `--descriptor_set_out <путь>` - Путь для вывода бинарного FileDescriptorSet
+- `--include_imports` - Включить все транзитивные зависимости в FileDescriptorSet
+
+**Пример:**
+
+```bash
+# Генерация descriptor set только с целевыми файлами
+easyp generate --descriptor_set_out=./schema.pb
+
+# Генерация descriptor set со всеми зависимостями
+easyp generate --descriptor_set_out=./schema.pb --include_imports
+```
+
+Самоописывающиеся сообщения полезны для динамического парсинга сообщений, валидации схемы во время выполнения, реестров схем и создания универсальных gRPC клиентов. Для получения дополнительной информации см. [документацию Protocol Buffers о самоописании](https://protobuf.dev/programming-guides/techniques/#self-description).
 
 ## Интеграция с менеджером пакетов
 

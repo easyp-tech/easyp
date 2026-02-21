@@ -20,9 +20,72 @@ type Plugin struct {
 	Path    string   `json:"path,omitempty" yaml:"path,omitempty"`
 	Command []string `json:"command,omitempty" yaml:"command,omitempty"`
 
-	Out         string            `json:"out" yaml:"out"`
-	Opts        map[string]string `json:"opts,omitempty" yaml:"opts,omitempty"`
-	WithImports bool              `json:"with_imports,omitempty" yaml:"with_imports,omitempty"`
+	Out         string     `json:"out" yaml:"out"`
+	Opts        PluginOpts `json:"opts,omitempty" yaml:"opts,omitempty"`
+	WithImports bool       `json:"with_imports,omitempty" yaml:"with_imports,omitempty"`
+}
+
+// PluginOpts stores plugin options allowing either scalar values or arrays of scalar values.
+type PluginOpts map[string][]string
+
+func (o *PluginOpts) UnmarshalYAML(value *yaml.Node) error {
+	if value.Kind != yaml.MappingNode {
+		return fmt.Errorf("plugin opts must be a mapping, got %s", yamlNodeKind(value.Kind))
+	}
+
+	res := make(PluginOpts, len(value.Content)/2)
+
+	for i := 0; i < len(value.Content); i += 2 {
+		keyNode := value.Content[i]
+		valNode := value.Content[i+1]
+		key := keyNode.Value
+
+		switch valNode.Kind {
+		case yaml.ScalarNode:
+			var scalar string
+			if err := valNode.Decode(&scalar); err != nil {
+				return fmt.Errorf("decode opts[%q]: %w", key, err)
+			}
+			res[key] = []string{scalar}
+		case yaml.SequenceNode:
+			values := make([]string, 0, len(valNode.Content))
+			for idx, item := range valNode.Content {
+				if item.Kind != yaml.ScalarNode {
+					return fmt.Errorf("opts[%q][%d] must be scalar, got %s", key, idx, yamlNodeKind(item.Kind))
+				}
+
+				var scalar string
+				if err := item.Decode(&scalar); err != nil {
+					return fmt.Errorf("decode opts[%q][%d]: %w", key, idx, err)
+				}
+				values = append(values, scalar)
+			}
+			res[key] = values
+		default:
+			return fmt.Errorf("opts[%q] must be scalar or sequence, got %s", key, yamlNodeKind(valNode.Kind))
+		}
+	}
+
+	*o = res
+
+	return nil
+}
+
+func yamlNodeKind(kind yaml.Kind) string {
+	switch kind {
+	case yaml.DocumentNode:
+		return "document"
+	case yaml.SequenceNode:
+		return "sequence"
+	case yaml.MappingNode:
+		return "mapping"
+	case yaml.ScalarNode:
+		return "scalar"
+	case yaml.AliasNode:
+		return "alias"
+	default:
+		return fmt.Sprintf("unknown(%d)", kind)
+	}
 }
 
 // ManagedDisableRule defines a rule to disable managed mode for specific conditions.
