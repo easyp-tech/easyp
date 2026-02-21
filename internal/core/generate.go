@@ -15,6 +15,7 @@ import (
 	"github.com/bufbuild/protocompile"
 	"github.com/bufbuild/protocompile/protoutil"
 	"github.com/bufbuild/protocompile/wellknownimports"
+	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/descriptorpb"
 	"google.golang.org/protobuf/types/pluginpb"
 
@@ -24,7 +25,7 @@ import (
 )
 
 // Generate generates files.
-func (c *Core) Generate(ctx context.Context, root, directory string) error {
+func (c *Core) Generate(ctx context.Context, root, directory, descriptorSetOut string, includeImports bool) error {
 	c.logger.Info(ctx, "starting code generation", slog.String("directory", directory))
 
 	// TODO: call download before
@@ -225,6 +226,37 @@ func (c *Core) Generate(ctx context.Context, root, directory string) error {
 		c.logger.Debug(ctx, "applying managed mode to file descriptors")
 		if err := ApplyManagedMode(fileDescriptors, c.managedMode, fileToModule); err != nil {
 			return fmt.Errorf("ApplyManagedMode: %w", err)
+		}
+	}
+
+	if descriptorSetOut != "" {
+		var descriptorsToSave []*descriptorpb.FileDescriptorProto
+		if includeImports {
+			descriptorsToSave = fileDescriptors
+		} else {
+			// Filter out imports, keep only target files
+			targetFiles := make(map[string]bool)
+			for _, f := range q.Files {
+				targetFiles[f] = true
+			}
+			for _, fd := range fileDescriptors {
+				if targetFiles[fd.GetName()] {
+					descriptorsToSave = append(descriptorsToSave, fd)
+				}
+			}
+		}
+
+		descriptorSet := &descriptorpb.FileDescriptorSet{
+			File: descriptorsToSave,
+		}
+
+		data, err := proto.Marshal(descriptorSet)
+		if err != nil {
+			return fmt.Errorf("proto.Marshal: %w", err)
+		}
+
+		if err := os.WriteFile(descriptorSetOut, data, 0644); err != nil {
+			return fmt.Errorf("os.WriteFile: %w", err)
 		}
 	}
 
