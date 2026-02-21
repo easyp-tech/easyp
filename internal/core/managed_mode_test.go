@@ -9,7 +9,6 @@ import (
 )
 
 func TestApplyManagedMode_Defaults(t *testing.T) {
-	// Create a test file descriptor
 	fd := &descriptorpb.FileDescriptorProto{
 		Name:    strPtr("test/v1/test.proto"),
 		Package: strPtr("acme.weather.v1"),
@@ -52,31 +51,60 @@ func TestApplyManagedMode_Defaults(t *testing.T) {
 }
 
 func TestApplyManagedMode_GoPackagePrefix(t *testing.T) {
-	fd := &descriptorpb.FileDescriptorProto{
-		Name:    strPtr("test/v1/test.proto"),
-		Package: strPtr("acme.weather.v1"),
-		Options: &descriptorpb.FileOptions{},
-	}
-
-	config := ManagedModeConfig{
-		Enabled: true,
-		Override: []ManagedOverrideRule{
-			{
-				FileOption: FileOptionGoPackagePrefix,
-				Value:      "github.com/acme/weather/gen/go",
-			},
+	tests := []struct {
+		name         string
+		fileName     string
+		protoPackage string
+		goPackage    string
+	}{
+		{
+			name:         "two_dots_in_package",
+			fileName:     "acme/weather/v1/weather.proto",
+			protoPackage: "acme.weather.v1",
+			goPackage:    "github.com/acme/weather/gen/go/acme/weather/v1;weatherv1",
+		},
+		{
+			name:         "one_dot_in_package",
+			fileName:     "task/v1/task.proto",
+			protoPackage: "task.v1",
+			goPackage:    "github.com/acme/weather/gen/go/task/v1;taskv1",
+		},
+		{
+			name:         "no_dots_in_package",
+			fileName:     "common/v1/common.proto",
+			protoPackage: "common",
+			goPackage:    "github.com/acme/weather/gen/go/common/v1",
 		},
 	}
 
-	fileToModule := map[string]string{
-		"test/v1/test.proto": "",
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			fd := &descriptorpb.FileDescriptorProto{
+				Name:    strPtr(tt.fileName),
+				Package: strPtr(tt.protoPackage),
+				Options: &descriptorpb.FileOptions{},
+			}
+
+			config := ManagedModeConfig{
+				Enabled: true,
+				Override: []ManagedOverrideRule{
+					{
+						FileOption: FileOptionGoPackagePrefix,
+						Value:      "github.com/acme/weather/gen/go",
+					},
+				},
+			}
+
+			fileToModule := map[string]string{
+				tt.fileName: "",
+			}
+
+			err := ApplyManagedMode([]*descriptorpb.FileDescriptorProto{fd}, config, fileToModule)
+			require.NoError(t, err)
+
+			assert.Equal(t, tt.goPackage, fd.Options.GetGoPackage())
+		})
 	}
-
-	err := ApplyManagedMode([]*descriptorpb.FileDescriptorProto{fd}, config, fileToModule)
-	require.NoError(t, err)
-
-	expected := "github.com/acme/weather/gen/go/acme/weather/v1"
-	assert.Equal(t, expected, fd.Options.GetGoPackage())
 }
 
 func TestApplyManagedMode_JavaPackageSuffix(t *testing.T) {
@@ -164,13 +192,13 @@ func TestApplyManagedMode_DisableForModule(t *testing.T) {
 
 func TestApplyManagedMode_OverrideForModule(t *testing.T) {
 	fd1 := &descriptorpb.FileDescriptorProto{
-		Name:    strPtr("test/v1/test.proto"),
+		Name:    strPtr("acme/weather/v1/weather.proto"),
 		Package: strPtr("acme.weather.v1"),
 		Options: &descriptorpb.FileOptions{},
 	}
 
 	fd2 := &descriptorpb.FileDescriptorProto{
-		Name:    strPtr("pet/v1/pet.proto"),
+		Name:    strPtr("acme/pet/v1/pet.proto"),
 		Package: strPtr("acme.pet.v1"),
 		Options: &descriptorpb.FileOptions{},
 	}
@@ -191,25 +219,25 @@ func TestApplyManagedMode_OverrideForModule(t *testing.T) {
 	}
 
 	fileToModule := map[string]string{
-		"test/v1/test.proto": "",
-		"pet/v1/pet.proto":   "buf.build/acme/petapis",
+		"acme/weather/v1/weather.proto": "",
+		"acme/pet/v1/pet.proto":         "buf.build/acme/petapis",
 	}
 
 	err := ApplyManagedMode([]*descriptorpb.FileDescriptorProto{fd1, fd2}, config, fileToModule)
 	require.NoError(t, err)
 
 	// fd1 should use default prefix
-	expected1 := "github.com/acme/default/gen/go/acme/weather/v1"
+	expected1 := "github.com/acme/default/gen/go/acme/weather/v1;weatherv1"
 	assert.Equal(t, expected1, fd1.Options.GetGoPackage())
 
 	// fd2 should use module-specific prefix
-	expected2 := "github.com/acme/pet/gen/go/acme/pet/v1"
+	expected2 := "github.com/acme/pet/gen/go/acme/pet/v1;petv1"
 	assert.Equal(t, expected2, fd2.Options.GetGoPackage())
 }
 
 func TestApplyManagedMode_LastRuleWins(t *testing.T) {
 	fd := &descriptorpb.FileDescriptorProto{
-		Name:    strPtr("test/v1/test.proto"),
+		Name:    strPtr("acme/weather/v1/weather.proto"),
 		Package: strPtr("acme.weather.v1"),
 		Options: &descriptorpb.FileOptions{},
 	}
@@ -229,14 +257,14 @@ func TestApplyManagedMode_LastRuleWins(t *testing.T) {
 	}
 
 	fileToModule := map[string]string{
-		"test/v1/test.proto": "",
+		"acme/weather/v1/weather.proto": "",
 	}
 
 	err := ApplyManagedMode([]*descriptorpb.FileDescriptorProto{fd}, config, fileToModule)
 	require.NoError(t, err)
 
 	// Last rule (go_package_prefix) should win
-	expected := "second/prefix/acme/weather/v1"
+	expected := "second/prefix/acme/weather/v1;weatherv1"
 	assert.Equal(t, expected, fd.Options.GetGoPackage())
 }
 
@@ -520,7 +548,7 @@ func TestApplyManagedMode_ExternalModules(t *testing.T) {
 	require.NoError(t, err)
 
 	// Local file should get go_package from managed mode
-	assert.Equal(t, "github.com/example/ec-code/gen/go/api/v1", localFile.Options.GetGoPackage())
+	assert.Equal(t, "github.com/example/ec-code/gen/go/api/v1;apiv1", localFile.Options.GetGoPackage())
 
 	// External file should keep its original go_package (no rule for this module)
 	assert.Equal(t, "google.golang.org/genproto/googleapis/api/annotations", externalFile.Options.GetGoPackage())
@@ -553,7 +581,45 @@ func TestApplyManagedMode_ExternalModuleWithRule(t *testing.T) {
 	require.NoError(t, err)
 
 	// External file should get go_package from managed mode because there's a rule for its module
-	assert.Equal(t, "github.com/example/ec-code/gen/go/google/api", externalFile.Options.GetGoPackage())
+	// Package: google.api -> take last 2 segments -> googleapi
+	assert.Equal(t, "github.com/example/ec-code/gen/go/google/api;googleapi", externalFile.Options.GetGoPackage())
+}
+
+// Test cleanPackageName function
+func TestCleanPackageName(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		expected string
+	}{
+		{
+			name:     "simple package with dot",
+			input:    "task.v1",
+			expected: "taskv1",
+		},
+		{
+			name:     "multiple dots",
+			input:    "acme.weather.v1",
+			expected: "acmeweatherv1",
+		},
+		{
+			name:     "no dots",
+			input:    "simple",
+			expected: "simple",
+		},
+		{
+			name:     "with underscores",
+			input:    "my_package.v1",
+			expected: "my_packagev1",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := cleanPackageName(tt.input)
+			assert.Equal(t, tt.expected, result)
+		})
+	}
 }
 
 // Helper functions

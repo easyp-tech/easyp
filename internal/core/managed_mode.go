@@ -328,20 +328,26 @@ var fileOptionHandlers = []FileOptionHandler{
 		AffectsOption: FileOptionGoPackage,
 		Apply: func(fd *descriptorpb.FileDescriptorProto, value any, pkg, filePath string) {
 			if prefix, ok := value.(string); ok {
-				// go_package_prefix sets go_package to <prefix>/<proto_package with dots replaced by slashes>
+				// go_package_prefix sets go_package to <prefix>/<file_directory>;<package_name>
+				//
+				// Example: file "api/task/service.proto" with proto package "task.v1"
+				//   generates: go_package = "prefix/api/task;taskv1"
+				//   path: "prefix/api/task" (physical file directory)
+				//   package name: "taskv1" (last 2 segments of proto package combined)
+
 				// If the value contains {{file_path}} or {{file_path_spec}}, use file path instead
 				if strings.Contains(prefix, "{{file_path}}") || strings.Contains(prefix, "{{file_path_spec}}") {
 					// Marker for generating paths based on file path
 					// Uses the file path directly, removing .proto extension
 					// {{file_path_spec}} is an alias for {{file_path}} - kept for backward compatibility
-					pathWithoutExt := strings.TrimSuffix(filePath, ".proto")
+					pathWithoutExt := normalizePath(strings.TrimSuffix(filePath, ".proto"))
 					replaced := strings.ReplaceAll(prefix, "{{file_path}}", pathWithoutExt)
 					replaced = strings.ReplaceAll(replaced, "{{file_path_spec}}", pathWithoutExt)
 					fd.Options.GoPackage = proto.String(replaced)
 				} else if strings.Contains(prefix, "{{file_dir}}") {
 					// Marker for using only the directory path, without filename
 					// Example: internal/cms/as_service.proto -> internal/cms
-					dir := filepath.Dir(filePath)
+					dir := normalizePath(filepath.Dir(filePath))
 					replaced := strings.ReplaceAll(prefix, "{{file_dir}}", dir)
 					fd.Options.GoPackage = proto.String(replaced)
 				} else if strings.Contains(prefix, "{{file_dir_without:") {
@@ -357,55 +363,38 @@ var fileOptionHandlers = []FileOptionHandler{
 						baseName = strings.TrimSuffix(baseName, "_grpc")
 					}
 					// Use directory + base name for path
-					pathWithBase := filepath.Join(dir, baseName)
-					// Find all {{file_dir_without:...}} markers and replace them
-					replaced := prefix
-					for {
-						start := strings.Index(replaced, "{{file_dir_without:")
-						if start == -1 {
-							break
-						}
-						end := strings.Index(replaced[start:], "}}")
-						if end == -1 {
-							break
-						}
-						end += start + 2
-						marker := replaced[start:end]
-						prefixToRemove := strings.TrimPrefix(marker, "{{file_dir_without:")
-						prefixToRemove = strings.TrimSuffix(prefixToRemove, "}}")
-						transformedPath := strings.TrimPrefix(pathWithBase, prefixToRemove)
-						// Normalize path separators
-						transformedPath = strings.ReplaceAll(transformedPath, "\\", "/")
-						replaced = strings.ReplaceAll(replaced, marker, transformedPath)
-					}
+					pathWithBase := normalizePath(filepath.Join(dir, baseName))
+					replaced := replacePathMarkers(prefix, "{{file_dir_without:", pathWithBase)
 					fd.Options.GoPackage = proto.String(replaced)
 				} else if strings.Contains(prefix, "{{file_path_without:") {
 					// Marker for generating paths with prefix removal: {{file_path_without:prefix/}}
 					// Example: {{file_path_without:internal/}} removes "internal/" from the beginning
-					pathWithoutExt := strings.TrimSuffix(filePath, ".proto")
-					// Find all {{file_path_without:...}} markers and replace them
-					replaced := prefix
-					for {
-						start := strings.Index(replaced, "{{file_path_without:")
-						if start == -1 {
-							break
-						}
-						end := strings.Index(replaced[start:], "}}")
-						if end == -1 {
-							break
-						}
-						end += start + 2
-						marker := replaced[start:end]
-						prefixToRemove := strings.TrimPrefix(marker, "{{file_path_without:")
-						prefixToRemove = strings.TrimSuffix(prefixToRemove, "}}")
-						transformedPath := strings.TrimPrefix(pathWithoutExt, prefixToRemove)
-						replaced = strings.ReplaceAll(replaced, marker, transformedPath)
-					}
+					pathWithoutExt := normalizePath(strings.TrimSuffix(filePath, ".proto"))
+					replaced := replacePathMarkers(prefix, "{{file_path_without:", pathWithoutExt)
 					fd.Options.GoPackage = proto.String(replaced)
 				} else {
-					// Default behavior: use package name
-					pkgPath := strings.ReplaceAll(pkg, ".", "/")
-					fd.Options.GoPackage = proto.String(prefix + "/" + pkgPath)
+					// With paths=source_relative:
+					// - Import path comes from physical file directory
+					// - Package name derived from proto package:
+					//   * 1 segment ("common"): omit explicit name, let protoc-gen-go derive from import path
+					//   * 2+ segments ("task.v1", "acme.api.v2"): combine last 2 -> "taskv1", "apiv2"
+
+					fileDir := normalizePath(filepath.Dir(filePath))
+					segments := strings.Split(pkg, ".")
+					var goPackage string
+
+					if len(segments) == 1 {
+						// Single segment: omit explicit package name
+						// protoc-gen-go will derive it from path.Base(importPath)
+						goPackage = prefix + "/" + fileDir
+					} else {
+						// Multiple segments: combine last 2
+						packageNameBase := segments[len(segments)-2] + segments[len(segments)-1]
+						cleanPkg := cleanPackageName(packageNameBase)
+						goPackage = prefix + "/" + fileDir + ";" + cleanPkg
+					}
+
+					fd.Options.GoPackage = proto.String(goPackage)
 				}
 			}
 		},
@@ -668,15 +657,6 @@ var fieldOptionHandlers = []FieldOptionHandler{
 	},
 }
 
-// fileOptionHandlerMap provides quick lookup by option type.
-var fileOptionHandlerMap = func() map[FileOptionType]*FileOptionHandler {
-	m := make(map[FileOptionType]*FileOptionHandler)
-	for i := range fileOptionHandlers {
-		m[fileOptionHandlers[i].Option] = &fileOptionHandlers[i]
-	}
-	return m
-}()
-
 // ============================================================================
 // Main Apply Functions
 // ============================================================================
@@ -760,8 +740,15 @@ func applyFileOptions(
 			continue
 		}
 
-		handler, exists := fileOptionHandlerMap[override.FileOption]
-		if !exists {
+		// Find handler for file option
+		var handler *FileOptionHandler
+		for i := range fileOptionHandlers {
+			if fileOptionHandlers[i].Option == override.FileOption {
+				handler = &fileOptionHandlers[i]
+				break
+			}
+		}
+		if handler == nil {
 			continue
 		}
 
@@ -884,37 +871,52 @@ func applyFieldOptions(
 // Helper Functions
 // ============================================================================
 
-// matchesPath implements buf's path matching behavior for managed mode rules.
-// Path matching behavior in buf:
-//   - path: "internal/cms/" matches all files in that directory and subdirectories
-//     (e.g., "internal/cms/as.proto", "internal/cms/node.proto", "internal/cms/v1/service.proto")
-//   - path: "internal/cms/as.proto" matches only that exact file
-//   - path: "internal/cms" matches "internal/cms/as.proto" but also "internal/cmsv2/file.proto"
-//     (prefix matching, not directory-aware)
-//
-// This function implements the same behavior as buf:
-//   - If path ends with "/", it's treated as a directory path (prefix match)
-//   - If path ends with ".proto", it's treated as an exact file match
-//   - Otherwise, it's treated as a prefix match (not directory-aware)
+// cleanPackageName sanitizes a string to a valid Go package name.
+// Removes non-alphanumeric characters (except underscores) and converts to lowercase.
+func cleanPackageName(name string) string {
+	var result strings.Builder
+	result.Grow(len(name)) // Preallocate capacity
+
+	for _, r := range name {
+		// Keep alphanumeric and underscore, convert uppercase to lowercase
+		if r >= 'a' && r <= 'z' {
+			result.WriteRune(r)
+		} else if r >= 'A' && r <= 'Z' {
+			result.WriteRune(r + ('a' - 'A')) // Convert to lowercase
+		} else if (r >= '0' && r <= '9') || r == '_' {
+			result.WriteRune(r)
+		}
+		// Skip all other characters (dots, hyphens, etc.)
+	}
+
+	return result.String()
+}
+
+// matchesPath checks if a file path matches the rule path:
+//   - Paths ending with ".proto" require exact file match
+//     example: "internal/cms/as.proto" matches only that exact file
+//   - Paths ending with "/" match directory and subdirectories
+//     example: "internal/cms/" matches all files in that directory and subdirectories (e.g., "internal/cms/as.proto",
+//     "internal/cms/node.proto", "internal/cms/v1/service.proto")
+//   - Other paths match any file starting with that string
+//     example: "internal/cms" matches "internal/cms/as.proto" but also "internal/cmsv2/file.proto"
 func matchesPath(filePath, rulePath string) bool {
 	if rulePath == "" {
 		return true
 	}
 
-	// Exact file match: if rule path ends with .proto, require exact match
+	// Exact file match
 	if strings.HasSuffix(rulePath, ".proto") {
 		return filePath == rulePath
 	}
 
-	// Directory path: if rule path ends with "/", match all files in that directory
+	// Directory path
 	if strings.HasSuffix(rulePath, "/") {
 		return strings.HasPrefix(filePath, rulePath)
 	}
 
-	// Prefix match: for paths without trailing "/" or ".proto", use prefix matching
-	// This matches buf's behavior where "internal/cms" matches both:
-	//   - "internal/cms/as.proto" (correct)
-	//   - "internal/cmsv2/file.proto" (also matches, as buf uses prefix matching)
+	// Prefix match: for paths without trailing "/" or ".proto"
+	// Note: "internal/cms" matches both "internal/cms/as.proto" and "internal/cmsv2/file.proto"
 	return strings.HasPrefix(filePath, rulePath)
 }
 
@@ -944,18 +946,8 @@ func generateObjcClassPrefix(pkg string) string {
 	return result
 }
 
-// toPascalCase converts a string to PascalCase (e.g., "hello_world" -> "HelloWorld").
-//
-// This function is used to convert protobuf package names (typically lowercase with dots)
-// to the naming conventions required by different programming languages:
-//   - C# namespaces use PascalCase (e.g., "Acme.Weather.V1")
-//   - Ruby modules use PascalCase (e.g., "Acme::Weather::V1")
-//   - PHP namespaces use PascalCase (e.g., "Acme\Weather\V1")
-//   - Java outer classnames use PascalCase (e.g., "TestProto")
-//
-// This follows the buf managed mode defaults, which are based on the official naming
-// conventions for each language. Without this conversion, generated code would not
-// conform to language-specific coding standards.
+// toPascalCase converts a string to PascalCase by capitalizing after separators (_, -, .).
+// Examples: "hello_world" -> "HelloWorld", "foo-bar" -> "FooBar", "my.name" -> "MyName".
 func toPascalCase(s string) string {
 	if s == "" {
 		return ""
@@ -982,29 +974,43 @@ func toPascalCase(s string) string {
 }
 
 // toPascalCaseWithSeparator converts a protobuf package name to PascalCase with a custom separator.
-//
-// This function is used to generate language-specific namespace/package names from protobuf
-// package names. Protobuf packages are typically lowercase with dots (e.g., "acme.weather.v1"),
-// but different languages require different formats:
-//   - C#: PascalCase with "." separator -> "Acme.Weather.V1"
-//   - Ruby: PascalCase with "::" separator -> "Acme::Weather::V1"
-//   - PHP: PascalCase with "\" separator -> "Acme\Weather\V1"
-//
 // Examples:
-//   - toPascalCaseWithSeparator("acme.weather.v1", ".")  -> "Acme.Weather.V1"
-//   - toPascalCaseWithSeparator("acme.weather.v1", "::")  -> "Acme::Weather::V1"
-//   - toPascalCaseWithSeparator("acme.weather.v1", `\`)   -> "Acme\Weather\V1"
-//
-// This follows the buf managed mode defaults, which are based on official naming conventions:
-//   - C#: Microsoft C# Coding Conventions
-//   - Ruby: Ruby Style Guide
-//   - PHP: PSR-1 Basic Coding Standard
-//
-// Without this conversion, generated code would not conform to language-specific standards.
+//   - toPascalCaseWithSeparator("acme.weather.v1", ".")  -> "Acme.Weather.V1" (C#)
+//   - toPascalCaseWithSeparator("acme.weather.v1", "::") -> "Acme::Weather::V1" (Ruby)
+//   - toPascalCaseWithSeparator("acme.weather.v1", `\`)  -> "Acme\Weather\V1 (PHP)
 func toPascalCaseWithSeparator(pkg, separator string) string {
 	parts := strings.Split(pkg, ".")
 	for i, part := range parts {
 		parts[i] = toPascalCase(part)
 	}
 	return strings.Join(parts, separator)
+}
+
+// replacePathMarkers replaces {{marker:prefix}} markers with basePath after removing the prefix.
+// Example: "a/{{x:internal/}}/b" with basePath="internal/cms" becomes "a/cms/b"
+// (takes "internal/cms", removes "internal/" from marker, uses remaining "cms")
+func replacePathMarkers(input, markerPrefix, basePath string) string {
+	result := input
+	for {
+		start := strings.Index(result, markerPrefix)
+		if start == -1 {
+			break
+		}
+		end := strings.Index(result[start:], "}}")
+		if end == -1 {
+			break
+		}
+		end += start + 2
+		marker := result[start:end]
+		prefixToRemove := strings.TrimPrefix(marker, markerPrefix)
+		prefixToRemove = strings.TrimSuffix(prefixToRemove, "}}")
+		transformedPath := strings.TrimPrefix(basePath, prefixToRemove)
+		result = strings.ReplaceAll(result, marker, transformedPath)
+	}
+	return result
+}
+
+// normalizePath converts Windows backslashes to forward slashes.
+func normalizePath(path string) string {
+	return strings.ReplaceAll(path, "\\", "/")
 }
