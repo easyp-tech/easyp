@@ -16,7 +16,6 @@ import (
 	"google.golang.org/protobuf/types/pluginpb"
 
 	plugingeneratorv1 "github.com/easyp-tech/service/api/generator/v1"
-	"github.com/samber/lo"
 
 	"github.com/easyp-tech/easyp/internal/logger"
 )
@@ -80,15 +79,8 @@ func (e *RemotePluginExecutor) Execute(ctx context.Context, plugin Info, request
 	pluginInfo := fmt.Sprintf("%s:%s", pluginName, version)
 
 	// Подготавливаем параметры плагина
-	options := lo.MapToSlice(plugin.Options, func(k string, v string) string {
-		if v == "" {
-			return k
-		}
-		return k + "=" + v
-	})
-
-	if len(options) > 0 {
-		request.Parameter = proto.String(strings.Join(options, ","))
+	if parameter, ok := flattenOptions(plugin.Options); ok {
+		request.Parameter = proto.String(parameter)
 	}
 
 	grpcRequest := &plugingeneratorv1.GenerateCodeRequest{

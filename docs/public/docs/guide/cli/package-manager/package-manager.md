@@ -494,7 +494,7 @@ find ~/.easyp/mod -type d -name "v0.0.0-*" -mtime +30 -exec rm -rf {} \;
 
 ```dockerfile
 # Stage 1: Download dependencies
-FROM easyp/easyp:latest AS deps
+FROM ghcr.io/easyp-tech/easyp:latest AS deps
 WORKDIR /workspace
 COPY easyp.yaml easyp.lock ./
 RUN easyp mod vendor

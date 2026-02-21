@@ -6,9 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 	"os/exec"
-	"strings"
 
-	"github.com/samber/lo"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/pluginpb"
 
@@ -19,7 +17,7 @@ import (
 type Info struct {
 	Source  string
 	Command []string
-	Options map[string]string
+	Options map[string][]string
 }
 
 // LocalPluginExecutor executes plugins locally via terminal
@@ -53,15 +51,8 @@ func (e *LocalPluginExecutor) Execute(ctx context.Context, plugin Info, request 
 	)
 
 	// Prepare plugin parameters
-	options := lo.MapToSlice(plugin.Options, func(k string, v string) string {
-		if v == "" {
-			return k
-		}
-		return k + "=" + v
-	})
-
-	if len(options) > 0 {
-		request.Parameter = proto.String(strings.Join(options, ","))
+	if parameter, ok := flattenOptions(plugin.Options); ok {
+		request.Parameter = proto.String(parameter)
 	}
 
 	reqData, err := proto.Marshal(request)

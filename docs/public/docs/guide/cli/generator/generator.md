@@ -349,10 +349,11 @@ In this mode EasyP:
 | `remote` | string | ❌ | - | Remote plugin URL |
 | `path` | string | ❌ | - | Path to plugin executable file |
 | `out` | string | ✅ | - | Output directory for generated files |
-| `opts` | map[string]string | ❌ | `{}` | Plugin-specific options (mapped to `--opt=value`) |
+| `opts` | map[string](string \| []string) | ❌ | `{}` | Plugin-specific options; list values are emitted as repeated `key=value` params |
 | `with_imports` | bool | ❌ | `false` | Include proto files from dependencies |
 
 **Note:** Only one plugin source (`name`, `command`, `remote`, or `path`) must be specified for each plugin.
+If `opts.outputServices` is set to `["grpc-js", "generic-definitions"]`, EasyP sends `outputServices=grpc-js,outputServices=generic-definitions`.
 
 **Command source examples:**
 

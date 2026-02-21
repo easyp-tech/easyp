@@ -123,6 +123,47 @@ func (pluginSourceValidator) Validate(node *yaml.Node, path string, ctx *v.Valid
 	}
 }
 
+// pluginOptsValidator allows plugin opts values to be either scalar or sequence of scalars.
+type pluginOptsValidator struct{}
+
+func (pluginOptsValidator) Validate(node *yaml.Node, path string, ctx *v.ValidationContext) {
+	if node.Kind != yaml.MappingNode {
+		return
+	}
+
+	for i := 0; i < len(node.Content); i += 2 {
+		keyNode := node.Content[i]
+		valNode := node.Content[i+1]
+		optsPath := path + "." + keyNode.Value
+
+		switch valNode.Kind {
+		case yaml.ScalarNode:
+			continue
+		case yaml.SequenceNode:
+			for idx, item := range valNode.Content {
+				if item.Kind != yaml.ScalarNode {
+					ctx.AddError(v.ValidationError{
+						Level:   v.LevelError,
+						Path:    fmt.Sprintf("%s[%d]", optsPath, idx),
+						Line:    item.Line,
+						Column:  item.Column,
+						Message: "opts array item must be a scalar value",
+					})
+				}
+			}
+		default:
+			ctx.AddError(v.ValidationError{
+				Level:   v.LevelError,
+				Path:    optsPath,
+				Line:    valNode.Line,
+				Column:  valNode.Column,
+				Message: "opts value must be a scalar or sequence of scalars",
+				Got:     fmt.Sprintf("%v", valNode.Kind),
+			})
+		}
+	}
+}
+
 // managedDisableValidator validates generate.managed.disable entries.
 type managedDisableValidator struct{}
 
