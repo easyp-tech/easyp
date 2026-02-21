@@ -13,6 +13,7 @@ Available for all commands:
 | `--cfg` | `-c` | `EASYP_CFG` | Configuration file path | `easyp.yaml` |
 | `--config` | | `EASYP_CFG` | Alias for `--cfg` | `easyp.yaml` |
 | `--debug` | `-d` | `EASYP_DEBUG` | Enable debug mode | `false` |
+| `--format` | `-f` | `EASYP_FORMAT` | Output format for commands that support multiple formats (`text`/`json`) | command-specific default |
 
 **Examples:**
 ```bash
@@ -37,7 +38,7 @@ easyp lint [flags]
 |------|-------|-------------|-------------|---------|
 | `--path` | `-p` | | Directory path to lint | `.` |
 | `--root` | `-r` | | Base directory for file search | Current working directory |
-| `--format` | `-f` | `EASYP_FORMAT` | Output format (text/json) | `text` |
+| `--format` | `-f` | `EASYP_FORMAT` | Uses global format flag (`text`/`json`) | Inherits global default |
 
 **Examples:**
 ```bash
@@ -48,7 +49,7 @@ easyp lint --path proto/
 easyp lint --root src/IPC/Contracts --path .
 
 # JSON output format
-easyp lint --format json
+easyp lint --format json   # global flag
 
 # Combined flags
 easyp lint -p proto/ -f json
@@ -85,7 +86,7 @@ easyp breaking [flags]
 |------|-------|-------------|-------------|---------|
 | `--against` | | | Git ref to compare against | (required) |
 | `--path` | `-p` | | Directory path to check | `.` |
-| `--format` | `-f` | `EASYP_FORMAT` | Output format (text/json) | `text` |
+| `--format` | `-f` | `EASYP_FORMAT` | Uses global format flag (`text`/`json`) | Inherits global default |
 
 **Examples:**
 ```bash
@@ -96,7 +97,7 @@ easyp breaking --against main
 easyp breaking --against develop --path proto/
 
 # JSON output
-easyp breaking --against main --format json
+easyp breaking --against main --format json   # global flag
 ```
 
 **Init command:**
@@ -117,6 +118,10 @@ easyp init
 easyp init --dir proto-project/
 ```
 
+`easyp init` is interactive:
+- If `buf.yml`/`buf.yaml` exists in the target directory root, it asks whether to migrate from Buf.
+- If `easyp.yaml` already exists, it asks for overwrite confirmation.
+
 **Validate-config command:**
 ```bash
 easyp validate-config [flags]
@@ -125,15 +130,15 @@ easyp validate-config [flags]
 | Flag | Short | Environment | Description | Default |
 |------|-------|-------------|-------------|---------|
 | `--config` | `-c` | `EASYP_CFG` | Configuration file path | `easyp.yaml` |
-| `--format` | `-f` | | Output format (`json` or `text`) | `json` |
+| `--format` (global) | `-f` | `EASYP_FORMAT` | Output format for commands that support multiple formats (`json` or `text`) | command-specific (`json` for `validate-config`) |
 
 **Examples:**
 ```bash
 # Validate default config with JSON output (exit 0 when no errors)
 easyp validate-config
 
-# Validate a different file with text output
-easyp validate-config --config example.easyp.yaml --format text
+# Validate a different file with text output (global --format)
+easyp --format text validate-config --config example.easyp.yaml
 ```
 
 **Package management commands:**
@@ -180,7 +185,7 @@ EasyP supports environment variables for configuration:
 | `EASYP_CFG` | Path to configuration file | `easyp.yaml` |
 | `EASYP_DEBUG` | Enable debug logging | `false` |
 | `EASYPPATH` | Cache and modules storage directory | `$HOME/.easyp` |
-| `EASYP_FORMAT` | Output format for lint command | `text` |
+| `EASYP_FORMAT` | Output format for supported commands (`text`/`json`). If not set, each command uses its own default. | command-specific default |
 | `EASYP_ROOT_GENERATE_PATH` | Root path for generate command | `.` |
 | `EASYP_INIT_DIR` | Directory for init command | `.` |
 
@@ -223,7 +228,6 @@ EasyP supports both YAML and JSON configuration formats:
 
 #### YAML Format (Recommended)
 ```yaml
-version: v1alpha
 lint:
   use:
     - BASIC
@@ -247,7 +251,6 @@ breaking:
 #### JSON Format
 ```json
 {
-  "version": "v1alpha",
   "lint": {
     "use": ["BASIC", "COMMENT_SERVICE"]
   },
@@ -281,8 +284,6 @@ EasyP supports environment variable expansion directly in the `easyp.yaml` confi
 
 **Example with all supported features:**
 ```yaml
-version: v1alpha
-
 deps:
   # Basic expansion: ${VAR} - expands to the value of VAR
   - ${GOOGLEAPIS_REPO}@${GOOGLEAPIS_VERSION}
@@ -322,17 +323,18 @@ generate:
 
 ### `version`
 
-**Required.** Specifies the configuration schema version.
+**Optional (legacy compatibility).** This field is accepted for backward compatibility and can be omitted in new configs.
 
 **Type:** `string`
-**Accepted values:** `v1alpha`
-**Default:** None (must be specified)
+**Default:** omitted
+**Recommendation:** if you keep it, use `v1alpha`
 
 ```yaml
+# Optional compatibility field (can be omitted)
 version: v1alpha
 ```
 
-Future versions will be `v1beta`, `v1`, etc. Currently only `v1alpha` is supported.
+The runtime behavior does not depend on this field.
 
 ### `lint`
 
@@ -760,7 +762,6 @@ Can be overridden by the `--against` CLI flag.
 ### Minimal Configuration
 
 ```yaml
-version: v1alpha
 lint:
   use:
     - MINIMAL
@@ -769,7 +770,6 @@ lint:
 ### Development Configuration
 
 ```yaml
-version: v1alpha
 lint:
   use:
     - BASIC
@@ -798,7 +798,6 @@ generate:
 ### Production Configuration
 
 ```yaml
-version: v1alpha
 lint:
   use:
     - MINIMAL
@@ -845,7 +844,6 @@ breaking:
 ### Multi-Service Configuration
 
 ```yaml
-version: v1alpha
 lint:
   use:
     - BASIC
@@ -900,8 +898,8 @@ EasyP validates configuration files on startup and provides helpful error messag
 # Invalid rule name
 Error: invalid rule: INVALID_RULE_NAME
 
-# Missing required field
-Error: version field is required
+# Missing required field in generate section
+Error: required field "plugins" is missing (path: generate.plugins)
 
 # Invalid dependency format
 Error: invalid dependency format: invalid-repo-url
@@ -913,9 +911,9 @@ Use `easyp --debug` for detailed validation information.
 
 EasyP is fully compatible with Buf configurations. To migrate:
 
-1. Rename `buf.yaml` to `easyp.yaml`
-2. Change `version: v1` to `version: v1alpha`
+1. Place `buf.yaml` or `buf.yml` in the project root
+2. Run `easyp init` and confirm migration when prompted
 3. Update `deps` format if using BSR modules
-4. Adjust any custom lint rules or breaking change configurations
+4. Review migrated lint/breaking settings and adjust as needed
 
 Most Buf configurations work without changes in EasyP.

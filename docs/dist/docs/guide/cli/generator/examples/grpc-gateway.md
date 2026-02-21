@@ -71,8 +71,6 @@ message EchoResponse {
 Update your `easyp.yaml` configuration file to include the necessary dependencies and plugins:
 
 ```yaml
-version: v1alpha
-
 deps:  # [!code ++]
   - github.com/googleapis/googleapis  # [!code ++]
 

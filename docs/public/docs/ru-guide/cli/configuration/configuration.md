@@ -118,6 +118,10 @@ easyp init
 easyp init --dir proto-project/
 ```
 
+`easyp init` работает интерактивно:
+- Если в корне целевой директории есть `buf.yml`/`buf.yaml`, команда предложит миграцию из Buf.
+- Если `easyp.yaml` уже существует, команда запросит подтверждение на перезапись.
+
 **Validate-config command:**
 ```bash
 easyp validate-config [flags]
@@ -126,15 +130,15 @@ easyp validate-config [flags]
 | Flag | Short | Environment | Description | Default |
 |------|-------|-------------|-------------|---------|
 | `--config` | `-c` | `EASYP_CFG` | Путь до файла конфигурации | `easyp.yaml` |
-| `--format` | `-f` | | Формат вывода (`json` или `text`) | `json` |
+| `--format` (global) | `-f` | `EASYP_FORMAT` | Глобальный формат вывода для команд с несколькими форматами (`json` или `text`) | зависит от команды (`json` для `validate-config`) |
 
 **Examples:**
 ```bash
 # Проверить конфиг по умолчанию с JSON выводом (статус 0 если ошибок нет)
 easyp validate-config
 
-# Проверить другой файл и вывести в текстовом формате
-easyp validate-config --config example.easyp.yaml --format text
+# Проверить другой файл и вывести в текстовом формате (глобальный --format)
+easyp --format text validate-config --config example.easyp.yaml
 ```
 
 **Package management commands:**
@@ -224,7 +228,6 @@ EasyP supports both YAML and JSON configuration formats:
 
 #### YAML Format (Recommended)
 ```yaml
-version: v1alpha
 lint:
   use:
     - BASIC
@@ -248,7 +251,6 @@ breaking:
 #### JSON Format
 ```json
 {
-  "version": "v1alpha",
   "lint": {
     "use": ["BASIC", "COMMENT_SERVICE"]
   },
@@ -282,8 +284,6 @@ EasyP поддерживает расширение переменных окр�
 
 **Пример со всеми поддерживаемыми возможностями:**
 ```yaml
-version: v1alpha
-
 deps:
   # Базовое расширение: ${VAR} - расширяется в значение переменной VAR
   - ${GOOGLEAPIS_REPO}@${GOOGLEAPIS_VERSION}
@@ -323,17 +323,18 @@ generate:
 
 ### `version`
 
-**Required.** Specifies the configuration schema version.
+**Опционально (legacy-совместимость).** Поле поддерживается для обратной совместимости и может быть опущено в новых конфигурациях.
 
 **Type:** `string`
-**Accepted values:** `v1alpha`
-**Default:** None (must be specified)
+**Default:** не задано
+**Рекомендация:** если сохраняете поле, используйте `v1alpha`
 
 ```yaml
+# Опциональное поле для совместимости (можно опустить)
 version: v1alpha
 ```
 
-Future versions will be `v1beta`, `v1`, etc. Currently only `v1alpha` is supported.
+На поведение рантайма это поле не влияет.
 
 ### `lint`
 
@@ -761,7 +762,6 @@ Can be overridden by the `--against` CLI flag.
 ### Minimal Configuration
 
 ```yaml
-version: v1alpha
 lint:
   use:
     - MINIMAL
@@ -770,7 +770,6 @@ lint:
 ### Development Configuration
 
 ```yaml
-version: v1alpha
 lint:
   use:
     - BASIC
@@ -799,7 +798,6 @@ generate:
 ### Production Configuration
 
 ```yaml
-version: v1alpha
 lint:
   use:
     - MINIMAL
@@ -846,7 +844,6 @@ breaking:
 ### Multi-Service Configuration
 
 ```yaml
-version: v1alpha
 lint:
   use:
     - BASIC
@@ -901,8 +898,8 @@ EasyP validates configuration files on startup and provides helpful error messag
 # Invalid rule name
 Error: invalid rule: INVALID_RULE_NAME
 
-# Missing required field
-Error: version field is required
+# Missing required field in generate section
+Error: required field "plugins" is missing (path: generate.plugins)
 
 # Invalid dependency format
 Error: invalid dependency format: invalid-repo-url
@@ -914,9 +911,9 @@ Use `easyp --debug` for detailed validation information.
 
 EasyP is fully compatible with Buf configurations. To migrate:
 
-1. Rename `buf.yaml` to `easyp.yaml`
-2. Change `version: v1` to `version: v1alpha`
+1. Place `buf.yaml` or `buf.yml` in the project root
+2. Run `easyp init` and confirm migration when prompted
 3. Update `deps` format if using BSR modules
-4. Adjust any custom lint rules or breaking change configurations
+4. Review migrated lint/breaking settings and adjust as needed
 
 Most Buf configurations work without changes in EasyP.

@@ -49,8 +49,6 @@ message EchoStreamResponse {
 Создайте и настройте файл конфигурации `easyp.yaml`:
 
 ```yaml
-version: v1alpha
-
 generate:
   plugins:
     - name: go

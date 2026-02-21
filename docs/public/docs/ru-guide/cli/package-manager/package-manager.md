@@ -69,8 +69,6 @@ EasyP использует двухуровневый кеш, вдохновлё
 Зависимости описываются в `easyp.yaml`:
 
 ```yaml
-version: v1alpha
-
 deps:
   - github.com/googleapis/googleapis@common-protos-1_3_1
   - github.com/grpc-ecosystem/grpc-gateway@v2.19.1
@@ -295,7 +293,6 @@ git config --global http.sslCAInfo /path/to/certificate.pem
 
 ```bash
 cat > easyp.yaml << EOF
-version: v1alpha
 deps:
   - github.com/googleapis/googleapis
   - github.com/grpc-ecosystem/grpc-gateway@v2.19.1

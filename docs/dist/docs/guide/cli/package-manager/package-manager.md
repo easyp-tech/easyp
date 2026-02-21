@@ -69,8 +69,6 @@ EasyP uses a two-tier caching system inspired by Go modules:
 Configure dependencies in your `easyp.yaml` file:
 
 ```yaml
-version: v1alpha
-
 deps:
   - github.com/googleapis/googleapis@common-protos-1_3_1
   - github.com/grpc-ecosystem/grpc-gateway@v2.19.1
@@ -335,7 +333,6 @@ git config --global http.sslCAInfo /path/to/certificate.pem
 ```bash
 # 1. Create configuration
 cat > easyp.yaml << EOF
-version: v1alpha
 deps:
   - github.com/googleapis/googleapis
   - github.com/grpc-ecosystem/grpc-gateway@v2.19.1
@@ -494,7 +491,7 @@ find ~/.easyp/mod -type d -name "v0.0.0-*" -mtime +30 -exec rm -rf {} \;
 
 ```dockerfile
 # Stage 1: Download dependencies
-FROM ghcr.io/easyp-tech/easyp:latest AS deps
+FROM easyp/easyp:latest AS deps
 WORKDIR /workspace
 COPY easyp.yaml easyp.lock ./
 RUN easyp mod vendor

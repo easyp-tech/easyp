@@ -17,8 +17,6 @@ EasyP linter provides flexible configuration options to adapt to different proje
 ### Complete Configuration Example
 
 ```yaml
-version: v1alpha
-
 lint:
   # Rules and categories to use
   use:

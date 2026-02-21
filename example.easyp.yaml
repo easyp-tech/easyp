@@ -1,4 +1,3 @@
-version: v1alpha
 lint:
   use:
     - COMMENT_ENUM

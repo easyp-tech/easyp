@@ -29,13 +29,14 @@ Start by creating an `easyp.yaml` configuration file in your project root:
 easyp init
 ```
 
-This creates a basic configuration file that you'll customize in the following steps.
+This command generates a commented template with default lint and breaking settings.
+`easyp init` is interactive: if `buf.yml`/`buf.yaml` exists in the target root, EasyP asks whether to migrate it; if `easyp.yaml` already exists, it asks before overwriting.
 
 ## Configure linting
 
 Linting helps catch errors and ensures your Protobuf files follow best practices. EasyP provides default rules compatible with Buf standards.
 
-Add lint configuration to your `easyp.yaml`:
+`easyp init` already generates a lint section. Adjust it if needed, for example:
 
 ```yaml
 lint:

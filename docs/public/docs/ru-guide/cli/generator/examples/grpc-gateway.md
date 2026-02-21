@@ -63,9 +63,6 @@
 ## Настройка конфигурации
 
 Обновите файл `easyp.yaml`, добавив необходимые зависимости и плагины:
-
-    version: v1alpha
-
     deps:  # [!code ++]
       - github.com/googleapis/googleapis  # [!code ++]
 

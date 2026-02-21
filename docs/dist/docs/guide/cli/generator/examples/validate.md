@@ -52,8 +52,6 @@ message EchoStreamResponse {
 Create and configure the easyp.yaml configuration file:
 
 ```yaml
-version: v1alpha
-
 deps: # [!code ++]
   - github.com/bufbuild/protoc-gen-validate  # [!code ++]
 

@@ -17,6 +17,33 @@ const (
 	unaryRPCGroup = "UNARY_RPC"
 )
 
+// RuleGroup describes a named group of lint rules.
+type RuleGroup struct {
+	Name  string   // Human-readable name: "Minimal", "Basic", ...
+	Key   string   // Config key: "MINIMAL", "BASIC", ...
+	Rules []string // List of rule names in the group.
+}
+
+// AllGroups returns all rule groups in canonical order.
+func AllGroups() []RuleGroup {
+	return []RuleGroup{
+		{Name: "Minimal", Key: minGroup, Rules: addMinimal(nil)},
+		{Name: "Basic", Key: basicGroup, Rules: addBasic(nil)},
+		{Name: "Default", Key: defaultGroup, Rules: addDefault(nil)},
+		{Name: "Comments", Key: commentsGroup, Rules: addComments(nil)},
+		{Name: "Unary RPC", Key: unaryRPCGroup, Rules: addUnary(nil)},
+	}
+}
+
+// AllRuleNames returns a flat list of all rule names from all groups.
+func AllRuleNames() []string {
+	var res []string
+	for _, g := range AllGroups() {
+		res = append(res, g.Rules...)
+	}
+	return res
+}
+
 // New returns a map of rules and a map of ignore only rules by configuration.
 func New(cfg config.LintConfig) ([]core.Rule, map[string][]string, error) {
 	allRules := []core.Rule{
@@ -224,7 +251,7 @@ func addComments(res []string) []string {
 }
 
 func addUnary(res []string) []string {
-	res = append(res, "RPC_NO_CLIENT_STREAMING")
-	res = append(res, "RPC_NO_SERVER_STREAMING")
+	res = append(res, core.GetRuleName(&RPCNoClientStreaming{}))
+	res = append(res, core.GetRuleName(&RPCNoServerStreaming{}))
 	return res
 }
