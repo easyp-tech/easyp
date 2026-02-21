@@ -894,8 +894,12 @@ func cleanPackageName(name string) string {
 
 // matchesPath checks if a file path matches the rule path:
 //   - Paths ending with ".proto" require exact file match
+//     example: "internal/cms/as.proto" matches only that exact file
 //   - Paths ending with "/" match directory and subdirectories
+//     example: "internal/cms/" matches all files in that directory and subdirectories (e.g., "internal/cms/as.proto",
+//     "internal/cms/node.proto", "internal/cms/v1/service.proto")
 //   - Other paths match any file starting with that string
+//     example: "internal/cms" matches "internal/cms/as.proto" but also "internal/cmsv2/file.proto"
 func matchesPath(filePath, rulePath string) bool {
 	if rulePath == "" {
 		return true
@@ -942,7 +946,8 @@ func generateObjcClassPrefix(pkg string) string {
 	return result
 }
 
-// toPascalCase converts a string to PascalCase (e.g., "hello_world" -> "HelloWorld").
+// toPascalCase converts a string to PascalCase by capitalizing after separators (_, -, .).
+// Examples: "hello_world" -> "HelloWorld", "foo-bar" -> "FooBar", "my.name" -> "MyName".
 func toPascalCase(s string) string {
 	if s == "" {
 		return ""
@@ -969,6 +974,10 @@ func toPascalCase(s string) string {
 }
 
 // toPascalCaseWithSeparator converts a protobuf package name to PascalCase with a custom separator.
+// Examples:
+//   - toPascalCaseWithSeparator("acme.weather.v1", ".")  -> "Acme.Weather.V1" (C#)
+//   - toPascalCaseWithSeparator("acme.weather.v1", "::") -> "Acme::Weather::V1" (Ruby)
+//   - toPascalCaseWithSeparator("acme.weather.v1", `\`)  -> "Acme\Weather\V1 (PHP)
 func toPascalCaseWithSeparator(pkg, separator string) string {
 	parts := strings.Split(pkg, ".")
 	for i, part := range parts {
