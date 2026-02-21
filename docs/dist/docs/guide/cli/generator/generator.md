@@ -34,8 +34,6 @@ EasyP includes a powerful generator that simplifies the process of generating co
 ### Complete Configuration Example
 
 ```yaml
-version: v1alpha
-
 # Package manager dependencies
 deps:
   - github.com/googleapis/googleapis@common-protos-1_3_1
@@ -820,6 +818,29 @@ When multiple rules match the same file or field, the following precedence appli
 ### Compatibility with buf
 
 EasyP's managed mode is compatible with `buf`'s managed mode. The same configuration format and behavior apply, making it easy to migrate between tools or use both in the same workflow.
+
+## Descriptor Set Generation
+
+**https://protobuf.dev/programming-guides/techniques/#self-description**
+
+EasyP supports generating binary FileDescriptorSet files using the `--descriptor_set_out` flag. This allows you to create self-describing protobuf messages that include schema information alongside the data.
+
+**CLI flags:**
+
+- `--descriptor_set_out <path>` - Output path for the binary FileDescriptorSet
+- `--include_imports` - Include all transitive dependencies in the FileDescriptorSet
+
+**Example:**
+
+```bash
+# Generate descriptor set with only target files
+easyp generate --descriptor_set_out=./schema.pb
+
+# Generate descriptor set with all dependencies
+easyp generate --descriptor_set_out=./schema.pb --include_imports
+```
+
+Self-describing messages are useful for dynamic message parsing, runtime schema validation, schema registries, and building generic gRPC clients. For more information, see the [Protocol Buffers documentation on self-description](https://protobuf.dev/programming-guides/techniques/#self-description).
 
 ## Package Manager Integration
 

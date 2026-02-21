@@ -34,8 +34,6 @@ EasyP включает мощный генератор, который упро�
 ### Complete Configuration Example
 
 ```yaml
-version: v1alpha
-
 # Package manager dependencies
 deps:
   - github.com/googleapis/googleapis@common-protos-1_3_1

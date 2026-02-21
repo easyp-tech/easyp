@@ -43,8 +43,6 @@ protoc \
 Единый файл `easyp.yaml`:
 
 ```yaml
-version: v1alpha
-
 deps:
   - github.com/googleapis/googleapis
   - github.com/envoyproxy/protoc-gen-validate
@@ -81,7 +79,7 @@ easyp generate        # Генерация кода
    - Соберите список всех вызовов `protoc` (скрипты, Makefile, CI).
    - Зафиксируйте используемые плагины и их версии.
 2. Создание `easyp.yaml`:
-   - Добавьте `version: v1alpha`.
+   - Поле `version` не обязательно (можете оставить его только для обратной совместимости).
    - Перенесите плагины в секцию `generate.plugins`.
    - Укажите опции, которые ранее передавались в командной строке.
 3. Зависимости:
@@ -163,8 +161,6 @@ generate:
 ## 10. Минимальный пример конфигурации (только Go)
 
 ```yaml
-version: v1alpha
-
 generate:
   plugins:
     - name: go
@@ -181,8 +177,6 @@ easyp generate
 ## 11. Расширенный пример (Go + gRPC + Gateway + Validate + Breaking и Lint)
 
 ```yaml
-version: v1alpha
-
 lint:
   use:
     - ENUM_FIRST_VALUE_ZERO

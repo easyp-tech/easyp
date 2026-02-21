@@ -115,8 +115,6 @@ While Protocol Buffers offer significant technical advantages over REST/JSON, ac
 EasyP uses a single `easyp.yaml` file for all configuration:
 
 ```yaml
-version: v1alpha
-
 # Dependencies
 deps:
   - github.com/googleapis/googleapis@common-protos-1_3_1
@@ -150,9 +148,8 @@ lint:
 # Validate the default easyp.yaml with JSON output (default)
 easyp validate-config
 
-# Validate a custom file with text output
-easyp validate-config --config example.easyp.yaml --format text
-```
+# Validate a custom file with text output (global --format flag)
+easyp --format text validate-config --config example.easyp.yaml
 ```
 
 ## Community

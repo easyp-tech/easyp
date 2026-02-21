@@ -59,8 +59,6 @@ generate:
 
 ```yaml
 # easyp.yaml (пример)
-version: v1alpha
-
 deps:
   - github.com/org/common-protos         # вместо manual include
   - github.com/org/third-party-protos
@@ -175,7 +173,6 @@ breaking:
 ## Минимальная конфигурация после миграции
 
 ```yaml
-version: v1alpha
 lint:
   use:
     - MINIMAL

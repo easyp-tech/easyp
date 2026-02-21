@@ -40,8 +40,6 @@ EasyP реализует уровень проверки **WIRE+**:
 Настройка в `easyp.yaml`:
 
 ```yaml
-version: v1alpha
-
 breaking:
   # Git reference для сравнения (branch, tag или commit hash)
   against_git_ref: "main"

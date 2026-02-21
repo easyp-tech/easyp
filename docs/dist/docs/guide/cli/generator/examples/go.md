@@ -49,8 +49,6 @@ message EchoStreamResponse {
 Create and configure the easyp.yaml configuration file:
 
 ```yaml
-version: v1alpha
-
 generate:
   plugins:
     - name: go

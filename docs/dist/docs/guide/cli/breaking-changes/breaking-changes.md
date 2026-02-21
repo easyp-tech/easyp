@@ -40,8 +40,6 @@ This provides strong compatibility guarantees while being less strict than some 
 Configure breaking changes detection in your `easyp.yaml`:
 
 ```yaml
-version: v1alpha
-
 breaking:
   # Git reference to compare against (branch, tag, or commit hash)
   against_git_ref: "main"

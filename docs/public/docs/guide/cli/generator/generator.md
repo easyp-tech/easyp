@@ -34,8 +34,6 @@ EasyP includes a powerful generator that simplifies the process of generating co
 ### Complete Configuration Example
 
 ```yaml
-version: v1alpha
-
 # Package manager dependencies
 deps:
   - github.com/googleapis/googleapis@common-protos-1_3_1
