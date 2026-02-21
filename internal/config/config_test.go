@@ -7,6 +7,12 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func requireSingleOptValue(t *testing.T, opts PluginOpts, key, expected string) {
+	t.Helper()
+	require.Contains(t, opts, key)
+	require.Equal(t, []string{expected}, opts[key])
+}
+
 func TestParseConfig_EnvironmentVariables(t *testing.T) {
 	tests := []struct {
 		name           string
@@ -79,9 +85,9 @@ generate:
 				// Проверяем, что опции содержат экранированные значения
 				require.Greater(t, len(cfg.Generate.Plugins), 0)
 				opts := cfg.Generate.Plugins[0].Opts
-				require.Equal(t, "This costs $100 dollars", opts["description"])
-				require.Equal(t, "/tmp/${TEMP}/file", opts["path"])
-				require.Equal(t, "$", opts["literal"])
+				requireSingleOptValue(t, opts, "description", "This costs $100 dollars")
+				requireSingleOptValue(t, opts, "path", "/tmp/${TEMP}/file")
+				requireSingleOptValue(t, opts, "literal", "$")
 			},
 		},
 		{
@@ -116,9 +122,9 @@ generate:
 				require.Equal(t, "github.com/googleapis/googleapis@common-protos-1_3_1", cfg.Deps[0])
 				require.Equal(t, "proto", cfg.Generate.Inputs[0].InputFilesDir.Path)
 				require.Equal(t, "./gen/go", cfg.Generate.Plugins[0].Out)
-				require.Equal(t, "github.com/example/project", cfg.Generate.Plugins[0].Opts["module"])
+				requireSingleOptValue(t, cfg.Generate.Plugins[0].Opts, "module", "github.com/example/project")
 				// Проверяем смешанное использование
-				require.Equal(t, "./gen/go/${TEMP}/generated", cfg.Generate.Plugins[0].Opts["mixed"])
+				requireSingleOptValue(t, cfg.Generate.Plugins[0].Opts, "mixed", "./gen/go/${TEMP}/generated")
 			},
 		},
 		{
@@ -164,8 +170,8 @@ generate:
 				require.Greater(t, len(cfg.Generate.Plugins), 0)
 				require.Equal(t, "./gen/go", cfg.Generate.Plugins[0].Out)
 				require.Greater(t, len(cfg.Generate.Plugins[0].Opts), 0)
-				require.Equal(t, "github.com/example/project", cfg.Generate.Plugins[0].Opts["module"])
-				require.Equal(t, "30", cfg.Generate.Plugins[0].Opts["timeout"])
+				requireSingleOptValue(t, cfg.Generate.Plugins[0].Opts, "module", "github.com/example/project")
+				requireSingleOptValue(t, cfg.Generate.Plugins[0].Opts, "timeout", "30")
 			},
 		},
 		{
@@ -218,7 +224,7 @@ generate:
 			if tt.expectedModule != "" {
 				require.Greater(t, len(cfg.Generate.Plugins), 0)
 				require.Greater(t, len(cfg.Generate.Plugins[0].Opts), 0)
-				require.Equal(t, tt.expectedModule, cfg.Generate.Plugins[0].Opts["module"])
+				requireSingleOptValue(t, cfg.Generate.Plugins[0].Opts, "module", tt.expectedModule)
 			}
 			if tt.checkFunc != nil {
 				tt.checkFunc(t, cfg)

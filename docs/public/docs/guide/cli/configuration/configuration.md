@@ -689,7 +689,7 @@ generate:
 **Plugin fields:**
 - `name` (string, required) - Plugin name (omit `protoc-gen-` prefix)
 - `out` (string, required) - Output directory for generated files
-- `opts` (map[string]string, optional) - Plugin-specific options
+- `opts` (map[string](string | []string), optional) - Plugin-specific options; each key can be a single value or an array of values
 - `url` (string, optional) - Remote plugin URL for HTTP execution
 - `with_imports` (boolean, optional) - Include imported dependencies
 
@@ -709,7 +709,16 @@ opts:
 opts:
   simple_operation_ids: true         # Use simple operation IDs
   generate_unbound_methods: false    # Skip unbound methods
+
+# ts-proto options with repeated key values
+opts:
+  env: node
+  outputServices:
+    - grpc-js
+    - generic-definitions
 ```
+
+When an `opts` value is a list, EasyP serializes it as repeated plugin params, e.g. `outputServices=grpc-js,outputServices=generic-definitions`.
 
 ### `breaking`
 

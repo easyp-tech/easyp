@@ -80,7 +80,11 @@ func ValidateFile(path string) ([]ValidationIssue, error) {
 // buildSchema builds the YAML validation schema matching easyp.yaml structure.
 func buildSchema() *v.FieldSchema {
 	stringSeq := &v.FieldSchema{Type: v.TypeSequence, ItemSchema: &v.FieldSchema{Type: v.TypeString}}
-	anyMap := &v.FieldSchema{Type: v.TypeMap, AdditionalProperties: &v.FieldSchema{Type: v.TypeAny}}
+	pluginOptsSchema := &v.FieldSchema{
+		Type:                 v.TypeMap,
+		AdditionalProperties: &v.FieldSchema{Type: v.TypeAny},
+		Validators:           []v.ValueValidator{pluginOptsValidator{}},
+	}
 
 	lintSchema := &v.FieldSchema{
 		Type: v.TypeMap,
@@ -141,7 +145,7 @@ func buildSchema() *v.FieldSchema {
 			"path":         {Type: v.TypeString},
 			"command":      {Type: v.TypeSequence, ItemSchema: &v.FieldSchema{Type: v.TypeString}},
 			"out":          {Type: v.TypeString},
-			"opts":         anyMap,
+			"opts":         pluginOptsSchema,
 			"with_imports": {Type: v.TypeBool},
 		},
 		AnyOf:             [][]string{{"name"}, {"remote"}, {"path"}, {"command"}},

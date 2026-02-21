@@ -129,8 +129,16 @@ generate:
       out: .
       opts:
         paths: source_relative
-    - remote: api.easyp.tech/protoc-gen-typescript:latest
+    - remote: api.beta.easyp.tech/community/stephenh-ts-proto:v1.178.0
       out: ./web/generated
+      opts:
+        env: node
+        useExactTypes: false
+        outputServices:
+          - grpc-js
+          - generic-definitions
+        esModuleInterop: true
+        useOptionals: true
 
 # Linting
 lint:
