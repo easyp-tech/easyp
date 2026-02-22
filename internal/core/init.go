@@ -1,6 +1,7 @@
 package core
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 
@@ -117,8 +118,20 @@ func (c *Core) Initialize(ctx context.Context, disk DirWalker, opts InitOptions)
 			}
 		}()
 
-		if renderErr := renderInitConfig(res, opts.TemplateData); renderErr != nil {
+		// Render to buffer and validate before writing to disk.
+		var buf bytes.Buffer
+		if renderErr := renderInitConfig(&buf, opts.TemplateData); renderErr != nil {
 			return fmt.Errorf("renderInitConfig: %w", renderErr)
+		}
+
+		if issues, valErr := config.ValidateRaw(buf.Bytes()); valErr != nil {
+			return fmt.Errorf("config.ValidateRaw: %w", valErr)
+		} else if config.HasErrors(issues) {
+			return fmt.Errorf("generated config has validation errors: %v", issues)
+		}
+
+		if _, writeErr := res.Write(buf.Bytes()); writeErr != nil {
+			return fmt.Errorf("res.Write: %w", writeErr)
 		}
 	}
 
@@ -184,9 +197,21 @@ func (c *Core) migrateFromBUF(ctx context.Context, disk FS, path string, default
 		}
 	}()
 
-	err = yaml.NewEncoder(res).Encode(migratedCfg)
+	// Encode to buffer and validate before writing to disk.
+	var buf bytes.Buffer
+	err = yaml.NewEncoder(&buf).Encode(migratedCfg)
 	if err != nil {
 		return fmt.Errorf("yaml.NewEncoder.Encode: %w", err)
+	}
+
+	if issues, valErr := config.ValidateRaw(buf.Bytes()); valErr != nil {
+		return fmt.Errorf("config.ValidateRaw: %w", valErr)
+	} else if config.HasErrors(issues) {
+		return fmt.Errorf("migrated config has validation errors: %v", issues)
+	}
+
+	if _, writeErr := res.Write(buf.Bytes()); writeErr != nil {
+		return fmt.Errorf("res.Write: %w", writeErr)
 	}
 
 	return nil

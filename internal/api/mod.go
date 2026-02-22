@@ -12,7 +12,6 @@ import (
 	"github.com/easyp-tech/easyp/internal/fs/fs"
 
 	"github.com/easyp-tech/easyp/internal/config"
-	"github.com/easyp-tech/easyp/internal/core"
 )
 
 var _ Handler = (*Mod)(nil)
@@ -81,7 +80,6 @@ func (m Mod) Download(ctx *cli.Context) error {
 	if err != nil {
 		return fmt.Errorf("config.New: %w", err)
 	}
-	core.SetAllowCommentIgnores(cfg.Lint.AllowCommentIgnores)
 
 	app, err := buildCore(ctx.Context, log, *cfg, dirWalker)
 	if err != nil {
@@ -114,7 +112,6 @@ func (m Mod) Update(ctx *cli.Context) error {
 	if err != nil {
 		return fmt.Errorf("config.New: %w", err)
 	}
-	core.SetAllowCommentIgnores(cfg.Lint.AllowCommentIgnores)
 
 	app, err := buildCore(ctx.Context, log, *cfg, dirWalker)
 	if err != nil {
@@ -147,7 +144,6 @@ func (m Mod) Vendor(ctx *cli.Context) error {
 	if err != nil {
 		return fmt.Errorf("config.New: %w", err)
 	}
-	core.SetAllowCommentIgnores(cfg.Lint.AllowCommentIgnores)
 
 	app, err := buildCore(ctx.Context, log, *cfg, dirWalker)
 	if err != nil {

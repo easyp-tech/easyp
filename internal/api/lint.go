@@ -107,7 +107,6 @@ func (l Lint) action(ctx *cli.Context, log logger.Logger) error {
 	if err != nil {
 		return fmt.Errorf("config.New: %w", err)
 	}
-	core.SetAllowCommentIgnores(cfg.Lint.AllowCommentIgnores)
 
 	// Walker for Core (lockfile etc) - strictly based on project root
 	projectWalker := fs.NewFSWalker(projectRoot, ".")

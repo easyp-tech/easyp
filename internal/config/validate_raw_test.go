@@ -76,3 +76,42 @@ func containsAny(s string, candidates ...string) bool {
 	}
 	return false
 }
+
+func TestValidateRaw_BreakingSchemaValidKeys(t *testing.T) {
+	content := `lint:
+  use:
+    - DIRECTORY_SAME_PACKAGE
+breaking:
+  ignore:
+    - proto/legacy
+  against_git_ref: main
+`
+
+	issues, err := ValidateRaw([]byte(content))
+	require.NoError(t, err)
+	require.False(t, HasErrors(issues), "valid breaking section should not produce errors, got: %v", issues)
+}
+
+func TestValidateRaw_BreakingSchemaUnknownKey(t *testing.T) {
+	content := `lint:
+  use:
+    - DIRECTORY_SAME_PACKAGE
+breaking:
+  ignore:
+    - proto/legacy
+  unknown_field: true
+`
+
+	issues, err := ValidateRaw([]byte(content))
+	require.NoError(t, err)
+
+	// Should produce at least one warning for the unknown key.
+	var hasWarning bool
+	for _, issue := range issues {
+		if issue.Severity == SeverityWarn && strings.Contains(issue.Message, "unknown_field") {
+			hasWarning = true
+			break
+		}
+	}
+	require.True(t, hasWarning, "expected warning for unknown key 'unknown_field' in breaking section, got: %v", issues)
+}
