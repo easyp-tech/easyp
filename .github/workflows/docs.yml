@@ -33,6 +33,11 @@ jobs:
           cd docs
           npm run build
 
+      - name: Verify search index artifacts
+        run: |
+          test -f docs/dist/search/index.en.json
+          test -f docs/dist/search/index.ru.json
+
       - name: Check for changes
         id: verify-changed-files
         run: |

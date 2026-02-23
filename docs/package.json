@@ -4,8 +4,9 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "dev": "vite",
-    "build": "tsc -b && vite build",
+    "dev": "npm run generate:search-index && vite",
+    "generate:search-index": "node scripts/generate-search-index.mjs",
+    "build": "npm run generate:search-index && tsc -b && vite build",
     "preview": "vite preview"
   },
   "type": "module",

@@ -143,6 +143,134 @@ export default function MarkdownPage({ path }: MarkdownPageProps) {
         setPrevNext({ prev, next })
     }, [location.pathname])
 
+    useEffect(() => {
+        if (isLoading || !content) {
+            return
+        }
+
+        const rawHash = location.hash.replace(/^#/, '')
+        if (!rawHash) {
+            return
+        }
+
+        const targetId = decodeURIComponent(rawHash)
+        let attempts = 0
+        const maxAttempts = 20
+
+        const scrollToAnchor = () => {
+            const element = document.getElementById(targetId)
+            if (!element) {
+                return false
+            }
+
+            const y = element.getBoundingClientRect().top + window.scrollY - 88
+            window.scrollTo({
+                top: Math.max(0, y),
+                behavior: 'smooth',
+            })
+            return true
+        }
+
+        if (scrollToAnchor()) {
+            return
+        }
+
+        const intervalId = window.setInterval(() => {
+            attempts += 1
+            if (scrollToAnchor() || attempts >= maxAttempts) {
+                window.clearInterval(intervalId)
+            }
+        }, 120)
+
+        return () => {
+            window.clearInterval(intervalId)
+        }
+    }, [isLoading, content, location.hash])
+
+    useEffect(() => {
+        if (isLoading || !content) {
+            return
+        }
+
+        const state = location.state as { docSearchQuery?: string } | null
+        const query = state?.docSearchQuery?.trim()
+        if (!query || query.length < 2) {
+            return
+        }
+
+        const root = document.querySelector('.markdown-body') as HTMLElement | null
+        if (!root) {
+            return
+        }
+
+        const clearMarks = () => {
+            const marks = root.querySelectorAll('mark.docs-search-hit')
+            marks.forEach((mark) => {
+                const parent = mark.parentNode
+                if (!parent) return
+                parent.replaceChild(document.createTextNode(mark.textContent || ''), mark)
+                parent.normalize()
+            })
+        }
+
+        const markFirstOccurrence = (startFromAnchor: boolean): HTMLElement | null => {
+            const target = query.toLowerCase()
+            const hashId = decodeURIComponent(location.hash.replace(/^#/, ''))
+            const anchor = hashId ? document.getElementById(hashId) : null
+
+            const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT)
+            let reachedAnchor = !startFromAnchor || !anchor
+
+            while (walker.nextNode()) {
+                const node = walker.currentNode as Text
+                const parent = node.parentElement
+                const value = node.nodeValue || ''
+                if (!parent || !value.trim()) {
+                    continue
+                }
+
+                if (!reachedAnchor && anchor) {
+                    const relation = anchor.compareDocumentPosition(parent)
+                    const isFollowing = (relation & Node.DOCUMENT_POSITION_FOLLOWING) !== 0
+                    const isInside = anchor.contains(parent) || anchor === parent
+                    if (isFollowing || isInside) {
+                        reachedAnchor = true
+                    } else {
+                        continue
+                    }
+                }
+
+                const index = value.toLowerCase().indexOf(target)
+                if (index === -1) {
+                    continue
+                }
+
+                const range = document.createRange()
+                range.setStart(node, index)
+                range.setEnd(node, index + query.length)
+
+                const mark = document.createElement('mark')
+                mark.className = 'docs-search-hit'
+                range.surroundContents(mark)
+                return mark
+            }
+
+            return null
+        }
+
+        clearMarks()
+        const highlighted = markFirstOccurrence(true) || markFirstOccurrence(false)
+        if (!highlighted) {
+            return
+        }
+
+        const y = highlighted.getBoundingClientRect().top + window.scrollY - 100
+        window.scrollTo({
+            top: Math.max(0, y),
+            behavior: 'smooth',
+        })
+    }, [isLoading, content, location.hash, location.key, location.state])
+
     if (isLoading) {
         return (
             <div className="flex items-center justify-center min-h-[60vh]">
