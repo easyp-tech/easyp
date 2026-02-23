@@ -1,5 +1,6 @@
 import { Link, useLocation } from 'react-router-dom'
 import { ChevronRight, Home } from 'lucide-react'
+import DocsSearch from './DocsSearch'
 
 export default function DocsHeader() {
     const location = useLocation()
@@ -41,6 +42,7 @@ export default function DocsHeader() {
                 </nav>
 
                 <div className="flex-1" />
+                <DocsSearch />
             </div>
         </header>
     )

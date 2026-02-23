@@ -19,6 +19,20 @@
     "subtitle": "A unified Git-native toolkit for linting, code generation, and dependency management. Fully Open Source.",
     "exploreDocs": "Explore Documentation"
   },
+  "docsSearch": {
+    "placeholder": "Search docs...",
+    "mobilePlaceholder": "Search documentation...",
+    "open": "Open search",
+    "close": "Close search",
+    "cancel": "Cancel",
+    "clear": "Clear search",
+    "loading": "Searching...",
+    "noResults": "No results found",
+    "showMoreMatches": "Show {{count}} more matches on this page",
+    "hideMoreMatches": "Hide additional matches",
+    "typeToSearch": "Type at least 2 characters to search",
+    "error": "Unable to load search index. Try again later."
+  },
   "trustedBy": {
     "title": "Trusted by engineering teams at"
   },
