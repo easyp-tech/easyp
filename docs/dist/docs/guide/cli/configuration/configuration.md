@@ -444,7 +444,7 @@ lint:
 **Optional.** Specifies the required suffix for enum zero values.
 
 **Type:** `string`
-**Default:** `""` (no suffix required)
+**Default:** `"UNSPECIFIED"`
 **Common values:** `"UNSPECIFIED"`, `"UNKNOWN"`, `"DEFAULT"`
 
 ```yaml
@@ -466,7 +466,7 @@ enum Status {
 **Optional.** Specifies the required suffix for service names.
 
 **Type:** `string`
-**Default:** `""` (no suffix required)
+**Default:** `"Service"`
 **Common values:** `"Service"`, `"API"`, `"Svc"`
 
 ```yaml
@@ -501,7 +501,7 @@ Paths are relative to the `easyp.yaml` file location. Supports glob patterns.
 
 #### `lint.except`
 
-**Optional.** Disables specific rules globally across the entire project.
+**Optional.** Disables specific rules globally across the entire project. Supports both individual rule names and group names (`MINIMAL`, `BASIC`, `DEFAULT`, `COMMENTS`, `UNARY_RPC`), which are automatically expanded to their constituent rules.
 
 **Type:** `[]string`
 **Default:** `[]`
@@ -512,11 +512,16 @@ lint:
     - COMMENT_FIELD
     - COMMENT_MESSAGE
     - SERVICE_SUFFIX
+
+  # Or exclude entire groups:
+  except:
+    - COMMENTS        # Excludes all COMMENT_* rules
+    - UNARY_RPC       # Excludes RPC_NO_CLIENT_STREAMING, RPC_NO_SERVER_STREAMING
 ```
 
 #### `lint.allow_comment_ignores`
 
-**Optional.** Enables inline comment-based rule ignoring within proto files.
+**Optional.** Enables inline comment-based rule ignoring within proto files. This setting is applied consistently across all commands (`lint`, `breaking`, `generate`, `mod`).
 
 **Type:** `boolean`
 **Default:** `false`
@@ -912,7 +917,14 @@ Error: required field "plugins" is missing (path: generate.plugins)
 
 # Invalid dependency format
 Error: invalid dependency format: invalid-repo-url
+
+# Unknown key in breaking section
+Warning: unknown key "typo_field" (path: breaking.typo_field)
 ```
+
+All configuration sections — including `lint`, `generate`, `deps`, and `breaking` — are validated against a strict schema. Unknown keys produce warnings; type mismatches and missing required fields produce errors.
+
+The `easyp init` command also validates the generated configuration before writing it to disk, ensuring that both fresh configs and Buf migrations produce valid `easyp.yaml` files.
 
 Use `easyp --debug` for detailed validation information.
 
@@ -926,3 +938,5 @@ EasyP is fully compatible with Buf configurations. To migrate:
 4. Review migrated lint/breaking settings and adjust as needed
 
 Most Buf configurations work without changes in EasyP.
+
+The migrated configuration is validated before being written to disk. If the migration produces an invalid config, EasyP will report the validation errors instead of writing a broken file.

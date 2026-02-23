@@ -71,6 +71,9 @@ func getEasypPath(log logger.Logger) (string, error) {
 func buildCore(_ context.Context, log logger.Logger, cfg config.Config, dirWalker core.DirWalker) (*core.Core, error) {
 	vendorPath := defaultVendorDir // TODO: read from config
 
+	// Centralized: set once for all commands (lint, breaking, generate, mod).
+	core.SetAllowCommentIgnores(cfg.Lint.AllowCommentIgnores)
+
 	lintRules, ignoreOnly, err := rules.New(cfg.Lint)
 	if err != nil {
 		return nil, fmt.Errorf("cfg.BuildLinterRules: %w", err)

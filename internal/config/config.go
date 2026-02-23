@@ -164,16 +164,16 @@ type InputFilesDir struct {
 // Config is the configuration of easyp.
 type Config struct {
 	// LintConfig is the lint configuration.
-	Lint LintConfig `json:"lint" yaml:"lint"`
+	Lint LintConfig `json:"lint,omitempty" yaml:"lint,omitempty"`
 
 	// Deps is the dependencies repositories
-	Deps []string `json:"deps" yaml:"deps"`
+	Deps []string `json:"deps,omitempty" yaml:"deps,omitempty"`
 
 	// Generate is the generate configuration.
-	Generate Generate `json:"generate" yaml:"generate"`
+	Generate Generate `json:"generate,omitempty" yaml:"generate,omitempty"`
 
 	// BreakingCheck `breaking` command's configuration
-	BreakingCheck BreakingCheck `json:"breaking" yaml:"breaking"`
+	BreakingCheck BreakingCheck `json:"breaking,omitempty" yaml:"breaking,omitempty"`
 }
 
 var errFileNotFound = errors.New("config file not found")

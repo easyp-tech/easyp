@@ -205,7 +205,14 @@ func buildSchema() *v.FieldSchema {
 		UnknownKeyPolicy: v.UnknownKeyWarn,
 	}
 
-	breakingSchema := &v.FieldSchema{Type: v.TypeMap, UnknownKeyPolicy: v.UnknownKeyIgnore}
+	breakingSchema := &v.FieldSchema{
+		Type: v.TypeMap,
+		AllowedKeys: map[string]*v.FieldSchema{
+			"ignore":          stringSeq,
+			"against_git_ref": {Type: v.TypeString},
+		},
+		UnknownKeyPolicy: v.UnknownKeyWarn,
+	}
 
 	return &v.FieldSchema{
 		Type: v.TypeMap,

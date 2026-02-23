@@ -79,7 +79,7 @@ func New(cfg config.LintConfig) ([]core.Rule, map[string][]string, error) {
 		//	defaultGroup
 		&EnumValuePrefix{},
 		&EnumZeroValueSuffix{
-			Suffix: cfg.EnumZeroValueSuffix,
+			Suffix: defaultIfEmpty(cfg.EnumZeroValueSuffix, "UNSPECIFIED"),
 		},
 		&FileLowerSnakeCase{},
 		&RPCRequestResponseUnique{},
@@ -87,7 +87,7 @@ func New(cfg config.LintConfig) ([]core.Rule, map[string][]string, error) {
 		&RPCResponseStandardName{},
 		&PackageVersionSuffix{},
 		&ServiceSuffix{
-			Suffix: cfg.ServiceSuffix,
+			Suffix: defaultIfEmpty(cfg.ServiceSuffix, "Service"),
 		},
 		//	commentsGroup
 		&CommentEnum{},
@@ -111,7 +111,7 @@ func New(cfg config.LintConfig) ([]core.Rule, map[string][]string, error) {
 	}
 
 	use := unwrapLintGroups(cfg.Use)
-	use = removeExcept(cfg.Except, use)
+	use = removeExcept(unwrapLintGroups(cfg.Except), use)
 
 	res := make([]core.Rule, len(use))
 
@@ -192,6 +192,14 @@ func removeExcept(except, use []string) []string {
 	return lo.Filter(use, func(ruleName string, _ int) bool {
 		return !lo.Contains(except, ruleName)
 	})
+}
+
+// defaultIfEmpty returns val if non-empty, otherwise fallback.
+func defaultIfEmpty(val, fallback string) string {
+	if val == "" {
+		return fallback
+	}
+	return val
 }
 
 func addMinimal(res []string) []string {
