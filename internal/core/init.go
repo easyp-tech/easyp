@@ -187,16 +187,6 @@ func (c *Core) migrateFromBUF(ctx context.Context, disk FS, path string, default
 
 	migratedCfg := buildCfgFromBUF(defaultConfiguration, b)
 
-	res, err := disk.Create("easyp.yaml")
-	if err != nil {
-		return fmt.Errorf("disk.Create: %w", err)
-	}
-	defer func() {
-		if closeErr := res.Close(); closeErr != nil && err == nil {
-			err = fmt.Errorf("res.Close: %w", closeErr)
-		}
-	}()
-
 	// Encode to buffer and validate before writing to disk.
 	var buf bytes.Buffer
 	err = yaml.NewEncoder(&buf).Encode(migratedCfg)
@@ -209,6 +199,16 @@ func (c *Core) migrateFromBUF(ctx context.Context, disk FS, path string, default
 	} else if config.HasErrors(issues) {
 		return fmt.Errorf("migrated config has validation errors: %v", issues)
 	}
+
+	res, err := disk.Create("easyp.yaml")
+	if err != nil {
+		return fmt.Errorf("disk.Create: %w", err)
+	}
+	defer func() {
+		if closeErr := res.Close(); closeErr != nil && err == nil {
+			err = fmt.Errorf("res.Close: %w", closeErr)
+		}
+	}()
 
 	if _, writeErr := res.Write(buf.Bytes()); writeErr != nil {
 		return fmt.Errorf("res.Write: %w", writeErr)
