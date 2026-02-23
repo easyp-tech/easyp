@@ -49,13 +49,22 @@ jobs:
 
       - name: Commit and push built documentation
         if: steps.verify-changed-files.outputs.changed == 'true'
+        env:
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
         run: |
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
 
           git add docs/dist/
+          if git diff --cached --quiet; then
+            echo "No documentation changes to commit. Skipping push."
+            exit 0
+          fi
+
           git commit -m "docs: build documentation for ${GITHUB_REF_NAME} [skip ci]"
-          git push
+          # Workflow runs on tag pushes, so HEAD is detached.
+          # Push explicitly to the repository default branch.
+          git push origin "HEAD:${DEFAULT_BRANCH}"
 
       - name: Summary
         run: |
