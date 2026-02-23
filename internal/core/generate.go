@@ -22,6 +22,7 @@ import (
 	pluginexecutor "github.com/easyp-tech/easyp/internal/adapters/plugin"
 	"github.com/easyp-tech/easyp/internal/core/models"
 	"github.com/easyp-tech/easyp/internal/fs/fs"
+	"github.com/easyp-tech/easyp/internal/version"
 )
 
 // Generate generates files.
@@ -270,8 +271,9 @@ func (c *Core) Generate(ctx context.Context, root, directory, descriptorSetOut s
 		}
 
 		req := &pluginpb.CodeGeneratorRequest{
-			FileToGenerate: filesToGenerate,
-			ProtoFile:      fileDescriptors,
+			FileToGenerate:  filesToGenerate,
+			ProtoFile:       fileDescriptors,
+			CompilerVersion: version.CompilerVersion(),
 		}
 
 		executor := c.getExecutor(plugin)
