@@ -691,11 +691,15 @@ generate:
 ```
 
 **Plugin fields:**
-- `name` (string, required) - Plugin name (omit `protoc-gen-` prefix)
+- `name` (string, optional) - Plugin name (omit `protoc-gen-` prefix)
+- `remote` (string, optional) - Remote plugin URL for execution
+- `path` (string, optional) - Path to plugin executable file
+- `command` ([]string, optional) - Command to execute plugin
 - `out` (string, required) - Output directory for generated files
 - `opts` (map[string](string | []string), optional) - Plugin-specific options; each key can be a single value or an array of values
-- `remote` (string, optional) - Remote plugin URL for execution
 - `with_imports` (boolean, optional) - Include imported dependencies
+
+Plugin source is `one-of`: exactly one of `name`, `remote`, `path`, or `command` must be set.
 
 **Common plugin options:**
 ```yaml
