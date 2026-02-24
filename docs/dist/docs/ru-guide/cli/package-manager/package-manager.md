@@ -326,7 +326,7 @@ git commit -m "Update dependencies"
 
 ```bash
 easyp mod vendor
-easyp -I easyp_vendor generate
+easyp generate
 ```
 
 ## Troubleshooting
@@ -408,7 +408,7 @@ FROM alpine:latest AS build
 WORKDIR /app
 COPY --from=deps /workspace/easyp_vendor ./easyp_vendor
 COPY . .
-RUN easyp -I easyp_vendor generate
+RUN easyp generate
 ```
 
 ### Monorepo

@@ -384,7 +384,7 @@ git commit -m "Update dependencies"
 easyp mod vendor
 
 # Now your project works offline
-easyp -I easyp_vendor generate
+easyp generate
 ```
 
 ## Troubleshooting
@@ -502,7 +502,7 @@ WORKDIR /app
 COPY --from=deps /workspace/easyp_vendor ./easyp_vendor
 COPY . .
 # Use vendored dependencies for generation
-RUN easyp -I easyp_vendor generate
+RUN easyp generate
 ```
 
 ### Monorepo Structure

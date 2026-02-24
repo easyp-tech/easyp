@@ -1235,10 +1235,10 @@ easyp generate --path=./api/proto
 
 # Генерация с vendored зависимостями (оффлайн / Docker контейнеры)
 easyp mod vendor
-easyp -I easyp_vendor generate
+easyp generate
 
-# Использование кастомного protoc (например более новой версии)
-PROTOC_PATH=/usr/local/bin/protoc easyp generate
+# Генерация из кастомного project root (удобно для монореп и вложенных рабочих директорий)
+easyp generate --root=/usr/local/src/my-project --path=./api/proto
 ```
 
 ## Типовые паттерны (Common Patterns)

@@ -1234,10 +1234,10 @@ easyp generate --path=./api/proto
 
 # Generate using vendored dependencies - For offline builds or Docker containers
 easyp mod vendor
-easyp -I easyp_vendor generate
+easyp generate
 
-# Generate with custom protoc path - When using custom or newer protoc versions
-PROTOC_PATH=/usr/local/bin/protoc easyp generate
+# Generate from a custom project root - Useful in monorepos or nested workdirs
+easyp generate --root=/usr/local/src/my-project --path=./api/proto
 ```
 
 ## Common Patterns
