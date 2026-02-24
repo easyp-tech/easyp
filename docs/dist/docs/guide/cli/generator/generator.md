@@ -1204,8 +1204,8 @@ easyp generate
 # Use custom configuration file - Essential for multi-environment setups  
 easyp -cfg production.easyp.yaml generate
 
-# Generate with verbose output - Helpful for debugging and CI/CD
-easyp -v generate
+# Generate with debug logs - Helpful for debugging and CI/CD
+easyp --debug generate
 
 # Generate with custom cache location - Useful for CI systems or shared environments
 EASYPPATH=/tmp/easyp-cache easyp generate
