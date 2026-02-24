@@ -84,7 +84,7 @@ easyp breaking [flags]
 
 | Flag | Short | Environment | Description | Default |
 |------|-------|-------------|-------------|---------|
-| `--against` | | | Git ref to compare against | (required) |
+| `--against` | | | Git ref to compare against | `master` |
 | `--path` | `-p` | | Directory path to check | `.` |
 | `--format` | `-f` | `EASYP_FORMAT` | Uses global format flag (`text`/`json`) | Inherits global default |
 
@@ -758,7 +758,7 @@ breaking:
 **Optional.** Git reference (branch, tag, or commit) to compare against for breaking changes.
 
 **Type:** `string`
-**Default:** `""` (must be specified via CLI flag)
+**Default:** `""` (falls back to CLI `--against` default: `master`)
 
 ```yaml
 breaking:
