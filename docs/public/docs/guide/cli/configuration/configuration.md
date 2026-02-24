@@ -62,7 +62,7 @@ easyp generate [flags]
 
 | Flag | Short | Environment | Description | Default |
 |------|-------|-------------|-------------|---------|
-| `--path` | `-p` | `EASYP_ROOT_GENERATE_PATH` | Root path for generation | `.` |
+| `--path` | `-p` | `EASYP_ROOT_GENERATE_PATH` | Directory path with proto files to generate | `.` |
 | `--root` | `-r` | | Base directory for file search | Current working directory |
 
 **Examples:**
