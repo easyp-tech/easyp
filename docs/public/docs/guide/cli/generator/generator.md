@@ -1230,7 +1230,7 @@ These advanced usage patterns are useful for specific deployment scenarios, debu
 
 ```bash
 # Generate from specific input directory - Override config file settings
-easyp generate --input-dir=./api/proto
+easyp generate --path=./api/proto
 
 # Generate using vendored dependencies - For offline builds or Docker containers
 easyp mod vendor

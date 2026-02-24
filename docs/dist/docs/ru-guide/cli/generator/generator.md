@@ -1231,7 +1231,7 @@ easyp generate
 
 ```bash
 # Генерация из конкретной директории (перекрывает настройку в файле конфигурации)
-easyp generate --input-dir=./api/proto
+easyp generate --path=./api/proto
 
 # Генерация с vendored зависимостями (оффлайн / Docker контейнеры)
 easyp mod vendor
