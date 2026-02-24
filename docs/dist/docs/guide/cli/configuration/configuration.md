@@ -677,8 +677,7 @@ generate:
         paths: source_relative
 
     # Remote plugin
-    - name: validate-go
-      url: "buf.build/bufbuild/protovalidate-go:v0.4.0"
+    - remote: "buf.build/bufbuild/protovalidate-go:v0.4.0"
       out: gen/go
       opts:
         paths: source_relative
@@ -695,7 +694,7 @@ generate:
 - `name` (string, required) - Plugin name (omit `protoc-gen-` prefix)
 - `out` (string, required) - Output directory for generated files
 - `opts` (map[string](string | []string), optional) - Plugin-specific options; each key can be a single value or an array of values
-- `url` (string, optional) - Remote plugin URL for HTTP execution
+- `remote` (string, optional) - Remote plugin URL for execution
 - `with_imports` (boolean, optional) - Include imported dependencies
 
 **Common plugin options:**
@@ -892,8 +891,7 @@ generate:
       out: gen/go
       opts:
         paths: source_relative
-    - name: validate-go
-      url: "buf.build/bufbuild/protovalidate-go:v0.4.0"
+    - remote: "buf.build/bufbuild/protovalidate-go:v0.4.0"
       out: gen/go
       opts:
         paths: source_relative
