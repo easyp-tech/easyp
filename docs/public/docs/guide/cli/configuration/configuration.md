@@ -622,10 +622,10 @@ generate:
 
 #### `generate.inputs`
 
-**Optional.** Specifies sources of proto files for generation.
+**Required when `generate` is set.** Specifies sources of proto files for generation.
 
-**Type:** `[]object`
-**Default:** `[]`
+**Type:** `[]object` (minimum 1 item)
+**Default:** not set
 
 ```yaml
 generate:
@@ -642,7 +642,7 @@ generate:
     - git_repo:
         url: "github.com/acme/common@v1.0.0"
         sub_directory: "proto"
-        out: "generated"
+        root: "."
 ```
 
 **Directory input fields:**
@@ -653,14 +653,14 @@ generate:
 **Git repository input fields:**
 - `git_repo.url` (string) - Repository URL with optional version
 - `git_repo.sub_directory` (string) - Subdirectory within the repository
-- `git_repo.out` (string) - Output directory for generated files
+- `git_repo.root` (string) - Root path used for import resolution
 
 #### `generate.plugins`
 
-**Optional.** Configures protoc plugins for code generation.
+**Required when `generate` is set.** Configures protoc plugins for code generation.
 
-**Type:** `[]object`
-**Default:** `[]`
+**Type:** `[]object` (minimum 1 item)
+**Default:** not set
 
 ```yaml
 generate:
