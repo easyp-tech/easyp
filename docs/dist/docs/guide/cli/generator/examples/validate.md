@@ -78,10 +78,10 @@ generate:
 To generate code, use the following command:
 
 ```shell
-easyp -cfg easyp.yaml generate
+easyp --cfg easyp.yaml generate
 ```
 
-If the -cfg flag is not specified, the easyp.yaml file in the current directory will be used by default:
+If the --cfg flag is not specified, the easyp.yaml file in the current directory will be used by default:
 
 ```shell
 easyp generate

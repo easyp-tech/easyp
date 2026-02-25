@@ -84,7 +84,7 @@ use:
 #### `enum_zero_value_suffix` (string)
 Defines the required suffix for zero-value enum entries. This enforces a consistent naming pattern for the default enum value.
 
-**Default**: `"UNSPECIFIED"`
+**Default**: Empty (no suffix required)
 **Common values**: `"UNSPECIFIED"`, `"UNKNOWN"`, `"DEFAULT"`
 
 **Example:**
@@ -104,7 +104,7 @@ enum Status {
 #### `service_suffix` (string)
 Specifies the required suffix for service names. This ensures consistent service naming across your project.
 
-**Default**: `"Service"`
+**Default**: Empty (no suffix required)
 **Common values**: `"Service"`, `"API"`, `"Svc"`
 
 **Example:**
@@ -141,8 +141,6 @@ ignore:
 #### `except` ([]string)
 Disables specific rules globally across the entire project. Use this when certain rules don't fit your project's conventions.
 
-You can specify either individual rule names or group names (`MINIMAL`, `BASIC`, `DEFAULT`, `COMMENTS`, `UNARY_RPC`). Group names are automatically expanded to their constituent rules.
-
 **When to use:**
 - Legacy projects with established naming conventions
 - Projects with specific style requirements
@@ -155,17 +153,10 @@ except:
   - COMMENT_MESSAGE            # Don't require message comments
   - SERVICE_SUFFIX             # Don't enforce service suffix
   - ENUM_ZERO_VALUE_SUFFIX     # Don't enforce enum zero suffix
-
-# Or exclude entire groups:
-except:
-  - COMMENTS                   # Disable all comment rules at once
-  - UNARY_RPC                  # Disable all streaming restrictions
 ```
 
 #### `allow_comment_ignores` (bool)
 Enables or disables the ability to ignore specific rules using inline comments in proto files.
-
-This setting applies consistently to all commands that process proto files: `lint`, `breaking`, `generate`, and `mod`.
 
 **Default**: `false`
 **Recommended**: `true` for flexibility during development

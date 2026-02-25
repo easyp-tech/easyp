@@ -103,9 +103,9 @@
 
 Для генерации кода используйте:
 
-    easyp -cfg easyp.yaml generate
+    easyp --cfg easyp.yaml generate
 
-Если флаг `-cfg` не указан, по умолчанию используется файл `easyp.yaml` из текущей директории:
+Если флаг `--cfg` не указан, по умолчанию используется файл `easyp.yaml` из текущей директории:
 
     easyp generate
 

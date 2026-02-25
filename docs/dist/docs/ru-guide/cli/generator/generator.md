@@ -52,14 +52,10 @@ generate:
     - git_repo:
         url: "github.com/acme/weather@v1.2.3"
         sub_directory: "proto/api"
-        out: "external"
-    
     # Another remote repository
     - git_repo:
         url: "https://github.com/company/internal-protos.git"
         sub_directory: "definitions"
-        out: "internal"
-
   plugins:
     # Local plugin execution
     - name: go
@@ -161,10 +157,9 @@ inputs:
   - git_repo:
       url: "github.com/company/protos@v1.0.0"    # Обязательное: репозиторий + версия
       sub_directory: "api"                       # Опционально: поддиректория внутри репо
-      out: "external"                            # Опционально: локальная директория для извлечения
 ```
 
-Параметр `out` задаёт куда локально будут извлечены proto‑файлы. Полезно для организации нескольких удалённых источников и избежания конфликтов имен.
+Параметр `root` задаёт корень для разрешения импортов файлов из этого репозитория.
 
 **Параметры:**
 
@@ -172,7 +167,7 @@ inputs:
 |----------|-----|------------|--------------|----------|
 | `url` | string | ✅ | - | URL Git репозитория с необязательной версией / тегом / коммитом |
 | `sub_directory` | string | ❌ | `""` | Поддиректория внутри репозитория, где лежат proto |
-| `out` | string | ❌ | `""` | Локальная директория для извлечённых proto |
+| `root` | string | ❌ | `""` | Корневой путь для разрешения импортов |
 
 **Варианты формата URL:**
 
@@ -211,25 +206,19 @@ inputs:
   - git_repo:
       url: "github.com/googleapis/googleapis@common-protos-1_3_1"
       sub_directory: "google"
-      out: "googleapis"
-
 # Приватный репозиторий с аутентификацией — внутренние API
 inputs:
   - git_repo:
       url: "github.com/mycompany/internal-protos@v2.1.0"
       sub_directory: "api/definitions"
-      out: "internal"
-
 # Несколько удалённых источников — часто в микросервисной архитектуре
 inputs:
   - git_repo:
       url: "github.com/grpc-ecosystem/grpc-gateway@v2.19.1"
       sub_directory: "protoc-gen-openapiv2/options"
-      out: "gateway"
   - git_repo:
       url: "github.com/bufbuild/protoc-gen-validate@v0.10.1"  
       sub_directory: "validate"
-      out: "validate"
 ```
 
 ### Конфигурация плагинов
@@ -1093,14 +1082,10 @@ generate:
     - git_repo:
         url: "github.com/acme/weather-api@v2.1.0"
         sub_directory: "proto/weather/v1"
-        out: "external/weather"
-    
     # Remote private repository - Internal company API
     - git_repo:
         url: "github.com/mycompany/internal-apis@main"
         sub_directory: "user-service/proto"
-        out: "internal/user"
-        
   plugins:
     - name: go
       out: ./gen/go
@@ -1136,14 +1121,10 @@ generate:
     - git_repo:
         url: "github.com/company/user-service@v1.8.0"  
         sub_directory: "api/proto"
-        out: "external/users"
-        
     # Payment service protos - Different team, different version
     - git_repo:
         url: "github.com/company/payment-service@v2.3.1"
         sub_directory: "proto/payment/v2"  
-        out: "external/payments"
-        
   plugins:
     - name: go
       out: ./gen/go
@@ -1172,14 +1153,10 @@ generate:
     - git_repo:
         url: "github.com/stripe/stripe-proto@v1.0.0"
         sub_directory: "proto"
-        out: "vendor/stripe"
-        
     # Communication service APIs - SMS/Voice integration
     - git_repo:  
         url: "github.com/twilio/twilio-protos@v2.1.0"
         sub_directory: "definitions"
-        out: "vendor/twilio"
-        
   plugins:
     - name: go
       out: ./clients/go
@@ -1203,7 +1180,7 @@ CLI EasyP предоставляет гибкие варианты запуск�
 easyp generate
 
 # Use custom configuration file - Essential for multi-environment setups  
-easyp -cfg production.easyp.yaml generate
+easyp --cfg production.easyp.yaml generate
 
 # Generate with debug logs - Helpful for debugging and CI/CD
 easyp --debug generate

@@ -115,10 +115,10 @@ For more details on managing dependencies, refer to the [Package Manager](../../
 To generate the code, use the following command:
 
 ```bash
-easyp -cfg easyp.yaml generate
+easyp --cfg easyp.yaml generate
 ```
 
-If the `-cfg` flag is not specified, the `easyp.yaml` file in the current directory will be used by default:
+If the `--cfg` flag is not specified, the `easyp.yaml` file in the current directory will be used by default:
 
 ```bash
 easyp generate

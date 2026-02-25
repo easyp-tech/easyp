@@ -73,7 +73,7 @@ easyp breaking --against main
 With a custom configuration file:
 
 ```bash
-easyp -cfg my-config.yaml breaking
+easyp --cfg my-config.yaml breaking
 ```
 
 ### Override Git Reference
@@ -272,7 +272,7 @@ messages.proto:15:3: Previously present field "2" with name "email" on message "
 ### JSON Format
 
 ```bash
-easyp breaking --against main --format json
+easyp --format json breaking --against main
 ```
 
 ```json

@@ -52,14 +52,10 @@ generate:
     - git_repo:
         url: "github.com/acme/weather@v1.2.3"
         sub_directory: "proto/api"
-        out: "external"
-    
     # Another remote repository
     - git_repo:
         url: "https://github.com/company/internal-protos.git"
         sub_directory: "definitions"
-        out: "internal"
-
   plugins:
     # Local plugin execution
     - name: go
@@ -161,10 +157,9 @@ inputs:
   - git_repo:
       url: "github.com/company/protos@v1.0.0"    # Required: Repository URL with optional version
       sub_directory: "api"                        # Optional: Subdirectory within repo
-      out: "external"                            # Optional: Local output directory
 ```
 
-The `out` parameter controls where proto files are extracted locally. This is useful for organizing different remote sources and avoiding naming conflicts.
+The `root` parameter controls import resolution root for files from this repository.
 
 **Parameters:**
 
@@ -172,7 +167,7 @@ The `out` parameter controls where proto files are extracted locally. This is us
 |-----------|------|----------|---------|-------------|
 | `url` | string | ✅ | - | Git repository URL with optional version/tag/commit |
 | `sub_directory` | string | ❌ | `""` | Subdirectory within the repository containing proto files |
-| `out` | string | ❌ | `""` | Local directory where proto files will be extracted |
+| `root` | string | ❌ | `""` | Root path used for import resolution |
 
 **URL Format Options:**
 
@@ -211,25 +206,19 @@ inputs:
   - git_repo:
       url: "github.com/googleapis/googleapis@common-protos-1_3_1"
       sub_directory: "google"
-      out: "googleapis"
-
 # Private repository with authentication - For internal company APIs
 inputs:
   - git_repo:
       url: "github.com/mycompany/internal-protos@v2.1.0"
       sub_directory: "api/definitions"
-      out: "internal"
-
 # Multiple remote sources - Common in microservices architectures
 inputs:
   - git_repo:
       url: "github.com/grpc-ecosystem/grpc-gateway@v2.19.1"
       sub_directory: "protoc-gen-openapiv2/options"
-      out: "gateway"
   - git_repo:
       url: "github.com/bufbuild/protoc-gen-validate@v0.10.1"  
       sub_directory: "validate"
-      out: "validate"
 ```
 
 ### Plugin Configuration
@@ -1092,14 +1081,10 @@ generate:
     - git_repo:
         url: "github.com/acme/weather-api@v2.1.0"
         sub_directory: "proto/weather/v1"
-        out: "external/weather"
-    
     # Remote private repository - Internal company API
     - git_repo:
         url: "github.com/mycompany/internal-apis@main"
         sub_directory: "user-service/proto"
-        out: "internal/user"
-        
   plugins:
     - name: go
       out: ./gen/go
@@ -1135,14 +1120,10 @@ generate:
     - git_repo:
         url: "github.com/company/user-service@v1.8.0"  
         sub_directory: "api/proto"
-        out: "external/users"
-        
     # Payment service protos - Different team, different version
     - git_repo:
         url: "github.com/company/payment-service@v2.3.1"
         sub_directory: "proto/payment/v2"  
-        out: "external/payments"
-        
   plugins:
     - name: go
       out: ./gen/go
@@ -1171,14 +1152,10 @@ generate:
     - git_repo:
         url: "github.com/stripe/stripe-proto@v1.0.0"
         sub_directory: "proto"
-        out: "vendor/stripe"
-        
     # Communication service APIs - SMS/Voice integration
     - git_repo:  
         url: "github.com/twilio/twilio-protos@v2.1.0"
         sub_directory: "definitions"
-        out: "vendor/twilio"
-        
   plugins:
     - name: go
       out: ./clients/go
@@ -1202,7 +1179,7 @@ These are the most commonly used command patterns for everyday development and p
 easyp generate
 
 # Use custom configuration file - Essential for multi-environment setups  
-easyp -cfg production.easyp.yaml generate
+easyp --cfg production.easyp.yaml generate
 
 # Generate with debug logs - Helpful for debugging and CI/CD
 easyp --debug generate

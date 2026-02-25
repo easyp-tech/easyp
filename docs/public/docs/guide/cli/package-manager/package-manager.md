@@ -178,7 +178,7 @@ Downloads and installs all dependencies declared in your configuration.
 easyp mod download
 
 # Use custom config file
-easyp -cfg production.easyp.yaml mod download
+easyp --cfg production.easyp.yaml mod download
 
 # With custom cache location
 EASYPPATH=/tmp/easyp-cache easyp mod download

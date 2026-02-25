@@ -173,7 +173,7 @@ deps:
 **Пример:**
 ```bash
 easyp mod download
-easyp -cfg production.easyp.yaml mod download
+easyp --cfg production.easyp.yaml mod download
 EASYPPATH=/tmp/easyp-cache easyp mod download
 ```
 

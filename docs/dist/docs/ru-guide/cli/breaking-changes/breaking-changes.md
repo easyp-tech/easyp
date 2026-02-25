@@ -71,7 +71,7 @@ easyp breaking --against main
 ### Использование файла конфигурации
 
 ```bash
-easyp -cfg my-config.yaml breaking
+easyp --cfg my-config.yaml breaking
 ```
 
 ### Переопределение Git‑ссылки
@@ -269,7 +269,7 @@ messages.proto:15:3: Previously present field "2" with name "email" on message "
 ### JSON формат
 
 ```bash
-easyp breaking --against main --format json
+easyp --format json breaking --against main
 ```
 
 ```json

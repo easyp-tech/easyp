@@ -49,10 +49,10 @@ easyp lint --path proto/
 easyp lint --root src/IPC/Contracts --path .
 
 # JSON output format
-easyp lint --format json   # global flag
+easyp --format json lint   # global flag
 
 # Combined flags
-easyp lint -p proto/ -f json
+easyp -f json lint -p proto/
 ```
 
 **Generate command:**
@@ -97,7 +97,7 @@ easyp breaking --against main
 easyp breaking --against develop --path proto/
 
 # JSON output
-easyp breaking --against main --format json   # global flag
+easyp --format json breaking --against main   # global flag
 ```
 
 **Init command:**
