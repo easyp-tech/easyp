@@ -160,6 +160,14 @@ easyp validate-config
 easyp --format text validate-config --config example.easyp.yaml
 ```
 
+### Config Schema Integration
+
+The source of truth for config schema + MCP tool metadata lives in [`mcp/easypconfig`](mcp/easypconfig/README.md).
+
+- Go integration: import `github.com/easyp-tech/easyp/mcp/easypconfig` and call `RegisterTool(...)` / `Describe(...)`.
+- Cross-language integration: consume generated JSON Schema artifacts in `schemas/easyp-config-v1.schema.json` and `schemas/easyp-config.schema.json`.
+- Regenerate artifacts: `task schema:generate` (or `go run ./cmd/easyp-schema-gen`).
+
 ## Community
 
 For help and discussion around EasyP and Protocol Buffers best practices:
