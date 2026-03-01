@@ -36,6 +36,17 @@ tasks:
     cmds:
       - "go build -o easyp ./cmd/easyp"
 
+  schema:generate:
+    desc: Generate versioned and latest easyp config JSON Schema artifacts
+    cmds:
+      - "go run ./cmd/easyp-schema-gen"
+
+  schema:check:
+    desc: Ensure schema artifacts are up to date
+    cmds:
+      - task: schema:generate
+      - "git diff --exit-code -- schemas/easyp-config-v1.schema.json schemas/easyp-config.schema.json"
+
   test:
     cmds:
       - "{{.LOCAL_BIN}}/gotestsum --format pkgname -- -coverprofile=coverage.out -race -count=1 ./..."

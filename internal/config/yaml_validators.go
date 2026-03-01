@@ -7,6 +7,21 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+func yamlKindName(kind yaml.Kind) string {
+	switch kind {
+	case yaml.ScalarNode:
+		return "ScalarNode"
+	case yaml.SequenceNode:
+		return "SequenceNode"
+	case yaml.MappingNode:
+		return "MappingNode"
+	case yaml.AliasNode:
+		return "AliasNode"
+	default:
+		return fmt.Sprintf("%d", kind)
+	}
+}
+
 // directoryValidator allows directory to be either a string or a map with required path and optional root.
 type directoryValidator struct{}
 
@@ -78,7 +93,7 @@ func (directoryValidator) Validate(node *yaml.Node, path string, ctx *v.Validati
 			Line:    node.Line,
 			Column:  node.Column,
 			Message: "directory must be string or mapping",
-			Got:     fmt.Sprintf("%v", node.Kind),
+			Got:     yamlKindName(node.Kind),
 		})
 	}
 }
@@ -158,7 +173,8 @@ func (pluginOptsValidator) Validate(node *yaml.Node, path string, ctx *v.Validat
 				Line:    valNode.Line,
 				Column:  valNode.Column,
 				Message: "opts value must be a scalar or sequence of scalars",
-				Got:     fmt.Sprintf("%v", valNode.Kind),
+				Expected: "scalar or sequence of scalars",
+				Got:      yamlKindName(valNode.Kind),
 			})
 		}
 	}

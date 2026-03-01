@@ -56,6 +56,34 @@ func TestAllRuleNames(t *testing.T) {
 	require.Equal(t, expected, allRules)
 }
 
+func TestAllLintUseValues(t *testing.T) {
+	values := rules.AllLintUseValues()
+	require.NotEmpty(t, values)
+
+	for _, group := range rules.AllGroups() {
+		require.Contains(t, values, group.Key)
+	}
+	for _, ruleName := range rules.AllRuleNames() {
+		require.Contains(t, values, ruleName)
+	}
+	require.Contains(t, values, "PACKAGE_NO_IMPORT_CYCLE")
+	require.Equal(t, len(values), len(uniqueStrings(values)))
+}
+
+func uniqueStrings(values []string) []string {
+	set := make(map[string]struct{}, len(values))
+	for _, value := range values {
+		set[value] = struct{}{}
+	}
+
+	out := make([]string, 0, len(set))
+	for value := range set {
+		out = append(out, value)
+	}
+
+	return out
+}
+
 func TestNew_ExceptExpandsGroups(t *testing.T) {
 	// Use DEFAULT group and except COMMENTS group.
 	// COMMENTS rules should not appear in result (but they aren't in DEFAULT anyway).

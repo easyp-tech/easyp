@@ -44,6 +44,20 @@ func AllRuleNames() []string {
 	return res
 }
 
+// AllLintUseValues returns all valid values for lint.use:
+// group keys, grouped rule names, and uncategorized rule names.
+func AllLintUseValues() []string {
+	groups := AllGroups()
+	values := make([]string, 0, len(groups)+len(AllRuleNames())+1)
+	for _, group := range groups {
+		values = append(values, group.Key)
+	}
+	values = append(values, AllRuleNames()...)
+	values = append(values, core.GetRuleName(&PackageNoImportCycle{}))
+
+	return lo.FindUniques(values)
+}
+
 // New returns a map of rules and a map of ignore only rules by configuration.
 func New(cfg config.LintConfig) ([]core.Rule, map[string][]string, error) {
 	allRules := []core.Rule{

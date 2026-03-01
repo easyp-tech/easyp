@@ -219,7 +219,6 @@ type (
 	InputGitRepo struct {
 		URL          string
 		SubDirectory string
-		Out          string
 		Root         string
 	}
 	// InputFilesDir is the configuration of the directory with additional functionality.

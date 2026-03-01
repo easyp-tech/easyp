@@ -49,8 +49,12 @@ func ValidateRaw(buf []byte) ([]ValidationIssue, error) {
 		}
 
 		msg := e.Message
-		if e.Expected != "" || e.Got != "" {
+		if e.Expected != "" && e.Got != "" {
 			msg = fmt.Sprintf("%s (expected %s, got %s)", e.Message, e.Expected, e.Got)
+		} else if e.Expected != "" {
+			msg = fmt.Sprintf("%s (expected %s)", e.Message, e.Expected)
+		} else if e.Got != "" {
+			msg = fmt.Sprintf("%s (got %s)", e.Message, e.Got)
 		}
 		if e.Path != "" {
 			msg = fmt.Sprintf("%s (path: %s)", msg, e.Path)
@@ -111,7 +115,7 @@ func buildSchema() *v.FieldSchema {
 			"path": {Type: v.TypeString},
 			"root": {Type: v.TypeString},
 		},
-		UnknownKeyPolicy: v.UnknownKeyWarn,
+		UnknownKeyPolicy: v.UnknownKeyIgnore,
 		Validators:       []v.ValueValidator{directoryValidator{}},
 	}
 
@@ -120,7 +124,6 @@ func buildSchema() *v.FieldSchema {
 		AllowedKeys: map[string]*v.FieldSchema{
 			"url":           {Type: v.TypeString, Required: true},
 			"sub_directory": {Type: v.TypeString},
-			"out":           {Type: v.TypeString},
 			"root":          {Type: v.TypeString},
 		},
 		UnknownKeyPolicy: v.UnknownKeyWarn,
