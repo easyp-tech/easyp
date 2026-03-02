@@ -97,6 +97,7 @@ dockers_v2:
       - go.sum
       - cmd
       - internal
+      - mcp
       - wellknownimports
 
 brews:
