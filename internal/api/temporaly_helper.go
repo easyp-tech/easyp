@@ -127,7 +127,6 @@ func buildCore(_ context.Context, log logger.Logger, cfg config.Config, dirWalke
 				return core.InputGitRepo{
 					URL:          i.GitRepo.URL,
 					SubDirectory: i.GitRepo.SubDirectory,
-					Out:          i.GitRepo.Out,
 					Root:         i.GitRepo.Root,
 				}
 			}), func(i core.InputGitRepo, _ int) bool {
