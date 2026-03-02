@@ -33,7 +33,7 @@ This allows external tooling (for example Kotlin/JetBrains plugins) to consume t
 Generate/update artifacts:
 
 ```sh
-go run ./cmd/easyp-schema-gen
+go run ./cmd/easyp schema-gen
 # or
 task schema:generate
 ```

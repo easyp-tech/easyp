@@ -48,6 +48,7 @@ func main() {
 			api.Completion{},
 			api.Init{},
 			api.Generate{},
+			api.SchemaGen{},
 			api.LsFiles{},
 			api.Validate{},
 			api.BreakingCheck{},

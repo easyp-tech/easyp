@@ -39,7 +39,7 @@ tasks:
   schema:generate:
     desc: Generate versioned and latest easyp config JSON Schema artifacts
     cmds:
-      - "go run ./cmd/easyp-schema-gen"
+      - "go run ./cmd/easyp schema-gen"
 
   schema:check:
     desc: Ensure schema artifacts are up to date

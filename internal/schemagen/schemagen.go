@@ -1,7 +1,6 @@
-package main
+package schemagen
 
 import (
-	"flag"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -9,28 +8,42 @@ import (
 	"github.com/easyp-tech/easyp/mcp/easypconfig"
 )
 
-func main() {
-	var (
-		versionedOut string
-		latestOut    string
-	)
+const (
+	DefaultVersionedOut = "schemas/easyp-config-v1.schema.json"
+	DefaultLatestOut    = "schemas/easyp-config.schema.json"
+)
 
-	flag.StringVar(&versionedOut, "out-versioned", "schemas/easyp-config-v1.schema.json", "path to versioned schema file")
-	flag.StringVar(&latestOut, "out-latest", "schemas/easyp-config.schema.json", "path to latest schema alias file")
-	flag.Parse()
+type Options struct {
+	VersionedOut string
+	LatestOut    string
+}
+
+func Run(opts Options) error {
+	versionedOut := opts.VersionedOut
+	if versionedOut == "" {
+		versionedOut = DefaultVersionedOut
+	}
+
+	latestOut := opts.LatestOut
+	if latestOut == "" {
+		latestOut = DefaultLatestOut
+	}
 
 	data, err := easypconfig.MarshalConfigJSONSchema()
 	if err != nil {
-		exitf("marshal schema: %v", err)
+		return fmt.Errorf("marshal schema: %w", err)
 	}
 	data = append(data, '\n')
 
 	if err := writeFile(versionedOut, data); err != nil {
-		exitf("write versioned schema: %v", err)
+		return fmt.Errorf("write versioned schema: %w", err)
 	}
+
 	if err := writeFile(latestOut, data); err != nil {
-		exitf("write latest schema: %v", err)
+		return fmt.Errorf("write latest schema: %w", err)
 	}
+
+	return nil
 }
 
 func writeFile(path string, data []byte) error {
@@ -44,9 +57,4 @@ func writeFile(path string, data []byte) error {
 	}
 
 	return nil
-}
-
-func exitf(format string, args ...any) {
-	_, _ = fmt.Fprintf(os.Stderr, format+"\n", args...)
-	os.Exit(1)
 }
