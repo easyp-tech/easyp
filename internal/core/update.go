@@ -21,7 +21,7 @@ func (c *Core) Update(ctx context.Context, dependencies []string) error {
 
 	for _, dependency := range dependencies {
 		module := models.NewModule(dependency)
-		log := c.logger.With(slog.String("module", module.Name), slog.String("version", string(module.Version)))
+		log := c.logger.With(slog.String("schema", module.Schema), slog.String("module", module.Name), slog.String("version", string(module.Version)))
 
 		log.Debug(ctx, "updating dependency")
 

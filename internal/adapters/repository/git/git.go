@@ -44,10 +44,10 @@ type Console interface {
 }
 
 // New returns gitRepo instance
-// remote: full remoteURL address without schema
+// remote: full remoteURL address with schema
 func New(ctx context.Context, remote string, cacheDir string, console Console) (repository.Repo, error) {
 	r := &gitRepo{
-		remoteURL: getRemote(remote),
+		remoteURL: remote,
 		cacheDir:  cacheDir,
 		console:   console,
 	}
@@ -69,9 +69,9 @@ func New(ctx context.Context, remote string, cacheDir string, console Console) (
 	return r, nil
 }
 
-func getRemote(name string) string {
-	return "https://" + name
-}
+// func getRemote(name string) string {
+// 	return "https://" + name
+// }
 
 // getCommitDatetime returns datetime of commit
 // NOTE: the commit has to be fetched!
