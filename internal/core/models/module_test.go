@@ -6,7 +6,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func Test_NewModule(t *testing.T) {
+func Test_NewModule_Versions(t *testing.T) {
 	tests := map[string]struct {
 		dependency     string
 		expectedResult Module
@@ -14,6 +14,7 @@ func Test_NewModule(t *testing.T) {
 		"with version": {
 			dependency: "github.com/company/repository@v1.2.3",
 			expectedResult: Module{
+				Schema:  "https://",
 				Name:    "github.com/company/repository",
 				Version: "v1.2.3",
 			},
@@ -21,6 +22,55 @@ func Test_NewModule(t *testing.T) {
 		"without version": {
 			dependency: "github.com/company/repository",
 			expectedResult: Module{
+				Schema:  "https://",
+				Name:    "github.com/company/repository",
+				Version: Omitted,
+			},
+		},
+	}
+
+	for name, tc := range tests {
+		name, tc := name, tc
+		t.Run(name, func(t *testing.T) {
+			result := NewModule(tc.dependency)
+			require.Equal(t, tc.expectedResult, result)
+		})
+	}
+}
+
+func Test_NewModule_Schemas(t *testing.T) {
+	tests := map[string]struct {
+		dependency     string
+		expectedResult Module
+	}{
+		"without schema": {
+			dependency: "github.com/company/repository",
+			expectedResult: Module{
+				Schema:  "https://",
+				Name:    "github.com/company/repository",
+				Version: Omitted,
+			},
+		},
+		"with http://": {
+			dependency: "http://github.com/company/repository",
+			expectedResult: Module{
+				Schema:  "http://",
+				Name:    "github.com/company/repository",
+				Version: Omitted,
+			},
+		},
+		"with https://": {
+			dependency: "https://github.com/company/repository",
+			expectedResult: Module{
+				Schema:  "https://",
+				Name:    "github.com/company/repository",
+				Version: Omitted,
+			},
+		},
+		"with unexpected_scheme://": {
+			dependency: "unexpected_scheme://github.com/company/repository",
+			expectedResult: Module{
+				Schema:  "unexpected_scheme://",
 				Name:    "github.com/company/repository",
 				Version: Omitted,
 			},

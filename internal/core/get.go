@@ -12,7 +12,7 @@ import (
 
 // Get download package.
 func (c *Core) Get(ctx context.Context, requestedModule models.Module) error {
-	log := c.logger.With(slog.String("module", requestedModule.Name), slog.String("version", string(requestedModule.Version)))
+	log := c.logger.With(slog.String("schema", requestedModule.Schema), slog.String("module", requestedModule.Name), slog.String("version", string(requestedModule.Version)))
 	cacheDownloadPaths := c.storage.GetCacheDownloadPaths(requestedModule.Name, string(requestedModule.Version))
 
 	var installedModuleInfo models.InstalledModuleInfo
@@ -56,7 +56,7 @@ func (c *Core) get(ctx context.Context, requestedModule models.Module) (models.I
 		return models.InstalledModuleInfo{}, fmt.Errorf("c.storage.CreateCacheRepositoryDir: %w", err)
 	}
 	// TODO: use factory (git, svn etc)
-	repo, err := git.New(ctx, requestedModule.Name, cacheRepositoryDir, c.console)
+	repo, err := git.New(ctx, requestedModule.Schema+requestedModule.Name, cacheRepositoryDir, c.console)
 	if err != nil {
 		return models.InstalledModuleInfo{}, fmt.Errorf("git.New: %w", err)
 	}
@@ -81,7 +81,7 @@ func (c *Core) get(ctx context.Context, requestedModule models.Module) (models.I
 		return models.InstalledModuleInfo{}, fmt.Errorf("c.moduleConfig.Read: %w", err)
 	}
 
-	log := c.logger.With(slog.String("module", requestedModule.Name), slog.String("version", string(requestedModule.Version)))
+	log := c.logger.With(slog.String("module", requestedModule.Schema+requestedModule.Name), slog.String("version", string(requestedModule.Version)))
 
 	for _, indirectDep := range moduleConfig.Dependencies {
 		if err := c.Get(ctx, indirectDep); err != nil {

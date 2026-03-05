@@ -9,3 +9,5 @@ easyp.lock
 node_modules
 *.tsbuildinfo
 .rules-mcp
+
+.vscode

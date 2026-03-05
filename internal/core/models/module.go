@@ -30,8 +30,9 @@ var (
 	ErrRequestedVersionNotGenerated = errors.New("requested version is not generated")
 )
 
-// Module contain requested dependency name and its version
+// Module contain requested dependency schema, name and its version
 type Module struct {
+	Schema  string           // schema to request remote repository (e.g. http:// https://)
 	Name    string           // Full path on remote repository
 	Version RequestedVersion // Version obtained from config (Omitted if version was omitted)
 }
@@ -48,9 +49,20 @@ type GeneratedVersionParts struct {
 	CommitHash string
 }
 
-// NewModule create Module struct from raw dependency string: remote@version
-// dependency string format: origin@version: github.com/company/repository@v1.2.3
+// NewModule create Module struct from raw dependency string: schema://remote@version
+//
+// dependency string format: [schema://]origin@version: https://github.com/company/repository@v1.2.3
+//
+// If schema is not speciefied, https:// is by default.
 func NewModule(dependency string) Module {
+	schema := "https://" // Default schema
+
+	if strings.Contains(dependency, "://") {
+		schemaEnd := strings.Index(dependency, "://") + 3
+		schema = dependency[:schemaEnd]
+		dependency = dependency[schemaEnd:]
+	}
+
 	parts := strings.Split(dependency, "@")
 	name := parts[0]
 	version := Omitted // by default set version as Omitted
@@ -58,6 +70,7 @@ func NewModule(dependency string) Module {
 		version = RequestedVersion(parts[1])
 	}
 	return Module{
+		Schema:  schema,
 		Name:    name,
 		Version: version,
 	}
