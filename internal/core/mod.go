@@ -1,5 +1,8 @@
 package core
 
+//go:generate mockery --name Storage --dir . --output . --outpkg core --filename storage_mock_test.go --structname StorageMock --inpackage --testonly
+//go:generate mockery --name LockFile --dir . --output . --outpkg core --filename lockfile_mock_test.go --structname LockFileMock --inpackage --testonly
+
 import (
 	"context"
 	"iter"

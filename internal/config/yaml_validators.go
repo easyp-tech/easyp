@@ -168,11 +168,11 @@ func (pluginOptsValidator) Validate(node *yaml.Node, path string, ctx *v.Validat
 			}
 		default:
 			ctx.AddError(v.ValidationError{
-				Level:   v.LevelError,
-				Path:    optsPath,
-				Line:    valNode.Line,
-				Column:  valNode.Column,
-				Message: "opts value must be a scalar or sequence of scalars",
+				Level:    v.LevelError,
+				Path:     optsPath,
+				Line:     valNode.Line,
+				Column:   valNode.Column,
+				Message:  "opts value must be a scalar or sequence of scalars",
 				Expected: "scalar or sequence of scalars",
 				Got:      yamlKindName(valNode.Kind),
 			})
@@ -195,13 +195,13 @@ func (managedDisableValidator) Validate(node *yaml.Node, path string, ctx *v.Val
 		}
 		return false
 	}
-	if !(has("module") || has("path") || has("file_option") || has("field_option") || has("field")) {
+	if !(has("module") || has("package") || has("path") || has("file_option") || has("field_option") || has("field")) {
 		ctx.AddError(v.ValidationError{
 			Level:   v.LevelError,
 			Path:    path,
 			Line:    node.Line,
 			Column:  node.Column,
-			Message: "managed.disable entry must set at least one of module/path/file_option/field_option/field",
+			Message: "managed.disable entry must set at least one of module/package/path/file_option/field_option/field",
 		})
 	}
 	if has("file_option") && has("field_option") {

@@ -212,7 +212,7 @@ func TestApplyManagedMode_OverrideForModule(t *testing.T) {
 			},
 			{
 				FileOption: FileOptionGoPackagePrefix,
-				Module:     "buf.build/acme/petapis",
+				Module:     "https://github.com/acme/petapis",
 				Value:      "github.com/acme/pet/gen/go",
 			},
 		},
@@ -220,7 +220,7 @@ func TestApplyManagedMode_OverrideForModule(t *testing.T) {
 
 	fileToModule := map[string]string{
 		"acme/weather/v1/weather.proto": "",
-		"acme/pet/v1/pet.proto":         "buf.build/acme/petapis",
+		"acme/pet/v1/pet.proto":         "https://github.com/acme/petapis",
 	}
 
 	err := ApplyManagedMode([]*descriptorpb.FileDescriptorProto{fd1, fd2}, config, fileToModule)
@@ -233,6 +233,46 @@ func TestApplyManagedMode_OverrideForModule(t *testing.T) {
 	// fd2 should use module-specific prefix
 	expected2 := "github.com/acme/pet/gen/go/acme/pet/v1;petv1"
 	assert.Equal(t, expected2, fd2.Options.GetGoPackage())
+}
+
+func TestApplyManagedMode_OverrideForProtoPackage(t *testing.T) {
+	fd1 := &descriptorpb.FileDescriptorProto{
+		Name:    strPtr("acme/weather/v1/weather.proto"),
+		Package: strPtr("acme.weather.v1"),
+		Options: &descriptorpb.FileOptions{},
+	}
+
+	fd2 := &descriptorpb.FileDescriptorProto{
+		Name:    strPtr("acme/weather/v2/weather.proto"),
+		Package: strPtr("acme.weather.v2"),
+		Options: &descriptorpb.FileOptions{},
+	}
+
+	config := ManagedModeConfig{
+		Enabled: true,
+		Override: []ManagedOverrideRule{
+			{
+				FileOption: FileOptionGoPackagePrefix,
+				Value:      "github.com/acme/default/gen/go",
+			},
+			{
+				FileOption: FileOptionGoPackagePrefix,
+				Package:    "acme.weather.v1",
+				Value:      "github.com/acme/weather/v1/gen/go",
+			},
+		},
+	}
+
+	fileToModule := map[string]string{
+		"acme/weather/v1/weather.proto": "",
+		"acme/weather/v2/weather.proto": "",
+	}
+
+	err := ApplyManagedMode([]*descriptorpb.FileDescriptorProto{fd1, fd2}, config, fileToModule)
+	require.NoError(t, err)
+
+	assert.Equal(t, "github.com/acme/weather/v1/gen/go/acme/weather/v1;weatherv1", fd1.Options.GetGoPackage())
+	assert.Equal(t, "github.com/acme/default/gen/go/acme/weather/v2;weatherv2", fd2.Options.GetGoPackage())
 }
 
 func TestApplyManagedMode_LastRuleWins(t *testing.T) {
@@ -514,7 +554,7 @@ func TestApplyManagedMode_FieldOptions(t *testing.T) {
 }
 
 func TestApplyManagedMode_ExternalModules(t *testing.T) {
-	// Files from external modules should only be processed if there's an explicit rule
+	// Global rules should apply to all files, including external modules.
 	localFile := &descriptorpb.FileDescriptorProto{
 		Name:    strPtr("api/v1/service.proto"),
 		Package: strPtr("api.v1"),
@@ -547,28 +587,33 @@ func TestApplyManagedMode_ExternalModules(t *testing.T) {
 	err := ApplyManagedMode([]*descriptorpb.FileDescriptorProto{localFile, externalFile}, config, fileToModule)
 	require.NoError(t, err)
 
-	// Local file should get go_package from managed mode
+	// Local file should get go_package from managed mode.
 	assert.Equal(t, "github.com/example/ec-code/gen/go/api/v1;apiv1", localFile.Options.GetGoPackage())
 
-	// External file should keep its original go_package (no rule for this module)
-	assert.Equal(t, "google.golang.org/genproto/googleapis/api/annotations", externalFile.Options.GetGoPackage())
+	// External file should also be rewritten by the global override.
+	assert.Equal(t, "github.com/example/ec-code/gen/go/google/api;googleapi", externalFile.Options.GetGoPackage())
 }
 
-func TestApplyManagedMode_ExternalModuleWithRule(t *testing.T) {
-	// External module file should be processed if there's an explicit rule
+func TestApplyManagedMode_DisableExternalModule(t *testing.T) {
 	externalFile := &descriptorpb.FileDescriptorProto{
 		Name:    strPtr("google/api/annotations.proto"),
 		Package: strPtr("google.api"),
-		Options: &descriptorpb.FileOptions{},
+		Options: &descriptorpb.FileOptions{
+			GoPackage: strPtr("google.golang.org/genproto/googleapis/api/annotations"),
+		},
 	}
 
 	config := ManagedModeConfig{
 		Enabled: true,
+		Disable: []ManagedDisableRule{
+			{
+				Module: "github.com/googleapis/googleapis",
+			},
+		},
 		Override: []ManagedOverrideRule{
 			{
 				FileOption: FileOptionGoPackagePrefix,
 				Value:      "github.com/example/ec-code/gen/go",
-				Module:     "github.com/googleapis/googleapis", // Explicit rule for this module
 			},
 		},
 	}
@@ -580,9 +625,43 @@ func TestApplyManagedMode_ExternalModuleWithRule(t *testing.T) {
 	err := ApplyManagedMode([]*descriptorpb.FileDescriptorProto{externalFile}, config, fileToModule)
 	require.NoError(t, err)
 
-	// External file should get go_package from managed mode because there's a rule for its module
-	// Package: google.api -> take last 2 segments -> googleapi
-	assert.Equal(t, "github.com/example/ec-code/gen/go/google/api;googleapi", externalFile.Options.GetGoPackage())
+	// Disabled modules should keep their original options even when global overrides exist.
+	assert.Equal(t, "google.golang.org/genproto/googleapis/api/annotations", externalFile.Options.GetGoPackage())
+}
+
+func TestApplyManagedMode_DisableForProtoPackage(t *testing.T) {
+	fd1 := &descriptorpb.FileDescriptorProto{
+		Name:    strPtr("acme/weather/v1/weather.proto"),
+		Package: strPtr("acme.weather.v1"),
+		Options: &descriptorpb.FileOptions{},
+	}
+
+	fd2 := &descriptorpb.FileDescriptorProto{
+		Name:    strPtr("acme/weather/v2/weather.proto"),
+		Package: strPtr("acme.weather.v2"),
+		Options: &descriptorpb.FileOptions{},
+	}
+
+	config := ManagedModeConfig{
+		Enabled: true,
+		Disable: []ManagedDisableRule{
+			{
+				Package:    "acme.weather.v1",
+				FileOption: FileOptionJavaPackagePrefix,
+			},
+		},
+	}
+
+	fileToModule := map[string]string{
+		"acme/weather/v1/weather.proto": "",
+		"acme/weather/v2/weather.proto": "",
+	}
+
+	err := ApplyManagedMode([]*descriptorpb.FileDescriptorProto{fd1, fd2}, config, fileToModule)
+	require.NoError(t, err)
+
+	assert.Nil(t, fd1.Options.JavaPackage)
+	assert.Equal(t, "com.acme.weather.v2", fd2.Options.GetJavaPackage())
 }
 
 // Test cleanPackageName function
@@ -701,7 +780,7 @@ func TestMatchesPath(t *testing.T) {
 			rule := ManagedOverrideRule{
 				Path: tt.rulePath,
 			}
-			result := rule.matchesFileContext(tt.filePath, "")
+			result := rule.matchesFileContext(tt.filePath, "", "")
 			assert.Equal(t, tt.expected, result, "filePath: %s, rulePath: %s", tt.filePath, tt.rulePath)
 		})
 	}

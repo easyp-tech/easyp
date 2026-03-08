@@ -92,6 +92,8 @@ func yamlNodeKind(kind yaml.Kind) string {
 type ManagedDisableRule struct {
 	// Module disables managed mode for all files in the specified module.
 	Module string `json:"module,omitempty" yaml:"module,omitempty"`
+	// Package disables managed mode for all files in the specified protobuf package.
+	Package string `json:"package,omitempty" yaml:"package,omitempty"`
 	// Path disables managed mode for files matching the specified path (directory or file).
 	Path string `json:"path,omitempty" yaml:"path,omitempty"`
 	// FileOption disables a specific file option from being modified.
@@ -112,6 +114,8 @@ type ManagedOverrideRule struct {
 	Value any `json:"value,omitempty" yaml:"value,omitempty"`
 	// Module applies this override only to files in the specified module.
 	Module string `json:"module,omitempty" yaml:"module,omitempty"`
+	// Package applies this override only to files in the specified protobuf package.
+	Package string `json:"package,omitempty" yaml:"package,omitempty"`
 	// Path applies this override only to files matching the specified path.
 	Path string `json:"path,omitempty" yaml:"path,omitempty"`
 	// Field applies this override only to the specified field (fully qualified name).
@@ -314,7 +318,7 @@ func (m *ManagedMode) Validate() error {
 // Validate validates a disable rule.
 func (r *ManagedDisableRule) Validate() error {
 	// At least one field must be set
-	if r.Module == "" && r.Path == "" && r.FileOption == "" && r.FieldOption == "" && r.Field == "" {
+	if r.Module == "" && r.Package == "" && r.Path == "" && r.FileOption == "" && r.FieldOption == "" && r.Field == "" {
 		return errors.New("disable rule must have at least one field set")
 	}
 

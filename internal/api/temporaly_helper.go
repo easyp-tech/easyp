@@ -161,6 +161,7 @@ func convertManagedModeConfig(cfg config.ManagedMode) core.ManagedModeConfig {
 		Disable: lo.Map(cfg.Disable, func(r config.ManagedDisableRule, _ int) core.ManagedDisableRule {
 			return core.ManagedDisableRule{
 				Module:      r.Module,
+				Package:     r.Package,
 				Path:        r.Path,
 				FileOption:  core.FileOptionType(r.FileOption),
 				FieldOption: core.FieldOptionType(r.FieldOption),
@@ -173,6 +174,7 @@ func convertManagedModeConfig(cfg config.ManagedMode) core.ManagedModeConfig {
 				FieldOption: core.FieldOptionType(r.FieldOption),
 				Value:       r.Value,
 				Module:      r.Module,
+				Package:     r.Package,
 				Path:        r.Path,
 				Field:       r.Field,
 			}

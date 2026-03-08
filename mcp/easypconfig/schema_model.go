@@ -119,6 +119,7 @@ type configSchemaManaged struct {
 
 type configSchemaManagedDisableRule struct {
 	Module      string `json:"module,omitempty"`
+	Package     string `json:"package,omitempty"`
 	Path        string `json:"path,omitempty"`
 	FileOption  string `json:"file_option,omitempty"`
 	FieldOption string `json:"field_option,omitempty"`
@@ -128,6 +129,7 @@ type configSchemaManagedDisableRule struct {
 func (configSchemaManagedDisableRule) JSONSchemaExtend(schema *invjsonschema.Schema) {
 	schema.AnyOf = []*invjsonschema.Schema{
 		{Required: []string{"module"}},
+		{Required: []string{"package"}},
 		{Required: []string{"path"}},
 		{Required: []string{"file_option"}},
 		{Required: []string{"field_option"}},
@@ -144,6 +146,7 @@ type configSchemaManagedOverrideRule struct {
 	FieldOption string `json:"field_option,omitempty"`
 	Value       any    `json:"value"`
 	Module      string `json:"module,omitempty"`
+	Package     string `json:"package,omitempty"`
 	Path        string `json:"path,omitempty"`
 	Field       string `json:"field,omitempty"`
 }
