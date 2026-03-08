@@ -206,6 +206,18 @@ func TestSchemaByPath_GitRepoOutAbsent(t *testing.T) {
 	require.False(t, hasOut)
 }
 
+func TestDescribe_ManagedRulePackageFieldPresent(t *testing.T) {
+	t.Parallel()
+
+	out, err := Describe(DescribeInput{Path: "generate.managed.override"})
+	require.NoError(t, err)
+	require.Contains(t, fieldPaths(out.Fields), "generate.managed.override[].package")
+
+	out, err = Describe(DescribeInput{Path: "generate.managed.disable"})
+	require.NoError(t, err)
+	require.Contains(t, fieldPaths(out.Fields), "generate.managed.disable[].package")
+}
+
 func TestMarshalConfigJSONSchema_Golden(t *testing.T) {
 	t.Parallel()
 

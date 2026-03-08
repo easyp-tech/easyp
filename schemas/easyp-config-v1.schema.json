@@ -203,6 +203,11 @@
                   },
                   {
                     "required": [
+                      "package"
+                    ]
+                  },
+                  {
+                    "required": [
                       "path"
                     ]
                   },
@@ -230,6 +235,9 @@
                 },
                 "properties": {
                   "module": {
+                    "type": "string"
+                  },
+                  "package": {
                     "type": "string"
                   },
                   "path": {
@@ -284,6 +292,9 @@
                   },
                   "value": true,
                   "module": {
+                    "type": "string"
+                  },
+                  "package": {
                     "type": "string"
                   },
                   "path": {

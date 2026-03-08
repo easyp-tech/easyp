@@ -235,6 +235,46 @@ func TestApplyManagedMode_OverrideForModule(t *testing.T) {
 	assert.Equal(t, expected2, fd2.Options.GetGoPackage())
 }
 
+func TestApplyManagedMode_OverrideForProtoPackage(t *testing.T) {
+	fd1 := &descriptorpb.FileDescriptorProto{
+		Name:    strPtr("acme/weather/v1/weather.proto"),
+		Package: strPtr("acme.weather.v1"),
+		Options: &descriptorpb.FileOptions{},
+	}
+
+	fd2 := &descriptorpb.FileDescriptorProto{
+		Name:    strPtr("acme/weather/v2/weather.proto"),
+		Package: strPtr("acme.weather.v2"),
+		Options: &descriptorpb.FileOptions{},
+	}
+
+	config := ManagedModeConfig{
+		Enabled: true,
+		Override: []ManagedOverrideRule{
+			{
+				FileOption: FileOptionGoPackagePrefix,
+				Value:      "github.com/acme/default/gen/go",
+			},
+			{
+				FileOption: FileOptionGoPackagePrefix,
+				Package:    "acme.weather.v1",
+				Value:      "github.com/acme/weather/v1/gen/go",
+			},
+		},
+	}
+
+	fileToModule := map[string]string{
+		"acme/weather/v1/weather.proto": "",
+		"acme/weather/v2/weather.proto": "",
+	}
+
+	err := ApplyManagedMode([]*descriptorpb.FileDescriptorProto{fd1, fd2}, config, fileToModule)
+	require.NoError(t, err)
+
+	assert.Equal(t, "github.com/acme/weather/v1/gen/go/acme/weather/v1;weatherv1", fd1.Options.GetGoPackage())
+	assert.Equal(t, "github.com/acme/default/gen/go/acme/weather/v2;weatherv2", fd2.Options.GetGoPackage())
+}
+
 func TestApplyManagedMode_LastRuleWins(t *testing.T) {
 	fd := &descriptorpb.FileDescriptorProto{
 		Name:    strPtr("acme/weather/v1/weather.proto"),
@@ -589,6 +629,41 @@ func TestApplyManagedMode_DisableExternalModule(t *testing.T) {
 	assert.Equal(t, "google.golang.org/genproto/googleapis/api/annotations", externalFile.Options.GetGoPackage())
 }
 
+func TestApplyManagedMode_DisableForProtoPackage(t *testing.T) {
+	fd1 := &descriptorpb.FileDescriptorProto{
+		Name:    strPtr("acme/weather/v1/weather.proto"),
+		Package: strPtr("acme.weather.v1"),
+		Options: &descriptorpb.FileOptions{},
+	}
+
+	fd2 := &descriptorpb.FileDescriptorProto{
+		Name:    strPtr("acme/weather/v2/weather.proto"),
+		Package: strPtr("acme.weather.v2"),
+		Options: &descriptorpb.FileOptions{},
+	}
+
+	config := ManagedModeConfig{
+		Enabled: true,
+		Disable: []ManagedDisableRule{
+			{
+				Package:    "acme.weather.v1",
+				FileOption: FileOptionJavaPackagePrefix,
+			},
+		},
+	}
+
+	fileToModule := map[string]string{
+		"acme/weather/v1/weather.proto": "",
+		"acme/weather/v2/weather.proto": "",
+	}
+
+	err := ApplyManagedMode([]*descriptorpb.FileDescriptorProto{fd1, fd2}, config, fileToModule)
+	require.NoError(t, err)
+
+	assert.Nil(t, fd1.Options.JavaPackage)
+	assert.Equal(t, "com.acme.weather.v2", fd2.Options.GetJavaPackage())
+}
+
 // Test cleanPackageName function
 func TestCleanPackageName(t *testing.T) {
 	tests := []struct {
@@ -705,7 +780,7 @@ func TestMatchesPath(t *testing.T) {
 			rule := ManagedOverrideRule{
 				Path: tt.rulePath,
 			}
-			result := rule.matchesFileContext(tt.filePath, "")
+			result := rule.matchesFileContext(tt.filePath, "", "")
 			assert.Equal(t, tt.expected, result, "filePath: %s, rulePath: %s", tt.filePath, tt.rulePath)
 		})
 	}

@@ -201,14 +201,14 @@ func docsByPath() map[string]nodeDoc {
 		"generate.managed": {
 			Fields: []FieldDoc{
 				{Path: "generate.managed.enabled", Type: "boolean", Required: false, Description: "Enable managed mode option rewriting.", DefaultValue: "false"},
-				{Path: "generate.managed.disable", Type: "array<object>", Required: false, Description: "Disable managed mode for matching modules, paths, or options."},
-				{Path: "generate.managed.override", Type: "array<object>", Required: false, Description: "Override file/field options with values. Without module/path, applies to all files."},
+				{Path: "generate.managed.disable", Type: "array<object>", Required: false, Description: "Disable managed mode for matching modules, protobuf packages, paths, or options."},
+				{Path: "generate.managed.override", Type: "array<object>", Required: false, Description: "Override file/field options with values. Without module/package/path, applies to all files."},
 			},
 			Examples: []Example{
 				{
 					Title:       "managed_mode_full",
 					Description: "Managed mode with both disable and override rules.",
-					YAML:        "generate:\n  managed:\n    enabled: true\n    disable:\n      - module: github.com/googleapis/googleapis\n      - field_option: jstype\n        field: acme.v1.Message.count\n    override:\n      - file_option: go_package_prefix\n        value: github.com/acme/contracts/gen/go\n      - field_option: jstype\n        field: acme.v1.Message.count\n        value: JS_STRING\n",
+					YAML:        "generate:\n  managed:\n    enabled: true\n    disable:\n      - module: github.com/googleapis/googleapis\n      - package: acme.v1\n        file_option: java_package_prefix\n      - field_option: jstype\n        field: acme.v1.Message.count\n    override:\n      - file_option: go_package_prefix\n        value: github.com/acme/contracts/gen/go\n      - file_option: go_package\n        package: acme.v1\n        value: github.com/acme/contracts/gen/go/acme/v1\n      - field_option: jstype\n        field: acme.v1.Message.count\n        value: JS_STRING\n",
 					Paths:       []string{"generate.managed"},
 				},
 			},
@@ -216,6 +216,7 @@ func docsByPath() map[string]nodeDoc {
 		"generate.managed.disable": {
 			Fields: []FieldDoc{
 				{Path: "generate.managed.disable[].module", Type: "string", Required: false, Description: "Apply disable to an exact EasyP module source (dependency/git_repo URL without @version)."},
+				{Path: "generate.managed.disable[].package", Type: "string", Required: false, Description: "Apply disable to an exact protobuf package from the .proto file package declaration."},
 				{Path: "generate.managed.disable[].path", Type: "string", Required: false, Description: "Apply disable to path."},
 				{Path: "generate.managed.disable[].file_option", Type: "string", Required: false, Description: "Disable this file option."},
 				{Path: "generate.managed.disable[].field_option", Type: "string", Required: false, Description: "Disable this field option."},
@@ -225,7 +226,7 @@ func docsByPath() map[string]nodeDoc {
 				{
 					Title:       "managed_disable_variants",
 					Description: "Disable rules by path, file option, and field option.",
-					YAML:        "generate:\n  managed:\n    disable:\n      - path: proto/third_party\n      - file_option: java_package\n      - field_option: jstype\n        field: acme.v1.Message.count\n",
+					YAML:        "generate:\n  managed:\n    disable:\n      - path: proto/third_party\n      - package: acme.v1\n        file_option: java_package\n      - field_option: jstype\n        field: acme.v1.Message.count\n",
 					Paths:       []string{"generate.managed.disable"},
 				},
 			},
@@ -233,6 +234,7 @@ func docsByPath() map[string]nodeDoc {
 				"At least one key in each disable item is required.",
 				"`file_option` and `field_option` cannot be used together.",
 				"`field` requires `field_option`.",
+				"`package` matches the protobuf file package exactly.",
 			},
 		},
 		"generate.managed.override": {
@@ -241,6 +243,7 @@ func docsByPath() map[string]nodeDoc {
 				{Path: "generate.managed.override[].field_option", Type: "string", Required: false, Description: "Target field option to override."},
 				{Path: "generate.managed.override[].value", Type: "any", Required: true, Description: "Override value."},
 				{Path: "generate.managed.override[].module", Type: "string", Required: false, Description: "Optional exact EasyP module selector (dependency/git_repo URL without @version)."},
+				{Path: "generate.managed.override[].package", Type: "string", Required: false, Description: "Optional exact protobuf package selector from the .proto file package declaration."},
 				{Path: "generate.managed.override[].path", Type: "string", Required: false, Description: "Optional path selector."},
 				{Path: "generate.managed.override[].field", Type: "string", Required: false, Description: "Optional field selector (for field_option)."},
 			},
@@ -248,7 +251,7 @@ func docsByPath() map[string]nodeDoc {
 				{
 					Title:       "managed_override_file_option",
 					Description: "Override a file option with a custom value.",
-					YAML:        "generate:\n  managed:\n    override:\n      - file_option: java_package_prefix\n        value: com.acme.generated\n",
+					YAML:        "generate:\n  managed:\n    override:\n      - file_option: java_package_prefix\n        value: com.acme.generated\n      - file_option: go_package_prefix\n        package: acme.v1\n        value: github.com/acme/generated/go\n",
 					Paths:       []string{"generate.managed.override"},
 				},
 				{
@@ -261,6 +264,7 @@ func docsByPath() map[string]nodeDoc {
 			Notes: []string{
 				"Each override item requires exactly one of file_option or field_option.",
 				"`field` can only be used with `field_option`.",
+				"`package` matches the protobuf file package exactly.",
 			},
 		},
 		"breaking": {

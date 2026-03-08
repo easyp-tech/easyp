@@ -179,6 +179,32 @@ breaking:
 	require.True(t, hasWarning, "expected warning for unknown key 'unknown_field' in breaking section, got: %v", issues)
 }
 
+func TestValidateRaw_ManagedModePackageSelectors(t *testing.T) {
+	content := `lint:
+  use:
+    - DIRECTORY_SAME_PACKAGE
+generate:
+  inputs:
+    - directory: proto
+  plugins:
+    - name: go
+      out: .
+  managed:
+    enabled: true
+    disable:
+      - package: acme.weather.v1
+        file_option: java_package_prefix
+    override:
+      - file_option: go_package_prefix
+        package: acme.weather.v1
+        value: github.com/acme/gen/go
+`
+
+	issues, err := ValidateRaw([]byte(content))
+	require.NoError(t, err)
+	require.False(t, HasErrors(issues), "package selector in managed mode should be valid, got: %v", issues)
+}
+
 func TestValidateRaw_DirectoryUnknownKey_NoDuplicate(t *testing.T) {
 	content := `version: v1alpha
 lint:

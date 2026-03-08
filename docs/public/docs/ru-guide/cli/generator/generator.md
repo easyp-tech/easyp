@@ -574,7 +574,7 @@ Managed mode автоматически устанавливает file и field
 - Objective-C: `objc_class_prefix` по умолчанию первые буквы частей пакета
 - C++: `cc_enable_arenas` по умолчанию `true`
 
-**Overrides** позволяют установить конкретные значения для опций с поддержкой фильтрации по модулю, пути или полю. Если не указаны `module` и `path`, override применяется ко всем файлам в запросе генерации, включая зависимости и `git_repo` inputs.
+**Overrides** позволяют установить конкретные значения для опций с поддержкой фильтрации по модулю, protobuf package, пути или полю. Если не указаны `module`, `package` и `path`, override применяется ко всем файлам в запросе генерации, включая зависимости и `git_repo` inputs.
 
 **Disables** позволяют предотвратить изменение managed mode определённых опций или файлов. Это рекомендуемый способ исключить внешние зависимости, у которых свои опции уже заданы.
 
@@ -590,6 +590,10 @@ generate:
       
       # Отключить конкретную опцию глобально
       - file_option: java_package_prefix
+
+      # Отключить для конкретного protobuf package
+      - package: acme.weather.v1
+        file_option: java_package
       
       # Отключить для конкретного пути
       - path: legacy/
@@ -608,6 +612,11 @@ generate:
       - file_option: java_package_prefix
         value: com.mycompany
         module: github.com/mycompany/internal-protos
+
+      # Переопределить для конкретного protobuf package
+      - file_option: go_package_prefix
+        value: github.com/mycompany/myproject/gen/go
+        package: acme.weather.v1
       
       # Переопределить для конкретного пути
       - file_option: csharp_namespace_prefix
@@ -760,6 +769,24 @@ generate:
 ```
 
 `module` должен точно совпадать с источником модуля в EasyP: это значение из `deps` или `git_repo.url` до `@version` (например, `github.com/mycompany/internal-protos` или `https://github.com/mycompany/internal-protos`). Это не Go module path из `go.mod`.
+
+`package` должен точно совпадать со значением `package` в `.proto` файле, например `acme.weather.v1`.
+
+#### Переопределения для конкретного protobuf package
+
+Примените отдельные опции к файлам из конкретного protobuf package:
+
+```yaml
+generate:
+  managed:
+    enabled: true
+    override:
+      - file_option: go_package_prefix
+        value: github.com/mycompany/myproject/gen/go
+      - file_option: go_package
+        package: acme.weather.v1
+        value: github.com/mycompany/myproject/gen/go/acme/weather/v1
+```
 
 #### Отключение для внешних зависимостей
 

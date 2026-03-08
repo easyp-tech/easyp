@@ -85,6 +85,8 @@ const (
 type ManagedDisableRule struct {
 	// Module disables managed mode for all files in the specified module.
 	Module string
+	// Package disables managed mode for all files in the specified protobuf package.
+	Package string
 	// Path disables managed mode for files matching the specified path (directory or file).
 	Path string
 	// FileOption disables a specific file option from being modified.
@@ -105,6 +107,8 @@ type ManagedOverrideRule struct {
 	Value any
 	// Module applies this override only to files in the specified module.
 	Module string
+	// Package applies this override only to files in the specified protobuf package.
+	Package string
 	// Path applies this override only to files matching the specified path.
 	Path string
 	// Field applies this override only to the specified field (fully qualified name).
@@ -126,9 +130,9 @@ type ManagedModeConfig struct {
 // ============================================================================
 
 // IsFileOptionDisabled checks if a file option is disabled for the given file.
-func (c *ManagedModeConfig) IsFileOptionDisabled(filePath, module string, option FileOptionType) bool {
+func (c *ManagedModeConfig) IsFileOptionDisabled(filePath, module, protoPackage string, option FileOptionType) bool {
 	for _, rule := range c.Disable {
-		if rule.matchesFileOption(filePath, module, option) {
+		if rule.matchesFileOption(filePath, module, protoPackage, option) {
 			return true
 		}
 	}
@@ -136,9 +140,9 @@ func (c *ManagedModeConfig) IsFileOptionDisabled(filePath, module string, option
 }
 
 // IsFieldOptionDisabled checks if a field option is disabled for the given field.
-func (c *ManagedModeConfig) IsFieldOptionDisabled(filePath, module string, option FieldOptionType, fieldName string) bool {
+func (c *ManagedModeConfig) IsFieldOptionDisabled(filePath, module, protoPackage string, option FieldOptionType, fieldName string) bool {
 	for _, rule := range c.Disable {
-		if rule.matchesFieldOption(filePath, module, option, fieldName) {
+		if rule.matchesFieldOption(filePath, module, protoPackage, option, fieldName) {
 			return true
 		}
 	}
@@ -147,10 +151,10 @@ func (c *ManagedModeConfig) IsFieldOptionDisabled(filePath, module string, optio
 
 // GetFileOptionOverride returns the override value for a file option, or nil if not overridden.
 // If multiple overrides match, the last matching rule wins (buf behavior).
-func (c *ManagedModeConfig) GetFileOptionOverride(filePath, module string, option FileOptionType) any {
+func (c *ManagedModeConfig) GetFileOptionOverride(filePath, module, protoPackage string, option FileOptionType) any {
 	var result any
 	for _, rule := range c.Override {
-		if rule.FileOption == option && rule.matchesFileContext(filePath, module) {
+		if rule.FileOption == option && rule.matchesFileContext(filePath, module, protoPackage) {
 			result = rule.Value
 		}
 	}
@@ -159,10 +163,10 @@ func (c *ManagedModeConfig) GetFileOptionOverride(filePath, module string, optio
 
 // GetFieldOptionOverride returns the override value for a field option, or nil if not overridden.
 // If multiple overrides match, the last matching rule wins (buf behavior).
-func (c *ManagedModeConfig) GetFieldOptionOverride(filePath, module string, option FieldOptionType, fieldName string) any {
+func (c *ManagedModeConfig) GetFieldOptionOverride(filePath, module, protoPackage string, option FieldOptionType, fieldName string) any {
 	var result any
 	for _, rule := range c.Override {
-		if rule.FieldOption == option && rule.matchesFieldContext(filePath, module, fieldName) {
+		if rule.FieldOption == option && rule.matchesFieldContext(filePath, module, protoPackage, fieldName) {
 			result = rule.Value
 		}
 	}
@@ -174,7 +178,7 @@ func (c *ManagedModeConfig) GetFieldOptionOverride(filePath, module string, opti
 // ============================================================================
 
 // matchesFileOption checks if a disable rule matches the given file option context.
-func (r *ManagedDisableRule) matchesFileOption(filePath, module string, fileOption FileOptionType) bool {
+func (r *ManagedDisableRule) matchesFileOption(filePath, module, protoPackage string, fileOption FileOptionType) bool {
 	// If file option is specified, it must match
 	if r.FileOption != "" && r.FileOption != fileOption {
 		return false
@@ -185,11 +189,11 @@ func (r *ManagedDisableRule) matchesFileOption(filePath, module string, fileOpti
 		return false
 	}
 
-	return r.matchesContext(filePath, module)
+	return r.matchesContext(filePath, module, protoPackage)
 }
 
 // matchesFieldOption checks if a disable rule matches the given field option context.
-func (r *ManagedDisableRule) matchesFieldOption(filePath, module string, fieldOption FieldOptionType, fieldName string) bool {
+func (r *ManagedDisableRule) matchesFieldOption(filePath, module, protoPackage string, fieldOption FieldOptionType, fieldName string) bool {
 	// If field option is specified, it must match
 	if r.FieldOption != "" && r.FieldOption != fieldOption {
 		return false
@@ -205,15 +209,19 @@ func (r *ManagedDisableRule) matchesFieldOption(filePath, module string, fieldOp
 		return false
 	}
 
-	return r.matchesContext(filePath, module)
+	return r.matchesContext(filePath, module, protoPackage)
 }
 
-// matchesContext checks if module and path filters match.
-// Uses exact module comparison to avoid false positives.
-func (r *ManagedDisableRule) matchesContext(filePath, module string) bool {
+// matchesContext checks if module, protobuf package, and path filters match.
+// Uses exact comparison to avoid false positives.
+func (r *ManagedDisableRule) matchesContext(filePath, module, protoPackage string) bool {
 	// Check module match - use exact comparison to avoid false positives
 	// e.g., "googleapis" should NOT match "github.com/mycompany/super-googleapis-tools"
 	if r.Module != "" && r.Module != module {
+		return false
+	}
+
+	if r.Package != "" && r.Package != protoPackage {
 		return false
 	}
 
@@ -228,10 +236,14 @@ func (r *ManagedDisableRule) matchesContext(filePath, module string) bool {
 }
 
 // matchesFileContext checks if an override rule matches the given file context.
-// Uses exact module comparison to avoid false positives.
-func (r *ManagedOverrideRule) matchesFileContext(filePath, module string) bool {
+// Uses exact comparison to avoid false positives.
+func (r *ManagedOverrideRule) matchesFileContext(filePath, module, protoPackage string) bool {
 	// Check module match - use exact comparison to avoid false positives
 	if r.Module != "" && r.Module != module {
+		return false
+	}
+
+	if r.Package != "" && r.Package != protoPackage {
 		return false
 	}
 
@@ -246,13 +258,13 @@ func (r *ManagedOverrideRule) matchesFileContext(filePath, module string) bool {
 }
 
 // matchesFieldContext checks if an override rule matches the given field context.
-func (r *ManagedOverrideRule) matchesFieldContext(filePath, module, fieldName string) bool {
+func (r *ManagedOverrideRule) matchesFieldContext(filePath, module, protoPackage, fieldName string) bool {
 	// Check field match
 	if r.Field != "" && r.Field != fieldName {
 		return false
 	}
 
-	return r.matchesFileContext(filePath, module)
+	return r.matchesFileContext(filePath, module, protoPackage)
 }
 
 // ============================================================================
@@ -688,7 +700,7 @@ func ApplyManagedMode(
 		applyFileOptions(fd, config, filePath, module, pkg)
 
 		// Apply field options to all messages
-		applyFieldOptionsToMessages(fd.GetMessageType(), config, filePath, module, pkg)
+		applyFieldOptionsToMessages(fd.GetMessageType(), config, filePath, module, pkg, pkg)
 	}
 
 	return nil
@@ -730,12 +742,12 @@ func applyFileOptions(
 		}
 
 		// Check if this override matches the current file context
-		if !override.matchesFileContext(filePath, module) {
+		if !override.matchesFileContext(filePath, module, pkg) {
 			continue
 		}
 
 		// Check if this option is disabled
-		if config.IsFileOptionDisabled(filePath, module, override.FileOption) {
+		if config.IsFileOptionDisabled(filePath, module, pkg, override.FileOption) {
 			continue
 		}
 
@@ -772,7 +784,7 @@ func applyFileOptions(
 		}
 
 		// Check if this option is disabled
-		if config.IsFileOptionDisabled(filePath, module, handler.Option) {
+		if config.IsFileOptionDisabled(filePath, module, pkg, handler.Option) {
 			continue
 		}
 
@@ -792,7 +804,7 @@ func applyFileOptions(
 func applyFieldOptionsToMessages(
 	messages []*descriptorpb.DescriptorProto,
 	config ManagedModeConfig,
-	filePath, module, parentPath string,
+	filePath, module, protoPackage, parentPath string,
 ) {
 	for _, msg := range messages {
 		messagePath := parentPath + "." + msg.GetName()
@@ -800,11 +812,11 @@ func applyFieldOptionsToMessages(
 		// Apply options to each field
 		for _, field := range msg.GetField() {
 			fieldPath := messagePath + "." + field.GetName()
-			applyFieldOptions(field, config, filePath, module, fieldPath)
+			applyFieldOptions(field, config, filePath, module, protoPackage, fieldPath)
 		}
 
 		// Recursively process nested messages
-		applyFieldOptionsToMessages(msg.GetNestedType(), config, filePath, module, messagePath)
+		applyFieldOptionsToMessages(msg.GetNestedType(), config, filePath, module, protoPackage, messagePath)
 	}
 }
 
@@ -814,7 +826,7 @@ func applyFieldOptionsToMessages(
 func applyFieldOptions(
 	field *descriptorpb.FieldDescriptorProto,
 	config ManagedModeConfig,
-	filePath, module, fieldPath string,
+	filePath, module, protoPackage, fieldPath string,
 ) {
 	for i := range fieldOptionHandlers {
 		handler := &fieldOptionHandlers[i]
@@ -825,12 +837,12 @@ func applyFieldOptions(
 		}
 
 		// Check if this option is disabled
-		if config.IsFieldOptionDisabled(filePath, module, handler.Option, fieldPath) {
+		if config.IsFieldOptionDisabled(filePath, module, protoPackage, handler.Option, fieldPath) {
 			continue
 		}
 
 		// Get override value - field options only apply when explicitly overridden
-		override := config.GetFieldOptionOverride(filePath, module, handler.Option, fieldPath)
+		override := config.GetFieldOptionOverride(filePath, module, protoPackage, handler.Option, fieldPath)
 		if override != nil {
 			handler.Apply(field, override)
 			continue
