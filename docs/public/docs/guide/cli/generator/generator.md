@@ -574,9 +574,9 @@ When managed mode is enabled, EasyP automatically applies file and field options
 - Objective-C: `objc_class_prefix` defaults to first letters of package parts
 - C++: `cc_enable_arenas` defaults to `true`
 
-**Overrides** allow you to set specific values for options, with support for filtering by module, path, or field.
+**Overrides** allow you to set specific values for options, with support for filtering by module, path, or field. Without `module` or `path`, an override applies to all files in the generation request, including dependencies and `git_repo` inputs.
 
-**Disables** allow you to prevent managed mode from modifying specific options or files.
+**Disables** allow you to prevent managed mode from modifying specific options or files. This is the recommended way to exclude external dependencies that already define their own options.
 
 ### Configuration
 
@@ -758,6 +758,8 @@ generate:
         value: github.com/mycompany/internal/gen/go
         module: github.com/mycompany/internal-protos
 ```
+
+`module` matches the EasyP module source exactly: the dependency or `git_repo.url` value before `@version` (for example `github.com/mycompany/internal-protos` or `https://github.com/mycompany/internal-protos`). It is not the Go module path from `go.mod`.
 
 #### Disabling for External Dependencies
 

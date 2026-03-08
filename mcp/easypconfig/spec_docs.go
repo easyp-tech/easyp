@@ -20,7 +20,7 @@ func docsByPath() map[string]nodeDoc {
 				{
 					Title:       "full_config_reference",
 					Description: "Reference config touching all top-level sections.",
-					YAML:        "version: v1alpha\nlint:\n  use:\n    - DEFAULT\n  enum_zero_value_suffix: _UNSPECIFIED\n  service_suffix: Service\n  ignore:\n    - vendor\n  ignore_only:\n    RPC_REQUEST_STANDARD_NAME:\n      - proto/legacy\ndeps:\n  - github.com/googleapis/googleapis@common-protos-1_3_1\ngenerate:\n  inputs:\n    - directory:\n        path: api\n        root: .\n    - git_repo:\n        url: github.com/acme/contracts@v1.2.3\n        sub_directory: proto\n        root: .\n  plugins:\n    - name: go\n      out: gen/go\n      opts:\n        paths: source_relative\n    - remote: api.easyp.tech/grpc/go:v1.5.1\n      out: gen/go\n      with_imports: true\n  managed:\n    enabled: true\n    disable:\n      - module: buf.build/googleapis/googleapis\n    override:\n      - file_option: go_package_prefix\n        value: github.com/acme/contracts/gen/go\nbreaking:\n  against_git_ref: main\n  ignore:\n    - proto/legacy\n",
+					YAML:        "version: v1alpha\nlint:\n  use:\n    - DEFAULT\n  enum_zero_value_suffix: _UNSPECIFIED\n  service_suffix: Service\n  ignore:\n    - vendor\n  ignore_only:\n    RPC_REQUEST_STANDARD_NAME:\n      - proto/legacy\ndeps:\n  - github.com/googleapis/googleapis@common-protos-1_3_1\ngenerate:\n  inputs:\n    - directory:\n        path: api\n        root: .\n    - git_repo:\n        url: github.com/acme/contracts@v1.2.3\n        sub_directory: proto\n        root: .\n  plugins:\n    - name: go\n      out: gen/go\n      opts:\n        paths: source_relative\n    - remote: api.easyp.tech/grpc/go:v1.5.1\n      out: gen/go\n      with_imports: true\n  managed:\n    enabled: true\n    disable:\n      - module: github.com/googleapis/googleapis\n    override:\n      - file_option: go_package_prefix\n        value: github.com/acme/contracts/gen/go\nbreaking:\n  against_git_ref: main\n  ignore:\n    - proto/legacy\n",
 					Paths:       []string{"$", "lint", "deps", "generate", "breaking"},
 				},
 			},
@@ -79,7 +79,7 @@ func docsByPath() map[string]nodeDoc {
 				{
 					Title:       "generate_all_sections",
 					Description: "Generate section with local+git inputs, multiple plugin styles, and managed mode.",
-					YAML:        "generate:\n  inputs:\n    - directory: proto\n    - git_repo:\n        url: github.com/acme/contracts@v1.2.3\n        sub_directory: api\n  plugins:\n    - name: go\n      out: gen/go\n    - command: [\"go\", \"run\", \"example.com/protoc-gen-custom@latest\"]\n      out: gen/custom\n      with_imports: true\n  managed:\n    enabled: true\n    disable:\n      - module: buf.build/googleapis/googleapis\n    override:\n      - file_option: go_package_prefix\n        value: github.com/acme/contracts/gen/go\n",
+					YAML:        "generate:\n  inputs:\n    - directory: proto\n    - git_repo:\n        url: github.com/acme/contracts@v1.2.3\n        sub_directory: api\n  plugins:\n    - name: go\n      out: gen/go\n    - command: [\"go\", \"run\", \"example.com/protoc-gen-custom@latest\"]\n      out: gen/custom\n      with_imports: true\n  managed:\n    enabled: true\n    disable:\n      - module: github.com/googleapis/googleapis\n    override:\n      - file_option: go_package_prefix\n        value: github.com/acme/contracts/gen/go\n",
 					Paths:       []string{"generate", "generate.inputs", "generate.plugins", "generate.managed"},
 				},
 			},
@@ -201,21 +201,21 @@ func docsByPath() map[string]nodeDoc {
 		"generate.managed": {
 			Fields: []FieldDoc{
 				{Path: "generate.managed.enabled", Type: "boolean", Required: false, Description: "Enable managed mode option rewriting.", DefaultValue: "false"},
-				{Path: "generate.managed.disable", Type: "array<object>", Required: false, Description: "Disable managed mode per module/path/option."},
-				{Path: "generate.managed.override", Type: "array<object>", Required: false, Description: "Override file/field options with values."},
+				{Path: "generate.managed.disable", Type: "array<object>", Required: false, Description: "Disable managed mode for matching modules, paths, or options."},
+				{Path: "generate.managed.override", Type: "array<object>", Required: false, Description: "Override file/field options with values. Without module/path, applies to all files."},
 			},
 			Examples: []Example{
 				{
 					Title:       "managed_mode_full",
 					Description: "Managed mode with both disable and override rules.",
-					YAML:        "generate:\n  managed:\n    enabled: true\n    disable:\n      - module: buf.build/googleapis/googleapis\n      - field_option: jstype\n        field: acme.v1.Message.count\n    override:\n      - file_option: go_package_prefix\n        value: github.com/acme/contracts/gen/go\n      - field_option: jstype\n        field: acme.v1.Message.count\n        value: JS_STRING\n",
+					YAML:        "generate:\n  managed:\n    enabled: true\n    disable:\n      - module: github.com/googleapis/googleapis\n      - field_option: jstype\n        field: acme.v1.Message.count\n    override:\n      - file_option: go_package_prefix\n        value: github.com/acme/contracts/gen/go\n      - field_option: jstype\n        field: acme.v1.Message.count\n        value: JS_STRING\n",
 					Paths:       []string{"generate.managed"},
 				},
 			},
 		},
 		"generate.managed.disable": {
 			Fields: []FieldDoc{
-				{Path: "generate.managed.disable[].module", Type: "string", Required: false, Description: "Apply disable to module."},
+				{Path: "generate.managed.disable[].module", Type: "string", Required: false, Description: "Apply disable to an exact EasyP module source (dependency/git_repo URL without @version)."},
 				{Path: "generate.managed.disable[].path", Type: "string", Required: false, Description: "Apply disable to path."},
 				{Path: "generate.managed.disable[].file_option", Type: "string", Required: false, Description: "Disable this file option."},
 				{Path: "generate.managed.disable[].field_option", Type: "string", Required: false, Description: "Disable this field option."},
@@ -240,7 +240,7 @@ func docsByPath() map[string]nodeDoc {
 				{Path: "generate.managed.override[].file_option", Type: "string", Required: false, Description: "Target file option to override."},
 				{Path: "generate.managed.override[].field_option", Type: "string", Required: false, Description: "Target field option to override."},
 				{Path: "generate.managed.override[].value", Type: "any", Required: true, Description: "Override value."},
-				{Path: "generate.managed.override[].module", Type: "string", Required: false, Description: "Optional module selector."},
+				{Path: "generate.managed.override[].module", Type: "string", Required: false, Description: "Optional exact EasyP module selector (dependency/git_repo URL without @version)."},
 				{Path: "generate.managed.override[].path", Type: "string", Required: false, Description: "Optional path selector."},
 				{Path: "generate.managed.override[].field", Type: "string", Required: false, Description: "Optional field selector (for field_option)."},
 			},

@@ -574,9 +574,9 @@ Managed mode автоматически устанавливает file и field
 - Objective-C: `objc_class_prefix` по умолчанию первые буквы частей пакета
 - C++: `cc_enable_arenas` по умолчанию `true`
 
-**Overrides** позволяют установить конкретные значения для опций с поддержкой фильтрации по модулю, пути или полю.
+**Overrides** позволяют установить конкретные значения для опций с поддержкой фильтрации по модулю, пути или полю. Если не указаны `module` и `path`, override применяется ко всем файлам в запросе генерации, включая зависимости и `git_repo` inputs.
 
-**Disables** позволяют предотвратить изменение managed mode определённых опций или файлов.
+**Disables** позволяют предотвратить изменение managed mode определённых опций или файлов. Это рекомендуемый способ исключить внешние зависимости, у которых свои опции уже заданы.
 
 ### Конфигурация
 
@@ -758,6 +758,8 @@ generate:
         value: github.com/mycompany/internal/gen/go
         module: github.com/mycompany/internal-protos
 ```
+
+`module` должен точно совпадать с источником модуля в EasyP: это значение из `deps` или `git_repo.url` до `@version` (например, `github.com/mycompany/internal-protos` или `https://github.com/mycompany/internal-protos`). Это не Go module path из `go.mod`.
 
 #### Отключение для внешних зависимостей
 

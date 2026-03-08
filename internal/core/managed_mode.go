@@ -676,12 +676,8 @@ func ApplyManagedMode(
 		module := fileToModule[filePath]
 		pkg := fd.GetPackage()
 
-		// For files from external dependencies (module != ""), managed mode should
-		// only be applied if there's an explicit rule for that module.
-		// Local project files (module == "") are always processed.
-		if module != "" && !hasModuleRule(config, module) {
-			continue
-		}
+		// Managed mode applies to all files. Module/path selectors are used only
+		// to narrow disable/override rules, matching buf's managed mode behavior.
 
 		// Ensure Options is initialized
 		if fd.Options == nil {
@@ -696,25 +692,6 @@ func ApplyManagedMode(
 	}
 
 	return nil
-}
-
-// hasModuleRule checks if there are any disable or override rules for the given module.
-func hasModuleRule(config ManagedModeConfig, module string) bool {
-	// Check disable rules
-	for _, rule := range config.Disable {
-		if rule.Module == module {
-			return true
-		}
-	}
-
-	// Check override rules
-	for _, rule := range config.Override {
-		if rule.Module == module {
-			return true
-		}
-	}
-
-	return false
 }
 
 // applyFileOptions applies all registered file options.
