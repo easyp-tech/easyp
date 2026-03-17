@@ -3,7 +3,7 @@ module github.com/easyp-tech/easyp
 go 1.24.0
 
 require (
-	github.com/Yakwilik/go-yamlvalidator v0.1.0
+	github.com/Yakwilik/go-yamlvalidator v0.2.1
 	github.com/a8m/envsubst v1.4.3
 	github.com/brianvoe/gofakeit/v6 v6.28.0
 	github.com/bufbuild/protocompile v0.14.1
