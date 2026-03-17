@@ -3,6 +3,7 @@ module github.com/easyp-tech/easyp
 go 1.24.0
 
 require (
+	github.com/Yakwilik/go-yamlvalidator v0.2.1
 	github.com/a8m/envsubst v1.4.3
 	github.com/brianvoe/gofakeit/v6 v6.28.0
 	github.com/bufbuild/protocompile v0.14.1
@@ -81,7 +82,6 @@ require (
 	github.com/xanzy/ssh-agent v0.3.3 // indirect
 	github.com/xo/terminfo v0.0.0-20220910002029-abceb7e1c41e // indirect
 	github.com/xrash/smetrics v0.0.0-20250705151800-55b8f293f342 // indirect
-	github.com/yakwilikk/go-yamlvalidator v0.0.0-20260216223344-568790865548
 	golang.org/x/crypto v0.44.0 // indirect
 	golang.org/x/exp v0.0.0-20250408133849-7e4ce0ab07d0 // indirect
 	golang.org/x/net v0.47.0 // indirect
