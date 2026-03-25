@@ -4,12 +4,10 @@ import BlogPage from './pages/BlogPage'
 import BlogPostPage from './pages/BlogPostPage'
 import DocsRoutes from './routes/DocsRoutes'
 import ErrorBoundary from './components/ErrorBoundary'
-import Snowflakes from './components/Snowflakes'
 
 function App() {
     return (
         <BrowserRouter>
-            <Snowflakes />
             <Routes>
                 <Route path="/" element={<HomePage />} />
                 <Route path="/blog" element={<BlogPage />} />
