@@ -59,7 +59,9 @@ func (c *Core) Generate(ctx context.Context, root, directory, descriptorSetOut s
 				addedFile := stripPrefix(path, repo.Root)
 
 				q.Files = append(q.Files, addedFile)
-				q.Imports = append(q.Imports, modulePaths)
+				if !slices.Contains(q.Imports, modulePaths) {
+					q.Imports = append(q.Imports, modulePaths)
+				}
 				if repo.Root != "" {
 					q.Imports = append(q.Imports, filepath.Join(modulePaths, repo.Root))
 				}
@@ -96,7 +98,9 @@ func (c *Core) Generate(ctx context.Context, root, directory, descriptorSetOut s
 
 		fsWalker := fs.NewFSWalker(root, searchPath)
 		importRoot := filepath.Join(root, inputFilesDir.Root)
-		q.Imports = append(q.Imports, importRoot)
+		if !slices.Contains(q.Imports, importRoot) {
+			q.Imports = append(q.Imports, importRoot)
+		}
 
 		err := fsWalker.WalkDir(func(walkPath string, err error) error {
 			switch {
