@@ -20,8 +20,8 @@ func (c *CommentRPC) Validate(protoInfo core.ProtoInfo) ([]core.Issue, error) {
 
 	for _, service := range protoInfo.Info.ProtoBody.Services {
 		for _, rpc := range service.ServiceBody.RPCs {
-			if len(service.Comments) == 0 {
-				res = core.AppendIssue(res, c, rpc.Meta.Pos, rpc.RPCName, service.Comments)
+			if len(rpc.Comments) == 0 {
+				res = core.AppendIssue(res, c, rpc.Meta.Pos, rpc.RPCName, rpc.Comments)
 			}
 		}
 	}
