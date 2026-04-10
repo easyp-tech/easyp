@@ -16,6 +16,7 @@ import (
 	"github.com/bufbuild/protocompile/protoutil"
 	"github.com/bufbuild/protocompile/wellknownimports"
 	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/reflect/protoreflect"
 	"google.golang.org/protobuf/types/descriptorpb"
 	"google.golang.org/protobuf/types/pluginpb"
 
@@ -59,7 +60,9 @@ func (c *Core) Generate(ctx context.Context, root, directory, descriptorSetOut s
 				addedFile := stripPrefix(path, repo.Root)
 
 				q.Files = append(q.Files, addedFile)
-				q.Imports = append(q.Imports, modulePaths)
+				if !slices.Contains(q.Imports, modulePaths) {
+					q.Imports = append(q.Imports, modulePaths)
+				}
 				if repo.Root != "" {
 					q.Imports = append(q.Imports, filepath.Join(modulePaths, repo.Root))
 				}
@@ -96,7 +99,9 @@ func (c *Core) Generate(ctx context.Context, root, directory, descriptorSetOut s
 
 		fsWalker := fs.NewFSWalker(root, searchPath)
 		importRoot := filepath.Join(root, inputFilesDir.Root)
-		q.Imports = append(q.Imports, importRoot)
+		if !slices.Contains(q.Imports, importRoot) {
+			q.Imports = append(q.Imports, importRoot)
+		}
 
 		err := fsWalker.WalkDir(func(walkPath string, err error) error {
 			switch {
@@ -152,34 +157,27 @@ func (c *Core) Generate(ctx context.Context, root, directory, descriptorSetOut s
 	dependencyFiles := make([]string, 0)
 
 	// Recursive function to add file and its dependencies in correct order
-	var addFileWithDeps func(string) error
-	addFileWithDeps = func(fileName string) error {
+	var addFileWithDeps func(protoreflect.FileDescriptor) error
+	addFileWithDeps = func(file protoreflect.FileDescriptor) error {
+		fileName := file.Path()
 		// If already processed - skip
 		if processedFiles[fileName] {
 			return nil
 		}
 
-		// Compile file
-		depRes, err := compiler.Compile(ctx, fileName)
-		if err != nil {
-			return fmt.Errorf("compile %s: %w", fileName, err)
-		}
-
-		if len(depRes) == 0 {
-			return fmt.Errorf("no results for %s", fileName)
-		}
-
-		descriptor := protoutil.ProtoFromFileDescriptor(depRes[0])
-
 		// IMPORTANT: first recursively add all dependencies
-		for _, dep := range descriptor.Dependency {
+		for i := range file.Imports().Len() {
+			dep := file.Imports().Get(i)
+
 			if err := addFileWithDeps(dep); err != nil {
 				// Ignore errors for optional dependencies
 				c.logger.Warn(ctx, "could not compile dependency",
-					slog.String("dependency", dep),
+					slog.String("dependency", dep.Path()),
 					slog.Any("error", err))
 			}
 		}
+
+		descriptor := protoutil.ProtoFromFileDescriptor(file)
 
 		// Only after dependencies add the file itself (if not already added)
 		if !processedFiles[fileName] {
@@ -193,13 +191,16 @@ func (c *Core) Generate(ctx context.Context, root, directory, descriptorSetOut s
 
 	// Process all files and their dependencies
 	for _, file := range res {
+		reflectFd := file.(protoreflect.FileDescriptor)
 		descriptor := protoutil.ProtoFromFileDescriptor(file)
 
 		// First add all dependencies of this file
-		for _, dep := range descriptor.Dependency {
+		for i := range reflectFd.Imports().Len() {
+			dep := reflectFd.Imports().Get(i)
+
 			if err := addFileWithDeps(dep); err != nil {
 				c.logger.Warn(ctx, "could not compile dependency",
-					slog.String("dependency", dep),
+					slog.String("dependency", dep.Path()),
 					slog.Any("error", err))
 			}
 		}
@@ -251,7 +252,7 @@ func (c *Core) Generate(ctx context.Context, root, directory, descriptorSetOut s
 			File: descriptorsToSave,
 		}
 
-		data, err := proto.Marshal(descriptorSet)
+		data, err := proto.MarshalOptions{Deterministic: true}.Marshal(descriptorSet)
 		if err != nil {
 			return fmt.Errorf("proto.Marshal: %w", err)
 		}
