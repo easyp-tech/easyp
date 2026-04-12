@@ -6,20 +6,16 @@ import (
 	"fmt"
 	"log/slog"
 
-	"github.com/samber/lo"
-
 	"github.com/easyp-tech/easyp/internal/core/models"
 )
 
 // Update all packages from config
 // dependencies slice of strings format: origin@version: github.com/company/repository@v1.2.3
 // if version is absent use the latest commit
-func (c *Core) Update(ctx context.Context, dependencies []string) error {
-	c.logger.Info(ctx, "updating dependencies", slog.Int("count", len(dependencies)))
+func (c *Core) Update(ctx context.Context) error {
+	c.logger.Info(ctx, "updating dependencies", slog.Int("count", len(c.deps)))
 
-	lo.Uniq(dependencies)
-
-	for _, dependency := range dependencies {
+	for _, dependency := range c.deps {
 		module := models.NewModule(dependency)
 		log := c.logger.With(slog.String("module", module.Name), slog.String("version", string(module.Version)))
 

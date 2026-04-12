@@ -30,6 +30,10 @@ import (
 func (c *Core) Generate(ctx context.Context, root, directory, descriptorSetOut string, includeImports bool) error {
 	c.logger.Info(ctx, "starting code generation", slog.String("directory", directory))
 
+	if err := c.Download(ctx); err != nil {
+		return fmt.Errorf("c.Download: %w", err)
+	}
+
 	// TODO: call download before
 	q := Query{
 		Imports: []string{},
