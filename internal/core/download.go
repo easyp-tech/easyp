@@ -12,12 +12,12 @@ import (
 // Download all packages from config
 // dependencies slice of strings format: origin@version: github.com/company/repository@v1.2.3
 // if version is absent use the latest commit
-func (c *Core) Download(ctx context.Context, dependencies []string) error {
+func (c *Core) Download(ctx context.Context) error {
 	if c.lockFile.IsEmpty() {
 		// if lock file is empty or doesn't exist install versions
 		// from easyp.yaml config and create lock file
 		c.logger.Debug(ctx, "Lock file is empty")
-		return c.Update(ctx, dependencies)
+		return c.Update(ctx)
 	}
 
 	c.logger.Debug(ctx, "Lock file is not empty. Install deps from it")
@@ -36,7 +36,7 @@ func (c *Core) Download(ctx context.Context, dependencies []string) error {
 	c.logger.Debug(ctx, "installing remaining dependencies not in lock file")
 
 	// install from remote generator sections
-	for _, dependency := range dependencies {
+	for _, dependency := range c.deps {
 		module := models.NewModule(dependency)
 		log := c.logger.With(slog.String("module", module.Name), slog.String("version", string(module.Version)))
 

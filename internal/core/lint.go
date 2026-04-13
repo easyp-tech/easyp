@@ -17,6 +17,10 @@ import (
 func (c *Core) Lint(ctx context.Context, fsWalker DirWalker) ([]IssueInfo, error) {
 	c.logger.Info(ctx, "starting lint")
 
+	if err := c.Download(ctx); err != nil {
+		return nil, fmt.Errorf("c.Download: %w", err)
+	}
+
 	var res []IssueInfo
 
 	err := fsWalker.WalkDir(func(path string, err error) error {

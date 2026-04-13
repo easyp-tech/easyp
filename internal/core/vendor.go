@@ -11,7 +11,7 @@ import (
 
 // Vendor copy all proto files from deps to local dir
 func (c *Core) Vendor(ctx context.Context) error {
-	if err := c.Download(ctx, c.deps); err != nil {
+	if err := c.Download(ctx); err != nil {
 		return fmt.Errorf("c.Download: %w", err)
 	}
 

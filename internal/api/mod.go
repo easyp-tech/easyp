@@ -86,10 +86,7 @@ func (m Mod) Download(ctx *cli.Context) error {
 		return fmt.Errorf("buildCore: %w", err)
 	}
 
-	deps := append([]string{}, cfg.Deps...)
-	deps = append(deps, getDepsFromGenerateDeps(cfg.Generate)...)
-
-	if err := app.Download(ctx.Context, deps); err != nil {
+	if err := app.Download(ctx.Context); err != nil {
 		if errors.Is(err, models.ErrVersionNotFound) {
 			os.Exit(1)
 		}
@@ -118,10 +115,7 @@ func (m Mod) Update(ctx *cli.Context) error {
 		return fmt.Errorf("buildCore: %w", err)
 	}
 
-	deps := append([]string{}, cfg.Deps...)
-	deps = append(deps, getDepsFromGenerateDeps(cfg.Generate)...)
-
-	if err := app.Update(ctx.Context, deps); err != nil {
+	if err := app.Update(ctx.Context); err != nil {
 		if errors.Is(err, models.ErrVersionNotFound) {
 			os.Exit(1)
 		}

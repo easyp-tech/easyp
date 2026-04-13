@@ -103,10 +103,15 @@ func buildCore(_ context.Context, log logger.Logger, cfg config.Config, dirWalke
 	// Convert managed mode configuration
 	managedMode := convertManagedModeConfig(cfg.Generate.Managed)
 
+	// collect all deps: from deps, from generate sections
+	deps := append([]string{}, cfg.Deps...)
+	deps = append(deps, getDepsFromGenerateDeps(cfg.Generate)...)
+	deps = lo.Uniq(deps)
+
 	app := core.New(
 		lintRules,
 		linterIgnoreDirs,
-		cfg.Deps,
+		deps,
 		ignoreOnly,
 		log,
 		lo.Map(cfg.Generate.Plugins, func(p config.Plugin, _ int) core.Plugin {
