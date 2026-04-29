@@ -29,6 +29,15 @@ var (
 		Value:      "master",
 	}
 
+	flagBreakingCheckRoot = &cli.StringFlag{
+		Name:       "root",
+		Usage:      "set root directory for file search (default: current working directory)",
+		Required:   false,
+		HasBeenSet: false,
+		Value:      "",
+		Aliases:    []string{"r"},
+	}
+
 	ErrBreakingCheckIssue = errors.New("has breaking check issue")
 )
 
@@ -49,6 +58,7 @@ func (b BreakingCheck) Command() *cli.Command {
 		Flags: []cli.Flag{
 			flagLintDirectoryPath,
 			flagAgainstBranchName,
+			flagBreakingCheckRoot,
 		},
 		SkipFlagParsing:        false,
 		HideHelp:               false,
@@ -86,12 +96,12 @@ func (b BreakingCheck) Action(ctx *cli.Context) error {
 }
 
 func (b BreakingCheck) action(ctx *cli.Context, log logger.Logger) error {
-	workingDir, err := os.Getwd()
+	configPath, projectRoot, breakingCheckRoot, err := resolveRoots(ctx, flagBreakingCheckRoot.Name)
 	if err != nil {
-		return fmt.Errorf("os.Getwd: %w", err)
+		return fmt.Errorf("resolveRoots: %w", err)
 	}
 
-	cfg, err := config.New(ctx.Context, ctx.String(flags.Config.Name))
+	cfg, err := config.New(ctx.Context, configPath)
 	if err != nil {
 		return fmt.Errorf("config.New: %w", err)
 	}
@@ -102,13 +112,13 @@ func (b BreakingCheck) action(ctx *cli.Context, log logger.Logger) error {
 		cfg.BreakingCheck.AgainstGitRef = against
 	}
 
-	dirWalker := fs.NewFSWalker(workingDir, ".")
+	dirWalker := fs.NewFSWalker(breakingCheckRoot, ".")
 	app, err := buildCore(ctx.Context, log, *cfg, dirWalker)
 	if err != nil {
 		return fmt.Errorf("buildCore: %w", err)
 	}
 
-	issues, err := app.BreakingCheck(ctx.Context, workingDir, path)
+	issues, err := app.BreakingCheck(ctx.Context, breakingCheckRoot, path)
 	if err != nil {
 		return fmt.Errorf("app.BreakingCheck: %w", err)
 	}
