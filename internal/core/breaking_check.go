@@ -20,6 +20,10 @@ type BreakingCheckConfig struct {
 }
 
 func (c *Core) BreakingCheck(ctx context.Context, workingDir, path string) ([]IssueInfo, error) {
+	if err := c.Download(ctx); err != nil {
+		return nil, fmt.Errorf("c.Download: %w", err)
+	}
+
 	fsWalker := fs.NewFSWalker(workingDir, path)
 
 	currentProtoFiles, err := c.readProtoFiles(ctx, fsWalker)
