@@ -3,6 +3,7 @@ package core
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"path/filepath"
 
 	"github.com/yoheimuta/go-protoparser/v4/interpret/unordered"
@@ -20,19 +21,25 @@ type BreakingCheckConfig struct {
 }
 
 func (c *Core) BreakingCheck(ctx context.Context, projectRoot, workingDir, path string) ([]IssueInfo, error) {
+	rel, err := filepath.Rel(projectRoot, workingDir)
+	if err != nil {
+		return nil, fmt.Errorf("filepath.Rel: %w", err)
+	}
+
+	gitPath := filepath.Join(rel, path)
+	c.logger.Debug(
+		ctx, "Paths for breaking check",
+		slog.String("rel", rel),
+		slog.String("path", path),
+		slog.String("gitPath", gitPath),
+	)
+
 	if err := c.Download(ctx); err != nil {
 		return nil, fmt.Errorf("c.Download: %w", err)
 	}
 
-	fsWalker := fs.NewFSWalker(workingDir, path)
-
-	currentProtoFiles, err := c.readProtoFiles(ctx, fsWalker)
-	if err != nil {
-		return nil, fmt.Errorf("c.readCurrentProtoFiles: %w", err)
-	}
-
 	againstFSWalker, err := c.currentProjectGitWalker.GetDirWalker(
-		workingDir, c.breakingCheckConfig.AgainstGitRef, path,
+		projectRoot, c.breakingCheckConfig.AgainstGitRef, gitPath,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("c.currentProjectGitWalker.GetDirWalker: %w", err)
@@ -40,6 +47,12 @@ func (c *Core) BreakingCheck(ctx context.Context, projectRoot, workingDir, path 
 	againstProtoFiles, err := c.readProtoFiles(ctx, againstFSWalker)
 	if err != nil {
 		return nil, fmt.Errorf("c.readAgainstProtoFiles: %w", err)
+	}
+
+	fsWalker := fs.NewFSWalker(workingDir, path)
+	currentProtoFiles, err := c.readProtoFiles(ctx, fsWalker)
+	if err != nil {
+		return nil, fmt.Errorf("c.readCurrentProtoFiles: %w", err)
 	}
 
 	currentProtoData, err := collect(currentProtoFiles)
