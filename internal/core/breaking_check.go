@@ -19,7 +19,7 @@ type BreakingCheckConfig struct {
 	IgnoreDirs []string
 }
 
-func (c *Core) BreakingCheck(ctx context.Context, workingDir, path string) ([]IssueInfo, error) {
+func (c *Core) BreakingCheck(ctx context.Context, projectRoot, workingDir, path string) ([]IssueInfo, error) {
 	if err := c.Download(ctx); err != nil {
 		return nil, fmt.Errorf("c.Download: %w", err)
 	}

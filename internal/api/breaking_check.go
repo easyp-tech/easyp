@@ -119,7 +119,7 @@ func (b BreakingCheck) action(ctx *cli.Context, log logger.Logger) error {
 		cfg.BreakingCheck.AgainstGitRef = against
 	}
 
-	issues, err := app.BreakingCheck(ctx.Context, breakingCheckRoot, path)
+	issues, err := app.BreakingCheck(ctx.Context, projectRoot, breakingCheckRoot, path)
 	if err != nil {
 		return fmt.Errorf("app.BreakingCheck: %w", err)
 	}
