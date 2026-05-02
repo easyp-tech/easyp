@@ -1,5 +1,6 @@
 module github.com/easyp-tech/easyp
 
+
 go 1.24.0
 
 require (

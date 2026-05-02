@@ -102,9 +102,17 @@ func (configSchemaPluginOpts) JSONSchema() *invjsonschema.Schema {
 		AdditionalProperties: &invjsonschema.Schema{
 			OneOf: []*invjsonschema.Schema{
 				{Type: "string"},
+				{Type: "number"},
+				{Type: "boolean"},
 				{
-					Type:  "array",
-					Items: &invjsonschema.Schema{Type: "string"},
+					Type: "array",
+					Items: &invjsonschema.Schema{
+						OneOf: []*invjsonschema.Schema{
+							{Type: "string"},
+							{Type: "number"},
+							{Type: "boolean"},
+						},
+					},
 				},
 			},
 		},

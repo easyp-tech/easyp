@@ -206,6 +206,33 @@ func TestSchemaByPath_GitRepoOutAbsent(t *testing.T) {
 	require.False(t, hasOut)
 }
 
+func TestSchemaByPath_PluginOptsAllowScalarBooleansAndNumbers(t *testing.T) {
+	t.Parallel()
+
+	index := SchemaByPath()
+	node, ok := index["generate.plugins[].opts"]
+	require.True(t, ok, "expected schema path generate.plugins[].opts")
+
+	additionalProperties, ok := nestedMap(node, "additionalProperties")
+	require.True(t, ok, "expected additionalProperties for generate.plugins[].opts")
+
+	topLevelTypes := collectOneOfTypes(t, additionalProperties)
+	require.Contains(t, topLevelTypes, "array")
+
+	arraySchema := findOneOfByType(t, additionalProperties, "array")
+	arrayItemTypes := collectOneOfTypes(t, arraySchema["items"].(map[string]any))
+	require.ElementsMatch(t, []string{"string", "number", "boolean"}, arrayItemTypes)
+
+	var scalarTypes []string
+	for _, schema := range oneOfSchemas(t, additionalProperties) {
+		typeName, _ := schema["type"].(string)
+		if typeName != "" {
+			scalarTypes = append(scalarTypes, typeName)
+		}
+	}
+	require.ElementsMatch(t, []string{"string", "number", "boolean", "array"}, scalarTypes)
+}
+
 func TestDescribe_ManagedRulePackageFieldPresent(t *testing.T) {
 	t.Parallel()
 
@@ -319,6 +346,53 @@ func decodeStructured(t *testing.T, res *mcp.CallToolResult, dst any) {
 	data, err := json.Marshal(res.StructuredContent)
 	require.NoError(t, err)
 	require.NoError(t, json.Unmarshal(data, dst))
+}
+
+func oneOfSchemas(t *testing.T, schema map[string]any) []map[string]any {
+	t.Helper()
+
+	raw, ok := schema["oneOf"]
+	require.True(t, ok, "expected oneOf in schema")
+
+	items, ok := raw.([]any)
+	require.True(t, ok, "expected oneOf to be an array")
+
+	out := make([]map[string]any, 0, len(items))
+	for _, item := range items {
+		itemSchema, ok := item.(map[string]any)
+		require.True(t, ok, "expected oneOf item to be an object")
+		out = append(out, itemSchema)
+	}
+
+	return out
+}
+
+func collectOneOfTypes(t *testing.T, schema map[string]any) []string {
+	t.Helper()
+
+	out := make([]string, 0, 4)
+	for _, item := range oneOfSchemas(t, schema) {
+		typeName, _ := item["type"].(string)
+		if typeName != "" {
+			out = append(out, typeName)
+		}
+	}
+
+	return out
+}
+
+func findOneOfByType(t *testing.T, schema map[string]any, wantType string) map[string]any {
+	t.Helper()
+
+	for _, item := range oneOfSchemas(t, schema) {
+		typeName, _ := item["type"].(string)
+		if typeName == wantType {
+			return item
+		}
+	}
+
+	t.Fatalf("expected oneOf branch with type %q", wantType)
+	return nil
 }
 
 func toolText(res *mcp.CallToolResult) string {
