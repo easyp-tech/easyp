@@ -153,7 +153,7 @@ Built for teams and organizations with features like reproducible builds, privat
 
 EasyP simplifies protobuf development so you can focus on building great APIs instead of managing toolchain complexity. Whether you're starting a new project or migrating from existing tools, EasyP provides a smooth path to modern protobuf development.
 
-Ready to get started? Check out our [Installation Guide](./install) and [Quickstart Tutorial](./quickstart).
+Ready to get started? Check out our [Installation Guide](/docs/guide/introduction/install) and [Quickstart Tutorial](/docs/guide/introduction/quickstart).
 
 ## Stargazers over time
 [![Stargazers over time](https://starchart.cc/easyp-tech/easyp.svg?variant=adaptive)](https://starchart.cc/easyp-tech/easyp)

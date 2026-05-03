@@ -151,7 +151,7 @@ EasyP изначально совместим с экосистемой buf:
 
 EasyP упрощает работу с protobuf — фокусируйтесь на API, а не на рутине. Хотите начать?
 
-Смотрите [Installation Guide](./install) и [Quickstart](./quickstart).
+Смотрите [Installation Guide](/docs/guide/introduction/install) и [Quickstart](/docs/guide/introduction/quickstart).
 
 ## Stargazers over time
 [![Stargazers over time](https://starchart.cc/easyp-tech/easyp.svg?variant=adaptive)](https://starchart.cc/easyp-tech/easyp)

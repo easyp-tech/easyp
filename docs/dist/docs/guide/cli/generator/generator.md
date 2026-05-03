@@ -335,8 +335,8 @@ In this mode EasyP:
 | `command` | []string | ❌ | - | Command to execute plugin (e.g., `["go", "run", "package"]`) |
 | `remote` | string | ❌ | - | Remote plugin URL |
 | `path` | string | ❌ | - | Path to plugin executable file |
-| `out` | string | ✅ | - | Output directory for generated files |
-| `opts` | map[string](string \| []string) | ❌ | `{}` | Plugin-specific options; list values are emitted as repeated `key=value` params |
+| `out` | string | ❌ | resolved generate root | Output directory for generated files |
+| `opts` | map[string](string \| number \| boolean \| array<string \| number \| boolean>) | ❌ | `{}` | Plugin-specific options; list values are emitted as repeated `key=value` params |
 | `with_imports` | bool | ❌ | `false` | Include proto files from dependencies |
 
 **Note:** Only one plugin source (`name`, `command`, `remote`, or `path`) must be specified for each plugin.
