@@ -335,8 +335,8 @@ plugins:
 | `command` | []string | ❌ | - | Команда для выполнения плагина (например, `["go", "run", "package"]`) |
 | `remote` | string | ❌ | - | URL удалённого плагина |
 | `path` | string | ❌ | - | Путь к исполняемому файлу плагина |
-| `out` | string | ✅ | - | Директория для сгенерированных файлов |
-| `opts` | map[string](string \| []string) | ❌ | `{}` | Специфичные опции плагина; значения-списки передаются как повторяющиеся `key=value` |
+| `out` | string | ❌ | resolved generate root | Директория для сгенерированных файлов |
+| `opts` | map[string](string \| number \| boolean \| array<string \| number \| boolean>) | ❌ | `{}` | Специфичные опции плагина; значения-списки передаются как повторяющиеся `key=value` |
 | `with_imports` | bool | ❌ | `false` | Включать proto из зависимостей |
 
 **Примечание:** Для каждого плагина должен быть указан ровно один источник (`name`, `command`, `remote` или `path`).

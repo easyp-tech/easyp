@@ -31,7 +31,8 @@ func TestGenerateManagedModeAppliesToGitRepoInputs(t *testing.T) {
 	storage := &StorageMock{}
 	lockFile := &LockFileMock{}
 
-	lockFile.EXPECT().DepsIter().Return(func(yield func(models.LockFileInfo) bool) {}).Once()
+	lockFile.EXPECT().IsEmpty().Return(false).Once()
+	lockFile.EXPECT().DepsIter().Return(func(yield func(models.LockFileInfo) bool) {}).Twice()
 	lockFile.EXPECT().Read(moduleName).Return(lockInfo, nil).Twice()
 	storage.EXPECT().GetInstallDir(moduleName, moduleVersion).Return(gitRepoRoot).Twice()
 

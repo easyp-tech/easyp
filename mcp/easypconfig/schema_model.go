@@ -80,7 +80,7 @@ type configSchemaPlugin struct {
 	Remote      string                 `json:"remote,omitempty"`
 	Path        string                 `json:"path,omitempty"`
 	Command     []string               `json:"command,omitempty"`
-	Out         string                 `json:"out"`
+	Out         string                 `json:"out,omitempty"`
 	Opts        configSchemaPluginOpts `json:"opts,omitempty"`
 	WithImports bool                   `json:"with_imports,omitempty"`
 }
@@ -102,9 +102,17 @@ func (configSchemaPluginOpts) JSONSchema() *invjsonschema.Schema {
 		AdditionalProperties: &invjsonschema.Schema{
 			OneOf: []*invjsonschema.Schema{
 				{Type: "string"},
+				{Type: "number"},
+				{Type: "boolean"},
 				{
-					Type:  "array",
-					Items: &invjsonschema.Schema{Type: "string"},
+					Type: "array",
+					Items: &invjsonschema.Schema{
+						OneOf: []*invjsonschema.Schema{
+							{Type: "string"},
+							{Type: "number"},
+							{Type: "boolean"},
+						},
+					},
 				},
 			},
 		},

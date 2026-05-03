@@ -166,8 +166,24 @@
                       "type": "string"
                     },
                     {
+                      "type": "number"
+                    },
+                    {
+                      "type": "boolean"
+                    },
+                    {
                       "items": {
-                        "type": "string"
+                        "oneOf": [
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "type": "number"
+                          },
+                          {
+                            "type": "boolean"
+                          }
+                        ]
                       },
                       "type": "array"
                     }
@@ -180,10 +196,7 @@
               }
             },
             "additionalProperties": false,
-            "type": "object",
-            "required": [
-              "out"
-            ]
+            "type": "object"
           },
           "type": "array",
           "minItems": 1

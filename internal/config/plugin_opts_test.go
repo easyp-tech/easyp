@@ -46,6 +46,17 @@ func TestPluginOpts_UnmarshalYAML(t *testing.T) {
 			},
 		},
 		{
+			name: "sequence of scalar bool and int",
+			input: `opts:
+  flags:
+    - false
+    - 30
+`,
+			expected: PluginOpts{
+				"flags": {"false", "30"},
+			},
+		},
+		{
 			name: "sequence item must be scalar",
 			input: `opts:
   outputServices:

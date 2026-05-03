@@ -690,8 +690,8 @@ generate:
 - `remote` (string, optional) - Remote plugin URL for execution
 - `path` (string, optional) - Path to plugin executable file
 - `command` ([]string, optional) - Command to execute plugin
-- `out` (string, required) - Output directory for generated files
-- `opts` (map[string](string | []string), optional) - Plugin-specific options; each key can be a single value or an array of values
+- `out` (string, optional) - Output directory for generated files; defaults to the resolved generate root
+- `opts` (map[string](string | number | boolean | array<string | number | boolean>), optional) - Plugin-specific options; each key can be a single scalar value or an array of scalar values
 - `with_imports` (boolean, optional) - Include imported dependencies
 
 Plugin source is `one-of`: exactly one of `name`, `remote`, `path`, or `command` must be set.

@@ -20,9 +20,14 @@ generate:
       out: .
       opts:
         env: node
+        require_unimplemented_servers: false
+        timeout: 30
         outputServices:
           - grpc-js
           - generic-definitions
+        flags:
+          - false
+          - 30
 `
 
 	issues, err := ValidateRaw([]byte(content))
