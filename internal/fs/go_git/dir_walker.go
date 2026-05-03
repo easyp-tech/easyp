@@ -10,7 +10,6 @@ func NewGitTreeWalker(tree *object.Tree, root, path string) *GitTreeWalker {
 	return &GitTreeWalker{
 		GitTreeDiskAdapter: &GitTreeDiskAdapter{tree, root},
 		tree:               tree,
-		root:               root,
 		path:               path,
 	}
 }
@@ -19,7 +18,6 @@ type GitTreeWalker struct {
 	*GitTreeDiskAdapter
 
 	tree *object.Tree
-	root string
 	path string
 }
 
