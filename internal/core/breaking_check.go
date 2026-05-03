@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
-	pathpkg "path"
 	"path/filepath"
 
 	"github.com/yoheimuta/go-protoparser/v4/interpret/unordered"
@@ -14,7 +13,7 @@ import (
 	"github.com/easyp-tech/easyp/internal/fs/fs"
 )
 
-var ErrRootOutsideProject = fmt.Errorf("breaking check root must be inside the project root")
+var ErrRootOutsideProject = fmt.Errorf("breaking check root must be inside the git repository")
 
 type BreakingCheckConfig struct {
 	// branch name to compare with
@@ -24,23 +23,11 @@ type BreakingCheckConfig struct {
 }
 
 func (c *Core) BreakingCheck(ctx context.Context, projectRoot, workingDir, path string) ([]IssueInfo, error) {
-	rel, err := filepath.Rel(projectRoot, workingDir)
-	if err != nil {
-		return nil, fmt.Errorf("filepath.Rel: %w", err)
-	}
-
-	if !filepath.IsLocal(rel) {
-		return nil, fmt.Errorf("%w: root path %q is outside project root %q", ErrRootOutsideProject, workingDir, projectRoot)
-	}
-
-	// Git tree paths must use forward slashes regardless of OS
-	relSlash := filepath.ToSlash(rel)
-	gitPath := pathpkg.Join(relSlash, filepath.ToSlash(path))
 	c.logger.Debug(
 		ctx, "Paths for breaking check",
-		slog.String("rel", relSlash),
+		slog.String("projectRoot", projectRoot),
+		slog.String("workingDir", workingDir),
 		slog.String("path", path),
-		slog.String("gitPath", gitPath),
 	)
 
 	if err := c.Download(ctx); err != nil {
@@ -56,7 +43,7 @@ func (c *Core) BreakingCheck(ctx context.Context, projectRoot, workingDir, path 
 
 	// read from ref branch
 	againstFSWalker, err := c.currentProjectGitWalker.GetDirWalker(
-		projectRoot, c.breakingCheckConfig.AgainstGitRef, relSlash, gitPath,
+		workingDir, c.breakingCheckConfig.AgainstGitRef, path,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("c.currentProjectGitWalker.GetDirWalker: %w", err)

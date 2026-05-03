@@ -20,9 +20,9 @@ func (_m *CurrentProjectGitWalker) EXPECT() *CurrentProjectGitWalker_Expecter {
 	return &CurrentProjectGitWalker_Expecter{mock: &_m.Mock}
 }
 
-// GetDirWalker provides a mock function with given fields: workingDir, gitRef, root, path
-func (_m *CurrentProjectGitWalker) GetDirWalker(workingDir string, gitRef string, root string, path string) (core.DirWalker, error) {
-	ret := _m.Called(workingDir, gitRef, root, path)
+// GetDirWalker provides a mock function with given fields: workingDir, gitRef, path
+func (_m *CurrentProjectGitWalker) GetDirWalker(workingDir string, gitRef string, path string) (core.DirWalker, error) {
+	ret := _m.Called(workingDir, gitRef, path)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetDirWalker")
@@ -30,19 +30,19 @@ func (_m *CurrentProjectGitWalker) GetDirWalker(workingDir string, gitRef string
 
 	var r0 core.DirWalker
 	var r1 error
-	if rf, ok := ret.Get(0).(func(string, string, string, string) (core.DirWalker, error)); ok {
-		return rf(workingDir, gitRef, root, path)
+	if rf, ok := ret.Get(0).(func(string, string, string) (core.DirWalker, error)); ok {
+		return rf(workingDir, gitRef, path)
 	}
-	if rf, ok := ret.Get(0).(func(string, string, string, string) core.DirWalker); ok {
-		r0 = rf(workingDir, gitRef, root, path)
+	if rf, ok := ret.Get(0).(func(string, string, string) core.DirWalker); ok {
+		r0 = rf(workingDir, gitRef, path)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(core.DirWalker)
 		}
 	}
 
-	if rf, ok := ret.Get(1).(func(string, string, string, string) error); ok {
-		r1 = rf(workingDir, gitRef, root, path)
+	if rf, ok := ret.Get(1).(func(string, string, string) error); ok {
+		r1 = rf(workingDir, gitRef, path)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -58,15 +58,14 @@ type CurrentProjectGitWalker_GetDirWalker_Call struct {
 // GetDirWalker is a helper method to define mock.On call
 //   - workingDir string
 //   - gitRef string
-//   - root string
 //   - path string
-func (_e *CurrentProjectGitWalker_Expecter) GetDirWalker(workingDir interface{}, gitRef interface{}, root interface{}, path interface{}) *CurrentProjectGitWalker_GetDirWalker_Call {
-	return &CurrentProjectGitWalker_GetDirWalker_Call{Call: _e.mock.On("GetDirWalker", workingDir, gitRef, root, path)}
+func (_e *CurrentProjectGitWalker_Expecter) GetDirWalker(workingDir interface{}, gitRef interface{}, path interface{}) *CurrentProjectGitWalker_GetDirWalker_Call {
+	return &CurrentProjectGitWalker_GetDirWalker_Call{Call: _e.mock.On("GetDirWalker", workingDir, gitRef, path)}
 }
 
-func (_c *CurrentProjectGitWalker_GetDirWalker_Call) Run(run func(workingDir string, gitRef string, root string, path string)) *CurrentProjectGitWalker_GetDirWalker_Call {
+func (_c *CurrentProjectGitWalker_GetDirWalker_Call) Run(run func(workingDir string, gitRef string, path string)) *CurrentProjectGitWalker_GetDirWalker_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(string), args[1].(string), args[2].(string), args[3].(string))
+		run(args[0].(string), args[1].(string), args[2].(string))
 	})
 	return _c
 }
@@ -76,7 +75,7 @@ func (_c *CurrentProjectGitWalker_GetDirWalker_Call) Return(_a0 core.DirWalker, 
 	return _c
 }
 
-func (_c *CurrentProjectGitWalker_GetDirWalker_Call) RunAndReturn(run func(string, string, string, string) (core.DirWalker, error)) *CurrentProjectGitWalker_GetDirWalker_Call {
+func (_c *CurrentProjectGitWalker_GetDirWalker_Call) RunAndReturn(run func(string, string, string) (core.DirWalker, error)) *CurrentProjectGitWalker_GetDirWalker_Call {
 	_c.Call.Return(run)
 	return _c
 }
