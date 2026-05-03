@@ -38,8 +38,16 @@ func (c *Core) BreakingCheck(ctx context.Context, projectRoot, workingDir, path 
 		return nil, fmt.Errorf("c.Download: %w", err)
 	}
 
+	// read current state
+	fsWalker := fs.NewFSWalker(workingDir, path)
+	currentProtoFiles, err := c.readProtoFiles(ctx, fsWalker)
+	if err != nil {
+		return nil, fmt.Errorf("c.readCurrentProtoFiles: %w", err)
+	}
+
+	// read from ref branch
 	againstFSWalker, err := c.currentProjectGitWalker.GetDirWalker(
-		projectRoot, c.breakingCheckConfig.AgainstGitRef, gitPath,
+		projectRoot, c.breakingCheckConfig.AgainstGitRef, rel, gitPath,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("c.currentProjectGitWalker.GetDirWalker: %w", err)
@@ -49,11 +57,7 @@ func (c *Core) BreakingCheck(ctx context.Context, projectRoot, workingDir, path 
 		return nil, fmt.Errorf("c.readAgainstProtoFiles: %w", err)
 	}
 
-	fsWalker := fs.NewFSWalker(workingDir, path)
-	currentProtoFiles, err := c.readProtoFiles(ctx, fsWalker)
-	if err != nil {
-		return nil, fmt.Errorf("c.readCurrentProtoFiles: %w", err)
-	}
+	// ---
 
 	currentProtoData, err := collect(currentProtoFiles)
 	if err != nil {

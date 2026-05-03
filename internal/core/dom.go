@@ -25,7 +25,7 @@ type (
 
 	// CurrentProjectGitWalker is provider for fs walking for current project
 	CurrentProjectGitWalker interface {
-		GetDirWalker(workingDir, gitRef, path string) (DirWalker, error)
+		GetDirWalker(workingDir, gitRef, root, path string) (DirWalker, error)
 	}
 
 	// IssueInfo contains the information of an issue and the path.

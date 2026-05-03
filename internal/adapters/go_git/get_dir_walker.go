@@ -11,7 +11,7 @@ import (
 	"github.com/easyp-tech/easyp/internal/fs/go_git"
 )
 
-func (g *GoGit) GetDirWalker(workingDir, gitRef, path string) (core.DirWalker, error) {
+func (g *GoGit) GetDirWalker(workingDir, gitRef, root, path string) (core.DirWalker, error) {
 	repository, err := git.PlainOpen(workingDir)
 	if err != nil {
 		if errors.Is(err, git.ErrRepositoryNotExists) {
@@ -37,6 +37,6 @@ func (g *GoGit) GetDirWalker(workingDir, gitRef, path string) (core.DirWalker, e
 		return nil, fmt.Errorf("commitAgainst.Tree: %w", err)
 	}
 
-	gitTreeWalker := go_git.NewGitTreeWalker(treeAgainst, path)
+	gitTreeWalker := go_git.NewGitTreeWalker(treeAgainst, root, path)
 	return gitTreeWalker, nil
 }
