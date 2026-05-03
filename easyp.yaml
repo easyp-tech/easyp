@@ -65,7 +65,6 @@ generate:
   inputs:
     - directory: "api"
   plugins:
-    - name: python
     - name: go
       out: .
       opts:

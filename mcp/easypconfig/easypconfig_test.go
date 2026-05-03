@@ -233,6 +233,28 @@ func TestSchemaByPath_PluginOptsAllowScalarBooleansAndNumbers(t *testing.T) {
 	require.ElementsMatch(t, []string{"string", "number", "boolean", "array"}, scalarTypes)
 }
 
+func TestSchemaByPath_PluginOutOptional(t *testing.T) {
+	t.Parallel()
+
+	index := SchemaByPath()
+	node, ok := index["generate.plugins[]"]
+	require.True(t, ok, "expected schema path generate.plugins[]")
+
+	var required []string
+	requiredRaw, ok := node["required"].([]any)
+	if !ok {
+		requiredRaw = nil
+	}
+
+	for _, item := range requiredRaw {
+		field, ok := item.(string)
+		require.True(t, ok, "expected string required field, got %T", item)
+		required = append(required, field)
+	}
+
+	require.NotContains(t, required, "out")
+}
+
 func TestDescribe_ManagedRulePackageFieldPresent(t *testing.T) {
 	t.Parallel()
 

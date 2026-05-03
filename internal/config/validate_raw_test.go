@@ -25,6 +25,9 @@ generate:
         outputServices:
           - grpc-js
           - generic-definitions
+        flags:
+          - false
+          - 30
 `
 
 	issues, err := ValidateRaw([]byte(content))

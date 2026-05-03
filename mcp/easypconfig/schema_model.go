@@ -80,7 +80,7 @@ type configSchemaPlugin struct {
 	Remote      string                 `json:"remote,omitempty"`
 	Path        string                 `json:"path,omitempty"`
 	Command     []string               `json:"command,omitempty"`
-	Out         string                 `json:"out"`
+	Out         string                 `json:"out,omitempty"`
 	Opts        configSchemaPluginOpts `json:"opts,omitempty"`
 	WithImports bool                   `json:"with_imports,omitempty"`
 }
