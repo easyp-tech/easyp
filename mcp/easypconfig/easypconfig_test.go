@@ -220,7 +220,9 @@ func TestSchemaByPath_PluginOptsAllowScalarBooleansAndNumbers(t *testing.T) {
 	require.Contains(t, topLevelTypes, "array")
 
 	arraySchema := findOneOfByType(t, additionalProperties, "array")
-	arrayItemTypes := collectOneOfTypes(t, arraySchema["items"].(map[string]any))
+	itemsSchema, ok := nestedMap(arraySchema, "items")
+	require.True(t, ok, "expected items schema for generate.plugins[].opts array")
+	arrayItemTypes := collectOneOfTypes(t, itemsSchema)
 	require.ElementsMatch(t, []string{"string", "number", "boolean"}, arrayItemTypes)
 
 	var scalarTypes []string

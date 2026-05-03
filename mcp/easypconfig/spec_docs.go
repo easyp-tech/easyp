@@ -155,7 +155,7 @@ func docsByPath() map[string]nodeDoc {
 				{Path: "generate.plugins[].remote", Type: "string", Required: false, Description: "Remote plugin endpoint (one source option).", Examples: []string{"api.easyp.tech/protobuf/go:v1.36.10"}},
 				{Path: "generate.plugins[].path", Type: "string", Required: false, Description: "Explicit path to plugin binary (one source option)."},
 				{Path: "generate.plugins[].command", Type: "array<string>", Required: false, Description: "Command invocation for plugin (one source option).", Examples: []string{`["go","run","github.com/grpc-ecosystem/grpc-gateway/v2/protoc-gen-grpc-gateway@v2.25.1"]`}},
-				{Path: "generate.plugins[].out", Type: "string", Required: false, Description: "Output directory for generated files.", DefaultValue: "\"\" (project root)", Examples: []string{".", "gen/go"}},
+				{Path: "generate.plugins[].out", Type: "string", Required: false, Description: "Output directory for generated files.", DefaultValue: "\"\" (resolved generate root)", Examples: []string{".", "gen/go"}},
 				{Path: "generate.plugins[].opts", Type: "map<string, string | number | boolean | array<string | number | boolean>>", Required: false, Description: "Plugin options; value can be scalar or array of scalars."},
 				{Path: "generate.plugins[].with_imports", Type: "boolean", Required: false, Description: "Include dependency protos in generation.", DefaultValue: "false"},
 			},
