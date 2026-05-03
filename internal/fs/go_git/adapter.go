@@ -42,7 +42,7 @@ func (a *GitTreeDiskAdapter) Open(name string) (io.ReadCloser, error) {
 // isLocalPath reports whether p does not escape its base directory
 // (no ".." components, not an absolute path).
 func isLocalPath(p string) bool {
-	if filepath.IsAbs(p) || path.IsAbs(p) {
+	if filepath.IsAbs(p) {
 		return false
 	}
 	for _, segment := range strings.Split(p, "/") {

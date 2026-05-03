@@ -30,7 +30,7 @@ func (c *Core) BreakingCheck(ctx context.Context, projectRoot, workingDir, path 
 	}
 
 	if !filepath.IsLocal(rel) {
-		return nil, fmt.Errorf("%w: %q is not inside %q", ErrRootOutsideProject, workingDir, projectRoot)
+		return nil, fmt.Errorf("%w: root path %q is outside project root %q", ErrRootOutsideProject, workingDir, projectRoot)
 	}
 
 	// Git tree paths must use forward slashes regardless of OS
