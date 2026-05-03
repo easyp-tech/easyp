@@ -106,17 +106,17 @@ func (b BreakingCheck) action(ctx *cli.Context, log logger.Logger) error {
 		return fmt.Errorf("config.New: %w", err)
 	}
 
+	path := ctx.String(flagLintDirectoryPath.Name)
+	against := ctx.String(flagAgainstBranchName.Name)
+	if cfg.BreakingCheck.AgainstGitRef == "" {
+		cfg.BreakingCheck.AgainstGitRef = against
+	}
+
 	// Walker for Core (lockfile etc) - strictly based on project root
 	projectWalker := fs.NewFSWalker(projectRoot, ".")
 	app, err := buildCore(ctx.Context, log, *cfg, projectWalker)
 	if err != nil {
 		return fmt.Errorf("buildCore: %w", err)
-	}
-
-	path := ctx.String(flagLintDirectoryPath.Name)
-	against := ctx.String(flagAgainstBranchName.Name)
-	if cfg.BreakingCheck.AgainstGitRef == "" {
-		cfg.BreakingCheck.AgainstGitRef = against
 	}
 
 	issues, err := app.BreakingCheck(ctx.Context, projectRoot, breakingCheckRoot, path)
