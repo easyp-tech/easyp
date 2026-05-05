@@ -3,6 +3,7 @@ package core
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"path/filepath"
 
 	"github.com/yoheimuta/go-protoparser/v4/interpret/unordered"
@@ -12,6 +13,8 @@ import (
 	"github.com/easyp-tech/easyp/internal/fs/fs"
 )
 
+var ErrRootOutsideProject = fmt.Errorf("breaking check root must be inside the git repository")
+
 type BreakingCheckConfig struct {
 	// branch name to compare with
 	AgainstGitRef string
@@ -19,14 +22,26 @@ type BreakingCheckConfig struct {
 	IgnoreDirs []string
 }
 
-func (c *Core) BreakingCheck(ctx context.Context, workingDir, path string) ([]IssueInfo, error) {
-	fsWalker := fs.NewFSWalker(workingDir, path)
+func (c *Core) BreakingCheck(ctx context.Context, projectRoot, workingDir, path string) ([]IssueInfo, error) {
+	c.logger.Debug(
+		ctx, "Paths for breaking check",
+		slog.String("projectRoot", projectRoot),
+		slog.String("workingDir", workingDir),
+		slog.String("path", path),
+	)
 
+	if err := c.Download(ctx); err != nil {
+		return nil, fmt.Errorf("c.Download: %w", err)
+	}
+
+	// read current state
+	fsWalker := fs.NewFSWalker(workingDir, path)
 	currentProtoFiles, err := c.readProtoFiles(ctx, fsWalker)
 	if err != nil {
 		return nil, fmt.Errorf("c.readCurrentProtoFiles: %w", err)
 	}
 
+	// read from ref branch
 	againstFSWalker, err := c.currentProjectGitWalker.GetDirWalker(
 		workingDir, c.breakingCheckConfig.AgainstGitRef, path,
 	)
@@ -37,6 +52,8 @@ func (c *Core) BreakingCheck(ctx context.Context, workingDir, path string) ([]Is
 	if err != nil {
 		return nil, fmt.Errorf("c.readAgainstProtoFiles: %w", err)
 	}
+
+	// ---
 
 	currentProtoData, err := collect(currentProtoFiles)
 	if err != nil {

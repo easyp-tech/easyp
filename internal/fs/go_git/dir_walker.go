@@ -6,9 +6,9 @@ import (
 	"github.com/easyp-tech/easyp/internal/core/path_helpers"
 )
 
-func NewGitTreeWalker(tree *object.Tree, path string) *GitTreeWalker {
+func NewGitTreeWalker(tree *object.Tree, root, path string) *GitTreeWalker {
 	return &GitTreeWalker{
-		GitTreeDiskAdapter: &GitTreeDiskAdapter{tree},
+		GitTreeDiskAdapter: &GitTreeDiskAdapter{tree, root},
 		tree:               tree,
 		path:               path,
 	}
