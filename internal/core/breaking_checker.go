@@ -142,6 +142,11 @@ func (b *BreakingChecker) checkMessage(againstMessage Message) []IssueInfo {
 		return res
 	}
 
+	if currentMessage.ProtoFilePath != againstMessage.ProtoFilePath {
+		issue := getMessageMovedIssue(currentMessage, againstMessage)
+		res = append(res, issue)
+	}
+
 	// check fields
 	for _, againstField := range againstMessage.MessageBody.Fields {
 		currentField, ok := searchField(currentMessage.MessageBody.Fields, againstField.FieldNumber)
@@ -403,6 +408,16 @@ func getRPCResponseChangedTypeIssue(
 func getMessageDeletedIssue(againstMessage Message) IssueInfo {
 	message := fmt.Sprintf(
 		"Previously present message \"%s\" was deleted from file.\n", againstMessage.MessagePath,
+	)
+	return buildBreakingCheckIssue(againstMessage.ProtoFilePath, message, againstMessage.Meta.Pos)
+}
+
+func getMessageMovedIssue(currentMessage, againstMessage Message) IssueInfo {
+	message := fmt.Sprintf(
+		"Previously present message \"%s\" was moved from \"%s\" file to \"%s\" file\n",
+		againstMessage.MessagePath,
+		againstMessage.ProtoFilePath,
+		currentMessage.ProtoFilePath,
 	)
 	return buildBreakingCheckIssue(againstMessage.ProtoFilePath, message, againstMessage.Meta.Pos)
 }
