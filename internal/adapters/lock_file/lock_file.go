@@ -26,6 +26,8 @@ func New(dirWalker core.DirWalker) *LockFile {
 
 	fp, err := dirWalker.Open(lockFileName)
 	if err == nil {
+		defer func() { _ = fp.Close() }()
+
 		fscanner := bufio.NewScanner(fp)
 
 		for fscanner.Scan() {
