@@ -15,11 +15,17 @@ import (
 
 var ErrRootOutsideProject = fmt.Errorf("breaking check root must be inside the git repository")
 
+const (
+	BreakingCheckFilesCheck string = "FILES_CHECK"
+)
+
 type BreakingCheckConfig struct {
 	// branch name to compare with
 	AgainstGitRef string
 	// dirs should be ignored
 	IgnoreDirs []string
+
+	FilesCheck bool
 }
 
 func (c *Core) BreakingCheck(ctx context.Context, projectRoot, workingDir, path string) ([]IssueInfo, error) {
@@ -68,6 +74,8 @@ func (c *Core) BreakingCheck(ctx context.Context, projectRoot, workingDir, path 
 	breakingChecker := &BreakingChecker{
 		against: againstProtoData,
 		current: currentProtoData,
+
+		filesCheck: c.breakingCheckConfig.FilesCheck,
 	}
 
 	return breakingChecker.Check()
