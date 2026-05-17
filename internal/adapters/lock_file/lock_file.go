@@ -2,6 +2,7 @@ package lockfile
 
 import (
 	"bufio"
+	"fmt"
 	"strings"
 
 	"github.com/easyp-tech/easyp/internal/core"
@@ -21,7 +22,7 @@ type LockFile struct {
 	cache     map[string]fileInfo
 }
 
-func New(dirWalker core.DirWalker) *LockFile {
+func New(dirWalker core.DirWalker) (*LockFile, error) {
 	cache := make(map[string]fileInfo)
 
 	fp, err := dirWalker.Open(lockFileName)
@@ -42,11 +43,15 @@ func New(dirWalker core.DirWalker) *LockFile {
 			}
 			cache[parts[0]] = fileInfo
 		}
+
+		if err := fscanner.Err(); err != nil {
+			return nil, fmt.Errorf("scan %s: %w", lockFileName, err)
+		}
 	}
 
 	lockFile := &LockFile{
 		dirWalker: dirWalker,
 		cache:     cache,
 	}
-	return lockFile
+	return lockFile, nil
 }
