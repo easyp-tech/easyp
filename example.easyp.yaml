@@ -18,6 +18,8 @@ breaking:
   ignore:
     - some_dir
   against_git_ref: master
+  use:
+    - FILES_CHECK
 
 generate:
   inputs:

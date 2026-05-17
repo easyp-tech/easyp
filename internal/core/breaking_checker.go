@@ -12,6 +12,8 @@ const breakingCheckRuleName = "BREAKING_CHECK"
 type BreakingChecker struct {
 	against ProtoData
 	current ProtoData
+
+	filesCheck bool
 }
 
 func (b *BreakingChecker) Check() ([]IssueInfo, error) {
@@ -86,6 +88,11 @@ func (b *BreakingChecker) checkService(againstService Service) []IssueInfo {
 		return res
 	}
 
+	if b.hasFilesCheckError(currentService.ProtoFilePath, againstService.ProtoFilePath) {
+		issue := getServiceMovedIssue(currentService, againstService)
+		res = append(res, issue)
+	}
+
 	// check RPCs
 	for _, againstRPC := range againstService.ServiceBody.RPCs {
 		// rpc was deleted
@@ -142,6 +149,11 @@ func (b *BreakingChecker) checkMessage(againstMessage Message) []IssueInfo {
 		return res
 	}
 
+	if b.hasFilesCheckError(currentMessage.ProtoFilePath, againstMessage.ProtoFilePath) {
+		issue := getMessageMovedIssue(currentMessage, againstMessage)
+		res = append(res, issue)
+	}
+
 	// check fields
 	for _, againstField := range againstMessage.MessageBody.Fields {
 		currentField, ok := searchField(currentMessage.MessageBody.Fields, againstField.FieldNumber)
@@ -182,6 +194,11 @@ func (b *BreakingChecker) checkOneOf(againstOneOf OneOf) []IssueInfo {
 		return res
 	}
 
+	if b.hasFilesCheckError(currentOneOf.ProtoFilePath, againstOneOf.ProtoFilePath) {
+		issue := getOneOfMovedIssue(currentOneOf, againstOneOf)
+		res = append(res, issue)
+	}
+
 	// check fields
 	for _, againstField := range againstOneOf.OneofFields {
 		currentField, ok := searchOneOfField(currentOneOf.OneofFields, againstField.FieldNumber)
@@ -213,6 +230,11 @@ func (b *BreakingChecker) checkEnum(againstEnum Enum) []IssueInfo {
 		return res
 	}
 
+	if b.hasFilesCheckError(currentEnum.ProtoFilePath, againstEnum.ProtoFilePath) {
+		issue := getEnumMovedIssue(currentEnum, againstEnum)
+		res = append(res, issue)
+	}
+
 	for _, againstField := range againstEnum.EnumBody.EnumFields {
 		currentField, ok := searchEnumField(currentEnum.EnumBody.EnumFields, againstField.Number)
 		if !ok {
@@ -232,6 +254,14 @@ func (b *BreakingChecker) checkEnum(againstEnum Enum) []IssueInfo {
 }
 
 // ===== utils =====
+
+func (b *BreakingChecker) hasFilesCheckError(path1, path2 string) bool {
+	if b.filesCheck && path1 != path2 {
+		return true
+	}
+
+	return false
+}
 
 func getImport(source ProtoData, packageName PackageName, importPath ImportPath) (Import, bool) {
 	collection, ok := source[packageName]
@@ -405,6 +435,46 @@ func getMessageDeletedIssue(againstMessage Message) IssueInfo {
 		"Previously present message \"%s\" was deleted from file.\n", againstMessage.MessagePath,
 	)
 	return buildBreakingCheckIssue(againstMessage.ProtoFilePath, message, againstMessage.Meta.Pos)
+}
+
+func getMessageMovedIssue(currentMessage, againstMessage Message) IssueInfo {
+	message := fmt.Sprintf(
+		"Previously present Message \"%s\" was moved from \"%s\" file to \"%s\" file\n",
+		againstMessage.MessagePath,
+		againstMessage.ProtoFilePath,
+		currentMessage.ProtoFilePath,
+	)
+	return buildBreakingCheckIssue(againstMessage.ProtoFilePath, message, againstMessage.Meta.Pos)
+}
+
+func getServiceMovedIssue(currentService, againstService Service) IssueInfo {
+	message := fmt.Sprintf(
+		"Previously present Service \"%s\" was moved from \"%s\" file to \"%s\" file\n",
+		againstService.ServiceName,
+		againstService.ProtoFilePath,
+		currentService.ProtoFilePath,
+	)
+	return buildBreakingCheckIssue(againstService.ProtoFilePath, message, againstService.Meta.Pos)
+}
+
+func getOneOfMovedIssue(currentOneOf, againstOneOf OneOf) IssueInfo {
+	message := fmt.Sprintf(
+		"Previously present OneOf \"%s\" was moved from \"%s\" file to \"%s\" file\n",
+		againstOneOf.OneofName,
+		againstOneOf.ProtoFilePath,
+		currentOneOf.ProtoFilePath,
+	)
+	return buildBreakingCheckIssue(againstOneOf.ProtoFilePath, message, againstOneOf.Meta.Pos)
+}
+
+func getEnumMovedIssue(currentEnum, againstEnum Enum) IssueInfo {
+	message := fmt.Sprintf(
+		"Previously present Enum \"%s\" was moved from \"%s\" file to \"%s\" file\n",
+		againstEnum.EnumName,
+		againstEnum.ProtoFilePath,
+		currentEnum.ProtoFilePath,
+	)
+	return buildBreakingCheckIssue(againstEnum.ProtoFilePath, message, againstEnum.Meta.Pos)
 }
 
 func getFieldDeletedIssue(againstMessage Message, againstField *parser.Field) IssueInfo {
