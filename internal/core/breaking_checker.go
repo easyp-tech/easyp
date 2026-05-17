@@ -12,6 +12,8 @@ const breakingCheckRuleName = "BREAKING_CHECK"
 type BreakingChecker struct {
 	against ProtoData
 	current ProtoData
+
+	filesCheck bool
 }
 
 func (b *BreakingChecker) Check() ([]IssueInfo, error) {

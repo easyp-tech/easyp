@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"github.com/samber/lo"
@@ -95,9 +96,12 @@ func buildCore(_ context.Context, log logger.Logger, cfg config.Config, dirWalke
 	linterIgnoreDirs := append(cfg.Lint.Ignore, vendorPath)
 	breakingCheckIgnoreDirs := append(cfg.BreakingCheck.Ignore, vendorPath)
 
+	filesCheck := slices.Contains(cfg.BreakingCheck.Use, core.BreakingCheckFilesCheck)
+
 	breakingCheckConfig := core.BreakingCheckConfig{
 		IgnoreDirs:    breakingCheckIgnoreDirs,
 		AgainstGitRef: cfg.BreakingCheck.AgainstGitRef,
+		FilesCheck:    filesCheck,
 	}
 
 	// Convert managed mode configuration
