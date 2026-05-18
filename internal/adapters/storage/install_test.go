@@ -3,6 +3,7 @@ package storage
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -183,9 +184,14 @@ func TestBuildInstallTree_AbsoluteSymlinkRejected(t *testing.T) {
 		Directories: []string{"proto"},
 	})
 
+	absTarget := "/etc/passwd"
+	if runtime.GOOS == "windows" {
+		absTarget = `C:\Windows\System32\drivers\etc\hosts`
+	}
+
 	require.NoError(t, os.MkdirAll(filepath.Join(srcDir, "proto"), 0755))
 	require.NoError(t, os.WriteFile(filepath.Join(srcDir, "proto", "file.proto"), []byte("data"), 0644))
-	require.NoError(t, os.Symlink("/etc/passwd", filepath.Join(srcDir, "proto", "bad.proto")))
+	require.NoError(t, os.Symlink(absTarget, filepath.Join(srcDir, "proto", "bad.proto")))
 
 	err := buildInstallTree(srcDir, dstDir, renamer)
 	require.Error(t, err)

@@ -70,7 +70,14 @@ func (e *RemotePluginExecutor) Execute(ctx context.Context, plugin Info, request
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to gRPC server %s: %w", host, err)
 	}
-	defer conn.Close()
+	defer func() {
+		if err := conn.Close(); err != nil {
+			e.logger.Warn(ctx, "failed to close gRPC connection",
+				slog.String("plugin", plugin.Source),
+				slog.Any("error", err),
+			)
+		}
+	}()
 
 	// Создаем gRPC клиент
 	client := plugingeneratorv1.NewServiceAPIClient(conn)
@@ -91,14 +98,6 @@ func (e *RemotePluginExecutor) Execute(ctx context.Context, plugin Info, request
 	resp, err := client.GenerateCode(ctxWithTimeout, grpcRequest)
 	if err != nil {
 		return nil, fmt.Errorf("gRPC call failed for plugin %s: %w", plugin.Source, err)
-	}
-
-	err = conn.Close()
-	if err != nil {
-		e.logger.Warn(ctx, "failed to close gRPC connection",
-			slog.String("plugin", plugin.Source),
-			slog.Any("error", err),
-		)
 	}
 
 	return resp.CodeGeneratorResponse, nil

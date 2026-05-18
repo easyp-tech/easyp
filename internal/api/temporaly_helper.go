@@ -79,7 +79,11 @@ func buildCore(_ context.Context, log logger.Logger, cfg config.Config, dirWalke
 		return nil, fmt.Errorf("cfg.BuildLinterRules: %w", err)
 	}
 
-	lockFile := lockfile.New(dirWalker)
+	lockFile, err := lockfile.New(dirWalker)
+	if err != nil {
+		return nil, fmt.Errorf("lockfile.New: %w", err)
+	}
+
 	easypPath, err := getEasypPath(log)
 	if err != nil {
 		return nil, fmt.Errorf("getEasypPath: %w", err)
