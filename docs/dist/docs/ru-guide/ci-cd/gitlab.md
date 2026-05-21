@@ -27,7 +27,7 @@ validate:
   before_script:
     - go install github.com/easyp-tech/easyp/cmd/easyp@latest
     - echo "EasyP version:"
-    - easyp version
+    - easyp --version
     # При необходимости: git fetch --all --tags
   script:
     - easyp lint
