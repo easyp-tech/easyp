@@ -16,7 +16,7 @@ import (
 var ErrRootOutsideProject = fmt.Errorf("breaking check root must be inside the git repository")
 
 const (
-	BreakingCheckFilesCheck string = "FILES_CHECK"
+	BreakingCheckFilesCheck string = "FILE"
 )
 
 type BreakingCheckConfig struct {

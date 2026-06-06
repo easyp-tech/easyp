@@ -19,7 +19,7 @@ breaking:
     - some_dir
   against_git_ref: master
   use:
-    - FILES_CHECK
+    - FILE
 
 generate:
   inputs:
