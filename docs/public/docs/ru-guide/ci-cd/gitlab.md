@@ -4,6 +4,7 @@
 
 Документация по интеграции EasyP с GitLab CI находится в процессе подготовки.  
 Планируемые разделы:
+
 - Быстрый старт (пример `.gitlab-ci.yml` для линтинга и проверки несовместимых изменений)
 - Кэширование зависимостей и ускорение сборок
 - Генерация кода и проверка актуальности артефактов
@@ -27,7 +28,7 @@ validate:
   before_script:
     - go install github.com/easyp-tech/easyp/cmd/easyp@latest
     - echo "EasyP version:"
-    - easyp version
+    - easyp --version
     # При необходимости: git fetch --all --tags
   script:
     - easyp lint

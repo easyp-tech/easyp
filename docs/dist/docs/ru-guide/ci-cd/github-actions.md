@@ -49,7 +49,7 @@ jobs:
       - name: Verify EasyP version
         run: |
           which easyp
-          easyp version
+          easyp --version
 
       - name: Lint
         run: easyp lint
@@ -367,7 +367,7 @@ easyp generate -v
 - name: Debug environment
   run: |
     env | sort
-    easyp version
+    easyp --version
 ```
 
 ## Переменные окружения (примерно)
