@@ -1,0 +1,29 @@
+# EasyP starter config: Go + gRPC project
+# Usage: copy to your project root as easyp.yaml
+
+deps:
+  - github.com/googleapis/googleapis
+  - github.com/protocolbuffers/protobuf
+
+lint:
+  use:
+    - DEFAULT
+    - COMMENTS
+  allow_comment_ignores: true
+
+generate:
+  inputs:
+    - directory: proto
+  plugins:
+    - name: go
+      out: gen/go
+      opts:
+        paths: source_relative
+    - name: go-grpc
+      out: gen/go
+      opts:
+        paths: source_relative
+        require_unimplemented_servers: false
+
+breaking:
+  against_git_ref: main
