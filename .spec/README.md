@@ -7,16 +7,15 @@ This folder contains documentation to help LLMs and developers quickly understan
 
 ### Core
 
-- [ARCHITECTURE.md](./ARCHITECTURE.md) — TODO: layered architecture (cmd → api → core → adapters)
-- [PACKAGES.md](./PACKAGES.md) — TODO: package reference for `internal/*`, `mcp/`, `cmd/`
-- [DOMAIN.md](./DOMAIN.md) — TODO: domain model (modules, lockfile, lint rules, plugins)
-- [CODE_STYLE.md](./CODE_STYLE.md) — TODO: Go conventions expanded from agent-rules
+- [ARCHITECTURE.md](./ARCHITECTURE.md) — Layered architecture (cmd → api → core → adapters)
+- [PACKAGES.md](./PACKAGES.md) — Package reference for `internal/*`, `mcp/`, `cmd/`
+- [DOMAIN.md](./DOMAIN.md) — Domain model (modules, lockfile, lint rules, plugins)
+- [CODE_STYLE.md](./CODE_STYLE.md) — Go conventions expanded from agent-rules
 
 ### Development
 
-- [TOOLS.md](./TOOLS.md) — TODO: Taskfile, golangci-lint, mockery, gotestsum
-- [TESTING.md](./TESTING.md) — TODO: testify patterns, mocks, race tests
-- [FILES.md](./FILES.md) — TODO: important paths and generated artifacts
+- [TOOLS.md](./TOOLS.md) — Taskfile, golangci-lint, mockery, gotestsum
+- [TESTING.md](./TESTING.md) — testify patterns, mocks, race tests
 
 ### Config & Dependencies
 
@@ -25,9 +24,9 @@ This folder contains documentation to help LLMs and developers quickly understan
 
 ### Domain (CLI toolkit)
 
-- [CLI.md](./CLI.md) — TODO: commands, flags, exit codes
-- [ERRORS.md](./ERRORS.md) — TODO: domain / models sentinel errors
-- [DEPLOYMENT.md](./DEPLOYMENT.md) — TODO: Docker, CI/CD, releases
+- [CLI.md](./CLI.md) — Commands, flags, exit codes
+- [ERRORS.md](./ERRORS.md) — Domain / models sentinel errors and CLI mapping
+- [DEPLOYMENT.md](./DEPLOYMENT.md) — Docker, CI/CD, releases
 
 ## Quick Facts
 
