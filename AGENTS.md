@@ -21,7 +21,7 @@ Human-facing docs: [README.md](README.md) and https://easyp.tech.
 | `internal/api` | CLI command wiring |
 | `internal/core` | Business logic (lint, generate, mod, breaking) |
 | `internal/rules` | Lint rules (each rule + colocated `_test.go`) |
-| `internal/config` | `easyp.yaml` parsing and validation |
+| `internal/config` | `easyp.yaml` / `protobuf.mod` parsing and validation |
 | `internal/adapters` | Git, storage, lockfile, plugins |
 | `mcp/easypconfig` | MCP tool + config schema metadata (source of truth) |
 | `schemas/` | Generated JSON Schema artifacts |

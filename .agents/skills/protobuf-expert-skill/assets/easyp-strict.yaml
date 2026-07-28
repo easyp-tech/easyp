@@ -1,9 +1,6 @@
 # EasyP starter config: strict API project (all 42 rules)
 # Usage: copy to your project root as easyp.yaml
-
-deps:
-  - github.com/googleapis/googleapis
-  - github.com/protocolbuffers/protobuf
+# Dependencies: see protobuf.mod
 
 lint:
   use:

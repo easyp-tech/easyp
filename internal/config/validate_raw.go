@@ -3,6 +3,7 @@ package config
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 
 	v "github.com/Yakwilik/go-yamlvalidator"
 	"github.com/a8m/envsubst"
@@ -73,12 +74,106 @@ func ValidateRaw(buf []byte) ([]ValidationIssue, error) {
 }
 
 // ValidateFile validates config file on disk.
+// When protobuf.mod exists next to the config, it is validated as well.
 func ValidateFile(path string) ([]ValidationIssue, error) {
 	buf, err := os.ReadFile(path)
 	if err != nil {
 		return nil, fmt.Errorf("os.ReadFile: %w", err)
 	}
-	return ValidateRaw(buf)
+
+	issues, err := ValidateRaw(buf)
+	if err != nil {
+		return nil, err
+	}
+
+	modPath := filepath.Join(filepath.Dir(path), DefaultModFileName)
+	modIssues, err := ValidateModFile(modPath)
+	if err != nil {
+		if !os.IsNotExist(err) {
+			return nil, fmt.Errorf("ValidateModFile: %w", err)
+		}
+	} else {
+		issues = append(issues, modIssues...)
+	}
+
+	return issues, nil
+}
+
+// ValidateModFile validates protobuf.mod on disk.
+// Returns os.ErrNotExist when the file is missing.
+func ValidateModFile(path string) ([]ValidationIssue, error) {
+	buf, err := os.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+
+	return ValidateModRaw(buf)
+}
+
+// ValidateModRaw validates protobuf.mod bytes using go-yamlvalidator schema.
+func ValidateModRaw(buf []byte) ([]ValidationIssue, error) {
+	issues := make([]ValidationIssue, 0)
+
+	expanded, err := envsubst.String(string(buf))
+	if err != nil {
+		issues = append(issues, newIssue("envsubst_error", err.Error(), SeverityError))
+		return issues, nil
+	}
+	buf = []byte(expanded)
+
+	validator := v.NewValidator(buildModSchema())
+	ctx := v.ValidationContext{
+		StrictKeys:     true,
+		YAML11Booleans: true,
+	}
+	result := validator.ValidateWithOptions(buf, ctx)
+
+	for _, e := range result.Collector.All() {
+		severity := SeverityWarn
+		if e.Level == v.LevelError {
+			severity = SeverityError
+		}
+
+		msg := e.Message
+		if e.Expected != "" && e.Got != "" {
+			msg = fmt.Sprintf("%s (expected %s, got %s)", e.Message, e.Expected, e.Got)
+		} else if e.Expected != "" {
+			msg = fmt.Sprintf("%s (expected %s)", e.Message, e.Expected)
+		} else if e.Got != "" {
+			msg = fmt.Sprintf("%s (got %s)", e.Message, e.Got)
+		}
+		if e.Path != "" {
+			msg = fmt.Sprintf("%s (path: %s)", msg, e.Path)
+		}
+
+		issues = append(issues, ValidationIssue{
+			Code:     "yaml_validation",
+			Message:  fmt.Sprintf("%s: %s", DefaultModFileName, msg),
+			Line:     e.Line,
+			Column:   e.Column,
+			Severity: severity,
+		})
+	}
+
+	return issues, nil
+}
+
+// buildModSchema builds the YAML validation schema for protobuf.mod.
+func buildModSchema() *v.FieldSchema {
+	depsSchema := &v.FieldSchema{
+		Type:       v.TypeSequence,
+		ItemSchema: &v.FieldSchema{Type: v.TypeString},
+		Nullable:   true,
+	}
+
+	return &v.FieldSchema{
+		Type: v.TypeMap,
+		AllowedKeys: map[string]*v.FieldSchema{
+			"deps": depsSchema,
+		},
+		Required:         true,
+		UnknownKeyPolicy: v.UnknownKeyWarn,
+	}
 }
 
 // buildSchema builds the YAML validation schema matching easyp.yaml structure.
@@ -106,8 +201,6 @@ func buildSchema() *v.FieldSchema {
 		},
 		UnknownKeyPolicy: v.UnknownKeyWarn,
 	}
-
-	depsSchema := &v.FieldSchema{Type: v.TypeSequence, ItemSchema: &v.FieldSchema{Type: v.TypeString}, Nullable: true}
 
 	inputDirSchema := &v.FieldSchema{
 		Type: v.TypeAny, // string or map
@@ -223,7 +316,6 @@ func buildSchema() *v.FieldSchema {
 		Type: v.TypeMap,
 		AllowedKeys: map[string]*v.FieldSchema{
 			"lint":     lintSchema,
-			"deps":     depsSchema,
 			"generate": generateSchema,
 			"breaking": breakingSchema,
 			"version":  {Type: v.TypeString},

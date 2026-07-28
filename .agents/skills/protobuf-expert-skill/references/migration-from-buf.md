@@ -54,16 +54,16 @@ breaking:                            breaking:
     - proto/internal                   against_git_ref: main
 ```
 
-### buf.yaml → easyp.yaml: Dependencies
+### buf.yaml → protobuf.mod: Dependencies
 
 ```yaml
-# buf.yaml                          # easyp.yaml
+# buf.yaml                          # protobuf.mod
 deps:                                deps:
   - buf.build/googleapis/googleapis    - github.com/googleapis/googleapis
   - buf.build/grpc/grpc               - github.com/grpc/grpc@v1.60.0
 ```
 
-Key difference: buf uses BSR module references, EasyP uses **Git repository URLs** with optional `@version` or `@commit` suffixes.
+Key difference: buf uses BSR module references, EasyP uses **Git repository URLs** with optional `@version` or `@commit` suffixes. `easyp init` writes migrated deps to `protobuf.mod`.
 
 ### buf.gen.yaml → easyp.yaml: Code Generation
 

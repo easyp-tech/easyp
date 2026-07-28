@@ -2,5 +2,6 @@ package config
 
 // Default configurations.
 const (
-	DefaultFileName = "easyp.yaml"
+	DefaultFileName    = "easyp.yaml"
+	DefaultModFileName = "protobuf.mod"
 )

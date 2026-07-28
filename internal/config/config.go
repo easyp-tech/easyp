@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	stdpath "path/filepath"
 
 	"github.com/a8m/envsubst"
 	"gopkg.in/yaml.v3"
@@ -169,7 +170,8 @@ type Config struct {
 	// LintConfig is the lint configuration.
 	Lint LintConfig `json:"lint,omitempty" yaml:"lint,omitempty"`
 
-	// Deps is the dependencies repositories
+	// Deps is the dependencies repositories (loaded from protobuf.mod;
+	// easyp.yaml deps is kept for backward compatibility when protobuf.mod is absent).
 	Deps []string `json:"deps,omitempty" yaml:"deps,omitempty"`
 
 	// Generate is the generate configuration.
@@ -182,6 +184,7 @@ type Config struct {
 var errFileNotFound = errors.New("config file not found")
 
 // New creates a new configuration from the file.
+// Dependencies are loaded from protobuf.mod next to the config file when present.
 func New(_ context.Context, filepath string) (*Config, error) {
 	cfgFile, err := os.Open(filepath)
 	if err != nil {
@@ -201,7 +204,43 @@ func New(_ context.Context, filepath string) (*Config, error) {
 		return nil, fmt.Errorf("io.ReadAll: %w", err)
 	}
 
-	return ParseConfig(buf)
+	cfg, err := ParseConfig(buf)
+	if err != nil {
+		return nil, err
+	}
+
+	err = cfg.applyModFile(stdpath.Join(stdpath.Dir(filepath), DefaultModFileName))
+	if err != nil {
+		return nil, err
+	}
+
+	return cfg, nil
+}
+
+// applyModFile loads deps from protobuf.mod.
+// When the file exists, its deps replace any deps from easyp.yaml.
+// When both sources declare deps, an error is returned to force a clean migration.
+// When the file is missing, easyp.yaml deps are kept for backward compatibility.
+func (c *Config) applyModFile(modPath string) error {
+	modDeps, err := loadModFileDeps(modPath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil
+		}
+
+		return fmt.Errorf("loadModFileDeps: %w", err)
+	}
+
+	if len(c.Deps) > 0 {
+		return fmt.Errorf(
+			"deps must be declared only in %s; remove deps from easyp.yaml",
+			DefaultModFileName,
+		)
+	}
+
+	c.Deps = modDeps
+
+	return nil
 }
 
 // ParseConfig parses configuration from bytes with environment variable expansion.

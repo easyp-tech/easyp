@@ -20,9 +20,11 @@ Vendor output directory is hardcoded as `easyp_vendor` (not `vendor/`).
 
 ---
 
-## 2. Declaration (`easyp.yaml`)
+## 2. Declaration (`protobuf.mod`)
 
 ### `deps`
+
+Dependencies are declared in `protobuf.mod` (same directory as `easyp.yaml`):
 
 ```yaml
 deps:
@@ -32,11 +34,14 @@ deps:
 
 | Field | Go type | Notes |
 |-------|---------|--------|
-| `deps` | `[]string` | `Config.Deps` in `internal/config/config.go` |
+| `deps` | `[]string` | Loaded into `Config.Deps` from `protobuf.mod` via `config.New` |
 | Entry format | `repo[@version]` | Split on first `@` via `models.NewModule` |
 | Omitted version | `RequestedVersion("")` | Treated as latest (`HEAD`) |
+| Filename | `protobuf.mod` | Constant `config.DefaultModFileName` |
 
-Entire config content (including deps) is expanded with `envsubst` (`${VAR}`) before YAML parse.
+`protobuf.mod` content is expanded with `envsubst` (`${VAR}`) before YAML parse.
+
+**Backward compatibility:** if `protobuf.mod` is missing, deps from `easyp.yaml` are still accepted. If both files declare deps, config load fails.
 
 ### Union with generate inputs
 
@@ -90,7 +95,7 @@ On `models.ErrVersionNotFound`, mod handlers call `os.Exit(1)`.
 
 ```mermaid
 flowchart TD
-  cfg["easyp.yaml deps + generate.inputs.git_repo"] --> buildCore["buildCore → Core.deps"]
+  cfg["protobuf.mod deps + generate.inputs.git_repo"] --> buildCore["buildCore → Core.deps"]
   buildCore --> download["Core.Download / Update"]
   download --> get["Core.Get"]
   get --> git["bare git cache + fetch"]
@@ -207,10 +212,10 @@ Remote URL construction: always `https://` + module path (`getRemote` in `intern
 `ModuleConfig.ReadFromRepo` (`internal/adapters/module_config/read_from_repo.go`) tries, in order:
 
 1. **Buf** (`buf.work.yaml` v1 or `buf.yaml` v2) → **directories only** (no dependency list)
-2. **EasyP** (`easyp.yaml`) → `deps` become transitive `Dependencies`; `generate.inputs[].input_files_dir.root` become `Directories`
+2. **EasyP** (`easyp.yaml` + optional `protobuf.mod`) → `deps` become transitive `Dependencies`; `generate.inputs[].input_files_dir.root` become `Directories`
 3. Else empty config
 
-Indirect deps are installed only when the remote module ships an `easyp.yaml` with `deps`. Buf-only modules do not pull transitive packages via EasyP.
+Indirect deps are installed only when the remote module ships `protobuf.mod` (or legacy `easyp.yaml` `deps`). Buf-only modules do not pull transitive packages via EasyP.
 
 ---
 
@@ -287,5 +292,5 @@ Documented operational patterns (outside code):
 - Commit `easyp.lock` for reproducible CI; cache lives outside the repo (`EASYPPATH`).
 - `mod download` is lock-first; use `mod update` to refresh versions from config.
 - Archives contain only `*.proto`; non-proto files from deps are never installed.
-- Transitive deps require the dependency’s own `easyp.yaml`; buf configs alone do not declare them.
+- Transitive deps require the dependency’s own `protobuf.mod` (or legacy `easyp.yaml` `deps`); buf configs alone do not declare them.
 )

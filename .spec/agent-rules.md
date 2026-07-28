@@ -36,7 +36,8 @@ Mandatory rules for AI agents. Prefer these over generic Go guides when they con
 
 ## Dependencies
 
-- Proto deps: declare in `easyp.yaml` `deps` (and/or `generate.inputs[].git_repo.url`); lock with `easyp.lock`; cache under `EASYPPATH` (default `~/.easyp`).
+- Proto deps: declare in `protobuf.mod` `deps` (and/or `generate.inputs[].git_repo.url`); lock with `easyp.lock`; cache under `EASYPPATH` (default `~/.easyp`).
+- Legacy: `deps` in `easyp.yaml` still works if `protobuf.mod` is absent; do not declare deps in both files.
 - Vendor directory is `easyp_vendor`, not `vendor/`.
 - Use `easyp mod download` (lock-first) vs `easyp mod update` (refresh from config); commit `easyp.lock` for CI reproducibility.
 - No remotes/mirrors/auth fields in `easyp.yaml` — auth via system git.

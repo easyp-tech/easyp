@@ -2,6 +2,7 @@ package moduleconfig
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/easyp-tech/easyp/internal/adapters/repository"
@@ -21,8 +22,13 @@ func readEasyp(ctx context.Context, repo repository.Repo, revision models.Revisi
 		return models.ModuleConfig{}, fmt.Errorf("config.ParseConfig: %w", err)
 	}
 
-	modules := make([]models.Module, 0, len(easyp.Deps))
-	for _, dep := range easyp.Deps {
+	deps, err := readDeps(ctx, repo, revision, easyp.Deps)
+	if err != nil {
+		return models.ModuleConfig{}, fmt.Errorf("readDeps: %w", err)
+	}
+
+	modules := make([]models.Module, 0, len(deps))
+	for _, dep := range deps {
 		module := models.NewModule(dep)
 		modules = append(modules, module)
 	}
@@ -36,4 +42,36 @@ func readEasyp(ctx context.Context, repo repository.Repo, revision models.Revisi
 		Dependencies: modules,
 		Directories:  dirs,
 	}, nil
+}
+
+// readDeps loads dependency declarations from protobuf.mod when present.
+// Falls back to easyp.yaml deps for backward compatibility.
+func readDeps(
+	ctx context.Context,
+	repo repository.Repo,
+	revision models.Revision,
+	yamlDeps []string,
+) ([]string, error) {
+	content, err := repo.ReadFile(ctx, revision, config.DefaultModFileName)
+	if err != nil {
+		if errors.Is(err, models.ErrFileNotFound) {
+			return yamlDeps, nil
+		}
+
+		return nil, fmt.Errorf("repo.ReadFile: %w", err)
+	}
+
+	mod, err := config.ParseModFile([]byte(content))
+	if err != nil {
+		return nil, fmt.Errorf("config.ParseModFile: %w", err)
+	}
+
+	if len(yamlDeps) > 0 {
+		return nil, fmt.Errorf(
+			"deps must be declared only in %s; remove deps from easyp.yaml",
+			config.DefaultModFileName,
+		)
+	}
+
+	return mod.Deps, nil
 }

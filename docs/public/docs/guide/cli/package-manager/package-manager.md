@@ -66,7 +66,7 @@ EasyP uses a two-tier caching system inspired by Go modules:
 
 ### Basic Configuration
 
-Configure dependencies in your `easyp.yaml` file:
+Configure dependencies in `protobuf.mod` (next to `easyp.yaml`):
 
 ```yaml
 deps:
@@ -79,13 +79,13 @@ deps:
 
 #### Multi-Environment Setup
 ```yaml
-# development.easyp.yaml
+# development — protobuf.mod
 deps:
   - github.com/googleapis/googleapis              # Latest for development
   - github.com/mycompany/internal-protos          # Latest internal changes
   - github.com/bufbuild/protoc-gen-validate       # Latest features
 
-# production.easyp.yaml
+# production — protobuf.mod
 deps:
   - github.com/googleapis/googleapis@common-protos-1_3_1       # Pinned
   - github.com/mycompany/internal-protos@v2.1.0                # Stable release

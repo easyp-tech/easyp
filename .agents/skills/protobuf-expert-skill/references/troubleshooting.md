@@ -15,7 +15,7 @@
 **Symptom:** `exit code 2` with message like `import "google/protobuf/timestamp.proto" not found`
 
 **Causes & fixes:**
-1. Missing dependency — add to `deps` in `easyp.yaml`:
+1. Missing dependency — add to `deps` in `protobuf.mod`:
    ```yaml
    deps:
      - github.com/protocolbuffers/protobuf@v25.0

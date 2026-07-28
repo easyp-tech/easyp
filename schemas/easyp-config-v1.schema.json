@@ -46,12 +46,6 @@
       "additionalProperties": false,
       "type": "object"
     },
-    "deps": {
-      "items": {
-        "type": "string"
-      },
-      "type": "array"
-    },
     "generate": {
       "properties": {
         "inputs": {

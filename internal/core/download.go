@@ -15,7 +15,7 @@ import (
 func (c *Core) Download(ctx context.Context) error {
 	if c.lockFile.IsEmpty() {
 		// if lock file is empty or doesn't exist install versions
-		// from easyp.yaml config and create lock file
+		// from protobuf.mod / easyp.yaml config and create lock file
 		c.logger.Debug(ctx, "Lock file is empty")
 		return c.Update(ctx)
 	}

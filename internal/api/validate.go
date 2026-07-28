@@ -20,7 +20,7 @@ func (v Validate) Command() *cli.Command {
 		Name:        "validate-config",
 		Aliases:     []string{"validate"},
 		Usage:       "validate easyp config file",
-		Description: "validate easyp.yaml for syntax and required fields",
+		Description: "validate easyp.yaml and protobuf.mod for syntax and required fields",
 		UsageText:   "validate-config [--config path] [--format json|text]",
 		Flags: []cli.Flag{
 			flags.Config,

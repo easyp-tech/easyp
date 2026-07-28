@@ -101,7 +101,7 @@ While buf.build provides excellent protobuf tooling, EasyP offers several key ad
 **Key Benefits:**
 - **No infrastructure changes**: Use your existing Git repositories for proto dependencies
 - **Enhanced flexibility**: Execute plugins both locally and remotely for consistent results
-- **Simplified configuration**: Single file for all protobuf operations
+- **Simplified configuration**: `easyp.yaml` for tooling, `protobuf.mod` for dependencies
 - **Full buf compatibility**: Drop-in replacement with familiar rule sets and configuration
 
 ## Our goals for Protobuf
@@ -112,14 +112,17 @@ While Protocol Buffers offer significant technical advantages over REST/JSON, ac
 
 ## Configuration
 
-EasyP uses a single `easyp.yaml` file for all configuration:
+EasyP uses `easyp.yaml` for tooling config and `protobuf.mod` for dependencies:
 
 ```yaml
-# Dependencies
+# protobuf.mod
 deps:
   - github.com/googleapis/googleapis@common-protos-1_3_1
   - github.com/bufbuild/protoc-gen-validate@v0.9.1
+```
 
+```yaml
+# easyp.yaml
 # Code generation
 generate:
   inputs:

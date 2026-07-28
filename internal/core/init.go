@@ -133,6 +133,10 @@ func (c *Core) Initialize(ctx context.Context, disk DirWalker, opts InitOptions)
 		if _, writeErr := res.Write(buf.Bytes()); writeErr != nil {
 			return fmt.Errorf("res.Write: %w", writeErr)
 		}
+
+		if writeErr := writeModFile(disk, nil); writeErr != nil {
+			return fmt.Errorf("writeModFile: %w", writeErr)
+		}
 	}
 
 	return nil
@@ -186,6 +190,8 @@ func (c *Core) migrateFromBUF(ctx context.Context, disk FS, path string, default
 	}
 
 	migratedCfg := buildCfgFromBUF(defaultConfiguration, b)
+	deps := migratedCfg.Deps
+	migratedCfg.Deps = nil
 
 	// Encode to buffer and validate before writing to disk.
 	var buf bytes.Buffer
@@ -201,6 +207,43 @@ func (c *Core) migrateFromBUF(ctx context.Context, disk FS, path string, default
 	}
 
 	res, err := disk.Create("easyp.yaml")
+	if err != nil {
+		return fmt.Errorf("disk.Create: %w", err)
+	}
+	defer func() {
+		if closeErr := res.Close(); closeErr != nil && err == nil {
+			err = fmt.Errorf("res.Close: %w", closeErr)
+		}
+	}()
+
+	if _, writeErr := res.Write(buf.Bytes()); writeErr != nil {
+		return fmt.Errorf("res.Write: %w", writeErr)
+	}
+
+	err = writeModFile(disk, deps)
+	if err != nil {
+		return fmt.Errorf("writeModFile: %w", err)
+	}
+
+	return nil
+}
+
+func writeModFile(disk FS, deps []string) (err error) {
+	mod := config.ModFile{Deps: deps}
+
+	var buf bytes.Buffer
+	err = yaml.NewEncoder(&buf).Encode(mod)
+	if err != nil {
+		return fmt.Errorf("yaml.NewEncoder.Encode: %w", err)
+	}
+
+	if issues, valErr := config.ValidateModRaw(buf.Bytes()); valErr != nil {
+		return fmt.Errorf("config.ValidateModRaw: %w", valErr)
+	} else if config.HasErrors(issues) {
+		return fmt.Errorf("generated mod file has validation errors: %v", issues)
+	}
+
+	res, err := disk.Create(config.DefaultModFileName)
 	if err != nil {
 		return fmt.Errorf("disk.Create: %w", err)
 	}

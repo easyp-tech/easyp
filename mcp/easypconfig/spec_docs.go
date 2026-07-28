@@ -6,7 +6,6 @@ func docsByPath() map[string]nodeDoc {
 			Fields: []FieldDoc{
 				{Path: "version", Type: "string", Required: false, Description: "Legacy compatibility field.", DefaultValue: "omitted", Examples: []string{"v1alpha"}},
 				{Path: "lint", Type: "object", Required: false, Description: "Linter configuration and rule selection."},
-				{Path: "deps", Type: "array<string>", Required: false, Description: "Dependency repositories in format <repo>@<version>."},
 				{Path: "generate", Type: "object", Required: false, Description: "Code generation configuration."},
 				{Path: "breaking", Type: "object", Required: false, Description: "Breaking changes check configuration."},
 			},
@@ -19,9 +18,9 @@ func docsByPath() map[string]nodeDoc {
 				},
 				{
 					Title:       "full_config_reference",
-					Description: "Reference config touching all top-level sections.",
-					YAML:        "version: v1alpha\nlint:\n  use:\n    - DEFAULT\n  enum_zero_value_suffix: _UNSPECIFIED\n  service_suffix: Service\n  ignore:\n    - vendor\n  ignore_only:\n    RPC_REQUEST_STANDARD_NAME:\n      - proto/legacy\ndeps:\n  - github.com/googleapis/googleapis@common-protos-1_3_1\ngenerate:\n  inputs:\n    - directory:\n        path: api\n        root: .\n    - git_repo:\n        url: github.com/acme/contracts@v1.2.3\n        sub_directory: proto\n        root: .\n  plugins:\n    - name: go\n      out: gen/go\n      opts:\n        paths: source_relative\n    - remote: api.easyp.tech/grpc/go:v1.5.1\n      out: gen/go\n      with_imports: true\n  managed:\n    enabled: true\n    disable:\n      - module: github.com/googleapis/googleapis\n    override:\n      - file_option: go_package_prefix\n        value: github.com/acme/contracts/gen/go\nbreaking:\n  against_git_ref: main\n  ignore:\n    - proto/legacy\n",
-					Paths:       []string{"$", "lint", "deps", "generate", "breaking"},
+					Description: "Reference config touching all top-level sections. Dependencies are declared in protobuf.mod.",
+					YAML:        "version: v1alpha\nlint:\n  use:\n    - DEFAULT\n  enum_zero_value_suffix: _UNSPECIFIED\n  service_suffix: Service\n  ignore:\n    - vendor\n  ignore_only:\n    RPC_REQUEST_STANDARD_NAME:\n      - proto/legacy\ngenerate:\n  inputs:\n    - directory:\n        path: api\n        root: .\n    - git_repo:\n        url: github.com/acme/contracts@v1.2.3\n        sub_directory: proto\n        root: .\n  plugins:\n    - name: go\n      out: gen/go\n      opts:\n        paths: source_relative\n    - remote: api.easyp.tech/grpc/go:v1.5.1\n      out: gen/go\n      with_imports: true\n  managed:\n    enabled: true\n    disable:\n      - module: github.com/googleapis/googleapis\n    override:\n      - file_option: go_package_prefix\n        value: github.com/acme/contracts/gen/go\nbreaking:\n  against_git_ref: main\n  ignore:\n    - proto/legacy\n",
+					Paths:       []string{"$", "lint", "generate", "breaking"},
 				},
 			},
 		},
@@ -47,19 +46,6 @@ func docsByPath() map[string]nodeDoc {
 					Description: "Disable specific rules only for selected paths.",
 					YAML:        "lint:\n  use:\n    - DEFAULT\n  ignore_only:\n    PACKAGE_VERSION_SUFFIX:\n      - proto/legacy\n    RPC_REQUEST_STANDARD_NAME:\n      - proto/public\n",
 					Paths:       []string{"lint"},
-				},
-			},
-		},
-		"deps": {
-			Fields: []FieldDoc{
-				{Path: "deps[]", Type: "string", Required: false, Description: "Dependency in format <repo>@<version>.", Examples: []string{"github.com/googleapis/googleapis@v1.0.0", "github.com/bufbuild/protoc-gen-validate"}},
-			},
-			Examples: []Example{
-				{
-					Title:       "deps_with_and_without_revision",
-					Description: "Dependencies can be pinned or float to repository default revision.",
-					YAML:        "deps:\n  - github.com/googleapis/googleapis@common-protos-1_3_1\n  - github.com/bufbuild/protoc-gen-validate\n",
-					Paths:       []string{"deps"},
 				},
 			},
 		},

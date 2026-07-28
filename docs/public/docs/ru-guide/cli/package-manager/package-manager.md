@@ -66,7 +66,7 @@ EasyP использует двухуровневый кеш, вдохновлё
 
 ### Базовая конфигурация
 
-Зависимости описываются в `easyp.yaml`:
+Зависимости описываются в `protobuf.mod` (рядом с `easyp.yaml`):
 
 ```yaml
 deps:
@@ -79,13 +79,13 @@ deps:
 
 #### Multi-Environment Setup
 ```yaml
-# development.easyp.yaml
+# development — protobuf.mod
 deps:
   - github.com/googleapis/googleapis              # Последнее для разработки
   - github.com/mycompany/internal-protos          # Внутренние изменения
   - github.com/bufbuild/protoc-gen-validate       # Новые фичи
 
-# production.easyp.yaml
+# production — protobuf.mod
 deps:
   - github.com/googleapis/googleapis@common-protos-1_3_1       # Зафиксировано
   - github.com/mycompany/internal-protos@v2.1.0                # Стабильно

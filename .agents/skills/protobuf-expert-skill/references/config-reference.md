@@ -1,18 +1,25 @@
-# EasyP Configuration Reference (easyp.yaml)
+# EasyP Configuration Reference
 
-Complete reference for all configuration sections and options.
+Complete reference for `easyp.yaml` (tooling) and `protobuf.mod` (dependencies).
 
 ## Minimal Example
 
 ```yaml
+# easyp.yaml
 lint:
   use:
     - DEFAULT
 ```
 
+```yaml
+# protobuf.mod
+deps: []
+```
+
 ## Full Structure
 
 ```yaml
+# ─── easyp.yaml ─────────────────────────────────────────
 # ─── Lint ───────────────────────────────────────────────
 lint:
   use:                              # Required. Rule names or group names.
@@ -38,12 +45,6 @@ lint:
       - proto/legacy
     COMMENT_FIELD:
       - proto/internal
-
-# ─── Dependencies ──────────────────────────────────────
-deps:
-  - github.com/googleapis/googleapis              # Latest default branch
-  - github.com/grpc-ecosystem/grpc-gateway@v2.0.0 # Specific tag/version
-  - github.com/user/repo@abc123def                # Specific commit hash
 
 # ─── Code Generation ──────────────────────────────────
 generate:
@@ -112,6 +113,14 @@ breaking:
     - proto/experimental
 
   against_git_ref: main             # Default git ref to compare against
+```
+
+```yaml
+# ─── protobuf.mod ───────────────────────────────────────
+deps:
+  - github.com/googleapis/googleapis              # Latest default branch
+  - github.com/grpc-ecosystem/grpc-gateway@v2.0.0 # Specific tag/version
+  - github.com/user/repo@abc123def                # Specific commit hash
 ```
 
 ## Plugin Source Priority
