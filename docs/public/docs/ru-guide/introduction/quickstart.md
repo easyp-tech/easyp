@@ -71,15 +71,13 @@ easyp lint
 
 ### Добавление зависимостей
 
-Дополните `easyp.yaml`:
+Создайте или обновите `protobuf.mod`:
 
-```yaml
-lint:
-  use:
-    - DEFAULT
-deps:
-  - github.com/googleapis/googleapis                          # Последний коммит
-  - github.com/grpc-ecosystem/grpc-gateway@v2.20.0           # Конкретная версия
+```
+direct (
+	github.com/googleapis/googleapis                          # последний коммит
+	github.com/grpc-ecosystem/grpc-gateway@v2.20.0           # конкретная версия
+)
 ```
 
 ### Загрузка зависимостей
@@ -89,11 +87,11 @@ easyp mod download
 ```
 
 Команда:
-- Скачивает версии из `easyp.lock`, если он существует
-- Иначе — берёт из `easyp.yaml` и создаёт `easyp.lock`
+- Скачивает версии из `protobuf.lock`, если он существует
+- Иначе — берёт из `protobuf.mod` и создаёт `protobuf.lock`
 
 ::: info
-Совет: `easyp mod update` — игнорирует lock‑файл и подтягивает актуальные версии из `easyp.yaml`.
+Совет: `easyp mod update` — игнорирует lock‑файл и подтягивает актуальные версии из `protobuf.mod`.
 :::
 
 ## Генерация кода
@@ -108,9 +106,6 @@ EasyP поддерживает все стандартные protoc‑плаги
 lint:
   use:
     - DEFAULT
-deps:
-  - github.com/googleapis/googleapis
-  - github.com/grpc-ecosystem/grpc-gateway@v2.20.0
 generate:
   plugins:
     - name: go

@@ -15,10 +15,11 @@
 **Symptom:** `exit code 2` with message like `import "google/protobuf/timestamp.proto" not found`
 
 **Causes & fixes:**
-1. Missing dependency — add to `deps` in `easyp.yaml`:
-   ```yaml
-   deps:
-     - github.com/protocolbuffers/protobuf@v25.0
+1. Missing dependency — add to `protobuf.mod`:
+   ```
+   direct (
+   	github.com/protocolbuffers/protobuf@v25.0
+   )
    ```
 2. Dependencies not downloaded — run `easyp mod download`
 3. Wrong `--path` flag — ensure it points to the correct proto directory
@@ -33,7 +34,7 @@ easyp validate-config --format json
 ```
 
 **Common causes:**
-- Unknown keys (typos in field names)
+- Unknown keys (typos in field names) — including legacy `deps` in `easyp.yaml`
 - Missing required fields (`lint.use` is required)
 - Invalid rule names in `lint.use` or `lint.except`
 - Plugin missing exactly one source (`name`, `remote`, `path`, or `command`)

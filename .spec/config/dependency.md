@@ -12,41 +12,49 @@ EasyP’s package manager is **Git-native** and shaped like Go modules:
 
 - Any Git repository path can be a dependency (no Buf Schema Registry).
 - Versions are Git tags, branch names, commit hashes, omitted (`HEAD`), or Go-style pseudo-versions.
+- Declarations live in project-root `protobuf.mod` (not in `easyp.yaml`).
 - Installs are cached under `EASYPPATH` (default `$HOME/.easyp`).
-- Reproducibility is provided by project-root `easyp.lock`.
+- Reproducibility is provided by project-root `protobuf.lock`.
 - Auth, proxies, and SSH are delegated to the system `git` CLI (no remotes/mirrors/tokens in `easyp.yaml`).
 
 Vendor output directory is hardcoded as `easyp_vendor` (not `vendor/`).
 
 ---
 
-## 2. Declaration (`easyp.yaml`)
+## 2. Declaration (`protobuf.mod`)
 
-### `deps`
+### `direct`
 
-```yaml
-deps:
-  - github.com/googleapis/googleapis@common-protos-1_3_1
-  - github.com/bufbuild/protoc-gen-validate          # version omitted → latest
+```
+direct (
+    github.com/googleapis/googleapis@common-protos-1_3_1
+    github.com/bufbuild/protoc-gen-validate          # version omitted → latest
+)
 ```
 
-| Field | Go type | Notes |
-|-------|---------|--------|
-| `deps` | `[]string` | `Config.Deps` in `internal/config/config.go` |
+| Property | Value |
+|----------|--------|
+| Filename | `protobuf.mod` (constant `modfile.FileName`) |
+| Location | Project working directory |
+| Section | Single `direct (` … `)` block |
 | Entry format | `repo[@version]` | Split on first `@` via `models.NewModule` |
 | Omitted version | `RequestedVersion("")` | Treated as latest (`HEAD`) |
+| Missing file | Empty dependency list (not an error) |
+| Adapter | `internal/adapters/modfile/` |
 
-Entire config content (including deps) is expanded with `envsubst` (`${VAR}`) before YAML parse.
+There is **no** `deps` field in `easyp.yaml`. Unknown top-level key `deps` is rejected by config validation (warn/unknown).
+
+Comments: `#` and `//` to end of line. Empty lines allowed.
 
 ### Union with generate inputs
 
 `buildCore` builds the effective deps list as:
 
 ```
-uniq(cfg.Deps + generate.inputs[].git_repo.url)
+uniq(protobuf.mod direct + generate.inputs[].git_repo.url)
 ```
 
-See `getDepsFromGenerateDeps` in `internal/api/mod.go` and `buildCore` in `internal/api/temporaly_helper.go`.
+See `modfile.Read` + `getDepsFromGenerateDeps` in `internal/api/temporaly_helper.go` / `internal/api/mod.go`.
 
 ```yaml
 generate:
@@ -90,15 +98,15 @@ On `models.ErrVersionNotFound`, mod handlers call `os.Exit(1)`.
 
 ```mermaid
 flowchart TD
-  cfg["easyp.yaml deps + generate.inputs.git_repo"] --> buildCore["buildCore → Core.deps"]
+  cfg["protobuf.mod direct + generate.inputs.git_repo"] --> buildCore["buildCore → Core.deps"]
   buildCore --> download["Core.Download / Update"]
   download --> get["Core.Get"]
   get --> git["bare git cache + fetch"]
-  git --> modcfg["Read buf/easyp ModuleConfig"]
+  git --> modcfg["Read buf dirs + protobuf.mod deps"]
   modcfg --> indirect["Recursive Get for transitive deps"]
   indirect --> archive["git archive *.proto → zip"]
   archive --> install["storage.Install → mod/ + dirhash"]
-  install --> lock["easyp.lock Write"]
+  install --> lock["protobuf.lock Write"]
   lock --> consumers["lint / generate / breaking / vendor"]
 ```
 
@@ -122,7 +130,7 @@ For each string in `c.deps`, parse `Module` and call `Get` (overwrites lock entr
 2. `git.New` — `origin` = `https://` + module name
 3. `repo.ReadRevision` — resolve tag / branch / commit / HEAD / pseudo-version
 4. `repo.Fetch` — shallow fetch
-5. `moduleConfig.ReadFromRepo` — buf or easyp module layout + transitive deps
+5. `moduleConfig.ReadFromRepo` — buf/easyp directories + `protobuf.mod` transitive deps
 6. Recursive `Get` for each `moduleConfig.Dependencies`
 7. `repo.Archive` — `git archive --format=zip <commit> -o … "*.proto"` only
 8. `storage.Install` — extract, strip module dirs, `dirhash.HashDir`, atomic rename into `mod/`
@@ -135,11 +143,11 @@ For each string in `c.deps`, parse `Module` and call `Get` (overwrites lock entr
 
 ---
 
-## 5. Lockfile (`easyp.lock`)
+## 5. Lockfile (`protobuf.lock`)
 
 | Property | Value |
 |----------|--------|
-| Filename | `easyp.lock` (constant `lockFileName`) |
+| Filename | `protobuf.lock` (constant `lockFileName`) |
 | Location | Project working directory (via `DirWalker`) |
 | Line format | `moduleName version hash` (exactly 3 space-separated fields) |
 | Hash | Go `dirhash` style (`h1:…`) of installed tree |
@@ -152,7 +160,7 @@ github.com/googleapis/googleapis v0.0.0-20250909114430-8727b5baabcdef h1:eI+…
 github.com/grpc-ecosystem/grpc-gateway v2.19.1 h1:01NNlC…
 ```
 
-Malformed lines (≠ 3 fields) are skipped on read.
+Malformed lines (≠ 3 fields) are skipped on read. There is **no** fallback to legacy `easyp.lock`.
 
 Key types: `models.LockFileInfo`, `models.ErrModuleNotFoundInLockFile` (`internal/core/models/lock_file_info.go`).
 
@@ -204,13 +212,12 @@ Remote URL construction: always `https://` + module path (`getRemote` in `intern
 
 ## 8. Transitive / module config
 
-`ModuleConfig.ReadFromRepo` (`internal/adapters/module_config/read_from_repo.go`) tries, in order:
+`ModuleConfig.ReadFromRepo` (`internal/adapters/module_config/read_from_repo.go`):
 
-1. **Buf** (`buf.work.yaml` v1 or `buf.yaml` v2) → **directories only** (no dependency list)
-2. **EasyP** (`easyp.yaml`) → `deps` become transitive `Dependencies`; `generate.inputs[].input_files_dir.root` become `Directories`
-3. Else empty config
+1. **Directories** — Buf (`buf.work.yaml` v1 or `buf.yaml` v2), else EasyP (`easyp.yaml` generate input roots)
+2. **Dependencies** — `protobuf.mod` `direct` entries only
 
-Indirect deps are installed only when the remote module ships an `easyp.yaml` with `deps`. Buf-only modules do not pull transitive packages via EasyP.
+Buf-only modules without `protobuf.mod` do not pull transitive packages via EasyP. Remote `easyp.yaml` no longer declares transitive deps.
 
 ---
 
@@ -251,18 +258,19 @@ Documented operational patterns (outside code):
 | Package / type | Role |
 |----------------|------|
 | `internal/api.Mod` | CLI wiring for `mod` |
-| `internal/api.buildCore` | Assembles deps, storage, lock, vendor dir |
+| `internal/api.buildCore` | Assembles deps from `protobuf.mod` + generate inputs, storage, lock, vendor dir |
+| `adapters/modfile` | `protobuf.mod` parse / read / write |
 | `core.Core` | `Download`, `Update`, `Get`, `Vendor` |
 | `core.Storage` | Cache dirs, install, hashes, install paths |
 | `core.LockFile` | Read / Write / IsEmpty / DepsIter |
-| `core.ModuleConfig` | Read buf/easyp layout from cloned repo |
+| `core.ModuleConfig` | Read buf/easyp layout + protobuf.mod from cloned repo |
 | `models.Module` | Name + `RequestedVersion` |
 | `models.LockFileInfo` | Name, version, hash |
 | `models.InstalledModuleInfo` | Name, hash, revision version (`.info` file) |
 | `models.Revision` | CommitHash + Version |
 | `models.ModuleConfig` | `Dependencies` + `Directories` |
 | `adapters/repository/git` | Bare clone, fetch, archive, revision resolve |
-| `adapters/lock_file` | `easyp.lock` I/O |
+| `adapters/lock_file` | `protobuf.lock` I/O |
 | `adapters/storage` | `$EASYPPATH` layout |
 | `adapters/module_config` | Buf / EasyP module config readers |
 
@@ -283,9 +291,9 @@ Documented operational patterns (outside code):
 
 - Prefer this spec + code over outdated docs/skills that say vendor → `vendor/` (actual: `easyp_vendor`).
 - Do not invent remotes, mirrors, or auth YAML fields; they do not exist.
-- Do not hand-edit generated `schemas/*.json` for deps schema changes — update `mcp/easypconfig` / `internal/config`, then `task schema:generate`.
-- Commit `easyp.lock` for reproducible CI; cache lives outside the repo (`EASYPPATH`).
-- `mod download` is lock-first; use `mod update` to refresh versions from config.
+- Declare deps in `protobuf.mod`; lock with `protobuf.lock`. Do not use `easyp.yaml` `deps` or `easyp.lock`.
+- Do not hand-edit generated `schemas/*.json` for config schema changes — update `mcp/easypconfig` / `internal/config`, then regenerate schemas.
+- Commit `protobuf.lock` for reproducible CI; cache lives outside the repo (`EASYPPATH`).
+- `mod download` is lock-first; use `mod update` to refresh versions from `protobuf.mod`.
 - Archives contain only `*.proto`; non-proto files from deps are never installed.
-- Transitive deps require the dependency’s own `easyp.yaml`; buf configs alone do not declare them.
-)
+- Transitive deps require the dependency’s own `protobuf.mod`; buf configs alone do not declare them.

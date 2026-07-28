@@ -42,11 +42,15 @@ protoc \
 
 Единый файл `easyp.yaml`:
 
-```yaml
-deps:
-  - github.com/googleapis/googleapis
-  - github.com/envoyproxy/protoc-gen-validate
+```
+direct (
+	github.com/googleapis/googleapis
+	github.com/envoyproxy/protoc-gen-validate
+)
 
+```
+
+```yaml
 generate:
   plugins:
     - name: go
@@ -185,10 +189,6 @@ lint:
   enum_zero_value_suffix: _NONE
   service_suffix: Service
 
-deps:
-  - github.com/googleapis/googleapis
-  - github.com/envoyproxy/protoc-gen-validate
-
 generate:
   plugins:
     - name: go
@@ -218,6 +218,15 @@ breaking:
   against_git_ref: main
   ignore:
     - ENUM_VALUE_SAME_NAME
+```
+
+Dependencies are declared in `protobuf.mod` (not in `easyp.yaml`):
+
+```
+direct (
+	github.com/googleapis/googleapis
+	github.com/envoyproxy/protoc-gen-validate
+)
 ```
 
 ## 12. Checklist миграции

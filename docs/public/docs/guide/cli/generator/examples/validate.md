@@ -49,12 +49,15 @@ message EchoStreamResponse {
 
 ## Configuration Setup
 
-Create and configure the easyp.yaml configuration file:
+Create `protobuf.mod` with the validate dependency and configure `easyp.yaml`:
+
+```
+direct ( # [!code ++]
+	github.com/bufbuild/protoc-gen-validate  # [!code ++]
+)
+```
 
 ```yaml
-deps: # [!code ++]
-  - github.com/bufbuild/protoc-gen-validate  # [!code ++]
-
 generate:
   plugins:
     - name: go

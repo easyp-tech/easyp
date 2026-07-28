@@ -62,32 +62,38 @@
 
 ## Настройка конфигурации
 
-Обновите файл `easyp.yaml`, добавив необходимые зависимости и плагины:
-    deps:  # [!code ++]
-      - github.com/googleapis/googleapis  # [!code ++]
+Обновите `protobuf.mod` и `easyp.yaml`, добавив необходимые зависимости и плагины:
 
-    generate:
-      plugins:
-        - name: go
-          out: .
-          opts:
-            paths: source_relative
-        - name: go-grpc
-          out: .
-          opts:
-            paths: source_relative
-            require_unimplemented_servers: false
-        - name: grpc-gateway  # [!code ++]
-          out: .  # [!code ++]
-          opts:  # [!code ++]
-            paths: source_relative  # [!code ++]
-        - name: openapiv2        # [!code ++]
-          out: .  # [!code ++]
-          opts: # [!code ++]
-            simple_operation_ids: false  # [!code ++]
-            generate_unbound_methods: false  # [!code ++]
+```
+direct (  # [!code ++]
+	github.com/googleapis/googleapis  # [!code ++]
+)
+```
 
-Секция `deps` перечисляет зависимости, необходимые для импортов proto‑файлов.
+```yaml
+generate:
+  plugins:
+    - name: go
+      out: .
+      opts:
+        paths: source_relative
+    - name: go-grpc
+      out: .
+      opts:
+        paths: source_relative
+        require_unimplemented_servers: false
+    - name: grpc-gateway  # [!code ++]
+      out: .  # [!code ++]
+      opts:  # [!code ++]
+        paths: source_relative  # [!code ++]
+    - name: openapiv2        # [!code ++]
+      out: .  # [!code ++]
+      opts: # [!code ++]
+        simple_operation_ids: false  # [!code ++]
+        generate_unbound_methods: false  # [!code ++]
+```
+
+Секция `direct` в `protobuf.mod` перечисляет зависимости, необходимые для импортов proto‑файлов.
 В данном случае добавляем `github.com/googleapis/googleapis`,
 поскольку там находится файл `annotations.proto`, используемый в определении сервиса.
 

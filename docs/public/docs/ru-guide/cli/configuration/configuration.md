@@ -146,8 +146,8 @@ easyp --format text validate-config --config example.easyp.yaml
 #### `easyp mod download`
 Downloads dependencies based on lock file priority:
 
-1. **If `easyp.lock` exists** - downloads exact versions from lock file
-2. **If `easyp.lock` is missing** - downloads versions from `easyp.yaml` and creates `easyp.lock`
+1. **If `protobuf.lock` exists** - downloads exact versions from lock file
+2. **If `protobuf.lock` is missing** - downloads versions from `protobuf.mod` and creates `protobuf.lock`
 
 ```bash
 # Download exact versions (recommended for production)
@@ -155,11 +155,11 @@ easyp mod download
 ```
 
 #### `easyp mod update`  
-Always downloads dependencies from `easyp.yaml`, ignoring existing lock file:
+Always downloads dependencies from `protobuf.mod`, ignoring existing lock file:
 
-1. **Ignores `easyp.lock`** completely
-2. **Downloads versions from `easyp.yaml`**
-3. **Creates/updates `easyp.lock`** with new versions
+1. **Ignores `protobuf.lock`** completely
+2. **Downloads versions from `protobuf.mod`**
+3. **Creates/updates `protobuf.lock`** with new versions
 
 ```bash
 # Update dependencies and lock file
@@ -213,7 +213,7 @@ The `easyp.yaml` file is the main configuration file for EasyP, defining how you
 ```
 .
 ├── easyp.yaml
-├── easyp.lock
+├── protobuf.lock
 ├── proto/
 │   ├── user/
 │   │   └── user.proto
@@ -232,8 +232,6 @@ lint:
   use:
     - BASIC
     - COMMENT_SERVICE
-deps:
-  - github.com/googleapis/googleapis@v1.0.0
 generate:
   inputs:
     - directory: "proto"
@@ -248,15 +246,20 @@ breaking:
   against_git_ref: main
 ```
 
+Dependencies are declared in `protobuf.mod` (not in `easyp.yaml`):
+
+```
+direct (
+	github.com/googleapis/googleapis@v1.0.0
+)
+```
+
 #### JSON Format
 ```json
 {
   "lint": {
     "use": ["BASIC", "COMMENT_SERVICE"]
   },
-  "deps": [
-    "github.com/googleapis/googleapis@v1.0.0"
-  ],
   "generate": {
     "inputs": [
       {"directory": "proto"}
@@ -280,17 +283,10 @@ breaking:
 
 ### Переменные окружения в конфигурации
 
-EasyP поддерживает расширение переменных окружения непосредственно в файле конфигурации `easyp.yaml`. Это позволяет использовать переменные окружения для динамических значений конфигурации.
+EasyP поддерживает расширение переменных окружения непосредственно в файле конфигурации `easyp.yaml`. Это позволяет использовать переменные окружения для динамических значений конфигурации. Объявления зависимостей в `protobuf.mod` через envsubst не расширяются.
 
 **Пример со всеми поддерживаемыми возможностями:**
 ```yaml
-deps:
-  # Базовое расширение: ${VAR} - расширяется в значение переменной VAR
-  - ${GOOGLEAPIS_REPO}@${GOOGLEAPIS_VERSION}
-  
-  # Значение по умолчанию: ${VAR:-default} - использует default, если VAR не установлена или пустая
-  - ${GNOSTIC_REPO:-github.com/google/gnostic}@${GNOSTIC_VERSION:-v0.7.0}
-
 generate:
   inputs:
     # Значение по умолчанию, если INPUT_DIR не установлена
@@ -577,19 +573,13 @@ Dependencies follow the format: `$GIT_LINK@$VERSION`
 - `github.com/owner/repo@version` - Full URL with version
 - `gitlab.com/group/repo@tag` - GitLab repository
 
-```yaml
-deps:
-  # Latest commit from default branch
-  - googleapis/googleapis
-  
-  # Specific tag (recommended for production)
-  - googleapis/googleapis@v1.0.0
-  
-  # Full commit hash (most precise)
-  - googleapis/googleapis@47b927cbb41c4fdea1292bafadb8976f
-  
-  # Different Git hosting
-  - gitlab.com/acme/proto@v2.1.0
+```
+direct (
+	googleapis/googleapis
+	googleapis/googleapis@v1.0.0
+	googleapis/googleapis@47b927cbb41c4fdea1292bafadb8976f
+	gitlab.com/acme/proto@v2.1.0
+)
 ```
 
 **Note:** If `@$VERSION` is omitted, EasyP downloads the latest commit from the repository's default branch.
@@ -791,8 +781,6 @@ lint:
   ignore:
     - vendor/
     - testdata/
-deps:
-  - github.com/googleapis/googleapis@v1.0.0
 generate:
   inputs:
     - directory: "proto"
@@ -805,6 +793,14 @@ generate:
       out: .
       opts:
         paths: source_relative
+```
+
+Dependencies are declared in `protobuf.mod` (not in `easyp.yaml`):
+
+```
+direct (
+	github.com/googleapis/googleapis@v1.0.0
+)
 ```
 
 ### Production Configuration
@@ -822,9 +818,6 @@ lint:
     - vendor/
   except: []
   allow_comment_ignores: false
-deps:
-  - github.com/googleapis/googleapis@v1.56.0
-  - github.com/grpc-ecosystem/grpc-gateway@v2.18.0
 generate:
   inputs:
     - directory: "proto"
@@ -853,6 +846,15 @@ breaking:
   against_git_ref: main
 ```
 
+Dependencies are declared in `protobuf.mod` (not in `easyp.yaml`):
+
+```
+direct (
+	github.com/googleapis/googleapis@v1.56.0
+	github.com/grpc-ecosystem/grpc-gateway@v2.18.0
+)
+```
+
 ### Multi-Service Configuration
 
 ```yaml
@@ -867,9 +869,6 @@ lint:
       - proto/internal/
     SERVICE_SUFFIX:
       - proto/legacy/
-deps:
-  - github.com/googleapis/googleapis@v1.0.0
-  - github.com/acme/common-proto@v2.1.0
 generate:
   inputs:
     - directory: "proto/public"
@@ -899,6 +898,15 @@ breaking:
     - proto/internal/
     - proto/experimental/
   against_git_ref: develop
+```
+
+Dependencies are declared in `protobuf.mod` (not in `easyp.yaml`):
+
+```
+direct (
+	github.com/googleapis/googleapis@v1.0.0
+	github.com/acme/common-proto@v2.1.0
+)
 ```
 
 ## Configuration Validation

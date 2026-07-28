@@ -48,7 +48,7 @@ Handlers own CLI flags, command-specific exit handling, configuration loading, a
 2. Opens the project lock file through `adapters/lock_file`.
 3. Resolves `EASYPPATH`, defaulting to `$HOME/.easyp`.
 4. Instantiates storage, module-config, console, and Git-walker adapters.
-5. Combines `deps` with Git repository generation inputs.
+5. Combines `protobuf.mod` with Git repository generation inputs.
 6. Converts configured plugins, inputs, managed-mode rules, and breaking-check settings.
 7. Constructs `core.Core`.
 
@@ -77,7 +77,8 @@ Package: `internal/adapters`.
 | Package | Responsibility |
 |---------|----------------|
 | `adapters/storage` | Manages the cache and installed module trees under `EASYPPATH`. |
-| `adapters/lock_file` | Reads, writes, iterates, and checks `easyp.lock`. |
+| `adapters/lock_file` | Reads, writes, iterates, and checks `protobuf.lock`. |
+| `adapters/modfile` | Parses and writes `protobuf.mod` dependency declarations. |
 | `adapters/repository/git` | Resolves revisions, fetches Git objects, reads repository files, and archives proto sources. |
 | `adapters/go_git` | Provides directory walkers for project Git references. |
 | `adapters/module_config` | Reads supported module layouts from a repository. |
@@ -121,7 +122,7 @@ easyp/
 
 3. **Dependency resolution is Git-based.**
    - `Core.Download` is used before linting, generation, and breaking checks.
-   - Resolved versions and hashes are persisted in `easyp.lock`; installed sources are cached outside the project.
+   - Resolved versions and hashes are persisted in `protobuf.lock`; installed sources are cached outside the project.
 
 4. **Generation uses protobuf descriptors and plugin executors.**
    - `Core.Generate` compiles files with `protocompile`.

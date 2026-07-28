@@ -9,7 +9,7 @@ import (
 )
 
 const (
-	lockFileName = "easyp.lock"
+	lockFileName = "protobuf.lock"
 )
 
 type fileInfo struct {

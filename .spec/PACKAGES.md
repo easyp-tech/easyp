@@ -132,13 +132,20 @@ Each rule follows the `core.Rule` interface: it provides a message and validates
 | `create_cache_repository_dir.go`, `sanitize.go` | Create Git-cache paths and sanitize version components. |
 
 ### `internal/adapters/lock_file`
-**Lock-file adapter** — reads, writes, iterates, and checks the project `easyp.lock`.
+**Lock-file adapter** — reads, writes, iterates, and checks the project `protobuf.lock`.
 
 | File | Description |
 |------|-------------|
 | `lock_file.go` | Defines the lock-file adapter. |
 | `read.go`, `write.go` | Parse and serialize lock entries. |
 | `deps_iter.go`, `is_empty.go` | Iterate entries and detect an empty lock file. |
+
+### `internal/adapters/modfile`
+**Mod-file adapter** — parses and writes project `protobuf.mod` (`direct` block).
+
+| File | Description |
+|------|-------------|
+| `modfile.go` | Parse, Format, Read, Write for `protobuf.mod`. |
 
 ### `internal/adapters/repository` and `internal/adapters/repository/git`
 **Git repository adapter** — supplies repository operations required for dependency resolution.

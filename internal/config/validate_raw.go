@@ -107,8 +107,6 @@ func buildSchema() *v.FieldSchema {
 		UnknownKeyPolicy: v.UnknownKeyWarn,
 	}
 
-	depsSchema := &v.FieldSchema{Type: v.TypeSequence, ItemSchema: &v.FieldSchema{Type: v.TypeString}, Nullable: true}
-
 	inputDirSchema := &v.FieldSchema{
 		Type: v.TypeAny, // string or map
 		AllowedKeys: map[string]*v.FieldSchema{
@@ -223,7 +221,6 @@ func buildSchema() *v.FieldSchema {
 		Type: v.TypeMap,
 		AllowedKeys: map[string]*v.FieldSchema{
 			"lint":     lintSchema,
-			"deps":     depsSchema,
 			"generate": generateSchema,
 			"breaking": breakingSchema,
 			"version":  {Type: v.TypeString},

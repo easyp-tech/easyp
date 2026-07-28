@@ -89,10 +89,16 @@
 #### EasyP: «Любой Git репозиторий — это пакет»
 ```yaml
 # Прямые ссылки на Git репозитории
-deps:
-  - github.com/googleapis/googleapis@v1.2.3
-  - gitlab.company.com/protos/internal@v2.0.1
-  - git.example.com/team/shared-types@main
+```
+
+Dependencies are declared in `protobuf.mod` (not in `easyp.yaml`):
+
+```
+direct (
+	github.com/googleapis/googleapis@v1.2.3
+	gitlab.company.com/protos/internal@v2.0.1
+	git.example.com/team/shared-types@main
+)
 ```
 
 **Преимущества:**
@@ -105,10 +111,16 @@ deps:
 ```yaml
 # buf.yaml — ссылки только на модули BSR
 version: v1
-deps:
-  - buf.build/googleapis/googleapis
-  - buf.build/grpc/grpc
-  - buf.build/envoyproxy/protoc-gen-validate
+```
+
+Dependencies are declared in `protobuf.mod` (not in `easyp.yaml`):
+
+```
+direct (
+	buf.build/googleapis/googleapis
+	buf.build/grpc/grpc
+	buf.build/envoyproxy/protoc-gen-validate
+)
 ```
 
 **Преимущества:**
@@ -173,15 +185,16 @@ buf mod download
 #### EasyP: Прямой контроль
 ```yaml
 # Полный контроль источников
-deps:
-  # Публичный репозиторий — ваша конкретная версия
-  - github.com/googleapis/googleapis@common-protos-1_3_1
+```
 
-  # Внутренний репозиторий
-  - gitlab.company.com/security/validated-protos@v1.0.0
+Dependencies are declared in `protobuf.mod` (not in `easyp.yaml`):
 
-  # Точный коммит (горячий фикс)
-  - github.com/bufbuild/protoc-gen-validate@abc123def456
+```
+direct (
+	github.com/googleapis/googleapis@common-protos-1_3_1
+	gitlab.company.com/security/validated-protos@v1.0.0
+	github.com/bufbuild/protoc-gen-validate@abc123def456
+)
 ```
 
 **Преимущества по безопасности:**
@@ -192,10 +205,11 @@ deps:
 - ✅ Можно форкнуть и удерживать критические версии
 
 #### Buf: Зависимость от реестра
-```yaml
-deps:
-  - buf.build/googleapis/googleapis
-  - buf.build/grpc/grpc
+```
+direct (
+	buf.build/googleapis/googleapis
+	buf.build/grpc/grpc
+)
 ```
 
 **Риски:**
@@ -210,17 +224,19 @@ deps:
 #### Сценарий 1: Стартап с публичными зависимостями
 
 **EasyP:**
-```yaml
-deps:
-  - github.com/googleapis/googleapis
-  - github.com/grpc-ecosystem/grpc-gateway@v2.19.1
+```
+direct (
+	github.com/googleapis/googleapis
+	github.com/grpc-ecosystem/grpc-gateway@v2.19.1
+)
 ```
 
 **Buf:**
-```yaml
-deps:
-  - buf.build/googleapis/googleapis
-  - buf.build/grpcecosystem/grpc-gateway
+```
+direct (
+	buf.build/googleapis/googleapis
+	buf.build/grpcecosystem/grpc-gateway
+)
 ```
 
 **Итог:** Паритет — оба хорошо подходят для публичных пакетов.
@@ -228,19 +244,21 @@ deps:
 #### Сценарий 2: Компания со смешанными публичными/приватными зависимостями
 
 **EasyP:**
-```yaml
-deps:
-  - github.com/googleapis/googleapis@v1.2.3
-  - github.com/mycompany/auth-protos@v2.0.0
-  - gitlab.enterprise.com/platform/shared-types@v1.5.1
+```
+direct (
+	github.com/googleapis/googleapis@v1.2.3
+	github.com/mycompany/auth-protos@v2.0.0
+	gitlab.enterprise.com/platform/shared-types@v1.5.1
+)
 ```
 
 **Buf:**
-```yaml
-deps:
-  - buf.build/googleapis/googleapis
-  - buf.build/mycompany/auth-protos
-  - buf.build/mycompany/shared-types
+```
+direct (
+	buf.build/googleapis/googleapis
+	buf.build/mycompany/auth-protos
+	buf.build/mycompany/shared-types
+)
 ```
 
 **Итог:** **EasyP** — не требует публикации внутрь BSR.
@@ -311,9 +329,10 @@ easyp mod vendor
 #### EasyP: Нет привязки
 
 **Миграция ИЗ EasyP:**
-```yaml
-deps:
-  - github.com/googleapis/googleapis@v1.2.3
+```
+direct (
+	github.com/googleapis/googleapis@v1.2.3
+)
 ```
 (Обычные Git ссылки — легко перенести в другой инструмент.)
 
@@ -389,14 +408,21 @@ deps:
 
 ```yaml
 # Было (buf.yaml)
-deps:
-  - buf.build/googleapis/googleapis
-  - buf.build/grpc/grpc
+direct (
+	github.com/googleapis/googleapis@common-protos-1_3_1
+	github.com/grpc/grpc@v1.50.0
+)
+```
 
-# Стало (easyp.yaml)
-deps:
-  - github.com/googleapis/googleapis@common-protos-1_3_1
-  - github.com/grpc/grpc@v1.50.0
+Dependencies are declared in `protobuf.mod` (not in `easyp.yaml`):
+
+```
+direct (
+	buf.build/googleapis/googleapis
+	buf.build/grpc/grpc
+	github.com/googleapis/googleapis@common-protos-1_3_1
+	github.com/grpc/grpc@v1.50.0
+)
 ```
 
 ### Переход с EasyP на Buf

@@ -40,12 +40,12 @@ lint:
       - proto/internal
 
 # ─── Dependencies ──────────────────────────────────────
-deps:
-  - github.com/googleapis/googleapis              # Latest default branch
-  - github.com/grpc-ecosystem/grpc-gateway@v2.0.0 # Specific tag/version
-  - github.com/user/repo@abc123def                # Specific commit hash
+# Declared in protobuf.mod (not easyp.yaml):
+# direct (
+# 	github.com/googleapis/googleapis@v1.0.0
+# )
 
-# ─── Code Generation ──────────────────────────────────
+# ─── Generate ──────────────────────────────────────────
 generate:
   inputs:                           # Proto file sources
     - directory: proto              # Local directory (shorthand)
@@ -112,6 +112,16 @@ breaking:
     - proto/experimental
 
   against_git_ref: main             # Default git ref to compare against
+```
+
+Dependencies are declared in `protobuf.mod` (not in `easyp.yaml`):
+
+```
+direct (
+	github.com/googleapis/googleapis
+	github.com/grpc-ecosystem/grpc-gateway@v2.0.0
+	github.com/user/repo@abc123def
+)
 ```
 
 ## Plugin Source Priority

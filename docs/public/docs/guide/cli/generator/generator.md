@@ -35,12 +35,6 @@ EasyP includes a powerful generator that simplifies the process of generating co
 
 ```yaml
 # Package manager dependencies
-deps:
-  - github.com/googleapis/googleapis@common-protos-1_3_1
-  - github.com/grpc-ecosystem/grpc-gateway@v2.19.1
-  - github.com/bufbuild/protoc-gen-validate@v0.10.1
-
-# Code generation configuration
 generate:
   inputs:
     # Local directory input
@@ -87,7 +81,16 @@ generate:
       - field_option: jstype
         value: JS_STRING
         path: api/v1/  # Apply to specific path
+```
 
+Dependencies are declared in `protobuf.mod` (not in `easyp.yaml`):
+
+```
+direct (
+	github.com/googleapis/googleapis@common-protos-1_3_1
+	github.com/grpc-ecosystem/grpc-gateway@v2.19.1
+	github.com/bufbuild/protoc-gen-validate@v0.10.1
+)
 ```
 
 ### Input Sources
@@ -867,7 +870,7 @@ One of EasyP's most powerful features is the seamless integration between the pa
 
 **Key benefits:**
 - **Automatic dependency resolution**: No need to manually manage proto import paths
-- **Version consistency**: Dependencies are locked to specific versions via `easyp.lock`
+- **Version consistency**: Dependencies are locked to specific versions via `protobuf.lock`
 - **Transitive dependencies**: EasyP handles dependencies of dependencies automatically
 - **Performance**: Local caching means dependencies are downloaded once and reused
 
@@ -883,11 +886,15 @@ When you define dependencies in the `deps` section, the generator automatically 
 
 Here's a simple example showing how dependency resolution works automatically. Notice that you only need to specify the dependencies once in the `deps` section:
 
-```yaml
-deps:
-  - github.com/googleapis/googleapis@common-protos-1_3_1
-  - github.com/grpc-ecosystem/grpc-gateway@v2.19.1
+```
+direct (
+	github.com/googleapis/googleapis@common-protos-1_3_1
+	github.com/grpc-ecosystem/grpc-gateway@v2.19.1
+)
 
+```
+
+```yaml
 generate:
   inputs:
     - directory: "proto"
@@ -915,10 +922,14 @@ Google APIs are among the most commonly used proto dependencies, providing stand
 
 This configuration shows the minimal setup needed to use Google APIs in your proto files:
 
-```yaml
-deps:
-  - github.com/googleapis/googleapis@common-protos-1_3_1
+```
+direct (
+	github.com/googleapis/googleapis@common-protos-1_3_1
+)
 
+```
+
+```yaml
 generate:
   inputs:
     - directory: "api/proto"
@@ -966,10 +977,14 @@ Protoc-gen-validate provides powerful field validation capabilities that can be 
 - Consistent validation across different languages
 - Better performance than runtime reflection-based validation
 
-```yaml
-deps:
-  - github.com/bufbuild/protoc-gen-validate@v0.10.1
+```
+direct (
+	github.com/bufbuild/protoc-gen-validate@v0.10.1
+)
 
+```
+
+```yaml
 generate:
   inputs:
     - directory: "proto"
@@ -1005,20 +1020,17 @@ message User {
 
 This example demonstrates a production-ready configuration that combines multiple dependencies and plugins for a complete API development workflow:
 
-```yaml
-deps:
-  # Core Google APIs - Standard types and HTTP annotations
-  - github.com/googleapis/googleapis@common-protos-1_3_1
-  
-  # gRPC Gateway for REST APIs - Enables HTTP/JSON interfaces
-  - github.com/grpc-ecosystem/grpc-gateway@v2.19.1
-  
-  # Validation rules - Field-level validation constraints
-  - github.com/bufbuild/protoc-gen-validate@v0.10.1
-  
-  # Company internal shared types - Common business objects
-  - github.com/mycompany/shared-protos@v1.5.0
+```
+direct (
+	github.com/googleapis/googleapis@common-protos-1_3_1
+	github.com/grpc-ecosystem/grpc-gateway@v2.19.1
+	github.com/bufbuild/protoc-gen-validate@v0.10.1
+	github.com/mycompany/shared-protos@v1.5.0
+)
 
+```
+
+```yaml
 generate:
   inputs:
     - directory: "api/proto"

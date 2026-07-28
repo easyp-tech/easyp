@@ -9,7 +9,7 @@ import (
 	"github.com/easyp-tech/easyp/internal/core/models"
 )
 
-// readEasyp read easyp's config from repository
+// readEasyp reads directories from easyp.yaml in the repository (dependencies live in protobuf.mod).
 func readEasyp(ctx context.Context, repo repository.Repo, revision models.Revision) (models.ModuleConfig, error) {
 	content, err := repo.ReadFile(ctx, revision, config.DefaultFileName)
 	if err != nil {
@@ -21,19 +21,12 @@ func readEasyp(ctx context.Context, repo repository.Repo, revision models.Revisi
 		return models.ModuleConfig{}, fmt.Errorf("config.ParseConfig: %w", err)
 	}
 
-	modules := make([]models.Module, 0, len(easyp.Deps))
-	for _, dep := range easyp.Deps {
-		module := models.NewModule(dep)
-		modules = append(modules, module)
-	}
-
 	dirs := make([]string, 0, len(easyp.Generate.Inputs))
 	for _, input := range easyp.Generate.Inputs {
 		dirs = append(dirs, input.InputFilesDir.Root)
 	}
 
 	return models.ModuleConfig{
-		Dependencies: modules,
-		Directories:  dirs,
+		Directories: dirs,
 	}, nil
 }

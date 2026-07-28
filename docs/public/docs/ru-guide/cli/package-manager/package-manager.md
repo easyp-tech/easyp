@@ -20,7 +20,7 @@ EasyP предоставляет мощный менеджер пакетов д
 |-------------|----------|
 | **Git-Native** | Любой Git репозиторий, не нужен спец‑сервер |
 | **Множество форматов версий** | Теги, коммиты, псевдо‑версии, latest |
-| **Lock Files** | Воспроизводимые сборки через `easyp.lock` |
+| **Lock Files** | Воспроизводимые сборки через `protobuf.lock` |
 | **Локальный кеш** | Архитектура как у Go modules |
 | **Vendoring** | Локальное копирование для оффлайн сборок |
 | **YAML конфигурация** | Простые и читаемые декларации |
@@ -66,96 +66,109 @@ EasyP использует двухуровневый кеш, вдохновлё
 
 ### Базовая конфигурация
 
-Зависимости описываются в `easyp.yaml`:
+Объявите зависимости в файле `protobuf.mod`:
 
-```yaml
-deps:
-  - github.com/googleapis/googleapis@common-protos-1_3_1
-  - github.com/grpc-ecosystem/grpc-gateway@v2.19.1
-  - github.com/bufbuild/protoc-gen-validate
+```
+direct (
+	github.com/googleapis/googleapis@common-protos-1_3_1
+	github.com/grpc-ecosystem/grpc-gateway@v2.19.1
+	github.com/bufbuild/protoc-gen-validate
+)
 ```
 
-### Расширенные примеры
+### Примеры продвинутой конфигурации
 
-#### Multi-Environment Setup
-```yaml
-# development.easyp.yaml
-deps:
-  - github.com/googleapis/googleapis              # Последнее для разработки
-  - github.com/mycompany/internal-protos          # Внутренние изменения
-  - github.com/bufbuild/protoc-gen-validate       # Новые фичи
+#### Разные окружения
 
-# production.easyp.yaml
-deps:
-  - github.com/googleapis/googleapis@common-protos-1_3_1       # Зафиксировано
-  - github.com/mycompany/internal-protos@v2.1.0                # Стабильно
-  - github.com/bufbuild/protoc-gen-validate@v0.10.1            # Проверено
+```
+# development protobuf.mod
+direct (
+	github.com/googleapis/googleapis              # Latest for development
+	github.com/mycompany/internal-protos          # Latest internal changes
+	github.com/bufbuild/protoc-gen-validate       # Latest features
+)
+```
+
+```
+# production protobuf.mod
+direct (
+	github.com/googleapis/googleapis@common-protos-1_3_1       # Pinned
+	github.com/mycompany/internal-protos@v2.1.0                # Stable release
+	github.com/bufbuild/protoc-gen-validate@v0.10.1           # Tested version
+)
 ```
 
 #### Приватные репозитории
-```yaml
-deps:
-  # Публичное
-  - github.com/googleapis/googleapis@common-protos-1_3_1
 
-  # Частные
-  - github.com/mycompany/auth-protos@v1.5.0
-  - github.com/mycompany/common-types@v2.0.1
+```
+direct (
+	# Public dependencies
+	github.com/googleapis/googleapis@common-protos-1_3_1
 
-  # Внутренний GitLab
-  - gitlab.company.com/platform/messaging-protos@v0.3.0
+	# Private company repositories
+	github.com/mycompany/auth-protos@v1.5.0
+	github.com/mycompany/common-types@v2.0.1
+
+	# Internal GitLab
+	gitlab.company.com/platform/messaging-protos@v0.3.0
+)
 ```
 
 ## Стратегии версионирования
 
-Поддерживаются разные способы фиксации версий:
+EasyP поддерживает несколько подходов к версионированию:
 
-### 1. Семантические теги (для продакшена)
+### 1. Semantic Version Tags (рекомендуется для production)
 
-```yaml
-deps:
-  - github.com/grpc-ecosystem/grpc-gateway@v2.19.1
-  - github.com/googleapis/googleapis@common-protos-1_3_1
+```
+direct (
+	github.com/grpc-ecosystem/grpc-gateway@v2.19.1
+	github.com/googleapis/googleapis@common-protos-1_3_1
+)
 ```
 
-**Используйте когда:**
-- Продакшен
+**Когда использовать:**
+- Production-деплои
 - Стабильное потребление API
-- Нужна воспроизводимость
+- Нужна воспроизводимость сборок
 
-### 2. Последний тег (development)
-
-```yaml
-deps:
-  - github.com/googleapis/googleapis
-  - github.com/bufbuild/protoc-gen-validate
-```
-
-**Подходит для:**
-- Активной разработки
-- Получения свежих возможностей
-- Тестирования совместимости
-
-### 3. Хеш коммита (Bleeding Edge)
-
-```yaml
-deps:
-  - github.com/bufbuild/protoc-gen-validate@abc123def456789abcdef123456789abcdef1234
-```
-
-**Когда нужно:**
-- Нерелизные фичи
-- Тест конкретного фикса
-- Вклад в upstream
-
-### 4. Псевдо‑версии (автоматически)
-
-Если нет подходящего тега — создаётся псевдо‑версия:
+### 2. Latest (разработка)
 
 ```
-Формат: v0.0.0-{timestamp}-{short-commit-hash}
-Пример: v0.0.0-20250908104020-660ec2d64e07f2fa8947527443af058b3d7169df
+direct (
+	github.com/googleapis/googleapis    # Uses latest available tag
+	github.com/bufbuild/protoc-gen-validate
+)
 ```
+
+**Когда использовать:**
+- Активная разработка
+- Нужны свежие фичи
+- Проверка совместимости
+
+### 3. Commit hashes
+
+```
+direct (
+	github.com/bufbuild/protoc-gen-validate@abc123def456789abcdef123456789abcdef1234
+)
+```
+
+**Когда использовать:**
+- Нужны ещё не выпущенные фичи
+- Проверка конкретных фиксов
+- Контрибьют в upstream
+
+### 4. Pseudo-versions (автоматически)
+
+Если подходящий тег не найден, EasyP генерирует pseudo-version:
+
+```
+Format: v0.0.0-{timestamp}-{short-commit-hash}
+Example: v0.0.0-20250908104020-660ec2d64e07f2fa8947527443af058b3d7169df
+```
+
+Так каждый коммит можно адресовать version-like идентификатором.
 
 ## Команды
 
@@ -168,7 +181,7 @@ deps:
 2. Скачивает архивы в `cache/download`
 3. Проверяет контрольные суммы
 4. Распаковывает в `cache/mod`
-5. Обновляет `easyp.lock`
+5. Обновляет `protobuf.lock`
 
 **Пример:**
 ```bash
@@ -221,7 +234,7 @@ easyp mod update
 
 ## Lock файл
 
-`easyp.lock` фиксирует точные версии и хеш содержимого:
+`protobuf.lock` фиксирует точные версии и хеш содержимого:
 
 ```
 github.com/bufbuild/protoc-gen-validate v0.0.0-20250908104020-660ec2d64e07f2fa8947527443af058b3d7169df h1:ZZ5JyUkmrj9OBHM+gOCzeL5L/pAKVbsUl051yhhJTjU=
@@ -235,7 +248,7 @@ github.com/grpc-ecosystem/grpc-gateway v2.19.1 h1:01NNlCezvwUQ07ZvblXH0kelWq8hNl
 - Хеш содержимого (`h1:`)
 
 **Практики:**
-✅ Коммитить `easyp.lock`  
+✅ Коммитить `protobuf.lock`  
 ✅ Осознанно обновлять `mod update`  
 ✅ Ревью изменений версий  
 ❌ Не редактировать вручную  
@@ -246,10 +259,11 @@ github.com/grpc-ecosystem/grpc-gateway v2.19.1 h1:01NNlCezvwUQ07ZvblXH0kelWq8hNl
 
 Работают без настроек:
 
-```yaml
-deps:
-  - github.com/googleapis/googleapis
-  - github.com/bufbuild/protoc-gen-validate
+```
+direct (
+	github.com/googleapis/googleapis
+	github.com/bufbuild/protoc-gen-validate
+)
 ```
 
 ### Приватные репозитории
@@ -264,10 +278,11 @@ git config --global url."git@gitlab.company.com:".insteadOf "https://gitlab.comp
 
 Конфиг остаётся с HTTPS URL:
 
-```yaml
-deps:
-  - github.com/mycompany/private-protos@v1.0.0
-  - gitlab.company.com/platform/shared-types@v2.1.0
+```
+direct (
+	github.com/mycompany/private-protos@v1.0.0
+	gitlab.company.com/platform/shared-types@v2.1.0
+)
 ```
 
 #### Personal Access Tokens
@@ -293,10 +308,10 @@ git config --global http.sslCAInfo /path/to/certificate.pem
 
 ```bash
 cat > easyp.yaml << EOF
-deps:
-  - github.com/googleapis/googleapis
-  - github.com/grpc-ecosystem/grpc-gateway@v2.19.1
-EOF
+direct (
+	github.com/googleapis/googleapis
+	github.com/grpc-ecosystem/grpc-gateway@v2.19.1
+)EOF
 
 easyp mod download
 ls ~/.easyp/mod/github.com/googleapis/googleapis/
@@ -307,7 +322,7 @@ ls ~/.easyp/mod/github.com/googleapis/googleapis/
 ```bash
 echo "  - github.com/bufbuild/protoc-gen-validate@v0.10.1" >> easyp.yaml
 easyp mod download
-git add easyp.lock
+git add protobuf.lock
 git commit -m "Add protoc-gen-validate dependency"
 ```
 
@@ -315,10 +330,10 @@ git commit -m "Add protoc-gen-validate dependency"
 
 ```bash
 easyp mod update
-git diff easyp.lock
+git diff protobuf.lock
 easyp generate
 easyp lint
-git add easyp.lock
+git add protobuf.lock
 git commit -m "Update dependencies"
 ```
 
@@ -345,8 +360,9 @@ git config --list | grep url
 ```bash
 git ls-remote --tags https://github.com/googleapis/googleapis
 # Проверить корректный тег
-deps:
-  - github.com/googleapis/googleapis@common-protos-1_3_1
+direct (
+	github.com/googleapis/googleapis@common-protos-1_3_1
+)
 ```
 
 #### "Cache corruption" / "Checksum mismatch"
@@ -401,7 +417,7 @@ find ~/.easyp/mod -type d -name "v0.0.0-*" -mtime +30 -exec rm -rf {} \;
 ```dockerfile
 FROM ghcr.io/easyp-tech/easyp:latest AS deps
 WORKDIR /workspace
-COPY easyp.yaml easyp.lock ./
+COPY easyp.yaml protobuf.lock ./
 RUN easyp mod vendor
 
 FROM alpine:latest AS build

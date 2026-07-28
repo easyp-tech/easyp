@@ -68,12 +68,15 @@ message EchoResponse {
 
 ## Configuration Setup
 
-Update your `easyp.yaml` configuration file to include the necessary dependencies and plugins:
+Update `protobuf.mod` with the required dependency and configure plugins in `easyp.yaml`:
+
+```
+direct (  # [!code ++]
+	github.com/googleapis/googleapis  # [!code ++]
+)
+```
 
 ```yaml
-deps:  # [!code ++]
-  - github.com/googleapis/googleapis  # [!code ++]
-
 generate:
   plugins:
     - name: go
@@ -96,7 +99,7 @@ generate:
         generate_unbound_methods: false  # [!code ++]
 ```
 
-The `deps` section lists dependencies required for proto file imports.
+The `protobuf.mod` `direct` section lists dependencies required for proto file imports.
 In this case, we add `github.com/googleapis/googleapis`
 because it contains the `annotations.proto` file used in the proto service definition.
 

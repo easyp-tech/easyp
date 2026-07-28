@@ -37,7 +37,7 @@ This folder contains documentation to help LLMs and developers quickly understan
 | **CLI** | urfave/cli (`cmd/easyp`) |
 | **Capabilities** | lint, breaking, generate, `easyp mod` |
 | **Config** | `easyp.yaml` (+ envsubst); schema via `mcp/easypconfig` → `schemas/` |
-| **Deps** | Git repositories; lockfile `easyp.lock`; cache `EASYPPATH` |
+| **Deps** | Git repositories; declare in `protobuf.mod`; lockfile `protobuf.lock`; cache `EASYPPATH` |
 | **Build** | Task (`Taskfile.yml`) |
 | **Lint** | golangci-lint (`.golangci.yml`) |
 | **Tests** | gotestsum, `-race`, testify |
@@ -94,7 +94,7 @@ N/A — EasyP is a CLI tool, not a long-running server. Remote plugin execution 
 | `internal/api` | Commands: lint, generate, breaking, mod, init, ls-files, schema-gen |
 | `internal/core.Core` | Business logic facade |
 | `internal/core` Storage / LockFile / ModuleConfig | Package-manager ports |
-| `easyp.yaml` `deps` + `easyp.lock` | Declared and locked proto dependencies |
+| `easyp.yaml` + `protobuf.mod` + `protobuf.lock` | Config, declared deps, and locked proto dependencies |
 | `mcp/easypconfig` | Config schema / MCP metadata |
 
 ## Adding New Features

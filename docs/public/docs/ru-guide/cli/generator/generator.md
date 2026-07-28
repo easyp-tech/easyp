@@ -35,12 +35,6 @@ EasyP включает мощный генератор, который упро�
 
 ```yaml
 # Package manager dependencies
-deps:
-  - github.com/googleapis/googleapis@common-protos-1_3_1
-  - github.com/grpc-ecosystem/grpc-gateway@v2.19.1
-  - github.com/bufbuild/protoc-gen-validate@v0.10.1
-
-# Code generation configuration
 generate:
   inputs:
     # Local directory input
@@ -87,7 +81,16 @@ generate:
       - field_option: jstype
         value: JS_STRING
         path: api/v1/  # Применить к конкретному пути
+```
 
+Dependencies are declared in `protobuf.mod` (not in `easyp.yaml`):
+
+```
+direct (
+	github.com/googleapis/googleapis@common-protos-1_3_1
+	github.com/grpc-ecosystem/grpc-gateway@v2.19.1
+	github.com/bufbuild/protoc-gen-validate@v0.10.1
+)
 ```
 
 ### Input Sources
@@ -868,7 +871,7 @@ easyp generate --descriptor_set_out=./schema.pb --include_imports
 
 **Ключевые преимущества:**
 - **Автоматическое разрешение зависимостей**: не нужно вручную прописывать пути импортов
-- **Согласованность версий**: фиксация в `easyp.lock` гарантирует воспроизводимость
+- **Согласованность версий**: фиксация в `protobuf.lock` гарантирует воспроизводимость
 - **Транзитивные зависимости**: вложенные цепочки подтягиваются автоматически
 - **Производительность**: локальный кеш — скачивание один раз и повторное использование
 
@@ -884,11 +887,15 @@ easyp generate --descriptor_set_out=./schema.pb --include_imports
 
 Ниже простой пример — зависимости указываются один раз в `deps`, далее они доступны при генерации автоматически:
 
-```yaml
-deps:
-  - github.com/googleapis/googleapis@common-protos-1_3_1
-  - github.com/grpc-ecosystem/grpc-gateway@v2.19.1
+```
+direct (
+	github.com/googleapis/googleapis@common-protos-1_3_1
+	github.com/grpc-ecosystem/grpc-gateway@v2.19.1
+)
 
+```
+
+```yaml
 generate:
   inputs:
     - directory: "proto"
@@ -916,10 +923,14 @@ Google APIs — одна из самых популярных коллекций
 
 Минимальная конфигурация для подключения Google APIs:
 
-```yaml
-deps:
-  - github.com/googleapis/googleapis@common-protos-1_3_1
+```
+direct (
+	github.com/googleapis/googleapis@common-protos-1_3_1
+)
 
+```
+
+```yaml
 generate:
   inputs:
     - directory: "api/proto"
@@ -967,10 +978,14 @@ service MyService {
 - Единообразие проверок между языками
 - Производительнее чем проверка через runtime reflection
 
-```yaml
-deps:
-  - github.com/bufbuild/protoc-gen-validate@v0.10.1
+```
+direct (
+	github.com/bufbuild/protoc-gen-validate@v0.10.1
+)
 
+```
+
+```yaml
 generate:
   inputs:
     - directory: "proto"
@@ -1006,20 +1021,17 @@ message User {
 
 Пример ниже показывает продакшен‑конфигурацию, объединяющую несколько зависимостей и плагины для полного цикла разработки API:
 
-```yaml
-deps:
-  # Core Google APIs - Standard types and HTTP annotations
-  - github.com/googleapis/googleapis@common-protos-1_3_1
-  
-  # gRPC Gateway for REST APIs - Enables HTTP/JSON interfaces
-  - github.com/grpc-ecosystem/grpc-gateway@v2.19.1
-  
-  # Validation rules - Field-level validation constraints
-  - github.com/bufbuild/protoc-gen-validate@v0.10.1
-  
-  # Company internal shared types - Common business objects
-  - github.com/mycompany/shared-protos@v1.5.0
+```
+direct (
+	github.com/googleapis/googleapis@common-protos-1_3_1
+	github.com/grpc-ecosystem/grpc-gateway@v2.19.1
+	github.com/bufbuild/protoc-gen-validate@v0.10.1
+	github.com/mycompany/shared-protos@v1.5.0
+)
 
+```
+
+```yaml
 generate:
   inputs:
     - directory: "api/proto"

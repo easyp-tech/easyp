@@ -1,9 +1,6 @@
 # EasyP starter config: Go + gRPC project
 # Usage: copy to your project root as easyp.yaml
-
-deps:
-  - github.com/googleapis/googleapis
-  - github.com/protocolbuffers/protobuf
+# Dependencies: copy assets/protobuf-common.mod as protobuf.mod
 
 lint:
   use:

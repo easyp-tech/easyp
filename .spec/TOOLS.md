@@ -171,7 +171,7 @@ to GitHub Container Registry and Docker Hub.
 ## Dependency and Vendor Tools
 
 EasyP module dependencies are Git repositories, cached under `EASYPPATH`
-(default `$HOME/.easyp`) and locked in `easyp.lock`. The vendoring command is:
+(default `$HOME/.easyp`) and locked in `protobuf.lock`. The vendoring command is:
 
 ```bash
 ./easyp mod vendor

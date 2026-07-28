@@ -20,10 +20,10 @@ The EasyP package manager follows the **Go modules philosophy** - any Git reposi
 |---------|-------------|
 | **Git-Native** | Works with any Git repository - no special server required |
 | **Multiple Version Formats** | Tags, commits, pseudo-versions, latest |
-| **Lock Files** | Reproducible builds with `easyp.lock` |
+| **Lock Files** | Reproducible builds with `protobuf.lock` |
 | **Local Caching** | Go modules-style cache architecture |
 | **Vendoring Support** | Copy dependencies locally for offline builds |
-| **YAML Configuration** | Simple, readable dependency declarations |
+| **`protobuf.mod` Configuration** | Go-module-like `direct` dependency declarations |
 
 ## Architecture
 
@@ -66,44 +66,52 @@ EasyP uses a two-tier caching system inspired by Go modules:
 
 ### Basic Configuration
 
-Configure dependencies in your `easyp.yaml` file:
+Declare dependencies in your `protobuf.mod` file:
 
-```yaml
-deps:
-  - github.com/googleapis/googleapis@common-protos-1_3_1
-  - github.com/grpc-ecosystem/grpc-gateway@v2.19.1
-  - github.com/bufbuild/protoc-gen-validate
+```
+direct (
+	github.com/googleapis/googleapis@common-protos-1_3_1
+	github.com/grpc-ecosystem/grpc-gateway@v2.19.1
+	github.com/bufbuild/protoc-gen-validate
+)
 ```
 
 ### Advanced Configuration Examples
 
 #### Multi-Environment Setup
-```yaml
-# development.easyp.yaml
-deps:
-  - github.com/googleapis/googleapis              # Latest for development
-  - github.com/mycompany/internal-protos          # Latest internal changes
-  - github.com/bufbuild/protoc-gen-validate       # Latest features
 
-# production.easyp.yaml
-deps:
-  - github.com/googleapis/googleapis@common-protos-1_3_1       # Pinned
-  - github.com/mycompany/internal-protos@v2.1.0                # Stable release
-  - github.com/bufbuild/protoc-gen-validate@v0.10.1           # Tested version
+```
+# development protobuf.mod
+direct (
+	github.com/googleapis/googleapis              # Latest for development
+	github.com/mycompany/internal-protos          # Latest internal changes
+	github.com/bufbuild/protoc-gen-validate       # Latest features
+)
+```
+
+```
+# production protobuf.mod
+direct (
+	github.com/googleapis/googleapis@common-protos-1_3_1       # Pinned
+	github.com/mycompany/internal-protos@v2.1.0                # Stable release
+	github.com/bufbuild/protoc-gen-validate@v0.10.1           # Tested version
+)
 ```
 
 #### Private Repository Setup
-```yaml
-deps:
-  # Public dependencies
-  - github.com/googleapis/googleapis@common-protos-1_3_1
 
-  # Private company repositories
-  - github.com/mycompany/auth-protos@v1.5.0
-  - github.com/mycompany/common-types@v2.0.1
+```
+direct (
+	# Public dependencies
+	github.com/googleapis/googleapis@common-protos-1_3_1
 
-  # Internal GitLab
-  - gitlab.company.com/platform/messaging-protos@v0.3.0
+	# Private company repositories
+	github.com/mycompany/auth-protos@v1.5.0
+	github.com/mycompany/common-types@v2.0.1
+
+	# Internal GitLab
+	gitlab.company.com/platform/messaging-protos@v0.3.0
+)
 ```
 
 ## Versioning Strategies
@@ -112,10 +120,11 @@ EasyP supports multiple versioning approaches to fit different development workf
 
 ### 1. Semantic Version Tags (Recommended for Production)
 
-```yaml
-deps:
-  - github.com/grpc-ecosystem/grpc-gateway@v2.19.1
-  - github.com/googleapis/googleapis@common-protos-1_3_1
+```
+direct (
+	github.com/grpc-ecosystem/grpc-gateway@v2.19.1
+	github.com/googleapis/googleapis@common-protos-1_3_1
+)
 ```
 
 **Use when:**
@@ -125,10 +134,11 @@ deps:
 
 ### 2. Latest Tag (Development)
 
-```yaml
-deps:
-  - github.com/googleapis/googleapis    # Uses latest available tag
-  - github.com/bufbuild/protoc-gen-validate
+```
+direct (
+	github.com/googleapis/googleapis    # Uses latest available tag
+	github.com/bufbuild/protoc-gen-validate
+)
 ```
 
 **Use when:**
@@ -138,9 +148,10 @@ deps:
 
 ### 3. Commit Hashes (Bleeding Edge)
 
-```yaml
-deps:
-  - github.com/bufbuild/protoc-gen-validate@abc123def456789abcdef123456789abcdef1234
+```
+direct (
+	github.com/bufbuild/protoc-gen-validate@abc123def456789abcdef123456789abcdef1234
+)
 ```
 
 **Use when:**
@@ -232,9 +243,9 @@ easyp_vendor/
 Updates module versions based on current configuration and writes resolved versions to the lock file.
 
 **Behavior:**
-- Respects version constraints in `easyp.yaml`
+- Respects version constraints in `protobuf.mod`
 - Updates to latest compatible versions
-- Regenerates `easyp.lock` with new versions and hashes
+- Regenerates `protobuf.lock` with new versions and hashes
 
 **Usage:**
 ```bash
@@ -243,7 +254,7 @@ easyp mod update
 
 ## Lock Files
 
-The `easyp.lock` file ensures reproducible builds by recording exact versions and content hashes:
+The `protobuf.lock` file ensures reproducible builds by recording exact versions and content hashes:
 
 ```
 github.com/bufbuild/protoc-gen-validate v0.0.0-20250908104020-660ec2d64e07f2fa8947527443af058b3d7169df h1:ZZ5JyUkmrj9OBHM+gOCzeL5L/pAKVbsUl051yhhJTjU=
@@ -260,7 +271,7 @@ Each line contains three components:
 
 ### Best Practices
 
-✅ **Always commit `easyp.lock`** - Ensures team consistency
+✅ **Always commit `protobuf.lock`** - Ensures team consistency
 ✅ **Run `mod update` deliberately** - Don't auto-update in CI
 ✅ **Review lock changes** - Understand what's being updated
 ❌ **Don't edit manually** - Let EasyP manage the format
@@ -271,10 +282,11 @@ Each line contains three components:
 
 No setup required - works out of the box:
 
-```yaml
-deps:
-  - github.com/googleapis/googleapis
-  - github.com/bufbuild/protoc-gen-validate
+```
+direct (
+	github.com/googleapis/googleapis
+	github.com/bufbuild/protoc-gen-validate
+)
 ```
 
 ### Private Repositories
@@ -296,10 +308,11 @@ git config --global url."git@gitlab.company.com:".insteadOf "https://gitlab.comp
 
 Then use normal HTTPS URLs in your config:
 
-```yaml
-deps:
-  - github.com/mycompany/private-protos@v1.0.0
-  - gitlab.company.com/platform/shared-types@v2.1.0
+```
+direct (
+	github.com/mycompany/private-protos@v1.0.0
+	gitlab.company.com/platform/shared-types@v2.1.0
+)
 ```
 
 #### Personal Access Tokens
@@ -333,10 +346,10 @@ git config --global http.sslCAInfo /path/to/certificate.pem
 ```bash
 # 1. Create configuration
 cat > easyp.yaml << EOF
-deps:
-  - github.com/googleapis/googleapis
-  - github.com/grpc-ecosystem/grpc-gateway@v2.19.1
-EOF
+direct (
+	github.com/googleapis/googleapis
+	github.com/grpc-ecosystem/grpc-gateway@v2.19.1
+)EOF
 
 # 2. Download dependencies
 easyp mod download
@@ -355,7 +368,7 @@ echo "  - github.com/bufbuild/protoc-gen-validate@v0.10.1" >> easyp.yaml
 easyp mod download
 
 # 3. Commit lock file changes
-git add easyp.lock
+git add protobuf.lock
 git commit -m "Add protoc-gen-validate dependency"
 ```
 
@@ -366,14 +379,14 @@ git commit -m "Add protoc-gen-validate dependency"
 easyp mod update
 
 # Review changes
-git diff easyp.lock
+git diff protobuf.lock
 
 # Test with new versions
 easyp generate
 easyp lint
 
 # Commit if everything works
-git add easyp.lock
+git add protobuf.lock
 git commit -m "Update dependencies"
 ```
 
@@ -414,8 +427,9 @@ git config --list | grep url
 git ls-remote --tags https://github.com/googleapis/googleapis
 
 # Use existing tag or commit hash
-deps:
-  - github.com/googleapis/googleapis@common-protos-1_3_1  # Valid tag
+direct (
+	github.com/googleapis/googleapis@common-protos-1_3_1
+)
 ```
 
 #### "Cache corruption" or "Checksum mismatch"
@@ -493,7 +507,7 @@ find ~/.easyp/mod -type d -name "v0.0.0-*" -mtime +30 -exec rm -rf {} \;
 # Stage 1: Download dependencies
 FROM ghcr.io/easyp-tech/easyp:latest AS deps
 WORKDIR /workspace
-COPY easyp.yaml easyp.lock ./
+COPY easyp.yaml protobuf.lock ./
 RUN easyp mod vendor
 
 # Stage 2: Build application
@@ -511,12 +525,12 @@ RUN easyp generate
 my-monorepo/
 ├── services/
 │   ├── auth-service/
-│   │   └── easyp.yaml          # Service-specific deps
+│   │   └── easyp.yaml          # Service-specific config
 │   └── user-service/
-│       └── easyp.yaml          # Different deps
+│       └── easyp.yaml          # Different config
 ├── shared/
 │   └── common-protos/          # Internal protos
-└── easyp.yaml                  # Global/shared deps
+└── easyp.yaml                  # Global/shared config
 ```
 
 Each `easyp.yaml` can have different dependencies based on service needs.

@@ -7,6 +7,7 @@ import (
 
 	"gopkg.in/yaml.v3"
 
+	"github.com/easyp-tech/easyp/internal/adapters/modfile"
 	"github.com/easyp-tech/easyp/internal/config"
 )
 
@@ -214,12 +215,18 @@ func (c *Core) migrateFromBUF(ctx context.Context, disk FS, path string, default
 		return fmt.Errorf("res.Write: %w", writeErr)
 	}
 
+	if len(b.Deps) > 0 {
+		writeErr := modfile.Write(disk, b.Deps)
+		if writeErr != nil {
+			return fmt.Errorf("modfile.Write: %w", writeErr)
+		}
+	}
+
 	return nil
 }
 
 func buildCfgFromBUF(cfg config.Config, bufConfig BUFConfig) config.Config {
 	result := config.Config{
-		Deps: bufConfig.Deps,
 		Lint: config.LintConfig{
 			Use:                 bufConfig.Lint.Use,
 			Except:              bufConfig.Lint.Except,

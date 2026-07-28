@@ -71,15 +71,13 @@ If you omit the version, EasyP downloads the latest commit from the default bran
 
 ### Add dependencies
 
-Update your `easyp.yaml` to include dependencies:
+Create or update `protobuf.mod` with your dependencies:
 
-```yaml
-lint:
-  use:
-    - DEFAULT
-deps:
-  - github.com/googleapis/googleapis                          # Latest commit
-  - github.com/grpc-ecosystem/grpc-gateway@v2.20.0           # Specific version
+```
+direct (
+	github.com/googleapis/googleapis                          # Latest commit
+	github.com/grpc-ecosystem/grpc-gateway@v2.20.0           # Specific version
+)
 ```
 
 ### Download dependencies
@@ -91,11 +89,11 @@ easyp mod download
 ```
 
 This command:
-- Downloads dependencies from `easyp.lock` if it exists
-- Otherwise, downloads from `easyp.yaml` and creates `easyp.lock`
+- Downloads dependencies from `protobuf.lock` if it exists
+- Otherwise, downloads from `protobuf.mod` and creates `protobuf.lock`
 
 ::: info
-**Tip:** Use `easyp mod update` to ignore the lock file and fetch the latest versions from `easyp.yaml`.
+**Tip:** Use `easyp mod update` to ignore the lock file and fetch the latest versions from `protobuf.mod`.
 :::
 
 ## Generate code
@@ -110,9 +108,6 @@ Add plugin configuration to your `easyp.yaml`:
 lint:
   use:
     - DEFAULT
-deps:
-  - github.com/googleapis/googleapis
-  - github.com/grpc-ecosystem/grpc-gateway@v2.20.0
 generate:
   plugins:
     - name: go

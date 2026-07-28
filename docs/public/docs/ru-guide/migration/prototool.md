@@ -59,10 +59,6 @@ generate:
 
 ```yaml
 # easyp.yaml (пример)
-deps:
-  - github.com/org/common-protos         # вместо manual include
-  - github.com/org/third-party-protos
-
 lint:
   use:
     - MINIMAL
@@ -91,6 +87,15 @@ breaking:
   against_git_ref: main
   ignore:
     - FIELD_SAME_TYPE
+```
+
+Dependencies are declared in `protobuf.mod` (not in `easyp.yaml`):
+
+```
+direct (
+	github.com/org/common-protos
+	github.com/org/third-party-protos
+)
 ```
 
 Комментарии:

@@ -89,10 +89,16 @@ This document provides a comprehensive comparison between EasyP's decentralized 
 #### EasyP: "Any Git Repository is a Package"
 ```yaml
 # Direct Git repository references
-deps:
-  - github.com/googleapis/googleapis@v1.2.3
-  - gitlab.company.com/protos/internal@v2.0.1
-  - git.example.com/team/shared-types@main
+```
+
+Dependencies are declared in `protobuf.mod` (not in `easyp.yaml`):
+
+```
+direct (
+	github.com/googleapis/googleapis@v1.2.3
+	gitlab.company.com/protos/internal@v2.0.1
+	git.example.com/team/shared-types@main
+)
 ```
 
 **Advantages:**
@@ -105,10 +111,16 @@ deps:
 ```yaml
 # buf.yaml - Must reference BSR modules
 version: v1
-deps:
-  - buf.build/googleapis/googleapis
-  - buf.build/grpc/grpc
-  - buf.build/envoyproxy/protoc-gen-validate
+```
+
+Dependencies are declared in `protobuf.mod` (not in `easyp.yaml`):
+
+```
+direct (
+	buf.build/googleapis/googleapis
+	buf.build/grpc/grpc
+	buf.build/envoyproxy/protoc-gen-validate
+)
 ```
 
 **Advantages:**
@@ -175,15 +187,16 @@ buf mod download           # Must reach buf.build
 #### EasyP: Direct Control
 ```yaml
 # Full control over dependency sources
-deps:
-  # Public repository - your choice of version
-  - github.com/googleapis/googleapis@common-protos-1_3_1
+```
 
-  # Internal repository - complete control
-  - gitlab.company.com/security/validated-protos@v1.0.0
+Dependencies are declared in `protobuf.mod` (not in `easyp.yaml`):
 
-  # Specific commit for security fix
-  - github.com/bufbuild/protoc-gen-validate@abc123def456
+```
+direct (
+	github.com/googleapis/googleapis@common-protos-1_3_1
+	gitlab.company.com/security/validated-protos@v1.0.0
+	github.com/bufbuild/protoc-gen-validate@abc123def456
+)
 ```
 
 **Security advantages:**
@@ -197,9 +210,15 @@ deps:
 
 ```yaml
 # Dependencies controlled by BSR
-deps:
-  - buf.build/googleapis/googleapis  # Controlled by Buf
-  - buf.build/grpc/grpc             # Could be removed/updated
+```
+
+Dependencies are declared in `protobuf.mod` (not in `easyp.yaml`):
+
+```
+direct (
+	buf.build/googleapis/googleapis
+	buf.build/grpc/grpc
+)
 ```
 
 **Security considerations:**
@@ -216,17 +235,29 @@ deps:
 **EasyP Approach:**
 ```yaml
 # Simple, direct references
-deps:
-  - github.com/googleapis/googleapis
-  - github.com/grpc-ecosystem/grpc-gateway@v2.19.1
+```
+
+Dependencies are declared in `protobuf.mod` (not in `easyp.yaml`):
+
+```
+direct (
+	github.com/googleapis/googleapis
+	github.com/grpc-ecosystem/grpc-gateway@v2.19.1
+)
 ```
 
 **Buf Approach:**
 ```yaml
 # Requires understanding BSR module names
-deps:
-  - buf.build/googleapis/googleapis
-  - buf.build/grpcecosystem/grpc-gateway
+```
+
+Dependencies are declared in `protobuf.mod` (not in `easyp.yaml`):
+
+```
+direct (
+	buf.build/googleapis/googleapis
+	buf.build/grpcecosystem/grpc-gateway
+)
 ```
 
 **Winner**: Tie - both work well for public dependencies
@@ -234,23 +265,27 @@ deps:
 #### Scenario 2: Enterprise with Mixed Public/Private Dependencies
 
 **EasyP Approach:**
-```yaml
-deps:
-  # Public
-  - github.com/googleapis/googleapis@v1.2.3
-
-  # Private (existing Git repos)
-  - github.com/mycompany/auth-protos@v2.0.0
-  - gitlab.enterprise.com/platform/shared-types@v1.5.1
+```
+direct (
+	github.com/googleapis/googleapis@v1.2.3
+	github.com/mycompany/auth-protos@v2.0.0
+	gitlab.enterprise.com/platform/shared-types@v1.5.1
+)
 ```
 
 **Buf Approach:**
 ```yaml
 # All must be published to BSR first
-deps:
-  - buf.build/googleapis/googleapis
-  - buf.build/mycompany/auth-protos      # Requires BSR publication
-  - buf.build/mycompany/shared-types     # Requires BSR publication
+```
+
+Dependencies are declared in `protobuf.mod` (not in `easyp.yaml`):
+
+```
+direct (
+	buf.build/googleapis/googleapis
+	buf.build/mycompany/auth-protos
+	buf.build/mycompany/shared-types
+)
 ```
 
 **Winner**: **EasyP** - no additional setup for private repos
@@ -328,8 +363,14 @@ easyp mod vendor
 ```yaml
 # EasyP dependencies are just Git repositories
 # Can easily migrate to any other system that supports Git
-deps:
-  - github.com/googleapis/googleapis@v1.2.3  # Standard Git reference
+```
+
+Dependencies are declared in `protobuf.mod` (not in `easyp.yaml`):
+
+```
+direct (
+	github.com/googleapis/googleapis@v1.2.3
+)
 ```
 
 **Migration TO EasyP:**
@@ -414,14 +455,21 @@ deps:
 Example migration:
 ```yaml
 # Before (buf.yaml)
-deps:
-  - buf.build/googleapis/googleapis
-  - buf.build/grpc/grpc
+direct (
+	github.com/googleapis/googleapis@common-protos-1_3_1
+	github.com/grpc/grpc@v1.50.0
+)
+```
 
-# After (easyp.yaml)
-deps:
-  - github.com/googleapis/googleapis@common-protos-1_3_1
-  - github.com/grpc/grpc@v1.50.0
+Dependencies are declared in `protobuf.mod` (not in `easyp.yaml`):
+
+```
+direct (
+	buf.build/googleapis/googleapis
+	buf.build/grpc/grpc
+	github.com/googleapis/googleapis@common-protos-1_3_1
+	github.com/grpc/grpc@v1.50.0
+)
 ```
 
 ### Migrating from EasyP to Buf

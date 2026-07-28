@@ -110,13 +110,16 @@ message HealthResponse {
 
 ### Step 2: Configure easyp
 
-Create `easyp.yaml` in your project root. This single file drives both
+Create `easyp.yaml` and `protobuf.mod` in your project root. These drive both
 `protoc-gen-go` (standard Go protobuf) and `protoc-gen-mcp` (MCP bindings):
 
-```yaml
-deps:
-  - github.com/easyp-tech/protoc-gen-mcp@v0.3.1
+```
+direct (
+	github.com/easyp-tech/protoc-gen-mcp@v0.3.1
+)
+```
 
+```yaml
 lint:
   use:
     - PACKAGE_DEFINED
