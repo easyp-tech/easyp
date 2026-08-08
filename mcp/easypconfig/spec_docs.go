@@ -20,7 +20,7 @@ func docsByPath() map[string]nodeDoc {
 				{
 					Title:       "full_config_reference",
 					Description: "Reference config touching all top-level sections.",
-					YAML:        "version: v1alpha\nlint:\n  use:\n    - DEFAULT\n  enum_zero_value_suffix: _UNSPECIFIED\n  service_suffix: Service\n  ignore:\n    - vendor\n  ignore_only:\n    RPC_REQUEST_STANDARD_NAME:\n      - proto/legacy\ndeps:\n  - github.com/googleapis/googleapis@common-protos-1_3_1\ngenerate:\n  inputs:\n    - directory:\n        path: api\n        root: .\n    - git_repo:\n        url: github.com/acme/contracts@v1.2.3\n        sub_directory: proto\n        root: .\n  plugins:\n    - name: go\n      out: gen/go\n      opts:\n        paths: source_relative\n    - remote: api.easyp.tech/grpc/go:v1.5.1\n      out: gen/go\n      with_imports: true\n  managed:\n    enabled: true\n    disable:\n      - module: github.com/googleapis/googleapis\n    override:\n      - file_option: go_package_prefix\n        value: github.com/acme/contracts/gen/go\nbreaking:\n  against_git_ref: main\n  ignore:\n    - proto/legacy\n",
+					YAML:        "version: v1alpha\nlint:\n  use:\n    - DEFAULT\n  enum_zero_value_suffix: _UNSPECIFIED\n  service_suffix: Service\n  ignore:\n    - vendor\n  ignore_only:\n    RPC_REQUEST_STANDARD_NAME:\n      - proto/legacy\ndeps:\n  - github.com/googleapis/googleapis@common-protos-1_3_1\ngenerate:\n  inputs:\n    - directory:\n        path: api\n        root: .\n    - git_repo:\n        url: github.com/acme/contracts@v1.2.3\n        sub_directory: proto\n        root: .\n  plugins:\n    - name: go\n      out: gen/go\n      opts:\n        paths: source_relative\n    - remote: plugins.beta.easyp.tech/grpc/go:v1.5.1\n      out: gen/go\n      with_imports: true\n  managed:\n    enabled: true\n    disable:\n      - module: github.com/googleapis/googleapis\n    override:\n      - file_option: go_package_prefix\n        value: github.com/acme/contracts/gen/go\nbreaking:\n  against_git_ref: main\n  ignore:\n    - proto/legacy\n",
 					Paths:       []string{"$", "lint", "deps", "generate", "breaking"},
 				},
 			},
@@ -73,7 +73,7 @@ func docsByPath() map[string]nodeDoc {
 				{
 					Title:       "generate_local_and_remote_plugin",
 					Description: "Local directory input with remote plugin execution.",
-					YAML:        "generate:\n  inputs:\n    - directory:\n        path: api\n        root: .\n  plugins:\n    - remote: api.easyp.tech/protobuf/go:v1.36.10\n      out: .\n      opts:\n        paths: source_relative\n",
+					YAML:        "generate:\n  inputs:\n    - directory:\n        path: api\n        root: .\n  plugins:\n    - remote: plugins.beta.easyp.tech/protocolbuffers/go:v1.36.10\n      out: .\n      opts:\n        paths: source_relative\n",
 					Paths:       []string{"generate", "generate.inputs", "generate.plugins"},
 				},
 				{
@@ -144,7 +144,7 @@ func docsByPath() map[string]nodeDoc {
 				{
 					Title:       "plugins_all_source_variants",
 					Description: "Plugins can use name, remote, path, or command as a source.",
-					YAML:        "generate:\n  plugins:\n    - name: go\n      out: gen/go\n    - remote: api.easyp.tech/protobuf/go:v1.36.10\n      out: gen/go\n    - path: ./bin/protoc-gen-custom\n      out: gen/custom\n    - command: [\"go\", \"run\", \"example.com/protoc-gen-alt@latest\"]\n      out: gen/alt\n",
+					YAML:        "generate:\n  plugins:\n    - name: go\n      out: gen/go\n    - remote: plugins.beta.easyp.tech/protocolbuffers/go:v1.36.10\n      out: gen/go\n    - path: ./bin/protoc-gen-custom\n      out: gen/custom\n    - command: [\"go\", \"run\", \"example.com/protoc-gen-alt@latest\"]\n      out: gen/alt\n",
 					Paths:       []string{"generate.plugins"},
 				},
 			},
@@ -152,7 +152,7 @@ func docsByPath() map[string]nodeDoc {
 		"generate.plugins[]": {
 			Fields: []FieldDoc{
 				{Path: "generate.plugins[].name", Type: "string", Required: false, Description: "Built-in/local plugin name (one source option).", Examples: []string{"go", "go-grpc"}},
-				{Path: "generate.plugins[].remote", Type: "string", Required: false, Description: "Remote plugin endpoint (one source option).", Examples: []string{"api.easyp.tech/protobuf/go:v1.36.10"}},
+				{Path: "generate.plugins[].remote", Type: "string", Required: false, Description: "Remote plugin endpoint (one source option).", Examples: []string{"plugins.beta.easyp.tech/protocolbuffers/go:v1.36.10"}},
 				{Path: "generate.plugins[].path", Type: "string", Required: false, Description: "Explicit path to plugin binary (one source option)."},
 				{Path: "generate.plugins[].command", Type: "array<string>", Required: false, Description: "Command invocation for plugin (one source option).", Examples: []string{`["go","run","github.com/grpc-ecosystem/grpc-gateway/v2/protoc-gen-grpc-gateway@v2.25.1"]`}},
 				{Path: "generate.plugins[].out", Type: "string", Required: false, Description: "Output directory for generated files.", DefaultValue: "\"\" (resolved generate root)", Examples: []string{".", "gen/go"}},
@@ -163,7 +163,7 @@ func docsByPath() map[string]nodeDoc {
 				{
 					Title:       "plugin_remote",
 					Description: "Remote plugin source.",
-					YAML:        "generate:\n  plugins:\n    - remote: api.easyp.tech/grpc/go:v1.5.1\n      out: .\n      opts:\n        paths: source_relative\n",
+					YAML:        "generate:\n  plugins:\n    - remote: plugins.beta.easyp.tech/grpc/go:v1.5.1\n      out: .\n      opts:\n        paths: source_relative\n",
 					Paths:       []string{"generate.plugins[]"},
 				},
 				{
@@ -187,7 +187,7 @@ func docsByPath() map[string]nodeDoc {
 				{
 					Title:       "plugin_opts_scalar_and_array",
 					Description: "Plugin opts values can be scalar or arrays of scalars.",
-					YAML:        "generate:\n  plugins:\n    - remote: api.easyp.tech/community/stephenh-ts-proto:v1.178.0\n      out: gen/ts\n      opts:\n        env: node\n        outputServices:\n          - grpc-js\n          - generic-definitions\n        useExactTypes: false\n",
+					YAML:        "generate:\n  plugins:\n    - remote: plugins.beta.easyp.tech/community/stephenh-ts-proto:v1.178.0\n      out: gen/ts\n      opts:\n        env: node\n        outputServices:\n          - grpc-js\n          - generic-definitions\n        useExactTypes: false\n",
 					Paths:       []string{"generate.plugins[]"},
 				},
 				{
