@@ -56,11 +56,6 @@ lint:
 
   service_suffix: API
 
-deps:
-  - github.com/googleapis/googleapis
-  - github.com/bufbuild/protoc-gen-validate
-  - github.com/grpc-ecosystem/grpc-gateway@v2.19.1
-
 generate:
   inputs:
     - directory: "api"

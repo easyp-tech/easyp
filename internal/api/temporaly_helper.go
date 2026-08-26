@@ -15,6 +15,7 @@ import (
 	"github.com/easyp-tech/easyp/internal/adapters/console"
 	"github.com/easyp-tech/easyp/internal/adapters/go_git"
 	lockfile "github.com/easyp-tech/easyp/internal/adapters/lock_file"
+	"github.com/easyp-tech/easyp/internal/adapters/modfile"
 	moduleconfig "github.com/easyp-tech/easyp/internal/adapters/module_config"
 	"github.com/easyp-tech/easyp/internal/adapters/storage"
 	"github.com/easyp-tech/easyp/internal/config"
@@ -107,8 +108,13 @@ func buildCore(_ context.Context, log logger.Logger, cfg config.Config, dirWalke
 	// Convert managed mode configuration
 	managedMode := convertManagedModeConfig(cfg.Generate.Managed)
 
-	// collect all deps: from deps, from generate sections
-	deps := append([]string{}, cfg.Deps...)
+	modDeps, err := modfile.Read(dirWalker)
+	if err != nil {
+		return nil, fmt.Errorf("modfile.Read: %w", err)
+	}
+
+	// collect all deps: from protobuf.mod, from generate sections
+	deps := append([]string{}, modDeps...)
 	deps = append(deps, getDepsFromGenerateDeps(cfg.Generate)...)
 	deps = lo.Uniq(deps)
 

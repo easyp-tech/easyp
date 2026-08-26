@@ -5,7 +5,6 @@ import invjsonschema "github.com/invopop/jsonschema"
 type configSchemaRoot struct {
 	Version  string                `json:"version,omitempty"`
 	Lint     *configSchemaLint     `json:"lint,omitempty"`
-	Deps     []string              `json:"deps,omitempty"`
 	Generate *configSchemaGenerate `json:"generate,omitempty"`
 	Breaking *configSchemaBreaking `json:"breaking,omitempty"`
 }

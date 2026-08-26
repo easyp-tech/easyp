@@ -169,9 +169,6 @@ type Config struct {
 	// LintConfig is the lint configuration.
 	Lint LintConfig `json:"lint,omitempty" yaml:"lint,omitempty"`
 
-	// Deps is the dependencies repositories
-	Deps []string `json:"deps,omitempty" yaml:"deps,omitempty"`
-
 	// Generate is the generate configuration.
 	Generate Generate `json:"generate,omitempty" yaml:"generate,omitempty"`
 
