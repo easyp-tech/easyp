@@ -49,14 +49,19 @@ breaking:
     - "experimental"
     - "internal/proto"
     - "vendor"
+
+  # Additional options to braking check
+  use:
+    - FILE
 ```
 
 ### Configuration Options
 
-| Option | Description | Default | Required |
-|--------|-------------|---------|----------|
-| `against_git_ref` | Git reference to compare against | `"master"` | No |
-| `ignore` | List of directories to exclude from analysis | `[]` | No |
+| Option            | Description                                  | Default | Required |
+|-------------------|----------------------------------------------|---------|----------|
+| `against_git_ref` | Git reference to compare against             | `"master"` | No |
+| `ignore`          | List of directories to exclude from analysis | `[]` | No |
+| `use`             | List of braking check options                | `[]` | No |
 
 ## Usage
 
@@ -137,7 +142,7 @@ EasyP detects the following types of breaking changes:
 |----------------|-------------|---------------|
 | **WIRE** | Wire format compatibility only | ✅ **Full support** |
 | **WIRE+** | Wire + element deletion detection | ✅ **Current level** |
-| **FILE** | Generated code compatibility | ❌ Partial (planned) |
+| **FILE** | Generated code compatibility | ✅ **Current level** |
 ## Breaking Change Rules
 
 EasyP detects the following categories of breaking changes. Each rule has detailed documentation with examples:

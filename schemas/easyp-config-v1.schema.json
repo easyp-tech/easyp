@@ -352,6 +352,12 @@
         },
         "against_git_ref": {
           "type": "string"
+        },
+        "use": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
         }
       },
       "additionalProperties": false,
