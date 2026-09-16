@@ -271,6 +271,7 @@ func docsByPath() map[string]nodeDoc {
 			Fields: []FieldDoc{
 				{Path: "breaking.ignore", Type: "array<string>", Required: false, Description: "Paths excluded from breaking-change checks.", DefaultValue: "[]"},
 				{Path: "breaking.against_git_ref", Type: "string", Required: false, Description: "Branch/tag/commit used for comparison."},
+				{Path: "breaking.use", Type: "array<string>", Required: false, Description: "Additional breaking-check options; FILE also compares generated-code compatibility.", DefaultValue: "[]"},
 			},
 			Examples: []Example{
 				{

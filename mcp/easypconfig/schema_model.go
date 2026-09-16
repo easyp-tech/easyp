@@ -173,6 +173,7 @@ func (configSchemaManagedOverrideRule) JSONSchemaExtend(schema *invjsonschema.Sc
 type configSchemaBreaking struct {
 	Ignore        []string `json:"ignore,omitempty"`
 	AgainstGitRef string   `json:"against_git_ref,omitempty"`
+	Use           []string `json:"use,omitempty"`
 }
 
 func setMinItems(schema *invjsonschema.Schema, fieldName string, min uint64) {
