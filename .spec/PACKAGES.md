@@ -141,11 +141,11 @@ Each rule follows the `core.Rule` interface: it provides a message and validates
 | `deps_iter.go`, `is_empty.go` | Iterate entries and detect an empty lock file. |
 
 ### `internal/adapters/modfile`
-**Mod-file adapter** — parses and writes project `protobuf.mod` (`direct` block).
+**Mod-file adapter** — parses and writes project `protobuf.mod` (`direct` and `replace` blocks).
 
 | File | Description |
 |------|-------------|
-| `modfile.go` | Parse, Format, Read, Write for `protobuf.mod`. |
+| `modfile.go` | Parse, Format, Read, Write for `protobuf.mod`. `File` holds `Direct` deps and `Replace` entries (`models.Module` + local path). |
 
 ### `internal/adapters/repository` and `internal/adapters/repository/git`
 **Git repository adapter** — supplies repository operations required for dependency resolution.

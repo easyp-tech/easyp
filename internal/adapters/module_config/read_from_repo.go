@@ -60,13 +60,13 @@ func readProtobufMod(
 		return nil, fmt.Errorf("repo.ReadFile: %w", err)
 	}
 
-	rawDeps, err := modfile.Parse([]byte(content))
+	parsed, err := modfile.Parse([]byte(content))
 	if err != nil {
 		return nil, fmt.Errorf("modfile.Parse: %w", err)
 	}
 
-	modules := make([]models.Module, 0, len(rawDeps))
-	for _, dep := range rawDeps {
+	modules := make([]models.Module, 0, len(parsed.Direct))
+	for _, dep := range parsed.Direct {
 		modules = append(modules, models.NewModule(dep))
 	}
 

@@ -36,7 +36,7 @@ direct (
 |----------|--------|
 | Filename | `protobuf.mod` (constant `modfile.FileName`) |
 | Location | Project working directory |
-| Section | Single `direct (` … `)` block |
+| Section | One `direct (` … `)` block; optional `replace` lines and/or `replace (` … `)` blocks |
 | Entry format | `repo[@version]` | Split on first `@` via `models.NewModule` |
 | Omitted version | `RequestedVersion("")` | Treated as latest (`HEAD`) |
 | Missing file | Empty dependency list (not an error) |
@@ -45,6 +45,39 @@ direct (
 There is **no** `deps` field in `easyp.yaml`. Unknown top-level key `deps` is rejected by config validation (warn/unknown).
 
 Comments: `#` and `//` to end of line. Empty lines allowed.
+
+### `replace`
+
+```
+direct (
+    github.com/acme/weather@v1.2
+)
+
+replace github.com/acme/weather@v1.2 => /home/project
+```
+
+Block form (equivalent):
+
+```
+replace (
+    github.com/acme/weather@v1.2 => ../weather
+)
+```
+
+| Property | Value |
+|----------|--------|
+| Left side | `module@version` parsed by `models.NewModule` (`Name` + `Version` stored separately) |
+| Version | Required. Exact string match against lock / git-input version (`v1.2` ≠ `v1.2.0`) |
+| Right side | Local filesystem path only (not another module) |
+| Absolute path | Used as-is |
+| Relative path | Resolved against the `root` argument of `Core.Generate` (project directory) |
+| Import root | The path is passed to the compiler as-is (no buf/easyp directory prefix stripping) |
+| Duplicate | Same `Name` + `Version` twice is a parse error |
+| Scope | **generate only** (`generateModulePath`, git-repo inputs, managed-mode `mapModuleFiles`) |
+| Unused replace | No-op: a replace is applied only when that module would otherwise be added to generate import paths |
+| Dependency `protobuf.mod` | `replace` in a downloaded module is ignored; `readProtobufMod` uses `direct` only |
+
+`mod download`, lint, breaking, `ls-files`, and vendor still use `$EASYPPATH/mod/<name>/<version>`. Generate still calls `Download` (the cache may be populated) but does **not** pass the cache path for a replaced module.
 
 ### Union with generate inputs
 
@@ -225,11 +258,11 @@ Buf-only modules without `protobuf.mod` do not pull transitive packages via Easy
 
 | Command | Calls `Download`? | Dep usage |
 |---------|-------------------|-----------|
-| `lint` | yes (`internal/core/lint.go`) | Import resolution via install dirs |
-| `generate` | yes (`internal/core/generate.go`) | Install dirs on import path; walks `git_repo` inputs |
-| `breaking` | yes (`internal/core/breaking_check.go`) | Same import resolution path |
-| `mod vendor` | via `Download` | Copies install trees |
-| `ls-files` | **no** | Uses lock + install dirs if present |
+| `lint` | yes (`internal/core/lint.go`) | Import resolution via install dirs (replace is ignored) |
+| `generate` | yes (`internal/core/generate.go`) | `generateModulePath`: replace path if `Name`+`Version` match, else install dir; walks `git_repo` inputs |
+| `breaking` | yes (`internal/core/breaking_check.go`) | Same import resolution path as lint (replace is ignored) |
+| `mod vendor` | via `Download` | Copies install trees (replace is ignored) |
+| `ls-files` | **no** | Uses lock + install dirs if present (replace is ignored) |
 
 ### Import resolution order (`readFileFromImport`)
 
@@ -258,8 +291,8 @@ Documented operational patterns (outside code):
 | Package / type | Role |
 |----------------|------|
 | `internal/api.Mod` | CLI wiring for `mod` |
-| `internal/api.buildCore` | Assembles deps from `protobuf.mod` + generate inputs, storage, lock, vendor dir |
-| `adapters/modfile` | `protobuf.mod` parse / read / write |
+| `internal/api.buildCore` | Assembles deps and replaces from `protobuf.mod` + generate inputs, storage, lock, vendor dir |
+| `adapters/modfile` | `protobuf.mod` parse / read / write (`direct` + `replace`) |
 | `core.Core` | `Download`, `Update`, `Get`, `Vendor` |
 | `core.Storage` | Cache dirs, install, hashes, install paths |
 | `core.LockFile` | Read / Write / IsEmpty / DepsIter |

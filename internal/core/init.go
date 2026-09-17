@@ -216,7 +216,7 @@ func (c *Core) migrateFromBUF(ctx context.Context, disk FS, path string, default
 	}
 
 	if len(b.Deps) > 0 {
-		writeErr := modfile.Write(disk, b.Deps)
+		writeErr := modfile.Write(disk, modfile.File{Direct: b.Deps})
 		if writeErr != nil {
 			return fmt.Errorf("modfile.Write: %w", writeErr)
 		}

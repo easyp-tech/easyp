@@ -119,7 +119,11 @@ EasyP uses `easyp.yaml` for lint/generate/breaking config and `protobuf.mod` for
 direct (
 	github.com/googleapis/googleapis@common-protos-1_3_1
 	github.com/bufbuild/protoc-gen-validate@v0.9.1
+	github.com/acme/weather@v1.2
 )
+
+# Use a local checkout for generate import paths (cache path is not passed).
+replace github.com/acme/weather@v1.2 => /home/project
 ```
 
 ```yaml
