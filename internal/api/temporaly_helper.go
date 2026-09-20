@@ -108,13 +108,13 @@ func buildCore(_ context.Context, log logger.Logger, cfg config.Config, dirWalke
 	// Convert managed mode configuration
 	managedMode := convertManagedModeConfig(cfg.Generate.Managed)
 
-	modDeps, err := modfile.Read(dirWalker)
+	modFile, err := modfile.Read(dirWalker)
 	if err != nil {
 		return nil, fmt.Errorf("modfile.Read: %w", err)
 	}
 
 	// collect all deps: from protobuf.mod, from generate sections
-	deps := append([]string{}, modDeps...)
+	deps := append([]string{}, modFile.Direct...)
 	deps = append(deps, getDepsFromGenerateDeps(cfg.Generate)...)
 	deps = lo.Uniq(deps)
 
@@ -122,6 +122,7 @@ func buildCore(_ context.Context, log logger.Logger, cfg config.Config, dirWalke
 		lintRules,
 		linterIgnoreDirs,
 		deps,
+		modFile.Replace,
 		ignoreOnly,
 		log,
 		lo.Map(cfg.Generate.Plugins, func(p config.Plugin, _ int) core.Plugin {

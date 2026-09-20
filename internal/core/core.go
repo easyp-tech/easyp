@@ -5,6 +5,7 @@ import (
 	"errors"
 
 	"github.com/easyp-tech/easyp/internal/adapters/console"
+	"github.com/easyp-tech/easyp/internal/adapters/modfile"
 	"github.com/easyp-tech/easyp/internal/adapters/plugin"
 	"github.com/easyp-tech/easyp/internal/logger"
 )
@@ -14,6 +15,7 @@ type Core struct {
 	rules        []Rule
 	ignore       []string
 	deps         []string
+	replaces     []modfile.Replace
 	ignoreOnly   map[string][]string
 	logger       logger.Logger
 	plugins      []Plugin
@@ -44,6 +46,7 @@ func New(
 	rules []Rule,
 	ignore []string,
 	deps []string,
+	replaces []modfile.Replace,
 	ignoreOnly map[string][]string,
 	logger logger.Logger,
 	plugins []Plugin,
@@ -61,6 +64,7 @@ func New(
 		rules:                   rules,
 		ignore:                  ignore,
 		deps:                    deps,
+		replaces:                replaces,
 		ignoreOnly:              ignoreOnly,
 		logger:                  logger,
 		plugins:                 plugins,

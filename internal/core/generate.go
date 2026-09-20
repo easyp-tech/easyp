@@ -41,9 +41,9 @@ func (c *Core) Generate(ctx context.Context, root, directory, descriptorSetOut s
 	}
 
 	for lockFileInfo := range c.lockFile.DepsIter() {
-		modulePath, err := c.modulePath(models.NewModule(lockFileInfo.Name))
+		modulePath, err := c.generateModulePath(root, models.NewModuleFromLockFileInfo(lockFileInfo))
 		if err != nil {
-			return fmt.Errorf("modulePath: %w", err)
+			return fmt.Errorf("c.generateModulePath: %w", err)
 		}
 
 		q.Imports = append(q.Imports, modulePath)
@@ -77,9 +77,9 @@ func (c *Core) Generate(ctx context.Context, root, directory, descriptorSetOut s
 
 		module := models.NewModule(repo.URL)
 
-		modulePaths, err := c.modulePath(module)
+		modulePaths, err := c.generateModulePath(root, module)
 		if err != nil {
-			return fmt.Errorf("modulePath: %w", err)
+			return fmt.Errorf("c.generateModulePath: %w", err)
 		}
 
 		fsWalker := fs.NewFSWalker(modulePaths, repo.SubDirectory)
@@ -225,7 +225,7 @@ func (c *Core) Generate(ctx context.Context, root, directory, descriptorSetOut s
 	c.logger.Debug(ctx, "resolved file descriptor order", slog.Int("file_count", len(fileDescriptors)), slog.Any("files", fileNames))
 
 	// Build file to module mapping for managed mode
-	fileToModule := c.buildFileToModuleMap(ctx, q.Files)
+	fileToModule := c.buildFileToModuleMap(ctx, root, q.Files)
 
 	// Apply managed mode to file descriptors
 	if c.managedMode.Enabled {
@@ -515,7 +515,7 @@ func (c *Core) getExecutor(plugin Plugin) pluginexecutor.Executor {
 //   - Module "github.com/googleapis/googleapis" installed at ~/.easyp/mod/github.com/googleapis/googleapis/v1/
 //   - Contains file: google/api/annotations.proto
 //   - Mapping: "google/api/annotations.proto" → "github.com/googleapis/googleapis"
-func (c *Core) buildFileToModuleMap(ctx context.Context, files []string) map[string]string {
+func (c *Core) buildFileToModuleMap(ctx context.Context, root string, files []string) map[string]string {
 	fileToModule := make(map[string]string)
 
 	// Map main files - they belong to the local project (empty module)
@@ -527,20 +527,20 @@ func (c *Core) buildFileToModuleMap(ctx context.Context, files []string) map[str
 	// For each dependency, scan its install dir and map relative paths to module name
 	for _, dep := range c.deps {
 		module := models.NewModule(dep)
-		c.mapModuleFiles(ctx, module.Name, fileToModule)
+		c.mapModuleFiles(ctx, root, module.Name, fileToModule)
 	}
 
 	// Also map files from git repo inputs
 	for _, repo := range c.inputs.InputGitRepos {
 		module := models.NewModule(repo.URL)
-		c.mapModuleFiles(ctx, module.Name, fileToModule)
+		c.mapModuleFiles(ctx, root, module.Name, fileToModule)
 	}
 
 	return fileToModule
 }
 
 // mapModuleFiles scans a module's install directory and adds proto file mappings.
-func (c *Core) mapModuleFiles(ctx context.Context, moduleName string, fileToModule map[string]string) {
+func (c *Core) mapModuleFiles(ctx context.Context, root, moduleName string, fileToModule map[string]string) {
 	// Get module version from lock file
 	lockInfo, err := c.lockFile.Read(moduleName)
 	if err != nil {
@@ -548,8 +548,11 @@ func (c *Core) mapModuleFiles(ctx context.Context, moduleName string, fileToModu
 		return
 	}
 
-	// Get install directory
-	installDir := c.storage.GetInstallDir(moduleName, lockInfo.Version)
+	module := models.NewModuleFromLockFileInfo(lockInfo)
+	installDir, ok := c.replacePath(root, module)
+	if !ok {
+		installDir = c.storage.GetInstallDir(moduleName, lockInfo.Version)
+	}
 
 	// Walk the install directory and map all .proto files
 	err = filepath.WalkDir(installDir, func(filePath string, d os.DirEntry, err error) error {
