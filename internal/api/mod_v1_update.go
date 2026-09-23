@@ -14,28 +14,18 @@ import (
 	v1 "github.com/easyp-tech/easyp/internal/config/v1"
 )
 
-func (m Mod) updateV1IfPresent(ctx *cli.Context) (bool, error) {
+// Update refreshes v1 requirements within their current major versions.
+func (m Mod) Update(ctx *cli.Context) error {
 	root, err := os.Getwd()
 	if err != nil {
-		return true, err
+		return fmt.Errorf("Getwd: %w", err)
 	}
-	manifestPath := filepath.Join(root, "protobuf.mod")
-	original, err := os.ReadFile(manifestPath)
-	if os.IsNotExist(err) {
-		return false, nil
-	}
+	original, module, err := readV1Manifest(root)
 	if err != nil {
-		return true, err
-	}
-	if !v1.IsModuleManifest(original) {
-		return false, nil
-	}
-	module, err := v1.ParseModule(strings.NewReader(string(original)))
-	if err != nil {
-		return true, err
+		return fmt.Errorf("readV1Manifest: %w", err)
 	}
 	if len(module.Replaces) > 0 {
-		return true, fmt.Errorf("module %s: remove local replacements before updating a reproducible lock", module.Name)
+		return fmt.Errorf("module %s: remove local replacements before updating a reproducible lock", module.Name)
 	}
 	callCtx := ctx.Context
 	if callCtx == nil {
@@ -45,31 +35,31 @@ func (m Mod) updateV1IfPresent(ctx *cli.Context) (bool, error) {
 	for _, requirement := range module.Requires {
 		version, err := latestCompatibleV1Tag(callCtx, requirement.Module, requirement.Version)
 		if err != nil {
-			return true, err
+			return fmt.Errorf("latestCompatibleV1Tag: %w", err)
 		}
 		updatedVersions[requirement.Module] = version
 	}
 	updated, err := rewriteV1RequiredVersions(original, updatedVersions)
 	if err != nil {
-		return true, err
+		return fmt.Errorf("rewriteV1RequiredVersions: %w", err)
 	}
 	updatedModule, err := v1.ParseModule(strings.NewReader(string(updated)))
 	if err != nil {
-		return true, err
+		return fmt.Errorf("ParseModule: %w", err)
 	}
 	lock, err := resolveV1Lock(ctx, root, updatedModule)
 	if err != nil {
-		return true, err
+		return fmt.Errorf("resolveV1Lock: %w", err)
 	}
 	cacheRoot, err := getEasypPath(getLogger(ctx))
 	if err != nil {
-		return true, err
+		return fmt.Errorf("getEasypPath: %w", err)
 	}
 	updated, err = augmentV1ManifestRequirements(updated, root, updatedModule, lock, filepath.Join(cacheRoot, "v1", "git"))
 	if err != nil {
-		return true, err
+		return fmt.Errorf("augmentV1ManifestRequirements: %w", err)
 	}
-	return true, writeV1ResolvedFiles(root, original, updated, lock)
+	return writeV1ResolvedFiles(root, original, updated, lock)
 }
 
 func latestCompatibleV1Tag(ctx context.Context, source, current string) (string, error) {

@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -47,23 +48,25 @@ func downloadV1Lock(ctx context.Context, lock v1.Lock, cacheRoot string) error {
 			return fmt.Errorf("%s: invalid content hash %q", entry.Source, entry.Hash)
 		}
 		installed := v1ModuleCachePath(cacheRoot, entry)
-		if info, err := os.Lstat(installed); err == nil {
-			if !info.IsDir() {
-				return fmt.Errorf("%s: cached path is not a directory", entry.Source)
-			}
-			actual, err := dirhash.HashDir(installed, "", dirhash.Hash1)
-			if err != nil {
-				return fmt.Errorf("verify cached %s: %w", entry.Source, err)
-			}
-			if actual != entry.Hash {
-				return fmt.Errorf("cached %s@%s hash mismatch: got %s, want %s", entry.Source, entry.Commit, actual, entry.Hash)
+		info, err := os.Lstat(installed)
+		if errors.Is(err, os.ErrNotExist) {
+			if err := fetchPinnedV1Module(ctx, entry, cacheRoot, installed); err != nil {
+				return err
 			}
 			continue
-		} else if !os.IsNotExist(err) {
+		}
+		if err != nil {
 			return err
 		}
-		if err := fetchPinnedV1Module(ctx, entry, cacheRoot, installed); err != nil {
-			return err
+		if !info.IsDir() {
+			return fmt.Errorf("%s: cached path is not a directory", entry.Source)
+		}
+		actual, err := dirhash.HashDir(installed, "", dirhash.Hash1)
+		if err != nil {
+			return fmt.Errorf("verify cached %s: %w", entry.Source, err)
+		}
+		if actual != entry.Hash {
+			return fmt.Errorf("cached %s@%s hash mismatch: got %s, want %s", entry.Source, entry.Commit, actual, entry.Hash)
 		}
 	}
 	return nil

@@ -3,19 +3,11 @@ module github.com/easyp-tech/easyp
 go 1.24.0
 
 require (
-	github.com/Yakwilik/go-yamlvalidator v0.2.1
-	github.com/a8m/envsubst v1.4.3
-	github.com/brianvoe/gofakeit/v6 v6.28.0
 	github.com/bufbuild/protocompile v0.14.1
 	github.com/charmbracelet/bubbletea v1.3.10
 	github.com/charmbracelet/lipgloss v1.1.0
-	github.com/codeclysm/extract/v3 v3.1.1
 	github.com/easyp-tech/service v0.2.0
 	github.com/go-git/go-git/v5 v5.16.3
-	github.com/google/jsonschema-go v0.4.2
-	github.com/invopop/jsonschema v0.13.0
-	github.com/modelcontextprotocol/go-sdk v1.3.1
-	github.com/otiai10/copy v1.14.1
 	github.com/samber/lo v1.52.0
 	github.com/stretchr/testify v1.11.1
 	github.com/tetratelabs/wazero v1.9.0

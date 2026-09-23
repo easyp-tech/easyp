@@ -1,6 +1,7 @@
 package api
 
 import (
+	"errors"
 	"fmt"
 	"io/fs"
 	"os"
@@ -13,51 +14,49 @@ import (
 	"github.com/easyp-tech/easyp/internal/logger"
 )
 
-// generateV1 returns handled=false only when no consumer v1 config exists, so
-// the existing v0 entry point can still run its separate regression suite.
-func (g Generate) generateV1(ctx *cli.Context, log logger.Logger) (bool, error) {
+func (g Generate) generate(ctx *cli.Context, log logger.Logger) error {
 	workDir, err := os.Getwd()
 	if err != nil {
-		return true, err
+		return fmt.Errorf("Getwd: %w", err)
 	}
 	configs, err := discoverV1GenerateConfigs(workDir, ctx.String(flagGenerateProject.Name))
 	if err != nil {
-		return true, err
+		return fmt.Errorf("discoverV1GenerateConfigs: %w", err)
 	}
 	if len(configs) == 0 {
-		return false, nil
+		return fmt.Errorf("no easyp.gen.yaml found in %s", workDir)
 	}
 
 	for _, configPath := range configs {
 		fp, err := os.Open(configPath)
 		if err != nil {
-			return true, err
+			return fmt.Errorf("Open: %w", err)
 		}
 		gen, parseErr := v1.ParseGenerate(fp)
 		_ = fp.Close()
 		if parseErr != nil {
-			return true, fmt.Errorf("%s: %w", configPath, parseErr)
+			return fmt.Errorf("%s: %w", configPath, parseErr)
 		}
 		if err := inheritV1GenerateOptions(workDir, configPath, &gen); err != nil {
-			return true, err
+			return fmt.Errorf("inheritV1GenerateOptions: %w", err)
 		}
 		if len(gen.Plugins) == 0 {
 			continue // a root defaults file may contain only options
 		}
 		moduleDirs, err := selectedV1ModuleDirs(workDir, filepath.Dir(configPath), gen.Generate.Modules)
 		if err != nil {
-			return true, fmt.Errorf("%s: %w", configPath, err)
+			return fmt.Errorf("%s: %w", configPath, err)
 		}
 		if len(gen.Generate.Packages) > 0 {
-			return true, fmt.Errorf("%s: generate.packages matching is not specified precisely enough for v1", configPath)
+			return fmt.Errorf("%s: generate.packages matching is not specified precisely enough for v1", configPath)
 		}
 		for _, moduleDir := range moduleDirs {
 			if err := generateSelectedV1Module(ctx, log, configPath, workDir, moduleDir, gen); err != nil {
-				return true, err
+				return fmt.Errorf("generateSelectedV1Module: %w", err)
 			}
 		}
 	}
-	return true, nil
+	return nil
 }
 
 func discoverV1GenerateConfigs(root, project string) ([]string, error) {
@@ -93,7 +92,12 @@ func discoverV1GenerateConfigs(root, project string) ([]string, error) {
 func selectedV1ModuleDirs(repoRoot, configDir string, names []string) ([]string, error) {
 	if len(names) == 0 {
 		for dir := configDir; ; dir = filepath.Dir(dir) {
-			if _, err := os.Stat(filepath.Join(dir, "protobuf.mod")); err == nil {
+			_, err := os.Stat(filepath.Join(dir, "protobuf.mod"))
+			switch {
+			case errors.Is(err, os.ErrNotExist):
+			case err != nil:
+				return nil, fmt.Errorf("module in %s: %w", dir, err)
+			default:
 				return []string{dir}, nil
 			}
 			if dir == repoRoot || dir == filepath.Dir(dir) {

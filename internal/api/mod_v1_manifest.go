@@ -1,6 +1,7 @@
 package api
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -39,7 +40,13 @@ func augmentV1ManifestRequirements(original []byte, root string, module v1.Modul
 					continue
 				}
 				info, err := os.Stat(filepath.Join(base, filepath.FromSlash(importPath)))
-				if err == nil && info.Mode().IsRegular() {
+				if errors.Is(err, os.ErrNotExist) {
+					continue
+				}
+				if err != nil {
+					return nil, fmt.Errorf("stat import %s: %w", importPath, err)
+				}
+				if info.Mode().IsRegular() {
 					direct = true
 					break
 				}

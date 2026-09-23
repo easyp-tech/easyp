@@ -2,7 +2,6 @@ package api
 
 import (
 	"fmt"
-	"os"
 	"path/filepath"
 	"strings"
 
@@ -25,12 +24,14 @@ func inheritV1GenerateOptions(repoRoot, configPath string, gen *v1.Generate) err
 			break
 		}
 		parentPath := filepath.Join(dir, "easyp.gen.yaml")
-		fp, err := os.Open(parentPath)
-		if err == nil {
-			parent, parseErr := v1.ParseGenerate(fp)
-			_ = fp.Close()
-			if parseErr != nil {
-				return fmt.Errorf("%s: %w", parentPath, parseErr)
+		raw, found, err := readOptionalFile(parentPath)
+		if err != nil {
+			return fmt.Errorf("%s: %w", parentPath, err)
+		}
+		if found {
+			parent, err := v1.ParseGenerate(strings.NewReader(string(raw)))
+			if err != nil {
+				return fmt.Errorf("%s: %w", parentPath, err)
 			}
 			if gen.Options.Go.PackagePrefix == nil {
 				gen.Options.Go.PackagePrefix = parent.Options.Go.PackagePrefix
@@ -38,8 +39,6 @@ func inheritV1GenerateOptions(repoRoot, configPath string, gen *v1.Generate) err
 					gen.InheritedGoPackagePrefix = true
 				}
 			}
-		} else if !os.IsNotExist(err) {
-			return err
 		}
 		if dir == repoRoot {
 			break

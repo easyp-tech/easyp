@@ -33,6 +33,13 @@ func TestParseGenerateRejectsLegacyInputs(t *testing.T) {
 	}
 }
 
+func TestParseGenerateRejectsInvalidManagedRule(t *testing.T) {
+	_, err := ParseGenerate(strings.NewReader("version: v1\ngenerate:\n  managed:\n    enabled: true\n    override:\n      - file_option: go_package_prefix\n"))
+	if err == nil {
+		t.Fatal("managed override without a value was accepted")
+	}
+}
+
 func TestParseGenerateListOptions(t *testing.T) {
 	got, err := ParseGenerate(strings.NewReader("version: v1\nplugins:\n  - name: go\n    out: ./gen\n    opts: [paths=source_relative]\n"))
 	if err != nil {

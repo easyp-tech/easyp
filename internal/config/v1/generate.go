@@ -80,6 +80,9 @@ func ParseGenerate(r io.Reader) (Generate, error) {
 	if result.Version != "v1" {
 		return Generate{}, fmt.Errorf("easyp.gen.yaml version must be v1")
 	}
+	if err := result.Generate.Managed.Validate(); err != nil {
+		return Generate{}, fmt.Errorf("generate.managed: %w", err)
+	}
 	for i, plugin := range result.Plugins {
 		if (plugin.Name == "") == (plugin.Remote == "") {
 			return Generate{}, fmt.Errorf("plugins[%d]: exactly one of name or remote is required", i)

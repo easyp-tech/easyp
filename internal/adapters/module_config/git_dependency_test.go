@@ -102,10 +102,10 @@ func TestReadGitDependencyRejectsInvalidBufWorkspaceBeforeFallback(t *testing.T)
 	t.Parallel()
 
 	dir := t.TempDir()
-	require.NoError(t, os.WriteFile(filepath.Join(dir, bufV1ConfigFile), []byte("version: v2\ndirectories: [proto]\n"), 0o644))
-	require.NoError(t, os.WriteFile(filepath.Join(dir, bufV2ConfigFile), []byte("version: v1\n"), 0o644))
+	require.NoError(t, os.WriteFile(filepath.Join(dir, bufWorkConfigFile), []byte("version: v2\ndirectories: [proto]\n"), 0o644))
+	require.NoError(t, os.WriteFile(filepath.Join(dir, bufModuleConfigFile), []byte("version: v1\n"), 0o644))
 	_, err := ReadGitDependency(dir, "example.com/dependency")
-	require.ErrorContains(t, err, bufV1ConfigFile)
+	require.ErrorContains(t, err, bufWorkConfigFile)
 }
 
 func TestReadOptionalDependencyConfig(t *testing.T) {

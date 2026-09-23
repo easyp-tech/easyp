@@ -30,10 +30,6 @@ func (c *Core) BreakingCheck(ctx context.Context, projectRoot, workingDir, path 
 		slog.String("path", path),
 	)
 
-	if err := c.Download(ctx); err != nil {
-		return nil, fmt.Errorf("c.Download: %w", err)
-	}
-
 	// read current state
 	fsWalker := fs.NewFSWalker(workingDir, path)
 	currentProtoFiles, err := c.readProtoFiles(ctx, fsWalker)

@@ -10,7 +10,6 @@ import (
 	"github.com/urfave/cli/v2"
 	"gopkg.in/yaml.v3"
 
-	"github.com/easyp-tech/easyp/internal/adapters/modfile"
 	"github.com/easyp-tech/easyp/internal/config"
 	v1 "github.com/easyp-tech/easyp/internal/config/v1"
 	"github.com/easyp-tech/easyp/internal/core"
@@ -19,17 +18,14 @@ import (
 	"github.com/easyp-tech/easyp/internal/logger"
 )
 
-func (l Lint) actionV1(ctx *cli.Context, log logger.Logger, configPath, projectRoot, lintRoot string) (bool, error) {
+func (l Lint) actionV1(ctx *cli.Context, log logger.Logger, configPath, projectRoot, lintRoot string) error {
 	raw, err := os.ReadFile(configPath)
 	if err != nil {
-		return false, nil // legacy path reports its usual missing-config error
+		return fmt.Errorf("ReadFile: %w", err)
 	}
-	isV1, err := v1.IsPolicyConfig(raw)
+	_, err = v1.ParsePolicy(strings.NewReader(string(raw)))
 	if err != nil {
-		return true, fmt.Errorf("IsPolicyConfig: %w", err)
-	}
-	if !isV1 {
-		return false, nil
+		return fmt.Errorf("ParsePolicy: %w", err)
 	}
 	searchDir := filepath.Join(lintRoot, ctx.String(flagLintDirectoryPath.Name))
 	var files []string
@@ -43,47 +39,64 @@ func (l Lint) actionV1(ctx *cli.Context, log logger.Logger, configPath, projectR
 		return nil
 	})
 	if err != nil {
-		return true, err
+		return fmt.Errorf("WalkDir: %w", err)
 	}
 	apps := map[string]*core.Core{}
+	moduleRoots := map[string][]string{}
 	var issues []core.IssueInfo
 	for _, file := range files {
 		policy, policyKey, err := resolveV1LintPolicy(file, projectRoot, configPath)
 		if err != nil {
-			return true, err
+			return fmt.Errorf("resolveV1LintPolicy: %w", err)
 		}
 		if policy.ExcludesAllIssues() {
 			continue
 		}
-		app, ok := apps[policyKey]
+		moduleDir, err := findV1PolicyModuleDir(projectRoot, filepath.Dir(file))
+		if err != nil {
+			return fmt.Errorf("findV1PolicyModuleDir: %w", err)
+		}
+		appKey := policyKey + "|" + moduleDir
+		app, ok := apps[appKey]
 		if !ok {
-			lintConfig, err := policy.LegacyLint()
+			lintConfig, err := policy.LintConfig()
 			if err != nil {
-				return true, err
+				return fmt.Errorf("LintConfig: %w", err)
 			}
-			app, err = buildCoreWithModFile(log, config.Config{Lint: lintConfig}, fs.NewFSWalker(projectRoot, "."), &modfile.File{})
+			app, err = buildCore(log, config.Config{Lint: lintConfig})
 			if err != nil {
-				return true, fmt.Errorf("build v1 linter: %w", err)
+				return fmt.Errorf("buildCore: %w", err)
 			}
-			apps[policyKey] = app
+			if moduleDir != "" {
+				roots, known := moduleRoots[moduleDir]
+				if !known {
+					roots, err = resolveV1PolicyImportRoots(ctx.Context, log, moduleDir)
+					if err != nil {
+						return fmt.Errorf("resolveV1PolicyImportRoots: %w", err)
+					}
+					moduleRoots[moduleDir] = roots
+				}
+				app.SetImportRoots(roots)
+			}
+			apps[appKey] = app
 		}
 		rel, err := filepath.Rel(lintRoot, file)
 		if err != nil {
-			return true, err
+			return fmt.Errorf("Rel: %w", err)
 		}
-		fileIssues, err := app.LintV1(ctx.Context, fs.NewFSWalker(lintRoot, rel))
+		fileIssues, err := app.Lint(ctx.Context, fs.NewFSWalker(lintRoot, rel))
 		if err != nil {
-			return true, err
+			return fmt.Errorf("Lint: %w", err)
 		}
 		issues = append(issues, fileIssues...)
 	}
 	if len(issues) == 0 {
-		return true, nil
+		return nil
 	}
 	if err := printIssues(flags.GetFormat(ctx, flags.TextFormat), os.Stdout, issues); err != nil {
-		return true, err
+		return fmt.Errorf("printIssues: %w", err)
 	}
-	return true, ErrHasLintIssue
+	return ErrHasLintIssue
 }
 
 func resolveV1LintPolicy(file, projectRoot, configPath string) (v1.Policy, string, error) {
@@ -95,7 +108,11 @@ func resolveV1LintPolicy(file, projectRoot, configPath string) (v1.Policy, strin
 		if dir == projectRoot {
 			path = configPath
 		}
-		if raw, err := os.ReadFile(path); err == nil {
+		raw, found, err := readOptionalFile(path)
+		if err != nil {
+			return v1.Policy{}, "", fmt.Errorf("%s: %w", path, err)
+		}
+		if found {
 			foundFile = true
 			var sections map[string]yaml.Node
 			if err := yaml.Unmarshal(raw, &sections); err != nil {
@@ -117,8 +134,6 @@ func resolveV1LintPolicy(file, projectRoot, configPath string) (v1.Policy, strin
 				result.Issues = policy.Issues
 				sources["issues"] = path
 			}
-		} else if !os.IsNotExist(err) {
-			return v1.Policy{}, "", err
 		}
 		if dir == projectRoot || dir == filepath.Dir(dir) {
 			break

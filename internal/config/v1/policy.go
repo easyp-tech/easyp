@@ -35,42 +35,6 @@ type Policy struct {
 	} `yaml:"breaking"`
 }
 
-// IsPolicyConfig identifies v1 policies by an explicit version or fields unique
-// to v1. Ambiguous versionless configurations retain legacy interpretation.
-func IsPolicyConfig(raw []byte) (bool, error) {
-	var fields map[string]yaml.Node
-	err := yaml.Unmarshal(raw, &fields)
-	if err != nil {
-		return false, fmt.Errorf("Unmarshal: %w", err)
-	}
-	if version, ok := fields["version"]; ok {
-		var value string
-		err := version.Decode(&value)
-		if err != nil {
-			return false, fmt.Errorf("Decode: %w", err)
-		}
-		return value == "v1", nil
-	}
-	for _, name := range []string{"linters", "linters-settings", "issues"} {
-		if _, ok := fields[name]; ok {
-			return true, nil
-		}
-	}
-	if breaking, ok := fields["breaking"]; ok {
-		var breakingFields map[string]yaml.Node
-		err := breaking.Decode(&breakingFields)
-		if err != nil {
-			return false, fmt.Errorf("Decode: %w", err)
-		}
-		for _, name := range []string{"baseline", "categories", "ignore_unstable", "extends"} {
-			if _, ok := breakingFields[name]; ok {
-				return true, nil
-			}
-		}
-	}
-	return false, nil
-}
-
 func ParsePolicy(r io.Reader) (Policy, error) {
 	var result Policy
 	decoder := yaml.NewDecoder(r)
@@ -95,7 +59,7 @@ func ParsePolicy(r io.Reader) (Policy, error) {
 	return result, nil
 }
 
-func (p Policy) LegacyLint() (config.LintConfig, error) {
+func (p Policy) LintConfig() (config.LintConfig, error) {
 	if p.Linters.Extends != "" {
 		return config.LintConfig{}, fmt.Errorf("linters.extends policy loading is not implemented")
 	}
@@ -140,9 +104,9 @@ func (p Policy) ExcludesAllIssues() bool {
 	return false
 }
 
-// LegacyBreaking retains the existing check set while accepting the v1
-// baseline spelling. Category filtering requires a rule mapping of its own.
-func (p Policy) LegacyBreaking(fallbackRef string) (config.BreakingCheck, error) {
+// BreakingConfig maps the v1 baseline onto the existing check set.
+// Category filtering requires a rule mapping of its own.
+func (p Policy) BreakingConfig(fallbackRef string) (config.BreakingCheck, error) {
 	if p.Breaking.Extends != "" {
 		return config.BreakingCheck{}, fmt.Errorf("breaking.extends policy loading is not implemented")
 	}

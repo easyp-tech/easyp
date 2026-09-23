@@ -15,21 +15,7 @@ import (
 
 // Lint lints the proto file.
 func (c *Core) Lint(ctx context.Context, fsWalker DirWalker) ([]IssueInfo, error) {
-	return c.lint(ctx, fsWalker, true)
-}
-
-func (c *Core) LintV1(ctx context.Context, fsWalker DirWalker) ([]IssueInfo, error) {
-	return c.lint(ctx, fsWalker, false)
-}
-
-func (c *Core) lint(ctx context.Context, fsWalker DirWalker, downloadLegacy bool) ([]IssueInfo, error) {
 	c.logger.Info(ctx, "starting lint")
-
-	if downloadLegacy {
-		if err := c.Download(ctx); err != nil {
-			return nil, fmt.Errorf("c.Download: %w", err)
-		}
-	}
 
 	var res []IssueInfo
 

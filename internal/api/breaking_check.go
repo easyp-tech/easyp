@@ -9,12 +9,10 @@ import (
 
 	"github.com/urfave/cli/v2"
 
-	"github.com/easyp-tech/easyp/internal/adapters/modfile"
 	"github.com/easyp-tech/easyp/internal/config"
 	v1 "github.com/easyp-tech/easyp/internal/config/v1"
 	"github.com/easyp-tech/easyp/internal/core"
 	"github.com/easyp-tech/easyp/internal/flags"
-	"github.com/easyp-tech/easyp/internal/fs/fs"
 	"github.com/easyp-tech/easyp/internal/logger"
 )
 
@@ -110,41 +108,30 @@ func (b BreakingCheck) action(ctx *cli.Context, log logger.Logger) error {
 	if err != nil {
 		return err
 	}
-	v1Policy, err := v1.IsPolicyConfig(raw)
+	policy, err := v1.ParsePolicy(strings.NewReader(string(raw)))
 	if err != nil {
-		return fmt.Errorf("IsPolicyConfig: %w", err)
+		return fmt.Errorf("ParsePolicy: %w", err)
 	}
-	var cfg config.Config
-	if v1Policy {
-		policy, err := v1.ParsePolicy(strings.NewReader(string(raw)))
-		if err != nil {
-			return err
-		}
-		cfg.BreakingCheck, err = policy.LegacyBreaking(against)
-		if err != nil {
-			return err
-		}
-	} else {
-		legacy, err := config.New(ctx.Context, configPath)
-		if err != nil {
-			return fmt.Errorf("config.New: %w", err)
-		}
-		cfg = *legacy
-		if cfg.BreakingCheck.AgainstGitRef == "" {
-			cfg.BreakingCheck.AgainstGitRef = against
-		}
+	cfg := config.Config{}
+	cfg.BreakingCheck, err = policy.BreakingConfig(against)
+	if err != nil {
+		return fmt.Errorf("BreakingConfig: %w", err)
 	}
 
-	// Walker for Core (lockfile etc) - strictly based on project root
-	projectWalker := fs.NewFSWalker(projectRoot, ".")
-	var app *core.Core
-	if v1Policy {
-		app, err = buildCoreWithModFile(log, cfg, projectWalker, &modfile.File{})
-	} else {
-		app, err = buildCore(ctx.Context, log, cfg, projectWalker)
-	}
+	app, err := buildCore(log, cfg)
 	if err != nil {
 		return fmt.Errorf("buildCore: %w", err)
+	}
+	moduleDir, err := findV1PolicyModuleDir(projectRoot, breakingCheckRoot)
+	if err != nil {
+		return fmt.Errorf("findV1PolicyModuleDir: %w", err)
+	}
+	if moduleDir != "" {
+		roots, err := resolveV1PolicyImportRoots(ctx.Context, log, moduleDir)
+		if err != nil {
+			return fmt.Errorf("resolveV1PolicyImportRoots: %w", err)
+		}
+		app.SetImportRoots(roots)
 	}
 
 	issues, err := app.BreakingCheck(ctx.Context, projectRoot, breakingCheckRoot, path)

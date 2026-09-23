@@ -11,11 +11,9 @@ import (
 
 	"github.com/urfave/cli/v2"
 
-	"github.com/easyp-tech/easyp/internal/adapters/modfile"
 	moduleconfig "github.com/easyp-tech/easyp/internal/adapters/module_config"
 	"github.com/easyp-tech/easyp/internal/config"
 	v1 "github.com/easyp-tech/easyp/internal/config/v1"
-	easypfs "github.com/easyp-tech/easyp/internal/fs/fs"
 	"github.com/easyp-tech/easyp/internal/logger"
 )
 
@@ -49,7 +47,7 @@ func generateSelectedV1Module(ctx *cli.Context, log logger.Logger, configPath, r
 	}
 	for _, replacement := range consumer.Replaces {
 		if replacement.Module == selection {
-			roots, err := resolveV1DependencySources(ctx, log, consumerDir, consumer)
+			roots, err := resolveV1DependencySources(ctx.Context, log, consumerDir, consumer)
 			if err != nil {
 				return err
 			}
@@ -135,14 +133,14 @@ func generateV1Module(ctx *cli.Context, log logger.Logger, configPath, moduleDir
 	if parseErr != nil {
 		return fmt.Errorf("%s/protobuf.mod: %w", moduleDir, parseErr)
 	}
-	importRoots, err := resolveV1DependencySources(ctx, log, moduleDir, module)
+	importRoots, err := resolveV1DependencySources(ctx.Context, log, moduleDir, module)
 	if err != nil {
 		return err
 	}
 	return generateV1ModuleWithRoots(ctx, log, configPath, moduleDir, gen, module, importRoots)
 }
 
-func resolveV1DependencySources(ctx *cli.Context, log logger.Logger, moduleDir string, module v1.Module) (v1SourceRoots, error) {
+func resolveV1DependencySources(ctx context.Context, log logger.Logger, moduleDir string, module v1.Module) (v1SourceRoots, error) {
 	roots, err := localV1DependencySources(moduleDir, module, map[string]bool{})
 	if err != nil {
 		return nil, fmt.Errorf("localV1DependencySources: %w", err)
@@ -151,11 +149,10 @@ func resolveV1DependencySources(ctx *cli.Context, log logger.Logger, moduleDir s
 	if err != nil {
 		return nil, err
 	}
-	callCtx := ctx.Context
-	if callCtx == nil {
-		callCtx = context.Background()
+	if ctx == nil {
+		ctx = context.Background()
 	}
-	lockedRoots, err := lockedV1DependencySources(callCtx, moduleDir, module, filepath.Join(cacheBase, "v1", "git"))
+	lockedRoots, err := lockedV1DependencySources(ctx, moduleDir, module, filepath.Join(cacheBase, "v1", "git"))
 	if err != nil {
 		return nil, fmt.Errorf("lockedV1DependencySources: %w", err)
 	}
@@ -215,11 +212,11 @@ func generateV1ModuleWithRoots(ctx *cli.Context, log logger.Logger, configPath, 
 			cfg.Generate.Managed.Override = append(cfg.Generate.Managed.Override, rule)
 		}
 	}
-	app, err := buildCoreWithModFile(log, cfg, easypfs.NewFSWalker(moduleDir, "."), &modfile.File{})
+	app, err := buildCore(log, cfg)
 	if err != nil {
 		return fmt.Errorf("build v1 module %s: %w", module.Name, err)
 	}
-	app.SetV1ImportRoots(importRoots.paths())
+	app.SetImportRoots(importRoots.paths())
 	if cfg.Generate.Managed.Enabled {
 		moduleRoots := append(v1SourceRoots(nil), importRoots...)
 		for _, root := range module.Roots {
@@ -229,9 +226,9 @@ func generateV1ModuleWithRoots(ctx *cli.Context, log logger.Logger, configPath, 
 		if err != nil {
 			return fmt.Errorf("fileModules: %w", err)
 		}
-		app.SetV1FileModules(fileModules)
+		app.SetFileModules(fileModules)
 	}
-	if err := app.GenerateV1(ctx.Context, moduleDir, ".", ctx.String(flagGenerateDescriptorSetOut.Name), ctx.Bool(flagGenerateIncludeImports.Name)); err != nil {
+	if err := app.Generate(ctx.Context, moduleDir, ctx.String(flagGenerateDescriptorSetOut.Name), ctx.Bool(flagGenerateIncludeImports.Name)); err != nil {
 		return fmt.Errorf("generate module %s: %w", module.Name, err)
 	}
 	return nil

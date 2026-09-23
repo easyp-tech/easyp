@@ -21,15 +21,11 @@ import (
 func (m Mod) Tidy(ctx *cli.Context) error {
 	root, err := os.Getwd()
 	if err != nil {
-		return err
+		return fmt.Errorf("Getwd: %w", err)
 	}
-	original, err := os.ReadFile(filepath.Join(root, "protobuf.mod"))
+	original, module, err := readV1Manifest(root)
 	if err != nil {
-		return fmt.Errorf("read protobuf.mod: %w", err)
-	}
-	module, err := v1.ParseModule(strings.NewReader(string(original)))
-	if err != nil {
-		return err
+		return fmt.Errorf("readV1Manifest: %w", err)
 	}
 	lock, err := resolveV1Lock(ctx, root, module)
 	if err != nil {
@@ -44,6 +40,18 @@ func (m Mod) Tidy(ctx *cli.Context) error {
 		return err
 	}
 	return writeV1ResolvedFiles(root, original, updated, lock)
+}
+
+func readV1Manifest(root string) ([]byte, v1.Module, error) {
+	original, err := os.ReadFile(filepath.Join(root, "protobuf.mod"))
+	if err != nil {
+		return nil, v1.Module{}, fmt.Errorf("ReadFile: %w", err)
+	}
+	module, err := v1.ParseModule(bytes.NewReader(original))
+	if err != nil {
+		return nil, v1.Module{}, fmt.Errorf("ParseModule: %w", err)
+	}
+	return original, module, nil
 }
 
 func writeV1ResolvedFiles(root string, original, updated []byte, lock v1.Lock) error {
@@ -126,35 +134,26 @@ func writeV1Lock(root string, lock v1.Lock) error {
 	return nil
 }
 
-func (m Mod) downloadV1IfPresent(ctx *cli.Context) (bool, error) {
+// Download installs the exact v1 dependencies recorded in protobuf.lock.
+func (m Mod) Download(ctx *cli.Context) error {
 	root, err := os.Getwd()
 	if err != nil {
-		return true, err
+		return fmt.Errorf("Getwd: %w", err)
 	}
-	manifest, err := os.ReadFile(filepath.Join(root, "protobuf.mod"))
-	if os.IsNotExist(err) {
-		return false, nil
-	}
+	_, module, err := readV1Manifest(root)
 	if err != nil {
-		return true, err
-	}
-	if !v1.IsModuleManifest(manifest) {
-		return false, nil // v0 protobuf.mod uses direct/replace blocks
-	}
-	module, err := v1.ParseModule(strings.NewReader(string(manifest)))
-	if err != nil {
-		return true, err
+		return fmt.Errorf("readV1Manifest: %w", err)
 	}
 	lock, err := readV1Lock(filepath.Join(root, "protobuf.lock"))
 	if err != nil {
-		return true, fmt.Errorf("read protobuf.lock; run easyp mod tidy: %w", err)
+		return fmt.Errorf("read protobuf.lock; run easyp mod tidy: %w", err)
 	}
 	if err := validateV1Requirements(remoteV1Requirements(module), lock); err != nil {
-		return true, err
+		return err
 	}
 	cacheBase, err := getEasypPath(getLogger(ctx))
 	if err != nil {
-		return true, err
+		return err
 	}
 	callCtx := ctx.Context
 	if callCtx == nil {
@@ -162,10 +161,10 @@ func (m Mod) downloadV1IfPresent(ctx *cli.Context) (bool, error) {
 	}
 	gitCacheRoot := filepath.Join(cacheBase, "v1", "git")
 	if err := downloadV1Lock(callCtx, lock, gitCacheRoot); err != nil {
-		return true, err
+		return err
 	}
 	_, err = rootsFromV1Lock(lock, gitCacheRoot)
-	return true, err
+	return err
 }
 
 func unresolvedV1Imports(moduleDir string, roots []string) ([]string, error) {
@@ -193,7 +192,14 @@ func unresolvedV1ImportsWithRoots(moduleDir string, roots, dependencyRoots []str
 				found := false
 				for _, candidateRoot := range allRoots {
 					candidate := filepath.Join(candidateRoot, importPath)
-					if info, err := os.Stat(candidate); err == nil && info.Mode().IsRegular() {
+					info, err := os.Stat(candidate)
+					if errors.Is(err, os.ErrNotExist) {
+						continue
+					}
+					if err != nil {
+						return fmt.Errorf("stat import %s: %w", importPath, err)
+					}
+					if info.Mode().IsRegular() {
 						found = true
 						break
 					}

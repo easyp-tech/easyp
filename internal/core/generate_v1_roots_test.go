@@ -36,7 +36,7 @@ func TestGenerateV1IncludesDeclaredSourceRootWithModuleConfig(t *testing.T) {
 			app := testCoreWithPlugins([]Plugin{{Source: PluginSource{Name: "custom-plugin"}}}, executor)
 			app.inputs.InputFilesDir = []InputFilesDir{{Root: "proto", Path: "."}}
 
-			err = app.GenerateV1(t.Context(), root, ".", "", false)
+			err = app.Generate(t.Context(), root, "", false)
 			require.NoError(t, err)
 			require.Len(t, executor.requests, 1)
 			require.Equal(t, []string{"item.proto"}, executor.requests[0].GetFileToGenerate())

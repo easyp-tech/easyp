@@ -50,6 +50,7 @@ mkdir api
 # ... add your .proto files to api/ ...
 
 # Download dependencies and generate code
+easyp mod tidy
 easyp mod download
 easyp generate
 
@@ -101,8 +102,8 @@ While buf.build provides excellent protobuf tooling, EasyP offers several key ad
 **Key Benefits:**
 - **No infrastructure changes**: Use your existing Git repositories for proto dependencies
 - **Enhanced flexibility**: Execute plugins both locally and remotely for consistent results
-- **Simplified configuration**: `easyp.yaml` + `protobuf.mod` for protobuf operations
-- **Full buf compatibility**: Drop-in replacement with familiar rule sets and configuration
+- **Separated configuration**: `protobuf.mod`, `easyp.gen.yaml`, and `easyp.yaml` each own one part of the workflow
+- **Buf dependency roots**: Git dependencies using Buf v1 or v2 configuration can supply import roots
 
 ## Our goals for Protobuf
 
@@ -112,69 +113,47 @@ While Protocol Buffers offer significant technical advantages over REST/JSON, ac
 
 ## Configuration
 
-EasyP uses `easyp.yaml` for lint/generate/breaking config and `protobuf.mod` for dependencies:
+The v1 pilot uses `protobuf.mod` for module identity, source roots, and dependencies. `easyp.gen.yaml` selects modules and plugins; `easyp.yaml` configures lint and breaking checks. `easyp mod tidy` writes the pinned commits and content hashes to `protobuf.lock`.
 
-```
+```text
 # protobuf.mod
-direct (
-	github.com/googleapis/googleapis@common-protos-1_3_1
-	github.com/bufbuild/protoc-gen-validate@v0.9.1
-	github.com/acme/weather@v1.2
-)
-
-# Use a local checkout for generate import paths (cache path is not passed).
-replace github.com/acme/weather@v1.2 => /home/project
+module github.com/acme/contracts
+roots proto
+require github.com/acme/weather v1.2.0
 ```
 
 ```yaml
-# easyp.yaml — code generation
+# easyp.gen.yaml
+version: v1
 generate:
-  inputs:
-    - directory: "api"
-  plugins:
-    - name: go
-      out: .
-      opts:
-        paths: source_relative
-    - remote: api.beta.easyp.tech/community/stephenh-ts-proto:v1.178.0
-      out: ./web/generated
-      opts:
-        env: node
-        useExactTypes: false
-        outputServices:
-          - grpc-js
-          - generic-definitions
-        esModuleInterop: true
-        useOptionals: true
+  modules: [github.com/acme/contracts]
+plugins:
+  - name: go
+    out: ./gen/go
+    opts:
+      paths: source_relative
+```
 
-# Linting
-lint:
-  use:
-    - DIRECTORY_SAME_PACKAGE
-    - PACKAGE_DEFINED
-    - FIELD_LOWER_SNAKE_CASE
-    - MESSAGE_PASCAL_CASE
+```yaml
+# easyp.yaml
+version: v1
+linters:
+  default: STANDARD
+breaking:
+  baseline: git:main
 ```
 
 # Configuration validation
 
-`easyp validate-config` validates `easyp.yaml` (or a custom path passed via `--config`). It expands env vars, checks required fields and types, warns on unknown keys, and exits with a non-zero status when errors are found.
+`easyp validate-config` validates a v1 `easyp.yaml` or `easyp.gen.yaml` (selected with `--config`) and exits with a non-zero status when errors are found.
 
 ```sh
 # Validate the default easyp.yaml with JSON output (default)
 easyp validate-config
 
-# Validate a custom file with text output (global --format flag)
-easyp --format text validate-config --config example.easyp.yaml
+# Validate the generator file with text output
+easyp --format text validate-config --config easyp.gen.yaml
 ```
-
-### Config Schema Integration
-
-The source of truth for config schema + MCP tool metadata lives in [`mcp/easypconfig`](mcp/easypconfig/README.md).
-
-- Go integration: import `github.com/easyp-tech/easyp/mcp/easypconfig` and call `RegisterTool(...)` / `Describe(...)`.
-- Cross-language integration: consume generated JSON Schema artifacts in `schemas/easyp-config-v1.schema.json` and `schemas/easyp-config.schema.json`.
-- Regenerate artifacts: `task schema:generate` (or `go run ./cmd/easyp schema-gen`).
 
 ## Community
 

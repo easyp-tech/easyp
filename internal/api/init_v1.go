@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/url"
 	"os"
@@ -17,22 +18,26 @@ import (
 // are collected before changing any file, so declining one cannot truncate it.
 func initializeV1(ctx context.Context, root, identity string, prompt prompter.Prompter) error {
 	for _, name := range []string{"buf.yaml", "buf.yml"} {
-		if _, err := os.Stat(filepath.Join(root, name)); err == nil {
-			return fmt.Errorf("%s exists: Buf dependency migration needs explicit Git module mappings and is not available yet", name)
-		} else if !os.IsNotExist(err) {
+		_, err := os.Stat(filepath.Join(root, name))
+		if errors.Is(err, os.ErrNotExist) {
+			continue
+		}
+		if err != nil {
 			return err
 		}
+		return fmt.Errorf("%s exists: Buf dependency migration needs explicit Git module mappings and is not available yet", name)
 	}
 	if identity == "" {
-		if fp, err := os.Open(filepath.Join(root, "protobuf.mod")); err == nil {
-			module, parseErr := v1.ParseModule(fp)
-			_ = fp.Close()
-			if parseErr != nil {
-				return parseErr
+		raw, found, err := readOptionalFile(filepath.Join(root, "protobuf.mod"))
+		if err != nil {
+			return err
+		}
+		if found {
+			module, err := v1.ParseModule(strings.NewReader(string(raw)))
+			if err != nil {
+				return err
 			}
 			identity = module.Name
-		} else if !os.IsNotExist(err) {
-			return err
 		}
 	}
 	if identity == "" {
@@ -69,8 +74,11 @@ func initializeV1(ctx context.Context, root, identity string, prompt prompter.Pr
 	var selected []int
 	for i, target := range targets {
 		path := filepath.Join(root, target.name)
-		current, err := os.ReadFile(path)
-		if err == nil {
+		current, found, err := readOptionalFile(path)
+		if err != nil {
+			return err
+		}
+		if found {
 			if string(current) == string(target.data) {
 				continue
 			}
@@ -81,8 +89,6 @@ func initializeV1(ctx context.Context, root, identity string, prompt prompter.Pr
 			if !overwrite {
 				continue
 			}
-		} else if !os.IsNotExist(err) {
-			return err
 		}
 		selected = append(selected, i)
 	}
