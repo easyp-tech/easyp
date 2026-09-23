@@ -15,6 +15,10 @@ func readV1ProtoImports(path string) ([]string, error) {
 	if err != nil {
 		return nil, fmt.Errorf("ReadFile: %w", err)
 	}
+	return parseV1ProtoImports(path, raw)
+}
+
+func parseV1ProtoImports(path string, raw []byte) ([]string, error) {
 	file, err := parser.Parse(path, bytes.NewReader(raw), reporter.NewHandler(nil))
 	if err != nil {
 		return nil, fmt.Errorf("Parse: %w", err)

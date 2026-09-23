@@ -36,6 +36,20 @@ tasks:
     cmds:
       - "go build -o easyp ./cmd/easyp"
 
+  schema:generate:
+    desc: Generate v1 JSON Schemas from the configuration models
+    cmds:
+      - "go run ./cmd/easyp schema-gen --out-dir schemas"
+
+  schema:check:
+    desc: Verify committed v1 JSON Schemas match the configuration models
+    cmds:
+      - |
+        schema_check_dir=$(mktemp -d)
+        trap 'rm -rf "$schema_check_dir"' EXIT
+        go run ./cmd/easyp schema-gen --out-dir "$schema_check_dir"
+        diff -r schemas "$schema_check_dir"
+
   test:
     cmds:
       - "{{.LOCAL_BIN}}/gotestsum --format pkgname -- -coverprofile=coverage.out -race -count=1 ./..."

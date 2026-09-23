@@ -1,0 +1,47 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "protobuf.lock v1",
+  "description": "Structural v1 YAML schema. EasyP CLI validation applies additional semantic checks.",
+  "type": "object",
+  "properties": {
+    "modules": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "commit": {
+            "type": "string",
+            "pattern": "^([0-9a-fA-F]{40}|[0-9a-fA-F]{64})$"
+          },
+          "hash": {
+            "type": "string",
+            "pattern": "^h1:[A-Za-z0-9+/]{43}=$"
+          },
+          "source": {
+            "type": "string",
+            "minLength": 1
+          },
+          "version": {
+            "type": "string",
+            "pattern": "^v[0-9]+\\.[0-9]+\\.[0-9]+([+-][0-9A-Za-z.-]+)?$"
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "source",
+          "version",
+          "commit",
+          "hash"
+        ]
+      }
+    },
+    "version": {
+      "type": "integer",
+      "const": 1
+    }
+  },
+  "additionalProperties": false,
+  "required": [
+    "version"
+  ]
+}

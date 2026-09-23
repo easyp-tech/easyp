@@ -7,8 +7,9 @@ import (
 )
 
 func TestShouldSkipV1SourceDir(t *testing.T) {
+	t.Parallel()
 	root := t.TempDir()
-	for _, name := range []string{".cache", "buf-module", "legacy-module", "regular"} {
+	for _, name := range []string{".cache", "buf-module", "legacy-module", "regular", "easyp_vendor"} {
 		if err := os.MkdirAll(filepath.Join(root, name), 0o755); err != nil {
 			t.Fatal(err)
 		}
@@ -29,6 +30,7 @@ func TestShouldSkipV1SourceDir(t *testing.T) {
 		{".cache", true},
 		{"buf-module", true},
 		{"legacy-module", true},
+		{"easyp_vendor", true},
 		{"regular", false},
 	} {
 		t.Run(tc.name, func(t *testing.T) {

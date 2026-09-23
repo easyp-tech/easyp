@@ -19,6 +19,9 @@ func ShouldSkipV1SourceDir(root, path string) bool {
 	if strings.HasPrefix(filepath.Base(path), ".") {
 		return true
 	}
+	if filepath.Base(path) == "easyp_vendor" {
+		return true
+	}
 	for _, name := range []string{"protobuf.mod", "buf.work.yaml", "buf.yaml"} {
 		if _, err := os.Stat(filepath.Join(path, name)); err == nil {
 			return true

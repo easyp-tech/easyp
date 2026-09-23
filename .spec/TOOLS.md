@@ -121,15 +121,14 @@ task schema:generate
 task schema:check
 ```
 
-`task schema:generate` runs `go run ./cmd/easyp schema-gen`, producing the
-versioned and latest schema artifacts under `schemas/`. The `go:generate`
-directive in `mcp/easypconfig/generate.go` can also run schema generation with
-explicit output paths.
+`task schema:generate` runs `go run ./cmd/easyp schema-gen --out-dir schemas`.
+The generator derives separate versioned and latest JSON Schemas from the v1
+models for `easyp.yaml`, `easyp.gen.yaml`, and `protobuf.lock`. The text
+`protobuf.mod` manifest is validated by `easyp validate-config`.
 
-Use `task schema:check` after changing config schema metadata or validation.
-It regenerates the artifacts and fails if
-`schemas/easyp-config-v1.schema.json` or `schemas/easyp-config.schema.json`
-would differ. Do not hand-edit those generated JSON files.
+Use `task schema:check` after changing v1 configuration models or validation.
+It regenerates all six artifacts and fails if any committed schema differs.
+Do not hand-edit those generated JSON files.
 
 ### Test Mocks
 
@@ -177,9 +176,10 @@ EasyP module dependencies are Git repositories, cached under `EASYPPATH`
 ./easyp mod vendor
 ```
 
-It copies installed proto dependencies to `easyp_vendor`, not Go's usual
-`vendor/` directory. This is EasyP dependency cache and package-management
-behavior, not application file storage. See
+It verifies the v1 lock, then copies `.proto` files from locked dependency
+roots to `easyp_vendor` by import path. It rejects local replacements and
+duplicate import paths. This is a materialized dependency tree, separate from
+the module cache and Go's usual `vendor/` directory. See
 [config/dependency.md](config/dependency.md) for the authoritative dependency
 flow and available `easyp mod` subcommands.
 

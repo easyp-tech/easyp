@@ -1,0 +1,119 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "easyp.yaml v1",
+  "description": "Structural v1 YAML schema. EasyP CLI validation applies additional semantic checks.",
+  "type": "object",
+  "properties": {
+    "breaking": {
+      "type": "object",
+      "properties": {
+        "baseline": {
+          "type": "string",
+          "pattern": "^git:.+$"
+        },
+        "categories": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "extends": {
+          "type": "string"
+        },
+        "ignore": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "ignore_unstable": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false
+    },
+    "issues": {
+      "type": "object",
+      "properties": {
+        "exclude-rules": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "linters": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "path": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": false
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "linters": {
+      "type": "object",
+      "properties": {
+        "default": {
+          "type": "string",
+          "enum": [
+            "MINIMAL",
+            "BASIC",
+            "STANDARD",
+            "COMMENTS"
+          ]
+        },
+        "disable": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "enable": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "extends": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "linters-settings": {
+      "type": "object",
+      "properties": {
+        "ENUM_ZERO_VALUE_SUFFIX": {
+          "type": "object",
+          "properties": {
+            "suffix": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        },
+        "SERVICE_SUFFIX": {
+          "type": "object",
+          "properties": {
+            "suffix": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "version": {
+      "type": "string",
+      "const": "v1"
+    }
+  },
+  "additionalProperties": false
+}

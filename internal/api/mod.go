@@ -27,6 +27,11 @@ func (m Mod) Command() *cli.Command {
 		Usage:  "resolve protobuf.mod and write protobuf.lock",
 		Action: m.Tidy,
 	}
+	vendorCmd := &cli.Command{
+		Name:   "vendor",
+		Usage:  "copy locked protobuf imports into easyp_vendor",
+		Action: m.Vendor,
+	}
 	return &cli.Command{
 		Name:                   "mod",
 		Aliases:                []string{"m"},
@@ -40,7 +45,7 @@ func (m Mod) Command() *cli.Command {
 		After:                  nil,
 		Action:                 nil,
 		OnUsageError:           nil,
-		Subcommands:            []*cli.Command{downloadCmd, updateCmd, tidyCmd},
+		Subcommands:            []*cli.Command{downloadCmd, updateCmd, tidyCmd, vendorCmd},
 		Flags:                  []cli.Flag{},
 		SkipFlagParsing:        false,
 		HideHelp:               false,
