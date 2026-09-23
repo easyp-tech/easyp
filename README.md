@@ -113,7 +113,7 @@ While Protocol Buffers offer significant technical advantages over REST/JSON, ac
 
 ## Configuration
 
-The v1 pilot uses `protobuf.mod` for module identity, source roots, and dependencies. `easyp.gen.yaml` selects modules and plugins; `easyp.yaml` configures lint and breaking checks. `easyp mod tidy` writes the pinned commits and content hashes to `protobuf.lock`.
+The v1 pilot uses `protobuf.mod` for module identity, source roots, and dependencies. `easyp.gen.yaml` selects modules and plugins; `easyp.yaml` configures lint and breaking checks. Run `easyp get <module>[@version|@commit]` from the module directory to add a direct requirement and record its transitive dependencies as `// indirect`. The command writes pinned commits and content hashes to `protobuf.lock`; `easyp mod tidy` resolves requirements already in the manifest.
 
 ```text
 # protobuf.mod
