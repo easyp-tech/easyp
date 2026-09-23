@@ -19,20 +19,23 @@ type v1RequirementLine struct {
 
 func parseV1RequirementLines(lines []string) []v1RequirementLine {
 	var requirements []v1RequirementLine
-	inRequire := false
+	block := ""
 	for i, line := range lines {
 		body, comment, hasComment := splitV1ManifestComment(line)
 		trimmed := strings.TrimSpace(body)
-		if strings.HasSuffix(trimmed, "(") && strings.TrimSpace(strings.TrimSuffix(trimmed, "(")) == "require" {
-			inRequire = true
+		if strings.HasSuffix(trimmed, "(") {
+			block = strings.TrimSpace(strings.TrimSuffix(trimmed, "("))
 			continue
 		}
-		if trimmed == ")" && inRequire {
-			inRequire = false
+		if trimmed == ")" {
+			block = ""
+			continue
+		}
+		if block != "" && block != "require" {
 			continue
 		}
 		fields := strings.Fields(body)
-		if !inRequire {
+		if block == "" {
 			if len(fields) == 0 || fields[0] != "require" {
 				continue
 			}

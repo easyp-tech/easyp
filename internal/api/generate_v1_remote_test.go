@@ -27,7 +27,11 @@ type testV1RemotePlugin struct {
 }
 
 func (s *testV1RemotePlugin) GenerateCode(_ context.Context, request *pluginv1.GenerateCodeRequest) (*pluginv1.GenerateCodeResponse, error) {
-	s.called <- request.GetPluginName()
+	select {
+	case s.called <- request.GetPluginName():
+	default:
+		return nil, fmt.Errorf("unexpected repeated GenerateCode call for %q", request.GetPluginName())
+	}
 	return &pluginv1.GenerateCodeResponse{CodeGeneratorResponse: &pluginpb.CodeGeneratorResponse{
 		File: []*pluginpb.CodeGeneratorResponse_File{{Name: proto.String("remote.txt"), Content: proto.String("ok")}},
 	}}, nil

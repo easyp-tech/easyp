@@ -3,6 +3,7 @@ package api
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"text/tabwriter"
@@ -14,8 +15,10 @@ import (
 	"github.com/easyp-tech/easyp/internal/flags"
 )
 
+// Validate handles recursive configuration validation.
 type Validate struct{}
 
+// Command implements Handler.
 func (v Validate) Command() *cli.Command {
 	return &cli.Command{
 		Name:        "validate-config",
@@ -37,6 +40,7 @@ type validateResult struct {
 	Warnings []config.ValidationIssue `json:"warnings,omitempty"`
 }
 
+// Action implements Handler.
 func (v Validate) Action(ctx *cli.Context) error {
 	configPath := validationTarget(ctx)
 	if !filepath.IsAbs(configPath) {
@@ -52,41 +56,40 @@ func (v Validate) Action(ctx *cli.Context) error {
 		return fmt.Errorf("ValidatePath: %w", err)
 	}
 
-	// Separate errors from warnings - only errors cause validation failure
-	var errors, warnings []config.ValidationIssue
+	var report validateResult
 	for _, issue := range issues {
 		if issue.Severity == config.SeverityError {
-			errors = append(errors, issue)
-		} else {
-			warnings = append(warnings, issue)
+			report.Errors = append(report.Errors, issue)
+			continue
 		}
+		report.Warnings = append(report.Warnings, issue)
 	}
+	report.Valid = len(report.Errors) == 0
 
-	result := validateResult{
-		Valid:    !config.HasErrors(issues),
-		Errors:   errors,
-		Warnings: warnings,
+	output := ctx.App.Writer
+	if output == nil {
+		output = os.Stdout
 	}
-
 	format := flags.GetFormat(ctx, flags.JSONFormat)
 	switch format {
 	case flags.JSONFormat:
-		enc := json.NewEncoder(os.Stdout)
+		enc := json.NewEncoder(output)
 		enc.SetIndent("", "  ")
-		if err := enc.Encode(result); err != nil {
+		if err := enc.Encode(report); err != nil {
 			return fmt.Errorf("Encode: %w", err)
 		}
 	case flags.TextFormat:
-		printValidateText(result)
+		if err := writeValidationText(output, report); err != nil {
+			return fmt.Errorf("writeValidationText: %w", err)
+		}
 	default:
 		return fmt.Errorf("unsupported format: %s", format)
 	}
 
-	if result.Valid {
-		return nil
+	if !report.Valid {
+		return ErrHasValidateIssue
 	}
-
-	return ErrHasValidateIssue
+	return nil
 }
 
 func validationTarget(ctx *cli.Context) string {
@@ -98,32 +101,39 @@ func validationTarget(ctx *cli.Context) string {
 	return "."
 }
 
-func printValidateText(res validateResult) {
-	if res.Valid {
-		fmt.Println("VALID: true")
-	} else {
-		fmt.Println("VALID: false")
+func writeValidationText(output io.Writer, report validateResult) error {
+	if _, err := fmt.Fprintf(output, "VALID: %t\n", report.Valid); err != nil {
+		return fmt.Errorf("Fprintf: %w", err)
 	}
 
-	w := tabwriter.NewWriter(os.Stdout, 0, 4, 2, ' ', 0)
+	w := tabwriter.NewWriter(output, 0, 4, 2, ' ', 0)
 
-	if len(res.Errors) > 0 {
-		fmt.Fprintln(w, "ERRORS:")
-		fmt.Fprintln(w, "  #\tFILE\tLOCATION\tCODE\tMESSAGE")
-		for i, e := range res.Errors {
-			fmt.Fprintf(w, "  %d\t%s\t%s\t%s\t%s\n", i+1, e.File, validationLocation(e), e.Code, e.Message)
+	if len(report.Errors) > 0 {
+		if _, err := fmt.Fprintln(w, "ERRORS:\n  #\tFILE\tLOCATION\tCODE\tMESSAGE"); err != nil {
+			return fmt.Errorf("Fprintln: %w", err)
+		}
+		for i, issue := range report.Errors {
+			if _, err := fmt.Fprintf(w, "  %d\t%s\t%s\t%s\t%s\n", i+1, issue.File, validationLocation(issue), issue.Code, issue.Message); err != nil {
+				return fmt.Errorf("Fprintf: %w", err)
+			}
 		}
 	}
 
-	if len(res.Warnings) > 0 {
-		fmt.Fprintln(w, "WARNINGS:")
-		fmt.Fprintln(w, "  #\tFILE\tLOCATION\tCODE\tMESSAGE")
-		for i, e := range res.Warnings {
-			fmt.Fprintf(w, "  %d\t%s\t%s\t%s\t%s\n", i+1, e.File, validationLocation(e), e.Code, e.Message)
+	if len(report.Warnings) > 0 {
+		if _, err := fmt.Fprintln(w, "WARNINGS:\n  #\tFILE\tLOCATION\tCODE\tMESSAGE"); err != nil {
+			return fmt.Errorf("Fprintln: %w", err)
+		}
+		for i, issue := range report.Warnings {
+			if _, err := fmt.Fprintf(w, "  %d\t%s\t%s\t%s\t%s\n", i+1, issue.File, validationLocation(issue), issue.Code, issue.Message); err != nil {
+				return fmt.Errorf("Fprintf: %w", err)
+			}
 		}
 	}
 
-	_ = w.Flush()
+	if err := w.Flush(); err != nil {
+		return fmt.Errorf("Flush: %w", err)
+	}
+	return nil
 }
 
 func validationLocation(issue config.ValidationIssue) string {
