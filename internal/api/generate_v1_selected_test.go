@@ -81,3 +81,35 @@ generate:
 		})
 	}
 }
+
+func TestSelectedV1ModuleDirsPrefersGeneratorSiblingThenRepositoryRoot(t *testing.T) {
+	root := t.TempDir()
+	configDir := filepath.Join(root, "projects", "app")
+	writeV1GenerateFixture(t, root, "protobuf.mod", "module example.com/root\n")
+	writeV1GenerateFixture(t, filepath.Join(root, "projects"), "protobuf.mod", "module example.com/intermediate\n")
+
+	dirs, err := selectedV1ModuleDirs(root, configDir, nil)
+	require.NoError(t, err)
+	require.Equal(t, []string{root}, dirs)
+
+	writeV1GenerateFixture(t, configDir, "protobuf.mod", "module example.com/app\n")
+	dirs, err = selectedV1ModuleDirs(root, configDir, nil)
+	require.NoError(t, err)
+	require.Equal(t, []string{configDir}, dirs)
+}
+
+func TestGenerateSelectedV1ModuleUsesGeneratorSiblingRequirements(t *testing.T) {
+	root := t.TempDir()
+	configDir := filepath.Join(root, "app")
+	dependency := filepath.Join(configDir, "dependency")
+	writeV1GenerateFixture(t, root, "protobuf.mod", "module example.com/root\nrequire example.com/dep v1.0.0\nreplace example.com/dep => ./missing\n")
+	writeV1GenerateFixture(t, configDir, "protobuf.mod", "module example.com/app\nrequire example.com/dep v1.0.0\nreplace example.com/dep => ./dependency\n")
+	writeV1GenerateFixture(t, dependency, "buf.yaml", "version: v2\nmodules:\n  - path: proto\n")
+	writeV1GenerateFixture(t, dependency, "proto/dep/v1/dep.proto", "syntax = \"proto3\"; package dep.v1; message Dep {}\n")
+	gen, err := v1.ParseGenerate(strings.NewReader("version: v1\ngenerate:\n  modules: [example.com/dep]\n"))
+	require.NoError(t, err)
+	descriptors := generateV1Descriptors(t, root, func(ctx *cli.Context) error {
+		return generateSelectedV1Module(ctx, logger.NewNop(), filepath.Join(configDir, "easyp.gen.yaml"), root, "example.com/dep", gen)
+	})
+	require.Contains(t, descriptors, "dep/v1/dep.proto")
+}

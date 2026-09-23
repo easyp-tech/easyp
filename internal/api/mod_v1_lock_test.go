@@ -63,6 +63,122 @@ func TestBuildV1LockPinsGitCommitAndGoStyleH1(t *testing.T) {
 	}
 }
 
+func TestBuildV1LockSelectsModulesFromOneGitRepository(t *testing.T) {
+	repository := filepath.Join(t.TempDir(), "monorepo")
+	foo := filepath.Join(repository, "foo")
+	bar := filepath.Join(repository, "bar")
+	for name, content := range map[string]string{
+		"foo/protobuf.mod":    fmt.Sprintf("module %s\nroots proto\n", foo),
+		"foo/proto/foo.proto": "syntax = \"proto3\";\nmessage Foo {}\n",
+		"bar/protobuf.mod":    fmt.Sprintf("module %s\nroots proto\n", bar),
+		"bar/proto/bar.proto": "syntax = \"proto3\";\nmessage Bar {}\n",
+	} {
+		path := filepath.Join(repository, name)
+		if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	runTestGit(t, repository, "init", "-q")
+	runTestGit(t, repository, "add", ".")
+	runTestGit(t, repository, "-c", "user.name=EasyP Test", "-c", "user.email=test@example.com", "commit", "-qm", "initial")
+	for _, tag := range []string{"foo/v1.0.0", "foo/v1.1.0", "bar/v1.0.0"} {
+		runTestGit(t, repository, "tag", tag)
+	}
+	module := v1.Module{Requires: []v1.Requirement{
+		{Module: foo, Version: "v1.0.0"},
+		{Module: bar, Version: "v1.0.0"},
+	}}
+	cache := t.TempDir()
+	lock, err := buildV1Lock(context.Background(), module, cache)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(lock.Modules) != 2 || lock.Modules[0].Source != bar || lock.Modules[1].Source != foo {
+		t.Fatalf("unexpected multi-module lock: %#v", lock)
+	}
+	if err := downloadV1Lock(context.Background(), lock, cache); err != nil {
+		t.Fatal(err)
+	}
+	roots, err := sourcesFromV1Lock(lock, cache)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(roots) != 2 || roots[0].module != bar || roots[1].module != foo {
+		t.Fatalf("unexpected multi-module roots: %#v", roots)
+	}
+	for _, root := range roots {
+		name := filepath.Base(filepath.Dir(root.path))
+		if _, err := os.Stat(filepath.Join(root.path, name+".proto")); err != nil {
+			t.Fatal(err)
+		}
+	}
+	latest, err := latestCompatibleV1Tag(context.Background(), foo, "v1.0.0")
+	if err != nil || latest != "v1.1.0" {
+		t.Fatalf("latest foo tag = %s, %v", latest, err)
+	}
+}
+
+func TestBuildV1LockSelectsUntaggedModulesByCommit(t *testing.T) {
+	repository := filepath.Join(t.TempDir(), "monorepo")
+	foo := filepath.Join(repository, "foo")
+	bar := filepath.Join(repository, "bar")
+	for name, content := range map[string]string{
+		"foo/protobuf.mod":    fmt.Sprintf("module %s\nroots proto\n", foo),
+		"foo/proto/foo.proto": "syntax = \"proto3\";\nmessage Foo {}\n",
+		"bar/protobuf.mod":    fmt.Sprintf("module %s\nroots proto\n", bar),
+		"bar/proto/bar.proto": "syntax = \"proto3\";\nmessage Bar {}\n",
+	} {
+		path := filepath.Join(repository, name)
+		if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	runTestGit(t, repository, "init", "-q")
+	runTestGit(t, repository, "add", ".")
+	runTestGit(t, repository, "-c", "user.name=EasyP Test", "-c", "user.email=test@example.com", "commit", "-qm", "initial")
+	commit := strings.TrimSpace(runTestGit(t, repository, "rev-parse", "HEAD"))
+	module := v1.Module{Requires: []v1.Requirement{
+		{Module: foo, Version: commit},
+		{Module: bar, Version: commit},
+	}}
+	cache := t.TempDir()
+	lock, err := buildV1Lock(context.Background(), module, cache)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := lock.Validate(); err != nil {
+		t.Fatal(err)
+	}
+	if len(lock.Modules) != 2 {
+		t.Fatalf("lock has %d modules, want two", len(lock.Modules))
+	}
+	for _, entry := range lock.Modules {
+		if entry.Commit != commit || entry.Version != commit {
+			t.Fatalf("unexpected pinned module: %#v", entry)
+		}
+		updated, err := latestCompatibleV1Tag(context.Background(), entry.Source, entry.Version)
+		if err != nil || updated != commit {
+			t.Fatalf("update changed pinned commit: %s, %v", updated, err)
+		}
+	}
+	if err := validateV1Requirements(module.Requires, lock); err != nil {
+		t.Fatal(err)
+	}
+	if err := downloadV1Lock(context.Background(), lock, cache); err != nil {
+		t.Fatal(err)
+	}
+	roots, err := sourcesFromV1Lock(lock, cache)
+	if err != nil || len(roots) != 2 {
+		t.Fatalf("roots: %#v, %v", roots, err)
+	}
+}
+
 func TestDownloadV1LockKeepsCommitAfterTagMoves(t *testing.T) {
 	remote := filepath.Join(t.TempDir(), "dependency")
 	if err := os.MkdirAll(remote, 0o755); err != nil {

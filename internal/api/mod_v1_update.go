@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"slices"
 	"strings"
 
 	"github.com/urfave/cli/v2"
@@ -63,6 +62,9 @@ func (m Mod) Update(ctx *cli.Context) error {
 }
 
 func latestCompatibleV1Tag(ctx context.Context, source, current string) (string, error) {
+	if v1.IsCommitRef(current) {
+		return current, nil
+	}
 	if !semver.IsValid(current) {
 		return "", fmt.Errorf("%s: invalid required version %q", source, current)
 	}
@@ -106,27 +108,7 @@ func latestV1Tag(ctx context.Context, source string) (string, error) {
 }
 
 func listV1Tags(ctx context.Context, source string) ([]string, error) {
-	raw, err := gitV1(ctx, "", "ls-remote", "--tags", "--", v1GitRemote(source))
-	if err != nil {
-		return nil, fmt.Errorf("list Git tags for %s: %w", source, err)
-	}
-	seen := make(map[string]struct{})
-	for _, line := range strings.Split(raw, "\n") {
-		_, ref, ok := strings.Cut(line, "\t")
-		if !ok || !strings.HasPrefix(ref, "refs/tags/") {
-			continue
-		}
-		version := strings.TrimSuffix(strings.TrimPrefix(ref, "refs/tags/"), "^{}")
-		if semver.IsValid(version) {
-			seen[version] = struct{}{}
-		}
-	}
-	versions := make([]string, 0, len(seen))
-	for version := range seen {
-		versions = append(versions, version)
-	}
-	slices.Sort(versions)
-	return versions, nil
+	return listV1ModuleTags(ctx, source)
 }
 
 func rewriteV1RequiredVersions(original []byte, updates map[string]string) ([]byte, error) {

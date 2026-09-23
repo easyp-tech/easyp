@@ -60,11 +60,14 @@ func (lock Lock) Validate() error {
 			return fmt.Errorf("duplicate locked module %s", entry.Source)
 		}
 		seen[entry.Source] = struct{}{}
-		if !semver.IsValid(entry.Version) {
+		if !semver.IsValid(entry.Version) && !IsCommitRef(entry.Version) {
 			return fmt.Errorf("%s: invalid locked version %q", entry.Source, entry.Version)
 		}
 		if (len(entry.Commit) != 40 && len(entry.Commit) != 64) || !isHex(entry.Commit) {
 			return fmt.Errorf("%s: invalid commit %q", entry.Source, entry.Commit)
+		}
+		if IsCommitRef(entry.Version) && !strings.EqualFold(entry.Version, entry.Commit) {
+			return fmt.Errorf("%s: pinned version %q differs from commit %q", entry.Source, entry.Version, entry.Commit)
 		}
 		if !strings.HasPrefix(entry.Hash, "h1:") {
 			return fmt.Errorf("%s: invalid content hash %q", entry.Source, entry.Hash)
@@ -80,4 +83,9 @@ func (lock Lock) Validate() error {
 func isHex(value string) bool {
 	_, err := hex.DecodeString(value)
 	return err == nil
+}
+
+// IsCommitRef reports whether value is an unambiguous full Git commit hash.
+func IsCommitRef(value string) bool {
+	return (len(value) == 40 || len(value) == 64) && isHex(value)
 }

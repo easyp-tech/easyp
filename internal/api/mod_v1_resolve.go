@@ -43,10 +43,13 @@ func buildV1Lock(ctx context.Context, root v1.Module, cacheRoot string) (v1.Lock
 			}
 			requirement.Version = version
 		}
-		if !semver.IsValid(requirement.Version) {
-			return v1.Lock{}, fmt.Errorf("require %s: invalid semantic version %q", requirement.Module, requirement.Version)
+		if !semver.IsValid(requirement.Version) && !v1.IsCommitRef(requirement.Version) {
+			return v1.Lock{}, fmt.Errorf("require %s: expected semantic version or full Git commit, got %q", requirement.Module, requirement.Version)
 		}
-		if current, ok := selected[requirement.Module]; !ok || semver.Compare(requirement.Version, current) > 0 {
+		if current, ok := selected[requirement.Module]; ok && (v1.IsCommitRef(current) || v1.IsCommitRef(requirement.Version)) && current != requirement.Version {
+			return v1.Lock{}, fmt.Errorf("module %s has conflicting requirements %s and %s", requirement.Module, current, requirement.Version)
+		}
+		if current, ok := selected[requirement.Module]; !ok || (!v1.IsCommitRef(current) && semver.Compare(requirement.Version, current) > 0) {
 			selected[requirement.Module] = requirement.Version
 		}
 		key := requirement.Module + "@" + requirement.Version
@@ -75,27 +78,52 @@ func fetchV1Module(ctx context.Context, source, version, cacheRoot string) (fetc
 	if err := os.MkdirAll(cacheRoot, 0o755); err != nil {
 		return fetchedV1Module{}, err
 	}
-	checkout, err := os.MkdirTemp(cacheRoot, "git-*")
-	if err != nil {
-		return fetchedV1Module{}, err
-	}
-	defer os.RemoveAll(checkout)
-	remote := v1GitRemote(source)
-	if _, err := gitV1(ctx, "", "clone", "--quiet", "--depth=1", "--branch", version, "--no-checkout", "--", remote, checkout); err != nil {
-		return fetchedV1Module{}, fmt.Errorf("clone %s@%s: %w", source, version, err)
-	}
-	commit, err := gitV1(ctx, checkout, "rev-parse", "--verify", "refs/tags/"+version+"^{commit}")
-	if err != nil {
-		return fetchedV1Module{}, fmt.Errorf("%s: %s is not a Git tag: %w", source, version, err)
+	var checkout string
+	var module v1.Module
+	var commit string
+	if v1.IsCommitRef(version) {
+		var err error
+		checkout, err = clonePinnedV1GitModule(ctx, v1.LockedModule{Source: source, Commit: version}, cacheRoot)
+		if err != nil {
+			return fetchedV1Module{}, fmt.Errorf("fetch %s@%s: %w", source, version, err)
+		}
+		defer os.RemoveAll(checkout)
+		commit, err = gitV1(ctx, checkout, "rev-parse", "HEAD")
+		if err != nil {
+			return fetchedV1Module{}, err
+		}
+		module, err = moduleconfig.ReadGitDependency(checkout, source)
+		if err != nil {
+			return fetchedV1Module{}, err
+		}
+	} else {
+		var err error
+		checkout, err = os.MkdirTemp(cacheRoot, "git-*")
+		if err != nil {
+			return fetchedV1Module{}, err
+		}
+		defer os.RemoveAll(checkout)
+		candidate, err := findV1GitModuleTag(ctx, source, version)
+		if err != nil {
+			return fetchedV1Module{}, fmt.Errorf("findV1GitModuleTag: %w", err)
+		}
+		tag := candidate.tag(version)
+		if _, err := gitV1(ctx, "", "clone", "--quiet", "--depth=1", "--branch", tag, "--no-checkout", "--", candidate.remote, checkout); err != nil {
+			return fetchedV1Module{}, fmt.Errorf("clone %s@%s: %w", source, version, err)
+		}
+		commit, err = gitV1(ctx, checkout, "rev-parse", "--verify", "refs/tags/"+tag+"^{commit}")
+		if err != nil {
+			return fetchedV1Module{}, fmt.Errorf("%s: %s is not a Git tag: %w", source, version, err)
+		}
+		if _, err := gitV1(ctx, checkout, "checkout", "--quiet", "--detach", strings.TrimSpace(commit)); err != nil {
+			return fetchedV1Module{}, err
+		}
+		module, err = readV1GitModuleCandidate(checkout, source, candidate)
+		if err != nil {
+			return fetchedV1Module{}, fmt.Errorf("%s@%s: %w", source, version, err)
+		}
 	}
 	commit = strings.TrimSpace(commit)
-	if _, err := gitV1(ctx, checkout, "checkout", "--quiet", "--detach", commit); err != nil {
-		return fetchedV1Module{}, err
-	}
-	module, err := moduleconfig.ReadGitDependency(checkout, source)
-	if err != nil {
-		return fetchedV1Module{}, fmt.Errorf("%s@%s: %w", source, version, err)
-	}
 	filesRaw, err := gitV1(ctx, checkout, "ls-files", "-z")
 	if err != nil {
 		return fetchedV1Module{}, err
@@ -135,13 +163,6 @@ func gitV1(ctx context.Context, dir string, args ...string) (string, error) {
 		return "", fmt.Errorf("git %s: %w: %s", args[0], err, strings.TrimSpace(string(out)))
 	}
 	return string(out), nil
-}
-
-func v1GitRemote(source string) string {
-	if filepath.IsAbs(source) || strings.Contains(source, "://") {
-		return source
-	}
-	return "https://" + source
 }
 
 func v1CacheSourceKey(source string) string {

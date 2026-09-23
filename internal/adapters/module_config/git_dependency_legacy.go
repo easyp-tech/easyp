@@ -64,14 +64,11 @@ func parseLegacyV1Requirement(raw string) (v1.Requirement, error) {
 		return v1.Requirement{}, fmt.Errorf("empty legacy dependency")
 	}
 	source, version := raw, ""
-	if at := strings.LastIndex(raw, "@v"); at >= 0 {
+	if at := strings.LastIndex(raw, "@"); at > strings.LastIndex(raw, "/") {
 		source, version = raw[:at], raw[at+1:]
-		if !semver.IsValid(version) {
-			return v1.Requirement{}, fmt.Errorf("legacy dependency %q needs a valid semver tag", raw)
+		if !semver.IsValid(version) && !v1.IsCommitRef(version) {
+			return v1.Requirement{}, fmt.Errorf("legacy dependency %q needs a SemVer tag or full Git commit", raw)
 		}
-	}
-	if at := strings.LastIndex(source, "@"); at > strings.LastIndex(source, "/") {
-		return v1.Requirement{}, fmt.Errorf("legacy dependency %q uses a non-SemVer Git ref; use a SemVer tag for v1 resolution", raw)
 	}
 	if source == "" {
 		return v1.Requirement{}, fmt.Errorf("legacy dependency %q has no Git source", raw)

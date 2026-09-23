@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"golang.org/x/mod/semver"
 
@@ -108,9 +109,19 @@ func validateV1Requirements(requirements []v1.Requirement, lock v1.Lock) error {
 	}
 	for _, requirement := range requirements {
 		entry, ok := locked[requirement.Module]
-		if !ok || (requirement.Version != "" && semver.Compare(entry.Version, requirement.Version) < 0) {
+		if !ok || !v1RequirementSatisfied(requirement.Version, entry) {
 			return fmt.Errorf("protobuf.lock does not satisfy %s %s; run easyp mod tidy", requirement.Module, requirement.Version)
 		}
 	}
 	return nil
+}
+
+func v1RequirementSatisfied(required string, entry v1.LockedModule) bool {
+	if required == "" {
+		return true
+	}
+	if v1.IsCommitRef(required) {
+		return strings.EqualFold(entry.Commit, required)
+	}
+	return semver.IsValid(entry.Version) && semver.Compare(entry.Version, required) >= 0
 }

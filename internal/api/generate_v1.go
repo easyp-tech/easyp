@@ -91,7 +91,7 @@ func discoverV1GenerateConfigs(root, project string) ([]string, error) {
 
 func selectedV1ModuleDirs(repoRoot, configDir string, names []string) ([]string, error) {
 	if len(names) == 0 {
-		for dir := configDir; ; dir = filepath.Dir(dir) {
+		for _, dir := range []string{configDir, repoRoot} {
 			_, err := os.Stat(filepath.Join(dir, "protobuf.mod"))
 			switch {
 			case errors.Is(err, os.ErrNotExist):
@@ -99,9 +99,6 @@ func selectedV1ModuleDirs(repoRoot, configDir string, names []string) ([]string,
 				return nil, fmt.Errorf("module in %s: %w", dir, err)
 			default:
 				return []string{dir}, nil
-			}
-			if dir == repoRoot || dir == filepath.Dir(dir) {
-				break
 			}
 		}
 		return nil, fmt.Errorf("no protobuf.mod for generator in %s", configDir)

@@ -11,7 +11,6 @@ import (
 
 	"golang.org/x/mod/sumdb/dirhash"
 
-	moduleconfig "github.com/easyp-tech/easyp/internal/adapters/module_config"
 	v1 "github.com/easyp-tech/easyp/internal/config/v1"
 )
 
@@ -55,29 +54,17 @@ func fetchPinnedV1Module(ctx context.Context, entry v1.LockedModule, cacheRoot, 
 	if err := os.MkdirAll(cacheRoot, 0o755); err != nil {
 		return err
 	}
-	checkout, err := os.MkdirTemp(cacheRoot, "git-*")
+	checkout, err := clonePinnedV1GitModule(ctx, entry, cacheRoot)
 	if err != nil {
-		return err
+		return fmt.Errorf("clonePinnedV1GitModule: %w", err)
 	}
 	defer os.RemoveAll(checkout)
-	if _, err := gitV1(ctx, "", "clone", "--quiet", "--no-checkout", "--", v1GitRemote(entry.Source), checkout); err != nil {
-		return fmt.Errorf("clone %s: %w", entry.Source, err)
-	}
-	if _, err := gitV1(ctx, checkout, "rev-parse", "--verify", entry.Commit+"^{commit}"); err != nil {
-		return fmt.Errorf("%s: locked commit %s is unavailable: %w", entry.Source, entry.Commit, err)
-	}
-	if _, err := gitV1(ctx, checkout, "checkout", "--quiet", "--detach", entry.Commit); err != nil {
-		return err
-	}
 	commit, err := gitV1(ctx, checkout, "rev-parse", "HEAD")
 	if err != nil {
 		return err
 	}
 	if strings.TrimSpace(commit) != entry.Commit {
 		return fmt.Errorf("%s: checked out commit does not match lock", entry.Source)
-	}
-	if _, err := moduleconfig.ReadGitDependency(checkout, entry.Source); err != nil {
-		return fmt.Errorf("%s: %w", entry.Source, err)
 	}
 	filesRaw, err := gitV1(ctx, checkout, "ls-files", "-z")
 	if err != nil {

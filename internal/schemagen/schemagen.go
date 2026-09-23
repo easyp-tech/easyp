@@ -97,7 +97,7 @@ func documents() map[string]*schema {
 	entry := lock.Properties["modules"].Items
 	entry.Required = []string{"source", "version", "commit", "hash"}
 	entry.Properties["source"].MinLength = 1
-	entry.Properties["version"].Pattern = `^v[0-9]+\.[0-9]+\.[0-9]+([+-][0-9A-Za-z.-]+)?$`
+	entry.Properties["version"].Pattern = `^(v[0-9]+\.[0-9]+\.[0-9]+([+-][0-9A-Za-z.-]+)?|[0-9a-fA-F]{40}|[0-9a-fA-F]{64})$`
 	entry.Properties["commit"].Pattern = `^([0-9a-fA-F]{40}|[0-9a-fA-F]{64})$`
 	entry.Properties["hash"].Pattern = `^h1:[A-Za-z0-9+/]{43}=$`
 

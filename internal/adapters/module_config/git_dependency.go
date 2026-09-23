@@ -30,6 +30,27 @@ func ReadGitDependency(dir, source string) (v1.Module, error) {
 	if err != nil {
 		return v1.Module{}, fmt.Errorf("detectGitDependencyModes: %w", err)
 	}
+	var rootManifest v1.Module
+	var rootIsV1 bool
+	if len(modes) > 0 && modes[0] == gitDependencyManifest {
+		rootManifest, rootIsV1, err = readGitDependencyManifest(filepath.Join(dir, dependencyManifestFile), source)
+		if err != nil {
+			return v1.Module{}, fmt.Errorf("readGitDependencyManifest: %w", err)
+		}
+		if rootIsV1 && rootManifest.Name == source {
+			return rootManifest, nil
+		}
+	}
+	nested, found, hasNested, err := readNestedGitDependencyModule(dir, source)
+	if err != nil {
+		return v1.Module{}, fmt.Errorf("readNestedGitDependencyModule: %w", err)
+	}
+	if found {
+		return nested, nil
+	}
+	if hasNested && len(modes) == 0 {
+		return v1.Module{}, fmt.Errorf("dependency %s is not declared by a nested protobuf.mod in %s", source, dir)
+	}
 	module := v1.Module{Name: source}
 	var bufRoots, legacyRoots []string
 	foundBuf := false
@@ -37,14 +58,10 @@ func ReadGitDependency(dir, source string) (v1.Module, error) {
 		path := filepath.Join(dir, string(mode))
 		switch mode {
 		case gitDependencyManifest:
-			parsed, isV1, err := readGitDependencyManifest(path, source)
-			if err != nil {
-				return v1.Module{}, fmt.Errorf("readGitDependencyManifest: %w", err)
+			if rootIsV1 {
+				return v1.Module{}, fmt.Errorf("%s declares module %s, want %s", path, rootManifest.Name, source)
 			}
-			if isV1 {
-				return parsed, nil
-			}
-			module.Requires = append(module.Requires, parsed.Requires...)
+			module.Requires = append(module.Requires, rootManifest.Requires...)
 		case gitDependencyBufWorkspace:
 			bufRoots, err = readBufDependencyWorkspace(path)
 			if err != nil {
@@ -119,9 +136,6 @@ func readGitDependencyManifest(path, source string) (v1.Module, bool, error) {
 		parsed, err := v1.ParseModule(bytes.NewReader(manifest))
 		if err != nil {
 			return v1.Module{}, false, fmt.Errorf("ParseModule: %w", err)
-		}
-		if parsed.Name != source {
-			return v1.Module{}, false, fmt.Errorf("%s declares module %s, want %s", path, parsed.Name, source)
 		}
 		return parsed, true, nil
 	}

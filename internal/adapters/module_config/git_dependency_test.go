@@ -167,6 +167,42 @@ func TestReadGitDependencyReportsUnreadableSelectedConfig(t *testing.T) {
 	require.ErrorContains(t, err, bufModuleConfigFile)
 }
 
+func TestReadGitDependencySelectsNestedModuleByIdentity(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	for name, body := range map[string]string{
+		"protobuf.mod":         "module example.com/repo\nroots rootproto\n",
+		"foo/protobuf.mod":     "module example.com/repo/foo\nroots proto\nrequire example.com/common v1.2.0\n",
+		"bar/protobuf.mod":     "module example.com/repo/bar\nroots proto\n",
+		"foo/proto/foo.proto":  "syntax = \"proto3\";\n",
+		"bar/proto/bar.proto":  "syntax = \"proto3\";\n",
+		"rootproto/root.proto": "syntax = \"proto3\";\n",
+	} {
+		path := filepath.Join(dir, name)
+		require.NoError(t, os.MkdirAll(filepath.Dir(path), 0o755))
+		require.NoError(t, os.WriteFile(path, []byte(body), 0o644))
+	}
+
+	module, err := ReadGitDependency(dir, "example.com/repo/foo")
+	require.NoError(t, err)
+	require.Equal(t, "example.com/repo/foo", module.Name)
+	require.Equal(t, []string{"foo/proto"}, module.Roots)
+	require.Equal(t, []v1.Requirement{{Module: "example.com/common", Version: "v1.2.0"}}, module.Requires)
+
+	root, err := ReadGitDependency(dir, "example.com/repo")
+	require.NoError(t, err)
+	require.Equal(t, []string{"rootproto"}, root.Roots)
+}
+
+func TestReadGitDependencyRejectsUnknownNestedModule(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	require.NoError(t, os.Mkdir(filepath.Join(dir, "foo"), 0o755))
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "foo", "protobuf.mod"), []byte("module example.com/repo/foo\n"), 0o644))
+	_, err := ReadGitDependency(dir, "example.com/repo/bar")
+	require.ErrorContains(t, err, "example.com/repo/bar")
+}
+
 func TestReadGitDependencyModuleRejectsEscapingRoot(t *testing.T) {
 	t.Parallel()
 
@@ -206,7 +242,14 @@ func TestParseLegacyV1RequirementWithoutVersion(t *testing.T) {
 func TestParseLegacyV1RequirementRejectsBranchRef(t *testing.T) {
 	t.Parallel()
 
-	if _, err := parseLegacyV1Requirement("github.com/acme/common@main"); err == nil || !strings.Contains(err.Error(), "non-SemVer") {
+	if _, err := parseLegacyV1Requirement("github.com/acme/common@main"); err == nil || !strings.Contains(err.Error(), "SemVer tag or full Git commit") {
 		t.Fatalf("expected branch-ref error, got %v", err)
 	}
+}
+
+func TestParseLegacyV1RequirementByCommit(t *testing.T) {
+	commit := strings.Repeat("a", 40)
+	got, err := parseLegacyV1Requirement("github.com/acme/common@" + commit)
+	require.NoError(t, err)
+	require.Equal(t, v1.Requirement{Module: "github.com/acme/common", Version: commit}, got)
 }
