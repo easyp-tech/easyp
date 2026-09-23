@@ -4,7 +4,9 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	stdfs "io/fs"
 	"log/slog"
+	"maps"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -22,21 +24,44 @@ import (
 
 	pluginexecutor "github.com/easyp-tech/easyp/internal/adapters/plugin"
 	"github.com/easyp-tech/easyp/internal/core/models"
+	"github.com/easyp-tech/easyp/internal/core/path_helpers"
 	"github.com/easyp-tech/easyp/internal/fs/fs"
 	"github.com/easyp-tech/easyp/internal/version"
 )
 
 // Generate generates files.
 func (c *Core) Generate(ctx context.Context, root, directory, descriptorSetOut string, includeImports bool) error {
+	return c.generate(ctx, root, directory, descriptorSetOut, includeImports, true)
+}
+
+// GenerateV1 reuses the descriptor and plugin engine with dependencies already
+// resolved by the v1 module layer. It must not write the legacy easyp.lock.
+func (c *Core) GenerateV1(ctx context.Context, root, directory, descriptorSetOut string, includeImports bool) error {
+	return c.generate(ctx, root, directory, descriptorSetOut, includeImports, false)
+}
+
+// SetV1ImportRoots supplies import paths resolved from v1 module dependencies.
+func (c *Core) SetV1ImportRoots(roots []string) {
+	c.v1ImportRoots = append([]string(nil), roots...)
+}
+
+// SetV1FileModules supplies module identities for managed-mode selectors.
+func (c *Core) SetV1FileModules(modules map[string]string) {
+	c.v1FileModules = maps.Clone(modules)
+}
+
+func (c *Core) generate(ctx context.Context, root, directory, descriptorSetOut string, includeImports, downloadLegacy bool) error {
 	c.logger.Info(ctx, "starting code generation", slog.String("directory", directory))
 
-	if err := c.Download(ctx); err != nil {
-		return fmt.Errorf("c.Download: %w", err)
+	if downloadLegacy {
+		if err := c.Download(ctx); err != nil {
+			return fmt.Errorf("c.Download: %w", err)
+		}
 	}
 
 	// TODO: call download before
 	q := Query{
-		Imports: []string{},
+		Imports: append([]string{}, c.v1ImportRoots...),
 		Plugins: c.plugins,
 	}
 
@@ -113,6 +138,8 @@ func (c *Core) Generate(ctx context.Context, root, directory, descriptorSetOut s
 				return err
 			case ctx.Err() != nil:
 				return ctx.Err()
+			case !downloadLegacy && path_helpers.ShouldSkipV1SourceDir(importRoot, filepath.Join(root, walkPath)):
+				return stdfs.SkipDir
 			case filepath.Ext(walkPath) != ".proto":
 				return nil
 			case c.shouldIgnoreGenerate(ctx, walkPath, []string{directory}):
@@ -536,6 +563,7 @@ func (c *Core) buildFileToModuleMap(ctx context.Context, root string, files []st
 		c.mapModuleFiles(ctx, root, module.Name, fileToModule)
 	}
 
+	maps.Copy(fileToModule, c.v1FileModules)
 	return fileToModule
 }
 

@@ -34,6 +34,11 @@ func (m Mod) Command() *cli.Command {
 		Description: "update modules version using version from config",
 		Action:      m.Update,
 	}
+	tidyCmd := &cli.Command{
+		Name:   "tidy",
+		Usage:  "resolve protobuf.mod and write protobuf.lock",
+		Action: m.Tidy,
+	}
 	vendorCmd := &cli.Command{
 		Name:        "vendor",
 		Usage:       "copy proto files from deps to vendor dir",
@@ -55,7 +60,7 @@ func (m Mod) Command() *cli.Command {
 		After:                  nil,
 		Action:                 nil,
 		OnUsageError:           nil,
-		Subcommands:            []*cli.Command{downloadCmd, updateCmd, vendorCmd},
+		Subcommands:            []*cli.Command{downloadCmd, updateCmd, vendorCmd, tidyCmd},
 		Flags:                  []cli.Flag{},
 		SkipFlagParsing:        false,
 		HideHelp:               false,
@@ -68,6 +73,9 @@ func (m Mod) Command() *cli.Command {
 }
 
 func (m Mod) Download(ctx *cli.Context) error {
+	if handled, err := m.downloadV1IfPresent(ctx); handled || err != nil {
+		return err
+	}
 	log := getLogger(ctx)
 
 	workingDir, err := os.Getwd()
@@ -97,6 +105,9 @@ func (m Mod) Download(ctx *cli.Context) error {
 }
 
 func (m Mod) Update(ctx *cli.Context) error {
+	if handled, err := m.updateV1IfPresent(ctx); handled || err != nil {
+		return err
+	}
 	log := getLogger(ctx)
 
 	workingDir, err := os.Getwd()

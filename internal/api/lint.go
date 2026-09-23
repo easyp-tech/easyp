@@ -102,6 +102,9 @@ func (l Lint) action(ctx *cli.Context, log logger.Logger) error {
 	if err != nil {
 		return err
 	}
+	if handled, err := l.actionV1(ctx, log, configPath, projectRoot, lintRoot); handled || err != nil {
+		return err
+	}
 
 	cfg, err := config.New(ctx.Context, configPath)
 	if err != nil {

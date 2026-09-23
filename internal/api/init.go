@@ -2,8 +2,11 @@ package api
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
 
 	"github.com/urfave/cli/v2"
+	"gopkg.in/yaml.v3"
 
 	"github.com/easyp-tech/easyp/internal/adapters/prompter"
 	"github.com/easyp-tech/easyp/internal/config"
@@ -27,6 +30,10 @@ var (
 		Aliases:    []string{"d"},
 		EnvVars:    []string{"EASYP_INIT_DIR"},
 	}
+	flagInitModule = &cli.StringFlag{
+		Name:  "module",
+		Usage: "canonical protobuf module identity for a new v1 project",
+	}
 )
 
 // Command implements Handler.
@@ -40,6 +47,7 @@ func (i Init) Command() *cli.Command {
 		Action:      i.Action,
 		Flags: []cli.Flag{
 			flagInitDirectoryPath,
+			flagInitModule,
 		},
 	}
 }
@@ -49,6 +57,20 @@ func (i Init) Action(ctx *cli.Context) error {
 	log := getLogger(ctx)
 
 	rootPath := ctx.String(flagInitDirectoryPath.Name)
+	rootAbs, err := filepath.Abs(rootPath)
+	if err != nil {
+		return err
+	}
+	if err := os.MkdirAll(rootAbs, 0o755); err != nil {
+		return err
+	}
+	v1Project, err := shouldInitializeV1(rootAbs)
+	if err != nil {
+		return err
+	}
+	if ctx.String(flagInitModule.Name) != "" || v1Project {
+		return initializeV1(ctx.Context, rootAbs, ctx.String(flagInitModule.Name), prompter.InteractivePrompter{})
+	}
 	dirFS := fs.NewFSWalker(rootPath, ".")
 
 	cfg := &config.Config{}
@@ -69,6 +91,23 @@ func (i Init) Action(ctx *cli.Context) error {
 	}
 
 	return nil
+}
+
+func shouldInitializeV1(root string) (bool, error) {
+	raw, err := os.ReadFile(filepath.Join(root, "easyp.yaml"))
+	if err == nil {
+		var header struct {
+			Version string `yaml:"version"`
+		}
+		if err := yaml.Unmarshal(raw, &header); err != nil {
+			return false, err
+		}
+		return header.Version == "v1", nil
+	}
+	if os.IsNotExist(err) {
+		return true, nil
+	}
+	return false, err
 }
 
 // defaultTemplateData builds InitTemplateData from all available rule groups.

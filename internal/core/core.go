@@ -12,20 +12,22 @@ import (
 
 // Core provide to business logic of EasyP.
 type Core struct {
-	rules        []Rule
-	ignore       []string
-	deps         []string
-	replaces     []modfile.Replace
-	ignoreOnly   map[string][]string
-	logger       logger.Logger
-	plugins      []Plugin
-	inputs       Inputs
-	console      console.Console
-	storage      Storage
-	moduleConfig ModuleConfig
-	lockFile     LockFile
-	managedMode  ManagedModeConfig
-	vendorDir    string
+	rules         []Rule
+	ignore        []string
+	deps          []string
+	replaces      []modfile.Replace
+	ignoreOnly    map[string][]string
+	logger        logger.Logger
+	plugins       []Plugin
+	inputs        Inputs
+	v1ImportRoots []string
+	v1FileModules map[string]string
+	console       console.Console
+	storage       Storage
+	moduleConfig  ModuleConfig
+	lockFile      LockFile
+	managedMode   ManagedModeConfig
+	vendorDir     string
 
 	breakingCheckConfig     BreakingCheckConfig
 	currentProjectGitWalker CurrentProjectGitWalker

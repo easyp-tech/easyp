@@ -22,6 +22,12 @@ type LockFile struct {
 	cache     map[string]fileInfo
 }
 
+// NewEmpty supplies the legacy core with no legacy lock entries when a v1
+// command resolves its protobuf.lock independently.
+func NewEmpty(dirWalker core.DirWalker) *LockFile {
+	return &LockFile{dirWalker: dirWalker, cache: make(map[string]fileInfo)}
+}
+
 func New(dirWalker core.DirWalker) (*LockFile, error) {
 	cache := make(map[string]fileInfo)
 

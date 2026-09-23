@@ -70,6 +70,10 @@ func getEasypPath(log logger.Logger) (string, error) {
 }
 
 func buildCore(_ context.Context, log logger.Logger, cfg config.Config, dirWalker core.DirWalker) (*core.Core, error) {
+	return buildCoreWithModFile(log, cfg, dirWalker, nil)
+}
+
+func buildCoreWithModFile(log logger.Logger, cfg config.Config, dirWalker core.DirWalker, v1ModFile *modfile.File) (*core.Core, error) {
 	vendorPath := defaultVendorDir // TODO: read from config
 
 	// Centralized: set once for all commands (lint, breaking, generate, mod).
@@ -80,9 +84,14 @@ func buildCore(_ context.Context, log logger.Logger, cfg config.Config, dirWalke
 		return nil, fmt.Errorf("cfg.BuildLinterRules: %w", err)
 	}
 
-	lockFile, err := lockfile.New(dirWalker)
-	if err != nil {
-		return nil, fmt.Errorf("lockfile.New: %w", err)
+	var lockFile *lockfile.LockFile
+	if v1ModFile != nil {
+		lockFile = lockfile.NewEmpty(dirWalker)
+	} else {
+		lockFile, err = lockfile.New(dirWalker)
+		if err != nil {
+			return nil, fmt.Errorf("lockfile.New: %w", err)
+		}
 	}
 
 	easypPath, err := getEasypPath(log)
@@ -108,9 +117,14 @@ func buildCore(_ context.Context, log logger.Logger, cfg config.Config, dirWalke
 	// Convert managed mode configuration
 	managedMode := convertManagedModeConfig(cfg.Generate.Managed)
 
-	modFile, err := modfile.Read(dirWalker)
-	if err != nil {
-		return nil, fmt.Errorf("modfile.Read: %w", err)
+	var modFile modfile.File
+	if v1ModFile != nil {
+		modFile = *v1ModFile
+	} else {
+		modFile, err = modfile.Read(dirWalker)
+		if err != nil {
+			return nil, fmt.Errorf("modfile.Read: %w", err)
+		}
 	}
 
 	// collect all deps: from protobuf.mod, from generate sections
@@ -154,7 +168,7 @@ func buildCore(_ context.Context, log logger.Logger, cfg config.Config, dirWalke
 					Root: i.InputFilesDir.Root,
 				}
 			}), func(i core.InputFilesDir, _ int) bool {
-				return i.Path != "" && IsExistingDir(i.Root)
+				return i.Path != ""
 			}),
 		},
 		console.New(),

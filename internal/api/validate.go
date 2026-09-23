@@ -49,7 +49,7 @@ func (v Validate) Action(ctx *cli.Context) error {
 		return fmt.Errorf("config not found: %w", err)
 	}
 
-	issues, err := config.ValidateFile(configPath)
+	issues, err := validateConfigFile(configPath)
 	if err != nil {
 		return fmt.Errorf("validate config: %w", err)
 	}

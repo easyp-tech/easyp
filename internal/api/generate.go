@@ -50,6 +50,10 @@ var (
 		Usage:    "include all transitive dependencies in the FileDescriptorSet",
 		Required: false,
 	}
+	flagGenerateProject = &cli.StringFlag{
+		Name:  "project",
+		Usage: "generate only the consumer project in this directory",
+	}
 )
 
 // Command implements Handler.
@@ -66,6 +70,7 @@ func (g Generate) Command() *cli.Command {
 			flagGenerateRoot,
 			flagGenerateDescriptorSetOut,
 			flagGenerateIncludeImports,
+			flagGenerateProject,
 		},
 		HelpName: "help",
 	}
@@ -74,6 +79,9 @@ func (g Generate) Command() *cli.Command {
 // Action implements Handler.
 func (g Generate) Action(ctx *cli.Context) error {
 	log := getLogger(ctx)
+	if handled, err := g.generateV1(ctx, log); handled || err != nil {
+		return err
+	}
 
 	configPath, projectRoot, generateRoot, err := resolveRoots(ctx, flagGenerateRoot.Name)
 	if err != nil {
