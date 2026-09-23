@@ -20,10 +20,11 @@ func (v Validate) Command() *cli.Command {
 		Name:        "validate-config",
 		Aliases:     []string{"validate"},
 		Usage:       "validate easyp config file",
-		Description: "validate easyp.yaml for syntax and required fields",
+		Description: "validate a v1 EasyP configuration or module file",
 		UsageText:   "validate-config [--config path] [--format json|text]",
 		Flags: []cli.Flag{
 			flags.Config,
+			flags.Format,
 		},
 		Action: v.Action,
 	}

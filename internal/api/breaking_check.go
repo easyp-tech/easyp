@@ -5,12 +5,9 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
-	"strings"
 
 	"github.com/urfave/cli/v2"
 
-	"github.com/easyp-tech/easyp/internal/config"
-	v1 "github.com/easyp-tech/easyp/internal/config/v1"
 	"github.com/easyp-tech/easyp/internal/core"
 	"github.com/easyp-tech/easyp/internal/flags"
 	"github.com/easyp-tech/easyp/internal/logger"
@@ -102,41 +99,9 @@ func (b BreakingCheck) action(ctx *cli.Context, log logger.Logger) error {
 		return fmt.Errorf("resolveRoots: %w", err)
 	}
 
-	path := ctx.String(flagLintDirectoryPath.Name)
-	against := ctx.String(flagAgainstBranchName.Name)
-	raw, err := os.ReadFile(configPath)
+	issues, err := b.checkV1Policies(ctx, log, configPath, projectRoot, breakingCheckRoot)
 	if err != nil {
-		return err
-	}
-	policy, err := v1.ParsePolicy(strings.NewReader(string(raw)))
-	if err != nil {
-		return fmt.Errorf("ParsePolicy: %w", err)
-	}
-	cfg := config.Config{}
-	cfg.BreakingCheck, err = policy.BreakingConfig(against)
-	if err != nil {
-		return fmt.Errorf("BreakingConfig: %w", err)
-	}
-
-	app, err := buildCore(log, cfg)
-	if err != nil {
-		return fmt.Errorf("buildCore: %w", err)
-	}
-	moduleDir, err := findV1PolicyModuleDir(projectRoot, breakingCheckRoot)
-	if err != nil {
-		return fmt.Errorf("findV1PolicyModuleDir: %w", err)
-	}
-	if moduleDir != "" {
-		roots, err := resolveV1PolicyImportRoots(ctx.Context, log, moduleDir)
-		if err != nil {
-			return fmt.Errorf("resolveV1PolicyImportRoots: %w", err)
-		}
-		app.SetImportRoots(roots)
-	}
-
-	issues, err := app.BreakingCheck(ctx.Context, projectRoot, breakingCheckRoot, path)
-	if err != nil {
-		return fmt.Errorf("app.BreakingCheck: %w", err)
+		return fmt.Errorf("checkV1Policies: %w", err)
 	}
 
 	if len(issues) == 0 {

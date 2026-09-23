@@ -1,13 +1,13 @@
 package api
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"os"
 	"path/filepath"
 
 	"golang.org/x/mod/semver"
-	"gopkg.in/yaml.v3"
 
 	moduleconfig "github.com/easyp-tech/easyp/internal/adapters/module_config"
 	v1 "github.com/easyp-tech/easyp/internal/config/v1"
@@ -56,16 +56,13 @@ func remoteV1Requirements(module v1.Module) []v1.Requirement {
 }
 
 func readV1Lock(path string) (v1.Lock, error) {
-	fp, err := os.Open(path)
+	raw, err := os.ReadFile(path)
 	if err != nil {
-		return v1.Lock{}, err
+		return v1.Lock{}, fmt.Errorf("ReadFile: %w", err)
 	}
-	defer fp.Close()
-	var lock v1.Lock
-	decoder := yaml.NewDecoder(fp)
-	decoder.KnownFields(true)
-	if err := decoder.Decode(&lock); err != nil {
-		return v1.Lock{}, fmt.Errorf("decode protobuf.lock: %w", err)
+	lock, err := v1.ParseLock(bytes.NewReader(raw))
+	if err != nil {
+		return v1.Lock{}, fmt.Errorf("ParseLock: %w", err)
 	}
 	return lock, nil
 }

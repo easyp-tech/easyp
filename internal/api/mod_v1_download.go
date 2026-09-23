@@ -2,8 +2,6 @@ package api
 
 import (
 	"context"
-	"encoding/base64"
-	"encoding/hex"
 	"errors"
 	"fmt"
 	"io"
@@ -11,7 +9,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	"golang.org/x/mod/semver"
 	"golang.org/x/mod/sumdb/dirhash"
 
 	moduleconfig "github.com/easyp-tech/easyp/internal/adapters/module_config"
@@ -25,28 +22,10 @@ func v1ModuleCachePath(cacheRoot string, entry v1.LockedModule) string {
 // downloadV1Lock installs each locked Git commit, verifying its content hash
 // before accepting a downloaded or already cached module.
 func downloadV1Lock(ctx context.Context, lock v1.Lock, cacheRoot string) error {
-	if lock.Version != 1 {
-		return fmt.Errorf("unsupported protobuf.lock version %d", lock.Version)
+	if err := lock.Validate(); err != nil {
+		return fmt.Errorf("Validate: %w", err)
 	}
-	seen := make(map[string]struct{}, len(lock.Modules))
 	for _, entry := range lock.Modules {
-		if _, ok := seen[entry.Source]; ok {
-			return fmt.Errorf("duplicate locked module %s", entry.Source)
-		}
-		seen[entry.Source] = struct{}{}
-		if entry.Source == "" || entry.Commit == "" || entry.Hash == "" {
-			return fmt.Errorf("incomplete lock entry for %q", entry.Source)
-		}
-		if !semver.IsValid(entry.Version) {
-			return fmt.Errorf("%s: invalid locked version %q", entry.Source, entry.Version)
-		}
-		if (len(entry.Commit) != 40 && len(entry.Commit) != 64) || !isV1Hex(entry.Commit) {
-			return fmt.Errorf("%s: invalid commit %q", entry.Source, entry.Commit)
-		}
-		digest, err := base64.StdEncoding.DecodeString(strings.TrimPrefix(entry.Hash, "h1:"))
-		if !strings.HasPrefix(entry.Hash, "h1:") || err != nil || len(digest) != 32 {
-			return fmt.Errorf("%s: invalid content hash %q", entry.Source, entry.Hash)
-		}
 		installed := v1ModuleCachePath(cacheRoot, entry)
 		info, err := os.Lstat(installed)
 		if errors.Is(err, os.ErrNotExist) {
@@ -70,11 +49,6 @@ func downloadV1Lock(ctx context.Context, lock v1.Lock, cacheRoot string) error {
 		}
 	}
 	return nil
-}
-
-func isV1Hex(value string) bool {
-	_, err := hex.DecodeString(value)
-	return err == nil
 }
 
 func fetchPinnedV1Module(ctx context.Context, entry v1.LockedModule, cacheRoot, installed string) error {

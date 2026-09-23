@@ -28,6 +28,8 @@ func validateConfigFile(path string) ([]config.ValidationIssue, error) {
 		}
 	case "protobuf.mod":
 		_, validationErr = v1.ParseModule(strings.NewReader(string(raw)))
+	case "protobuf.lock":
+		_, validationErr = v1.ParseLock(strings.NewReader(string(raw)))
 	default:
 		policy, err := v1.ParsePolicy(strings.NewReader(string(raw)))
 		if err != nil {
