@@ -2,8 +2,6 @@ package moduleconfig
 
 import (
 	"fmt"
-	"os"
-	"path/filepath"
 	"strings"
 
 	"golang.org/x/mod/semver"
@@ -13,26 +11,36 @@ import (
 	v1 "github.com/easyp-tech/easyp/internal/config/v1"
 )
 
+const legacyEasyPConfigFile = "easyp.yaml"
+
+type legacyDependencyGitRepo struct {
+	URL string `yaml:"url"`
+}
+
+type legacyDependencyInput struct {
+	Directory config.InputFilesDir    `yaml:"directory"`
+	GitRepo   legacyDependencyGitRepo `yaml:"git_repo"`
+}
+
+type legacyDependencyGenerate struct {
+	Inputs []legacyDependencyInput `yaml:"inputs"`
+}
+
+type legacyDependencyConfig struct {
+	Generate legacyDependencyGenerate `yaml:"generate"`
+}
+
 func readLegacyEasyPRootsAndRequires(dir string) ([]string, []v1.Requirement, error) {
-	raw, err := os.ReadFile(filepath.Join(dir, "easyp.yaml"))
-	if os.IsNotExist(err) {
+	raw, found, err := readOptionalDependencyConfig(dir, legacyEasyPConfigFile)
+	if err != nil {
+		return nil, nil, fmt.Errorf("readOptionalDependencyConfig: %w", err)
+	}
+	if !found {
 		return nil, nil, nil
 	}
-	if err != nil {
-		return nil, nil, err
-	}
-	var old struct {
-		Generate struct {
-			Inputs []struct {
-				Directory config.InputFilesDir `yaml:"directory"`
-				GitRepo   struct {
-					URL string `yaml:"url"`
-				} `yaml:"git_repo"`
-			} `yaml:"inputs"`
-		} `yaml:"generate"`
-	}
+	var old legacyDependencyConfig
 	if err := yaml.Unmarshal(raw, &old); err != nil {
-		return nil, nil, fmt.Errorf("legacy easyp.yaml: %w", err)
+		return nil, nil, fmt.Errorf("Unmarshal: %s: %w", legacyEasyPConfigFile, err)
 	}
 	var roots []string
 	var requires []v1.Requirement

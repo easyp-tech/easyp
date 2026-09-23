@@ -3,20 +3,26 @@ package moduleconfig
 import (
 	"os"
 	"path/filepath"
-	"reflect"
 	"strings"
 	"testing"
 
 	v1 "github.com/easyp-tech/easyp/internal/config/v1"
+	"github.com/stretchr/testify/require"
 )
 
 func TestReadGitDependencyModuleFormats(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name     string
 		files    map[string]string
 		roots    []string
 		requires []v1.Requirement
 	}{
+		{
+			name:  "no dependency metadata",
+			roots: []string{"."},
+		},
 		{
 			name: "buf v2",
 			files: map[string]string{
@@ -72,6 +78,7 @@ func TestReadGitDependencyModuleFormats(t *testing.T) {
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 			dir := t.TempDir()
 			for name, body := range tc.files {
 				path := filepath.Join(dir, name)
@@ -83,17 +90,74 @@ func TestReadGitDependencyModuleFormats(t *testing.T) {
 				}
 			}
 			module, err := ReadGitDependency(dir, "example.com/dependency")
-			if err != nil {
-				t.Fatal(err)
+			require.NoError(t, err)
+			require.Equal(t, "example.com/dependency", module.Name)
+			require.Equal(t, tc.roots, module.Roots)
+			require.Equal(t, tc.requires, module.Requires)
+		})
+	}
+}
+
+func TestReadGitDependencyRejectsInvalidBufWorkspaceBeforeFallback(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	require.NoError(t, os.WriteFile(filepath.Join(dir, bufV1ConfigFile), []byte("version: v2\ndirectories: [proto]\n"), 0o644))
+	require.NoError(t, os.WriteFile(filepath.Join(dir, bufV2ConfigFile), []byte("version: v1\n"), 0o644))
+	_, err := ReadGitDependency(dir, "example.com/dependency")
+	require.ErrorContains(t, err, bufV1ConfigFile)
+}
+
+func TestReadOptionalDependencyConfig(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name      string
+		setup     func(string) error
+		wantFound bool
+		wantError bool
+	}{
+		{name: "missing file"},
+		{
+			name: "present file",
+			setup: func(path string) error {
+				return os.WriteFile(path, []byte("version: v1\n"), 0o644)
+			},
+			wantFound: true,
+		},
+		{
+			name: "file cannot be read",
+			setup: func(path string) error {
+				return os.Mkdir(path, 0o755)
+			},
+			wantError: true,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			dir := t.TempDir()
+			if tc.setup != nil {
+				require.NoError(t, tc.setup(filepath.Join(dir, "config.yaml")))
 			}
-			if module.Name != "example.com/dependency" || !reflect.DeepEqual(module.Roots, tc.roots) || !reflect.DeepEqual(module.Requires, tc.requires) {
-				t.Fatalf("module = %#v; want roots=%v requires=%v", module, tc.roots, tc.requires)
+			data, found, err := readOptionalDependencyConfig(dir, "config.yaml")
+			if tc.wantError {
+				require.Error(t, err)
+				return
+			}
+			require.NoError(t, err)
+			require.Equal(t, tc.wantFound, found)
+			if found {
+				require.Equal(t, "version: v1\n", string(data))
 			}
 		})
 	}
 }
 
 func TestReadGitDependencyModuleRejectsEscapingRoot(t *testing.T) {
+	t.Parallel()
+
 	dir := t.TempDir()
 	if err := os.WriteFile(filepath.Join(dir, "buf.yaml"), []byte("version: v2\nmodules:\n  - path: ../outside\n"), 0o644); err != nil {
 		t.Fatal(err)
@@ -104,6 +168,8 @@ func TestReadGitDependencyModuleRejectsEscapingRoot(t *testing.T) {
 }
 
 func TestReadGitDependencyModuleRejectsBufFilters(t *testing.T) {
+	t.Parallel()
+
 	dir := t.TempDir()
 	if err := os.WriteFile(filepath.Join(dir, "buf.yaml"), []byte("version: v2\nmodules:\n  - path: proto\n    excludes: [proto/unused]\n"), 0o644); err != nil {
 		t.Fatal(err)
@@ -114,6 +180,8 @@ func TestReadGitDependencyModuleRejectsBufFilters(t *testing.T) {
 }
 
 func TestParseLegacyV1RequirementWithoutVersion(t *testing.T) {
+	t.Parallel()
+
 	got, err := parseLegacyV1Requirement("github.com/acme/common")
 	if err != nil {
 		t.Fatal(err)
@@ -124,6 +192,8 @@ func TestParseLegacyV1RequirementWithoutVersion(t *testing.T) {
 }
 
 func TestParseLegacyV1RequirementRejectsBranchRef(t *testing.T) {
+	t.Parallel()
+
 	if _, err := parseLegacyV1Requirement("github.com/acme/common@main"); err == nil || !strings.Contains(err.Error(), "non-SemVer") {
 		t.Fatalf("expected branch-ref error, got %v", err)
 	}

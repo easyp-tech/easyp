@@ -2,62 +2,72 @@ package moduleconfig
 
 import (
 	"fmt"
-	"os"
-	"path/filepath"
 
 	"gopkg.in/yaml.v3"
 )
 
+type bufDependencyWorkspaceConfig struct {
+	Version     string   `yaml:"version"`
+	Directories []string `yaml:"directories"`
+}
+
+type bufDependencyModule struct {
+	Path     string   `yaml:"path"`
+	Includes []string `yaml:"includes"`
+	Excludes []string `yaml:"excludes"`
+}
+
+type bufDependencyBuild struct {
+	Roots    []string `yaml:"roots"`
+	Excludes []string `yaml:"excludes"`
+}
+
+type bufDependencyConfig struct {
+	Version string                `yaml:"version"`
+	Modules []bufDependencyModule `yaml:"modules"`
+	Build   bufDependencyBuild    `yaml:"build"`
+}
+
 func readBufDependencyRoots(dir string) ([]string, bool, error) {
-	if raw, err := os.ReadFile(filepath.Join(dir, "buf.work.yaml")); err == nil {
-		var workspace struct {
-			Version     string   `yaml:"version"`
-			Directories []string `yaml:"directories"`
-		}
-		if err := yaml.Unmarshal(raw, &workspace); err != nil {
-			return nil, true, fmt.Errorf("buf.work.yaml: %w", err)
+	raw, found, err := readOptionalDependencyConfig(dir, bufV1ConfigFile)
+	if err != nil {
+		return nil, false, fmt.Errorf("readOptionalDependencyConfig: %w", err)
+	}
+	if found {
+		var workspace bufDependencyWorkspaceConfig
+		err = yaml.Unmarshal(raw, &workspace)
+		if err != nil {
+			return nil, true, fmt.Errorf("Unmarshal: %s: %w", bufV1ConfigFile, err)
 		}
 		if workspace.Version != "v1" || len(workspace.Directories) == 0 {
-			return nil, true, fmt.Errorf("buf.work.yaml: expected v1 with nonempty directories")
+			return nil, true, fmt.Errorf("%s: expected v1 with nonempty directories", bufV1ConfigFile)
 		}
 		return workspace.Directories, true, nil
-	} else if !os.IsNotExist(err) {
-		return nil, true, err
 	}
-	raw, err := os.ReadFile(filepath.Join(dir, "buf.yaml"))
-	if os.IsNotExist(err) {
+	raw, found, err = readOptionalDependencyConfig(dir, bufV2ConfigFile)
+	if err != nil {
+		return nil, false, fmt.Errorf("readOptionalDependencyConfig: %w", err)
+	}
+	if !found {
 		return nil, false, nil
 	}
+	var buf bufDependencyConfig
+	err = yaml.Unmarshal(raw, &buf)
 	if err != nil {
-		return nil, true, err
-	}
-	var buf struct {
-		Version string `yaml:"version"`
-		Modules []struct {
-			Path     string   `yaml:"path"`
-			Includes []string `yaml:"includes"`
-			Excludes []string `yaml:"excludes"`
-		} `yaml:"modules"`
-		Build struct {
-			Roots    []string `yaml:"roots"`
-			Excludes []string `yaml:"excludes"`
-		} `yaml:"build"`
-	}
-	if err := yaml.Unmarshal(raw, &buf); err != nil {
-		return nil, true, fmt.Errorf("buf.yaml: %w", err)
+		return nil, true, fmt.Errorf("Unmarshal: %s: %w", bufV2ConfigFile, err)
 	}
 	switch buf.Version {
 	case "v2":
 		if len(buf.Modules) == 0 {
-			return nil, true, fmt.Errorf("buf.yaml v2: missing modules")
+			return nil, true, fmt.Errorf("%s v2: missing modules", bufV2ConfigFile)
 		}
 		roots := make([]string, 0, len(buf.Modules))
 		for _, item := range buf.Modules {
 			if item.Path == "" {
-				return nil, true, fmt.Errorf("buf.yaml v2: module path is empty")
+				return nil, true, fmt.Errorf("%s v2: module path is empty", bufV2ConfigFile)
 			}
 			if len(item.Includes) > 0 || len(item.Excludes) > 0 {
-				return nil, true, fmt.Errorf("buf.yaml v2: modules.includes/excludes are not supported as Git dependency import roots")
+				return nil, true, fmt.Errorf("%s v2: modules.includes/excludes are not supported as Git dependency import roots", bufV2ConfigFile)
 			}
 			roots = append(roots, item.Path)
 		}
@@ -66,13 +76,13 @@ func readBufDependencyRoots(dir string) ([]string, bool, error) {
 		return []string{"."}, true, nil
 	case "v1beta1":
 		if len(buf.Build.Excludes) > 0 {
-			return nil, true, fmt.Errorf("buf.yaml v1beta1: build.excludes is not supported as Git dependency import roots")
+			return nil, true, fmt.Errorf("%s v1beta1: build.excludes is not supported as Git dependency import roots", bufV2ConfigFile)
 		}
 		if len(buf.Build.Roots) > 0 {
 			return buf.Build.Roots, true, nil
 		}
 		return []string{"."}, true, nil
 	default:
-		return nil, true, fmt.Errorf("buf.yaml: unsupported version %q", buf.Version)
+		return nil, true, fmt.Errorf("%s: unsupported version %q", bufV2ConfigFile, buf.Version)
 	}
 }
