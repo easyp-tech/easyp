@@ -29,8 +29,8 @@ func (candidate v1GitModuleCandidate) tag(version string) string {
 }
 
 // v1GitModuleCandidates tries the complete module identity first, then each
-// parent Git URL with the removed suffix as its module directory. A repository
-// tag confirms which candidate owns a specific module version.
+// parent Git URL with the removed suffix as its module directory. The module
+// manifest at that suffix confirms the candidate for untagged requirements.
 func v1GitModuleCandidates(source string) ([]v1GitModuleCandidate, error) {
 	if filepath.IsAbs(source) {
 		return localV1GitModuleCandidates(source), nil
@@ -205,6 +205,65 @@ func readV1GitModuleCandidate(checkout, source string, candidate v1GitModuleCand
 		return v1.Module{}, fmt.Errorf("ReadGitDependency: %w", err)
 	}
 	return module, nil
+}
+
+// cloneHeadV1GitModule finds the repository default branch containing source.
+// The caller owns the returned checkout and must remove it.
+func cloneHeadV1GitModule(ctx context.Context, source, cacheRoot string) (string, v1.Module, string, error) {
+	candidates, err := v1GitModuleCandidates(source)
+	if err != nil {
+		return "", v1.Module{}, "", err
+	}
+	var firstErr, moduleErr error
+	for _, candidate := range candidates {
+		if err := ctx.Err(); err != nil {
+			return "", v1.Module{}, "", err
+		}
+		checkout, err := os.MkdirTemp(cacheRoot, "git-*")
+		if err != nil {
+			return "", v1.Module{}, "", err
+		}
+		module, commit, cloned, err := checkoutHeadV1GitModuleCandidate(ctx, checkout, source, candidate)
+		if err != nil {
+			if firstErr == nil {
+				firstErr = err
+			}
+			if cloned {
+				moduleErr = err
+			}
+			if removeErr := os.RemoveAll(checkout); removeErr != nil {
+				return "", v1.Module{}, "", removeErr
+			}
+			continue
+		}
+		return checkout, module, commit, nil
+	}
+	if moduleErr != nil {
+		return "", v1.Module{}, "", fmt.Errorf("module %s was not found at a Git repository HEAD: %w", source, moduleErr)
+	}
+	if firstErr != nil {
+		return "", v1.Module{}, "", fmt.Errorf("Git repository for %s was not found: %w", source, firstErr)
+	}
+	return "", v1.Module{}, "", fmt.Errorf("no Git repository candidate for %s", source)
+}
+
+func checkoutHeadV1GitModuleCandidate(ctx context.Context, checkout, source string, candidate v1GitModuleCandidate) (v1.Module, string, bool, error) {
+	if _, err := gitV1(ctx, "", "clone", "--quiet", "--depth=1", "--no-checkout", "--", candidate.remote, checkout); err != nil {
+		return v1.Module{}, "", false, err
+	}
+	commit, err := gitV1(ctx, checkout, "rev-parse", "HEAD")
+	if err != nil {
+		return v1.Module{}, "", true, err
+	}
+	commit = strings.TrimSpace(commit)
+	if _, err := gitV1(ctx, checkout, "checkout", "--quiet", "--detach", commit); err != nil {
+		return v1.Module{}, "", true, err
+	}
+	module, err := readV1GitModuleCandidate(checkout, source, candidate)
+	if err != nil {
+		return v1.Module{}, "", true, err
+	}
+	return module, commit, true, nil
 }
 
 // clonePinnedV1GitModule finds a repository containing the locked commit and

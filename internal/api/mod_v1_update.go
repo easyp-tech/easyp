@@ -13,7 +13,8 @@ import (
 	v1 "github.com/easyp-tech/easyp/internal/config/v1"
 )
 
-// Update refreshes v1 requirements within their current major versions.
+// Update refreshes tagged requirements within their major versions and
+// versionless requirements to Git HEAD; explicit commit pins remain fixed.
 func (m Mod) Update(ctx *cli.Context) error {
 	root, err := os.Getwd()
 	if err != nil {
@@ -62,6 +63,9 @@ func (m Mod) Update(ctx *cli.Context) error {
 }
 
 func latestCompatibleV1Tag(ctx context.Context, source, current string) (string, error) {
+	if current == "" {
+		return "", nil // versionless requirements resolve the current Git HEAD
+	}
 	if v1.IsCommitRef(current) {
 		return current, nil
 	}
@@ -83,26 +87,6 @@ func latestCompatibleV1Tag(ctx context.Context, source, current string) (string,
 		if semver.Compare(version, best) > 0 {
 			best = version
 		}
-	}
-	return best, nil
-}
-
-func latestV1Tag(ctx context.Context, source string) (string, error) {
-	versions, err := listV1Tags(ctx, source)
-	if err != nil {
-		return "", err
-	}
-	best := ""
-	for _, version := range versions {
-		if semver.Prerelease(version) != "" {
-			continue
-		}
-		if best == "" || semver.Compare(version, best) > 0 {
-			best = version
-		}
-	}
-	if best == "" {
-		return "", fmt.Errorf("legacy dependency %s has no stable semver Git tag; declare an explicit version in the dependent repository", source)
 	}
 	return best, nil
 }

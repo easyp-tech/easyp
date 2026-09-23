@@ -90,10 +90,14 @@ func ParseModule(r io.Reader) (Module, error) {
 			}
 		case "require":
 			fields := strings.Fields(value)
-			if len(fields) != 2 {
-				return Module{}, fmt.Errorf("protobuf.mod:%d: require expects module and version", line)
+			if len(fields) < 1 || len(fields) > 2 {
+				return Module{}, fmt.Errorf("protobuf.mod:%d: require expects module and optional version", line)
 			}
-			result.Requires = append(result.Requires, Requirement{Module: fields[0], Version: fields[1]})
+			requirement := Requirement{Module: fields[0]}
+			if len(fields) == 2 {
+				requirement.Version = fields[1]
+			}
+			result.Requires = append(result.Requires, requirement)
 		case "replace":
 			fields := strings.Fields(value)
 			if len(fields) != 3 || fields[1] != "=>" {

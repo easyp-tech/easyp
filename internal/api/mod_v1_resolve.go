@@ -23,12 +23,17 @@ type fetchedV1Module struct {
 	lock   v1.LockedModule
 }
 
-// buildV1Lock traverses requirements and selects the highest minimum version
-// of each module, then locks the exact Git commit and Go-style content hash.
+// buildV1Lock traverses requirements, selects SemVer minima or Git HEAD for
+// versionless modules, then locks the exact commit and Go-style content hash.
 func buildV1Lock(ctx context.Context, root v1.Module, cacheRoot string) (v1.Lock, error) {
+	return buildV1LockWithPins(ctx, root, cacheRoot, nil)
+}
+
+func buildV1LockWithPins(ctx context.Context, root v1.Module, cacheRoot string, pins map[string]v1.LockedModule) (v1.Lock, error) {
 	lock := v1.Lock{Version: 1, Modules: []v1.LockedModule{}}
 	selected := make(map[string]string)
 	seen := make(map[string]fetchedV1Module)
+	resolvedHeads := make(map[string]string)
 	queue := append([]v1.Requirement(nil), root.Requires...)
 	for len(queue) > 0 {
 		if err := ctx.Err(); err != nil {
@@ -36,12 +41,25 @@ func buildV1Lock(ctx context.Context, root v1.Module, cacheRoot string) (v1.Lock
 		}
 		requirement := queue[0]
 		queue = queue[1:]
+		var fetched fetchedV1Module
+		prefetched := false
 		if requirement.Version == "" {
-			version, err := latestV1Tag(ctx, requirement.Module)
-			if err != nil {
-				return v1.Lock{}, err
+			switch {
+			case resolvedHeads[requirement.Module] != "":
+				requirement.Version = resolvedHeads[requirement.Module]
+			case pins[requirement.Module].Commit != "":
+				requirement.Version = pins[requirement.Module].Commit
+				resolvedHeads[requirement.Module] = requirement.Version
+			default:
+				var err error
+				fetched, err = fetchV1Module(ctx, requirement.Module, "", cacheRoot)
+				if err != nil {
+					return v1.Lock{}, err
+				}
+				requirement.Version = fetched.lock.Version
+				resolvedHeads[requirement.Module] = requirement.Version
+				prefetched = true
 			}
-			requirement.Version = version
 		}
 		if !semver.IsValid(requirement.Version) && !v1.IsCommitRef(requirement.Version) {
 			return v1.Lock{}, fmt.Errorf("require %s: expected semantic version or full Git commit, got %q", requirement.Module, requirement.Version)
@@ -56,9 +74,12 @@ func buildV1Lock(ctx context.Context, root v1.Module, cacheRoot string) (v1.Lock
 		if _, ok := seen[key]; ok {
 			continue
 		}
-		fetched, err := fetchV1Module(ctx, requirement.Module, requirement.Version, cacheRoot)
-		if err != nil {
-			return v1.Lock{}, err
+		if !prefetched {
+			var err error
+			fetched, err = fetchV1Module(ctx, requirement.Module, requirement.Version, cacheRoot)
+			if err != nil {
+				return v1.Lock{}, err
+			}
 		}
 		seen[key] = fetched
 		queue = append(queue, fetched.config.Requires...)
@@ -81,7 +102,15 @@ func fetchV1Module(ctx context.Context, source, version, cacheRoot string) (fetc
 	var checkout string
 	var module v1.Module
 	var commit string
-	if v1.IsCommitRef(version) {
+	if version == "" {
+		var err error
+		checkout, module, commit, err = cloneHeadV1GitModule(ctx, source, cacheRoot)
+		if err != nil {
+			return fetchedV1Module{}, fmt.Errorf("resolve %s at Git HEAD: %w", source, err)
+		}
+		defer os.RemoveAll(checkout)
+		version = commit
+	} else if v1.IsCommitRef(version) {
 		var err error
 		checkout, err = clonePinnedV1GitModule(ctx, v1.LockedModule{Source: source, Commit: version}, cacheRoot)
 		if err != nil {

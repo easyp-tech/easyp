@@ -179,6 +179,91 @@ func TestBuildV1LockSelectsUntaggedModulesByCommit(t *testing.T) {
 	}
 }
 
+func TestTidyV1ResolvesUntaggedModulesWithoutVersionsAndKeepsLock(t *testing.T) {
+	repository := filepath.Join(t.TempDir(), "monorepo")
+	foo := filepath.Join(repository, "foo")
+	bar := filepath.Join(repository, "bar")
+	for name, content := range map[string]string{
+		"foo/protobuf.mod":    fmt.Sprintf("module %s\nroots proto\n", foo),
+		"foo/proto/foo.proto": "syntax = \"proto3\";\npackage foo.v1;\nmessage Foo {}\n",
+		"bar/protobuf.mod":    fmt.Sprintf("module %s\nroots proto\n", bar),
+		"bar/proto/bar.proto": "syntax = \"proto3\";\npackage bar.v1;\nmessage Bar {}\n",
+	} {
+		path := filepath.Join(repository, name)
+		if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	runTestGit(t, repository, "init", "-q")
+	runTestGit(t, repository, "add", ".")
+	runTestGit(t, repository, "-c", "user.name=EasyP Test", "-c", "user.email=test@example.com", "commit", "-qm", "initial")
+	initial := strings.TrimSpace(runTestGit(t, repository, "rev-parse", "HEAD"))
+	root := t.TempDir()
+	manifest := fmt.Sprintf("module example.com/app\nrequire (\n  %s\n  %s\n)\n", foo, bar)
+	if err := os.WriteFile(filepath.Join(root, "protobuf.mod"), []byte(manifest), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	appProto := "syntax = \"proto3\";\npackage app.v1;\nimport \"foo.proto\";\nimport \"bar.proto\";\nmessage App { foo.v1.Foo foo = 1; bar.v1.Bar bar = 2; }\n"
+	if err := os.WriteFile(filepath.Join(root, "app.proto"), []byte(appProto), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("EASYPPATH", t.TempDir())
+	oldDir, err := os.Getwd()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chdir(root); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = os.Chdir(oldDir) })
+	cliCtx := &cli.Context{Context: context.Background(), App: &cli.App{Metadata: map[string]any{}}}
+	readLock := func() v1.Lock {
+		t.Helper()
+		lock, err := readV1Lock(filepath.Join(root, "protobuf.lock"))
+		if err != nil {
+			t.Fatal(err)
+		}
+		return lock
+	}
+	if err := (Mod{}).Tidy(cliCtx); err != nil {
+		t.Fatal(err)
+	}
+	lock := readLock()
+	if len(lock.Modules) != 2 {
+		t.Fatalf("want two modules, got %#v", lock)
+	}
+	for _, entry := range lock.Modules {
+		if entry.Version != initial || entry.Commit != initial {
+			t.Fatalf("unexpected auto-resolved module: %#v", entry)
+		}
+	}
+	if err := os.WriteFile(filepath.Join(foo, "proto", "foo.proto"), []byte("syntax = \"proto3\";\npackage foo.v1;\nmessage Foo { string id = 1; }\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	runTestGit(t, repository, "add", ".")
+	runTestGit(t, repository, "-c", "user.name=EasyP Test", "-c", "user.email=test@example.com", "commit", "-qm", "foo update")
+	updated := strings.TrimSpace(runTestGit(t, repository, "rev-parse", "HEAD"))
+	if err := (Mod{}).Tidy(cliCtx); err != nil {
+		t.Fatal(err)
+	}
+	for _, entry := range readLock().Modules {
+		if entry.Commit != initial {
+			t.Fatalf("tidy changed a pinned dependency: %#v", entry)
+		}
+	}
+	if err := (Mod{}).Update(cliCtx); err != nil {
+		t.Fatal(err)
+	}
+	for _, entry := range readLock().Modules {
+		if entry.Commit != updated || entry.Version != updated {
+			t.Fatalf("update did not refresh an unversioned dependency: %#v", entry)
+		}
+	}
+}
+
 func TestDownloadV1LockKeepsCommitAfterTagMoves(t *testing.T) {
 	remote := filepath.Join(t.TempDir(), "dependency")
 	if err := os.MkdirAll(remote, 0o755); err != nil {
@@ -217,26 +302,6 @@ func TestDownloadV1LockKeepsCommitAfterTagMoves(t *testing.T) {
 	}
 	if string(installed) != string(oldContent) {
 		t.Fatalf("download followed moved tag instead of locked commit: %s", installed)
-	}
-}
-
-func TestLatestV1TagForUnversionedLegacyRequirement(t *testing.T) {
-	remote := t.TempDir()
-	runTestGit(t, remote, "init", "-q")
-	if err := os.WriteFile(filepath.Join(remote, "protobuf.mod"), []byte("direct (\n)\n"), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	runTestGit(t, remote, "add", ".")
-	runTestGit(t, remote, "-c", "user.name=EasyP Test", "-c", "user.email=test@example.com", "commit", "-qm", "initial")
-	for _, tag := range []string{"v1.0.0", "v1.1.0", "v2.0.0-rc.1"} {
-		runTestGit(t, remote, "tag", tag)
-	}
-	version, err := latestV1Tag(context.Background(), remote)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if version != "v1.1.0" {
-		t.Fatalf("latest stable tag = %s", version)
 	}
 }
 

@@ -91,6 +91,12 @@ func TestParseModuleDefaultRoot(t *testing.T) {
 	}
 }
 
+func TestParseModuleUnversionedRequirements(t *testing.T) {
+	got, err := ParseModule(strings.NewReader("module example.com/app\nrequire example.com/repo/foo\nrequire (\n  example.com/repo/bar\n)\n"))
+	require.NoError(t, err)
+	require.Equal(t, []Requirement{{Module: "example.com/repo/foo"}, {Module: "example.com/repo/bar"}}, got.Requires)
+}
+
 func TestParseModuleRejectsUnknownDirective(t *testing.T) {
 	if _, err := ParseModule(strings.NewReader("module github.com/acme/user\nplugin go\n")); err == nil {
 		t.Fatal("expected unknown directive error")

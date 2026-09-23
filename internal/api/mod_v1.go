@@ -27,7 +27,11 @@ func (m Mod) Tidy(ctx *cli.Context) error {
 	if err != nil {
 		return fmt.Errorf("readV1Manifest: %w", err)
 	}
-	lock, err := resolveV1Lock(ctx, root, module)
+	existing, err := readV1Lock(filepath.Join(root, "protobuf.lock"))
+	if err != nil && !errors.Is(err, os.ErrNotExist) {
+		return fmt.Errorf("read existing protobuf.lock: %w", err)
+	}
+	lock, err := resolveV1LockWithPins(ctx, root, module, existing)
 	if err != nil {
 		return err
 	}
@@ -73,6 +77,10 @@ func writeV1ResolvedFiles(root string, original, updated []byte, lock v1.Lock) e
 }
 
 func resolveV1Lock(ctx *cli.Context, root string, module v1.Module) (v1.Lock, error) {
+	return resolveV1LockWithPins(ctx, root, module, v1.Lock{})
+}
+
+func resolveV1LockWithPins(ctx *cli.Context, root string, module v1.Module, existing v1.Lock) (v1.Lock, error) {
 	if len(module.Replaces) > 0 {
 		return v1.Lock{}, fmt.Errorf("module %s: remove local replacements before writing a reproducible lock", module.Name)
 	}
@@ -85,7 +93,11 @@ func resolveV1Lock(ctx *cli.Context, root string, module v1.Module) (v1.Lock, er
 		callCtx = context.Background()
 	}
 	gitCacheRoot := filepath.Join(cacheRoot, "v1", "git")
-	lock, err := buildV1Lock(callCtx, module, gitCacheRoot)
+	pins := make(map[string]v1.LockedModule, len(existing.Modules))
+	for _, entry := range existing.Modules {
+		pins[entry.Source] = entry
+	}
+	lock, err := buildV1LockWithPins(callCtx, module, gitCacheRoot, pins)
 	if err != nil {
 		return v1.Lock{}, fmt.Errorf("module %s: %w", module.Name, err)
 	}
