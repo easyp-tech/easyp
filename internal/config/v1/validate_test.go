@@ -1,4 +1,4 @@
-package api
+package v1
 
 import (
 	"os"
@@ -16,7 +16,7 @@ func TestValidateVersionlessV1Policy(t *testing.T) {
 	err := os.WriteFile(path, []byte("linters:\n  default: MINIMAL\nbreaking:\n  baseline: git:main\n"), 0o644)
 	require.NoError(t, err)
 
-	issues, err := validateConfigFile(path)
+	issues, err := ValidateFile(path)
 	require.NoError(t, err)
 	assert.Empty(t, issues)
 }
@@ -26,7 +26,7 @@ func TestValidateRejectsLegacyPolicy(t *testing.T) {
 
 	path := filepath.Join(t.TempDir(), "easyp.yaml")
 	require.NoError(t, os.WriteFile(path, []byte("lint:\n  use: [MINIMAL]\n"), 0o644))
-	issues, err := validateConfigFile(path)
+	issues, err := ValidateFile(path)
 	require.NoError(t, err)
 	require.Len(t, issues, 1)
 	require.Equal(t, "yaml_validation", issues[0].Code)
@@ -51,7 +51,7 @@ func TestValidateV1Lock(t *testing.T) {
 			t.Parallel()
 			path := filepath.Join(t.TempDir(), "protobuf.lock")
 			require.NoError(t, os.WriteFile(path, []byte(tc.content), 0o644))
-			issues, err := validateConfigFile(path)
+			issues, err := ValidateFile(path)
 			require.NoError(t, err)
 			if tc.valid {
 				assert.Empty(t, issues)
@@ -68,7 +68,7 @@ func TestValidatePolicyReportsMultipleLocatedYAMLIssues(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "easyp.yaml")
 	content := "linters:\n  enable: INVALID\nissues:\n  exclude-rules:\n    - linters: [GOOD]\n      extra: true\nbreaking:\n  ignore: wrong\n"
 	require.NoError(t, os.WriteFile(path, []byte(content), 0o644))
-	issues, err := validateConfigFile(path)
+	issues, err := ValidateFile(path)
 	require.NoError(t, err)
 	require.GreaterOrEqual(t, len(issues), 3)
 	for _, issue := range issues {
@@ -84,7 +84,7 @@ func TestValidateGenerateReportsMultipleLocatedYAMLIssues(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "easyp.gen.yaml")
 	content := "plugins:\n  - name: python\n    out: gen\n    opts: 17\n  - name: go\n    out: gen/go\n    unknown: true\n"
 	require.NoError(t, os.WriteFile(path, []byte(content), 0o644))
-	issues, err := validateConfigFile(path)
+	issues, err := ValidateFile(path)
 	require.NoError(t, err)
 	require.GreaterOrEqual(t, len(issues), 2)
 	for _, issue := range issues {
@@ -100,7 +100,7 @@ func TestValidateGenerateAcceptsManagedAndPluginOptions(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "easyp.gen.yaml")
 	content := "version: v1\ngenerate:\n  managed:\n    enabled: true\n    disable:\n      - field_option: json_name\n        field: example.v1.Message.name\n    override:\n      - file_option: go_package_prefix\n        value: example.com/gen\nplugins:\n  - name: python\n    out: gen/python\n    opts:\n      foo: bar\n      paths: [source_relative]\n  - name: go\n    out: gen/go\n    opts: [paths=source_relative]\n"
 	require.NoError(t, os.WriteFile(path, []byte(content), 0o644))
-	issues, err := validateConfigFile(path)
+	issues, err := ValidateFile(path)
 	require.NoError(t, err)
 	assert.Empty(t, issues)
 }
@@ -110,7 +110,7 @@ func TestValidatePolicyAcceptsV1Fields(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "easyp.yaml")
 	content := "version: v1\nlinters:\n  default: STANDARD\n  enable: [ENUM_ZERO_VALUE_SUFFIX]\nlinters-settings:\n  ENUM_ZERO_VALUE_SUFFIX:\n    suffix: UNSPECIFIED\nissues:\n  exclude-rules:\n    - linters: [SERVICE_SUFFIX]\nbreaking:\n  baseline: git:main\n  ignore: [generated]\n"
 	require.NoError(t, os.WriteFile(path, []byte(content), 0o644))
-	issues, err := validateConfigFile(path)
+	issues, err := ValidateFile(path)
 	require.NoError(t, err)
 	assert.Empty(t, issues)
 }

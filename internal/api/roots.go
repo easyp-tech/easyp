@@ -24,15 +24,12 @@ func resolveRoots(ctx *cli.Context, rootFlagName string) (string, string, string
 	}
 	projectRoot := filepath.Dir(configPath)
 
-	var opRoot string
+	opRoot := projectRoot
 	if root != "" {
-		if filepath.IsAbs(root) {
-			opRoot = root
-		} else {
+		opRoot = root
+		if !filepath.IsAbs(root) {
 			opRoot = filepath.Join(workingDir, root)
 		}
-	} else {
-		opRoot = projectRoot
 	}
 
 	opRoot, err = filepath.Abs(opRoot)

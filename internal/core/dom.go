@@ -201,10 +201,9 @@ type (
 	Inputs struct {
 		InputFilesDir []InputFilesDir
 	}
-	// Query is a query for making sh command.
+	// Query collects source files and import roots for code generation.
 	Query struct {
 		Imports []string
-		Plugins []Plugin
 		Files   []string
 	}
 )

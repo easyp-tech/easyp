@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -58,7 +57,7 @@ func fetchPinnedV1Module(ctx context.Context, entry v1.LockedModule, cacheRoot, 
 	if err != nil {
 		return fmt.Errorf("clonePinnedV1GitModule: %w", err)
 	}
-	defer os.RemoveAll(checkout)
+	defer func() { _ = os.RemoveAll(checkout) }()
 	commit, err := gitV1(ctx, checkout, "rev-parse", "HEAD")
 	if err != nil {
 		return err
@@ -66,16 +65,13 @@ func fetchPinnedV1Module(ctx context.Context, entry v1.LockedModule, cacheRoot, 
 	if strings.TrimSpace(commit) != entry.Commit {
 		return fmt.Errorf("%s: checked out commit does not match lock", entry.Source)
 	}
-	filesRaw, err := gitV1(ctx, checkout, "ls-files", "-z")
+	files, err := trackedV1Files(ctx, checkout)
 	if err != nil {
-		return err
+		return fmt.Errorf("trackedV1Files: %w", err)
 	}
-	files := strings.FieldsFunc(filesRaw, func(r rune) bool { return r == 0 })
-	actual, err := dirhash.Hash1(files, func(name string) (io.ReadCloser, error) {
-		return os.Open(filepath.Join(checkout, filepath.FromSlash(name)))
-	})
+	actual, err := hashV1Files(checkout, files)
 	if err != nil {
-		return err
+		return fmt.Errorf("hashV1Files: %w", err)
 	}
 	if actual != entry.Hash {
 		return fmt.Errorf("%s@%s hash mismatch: got %s, want %s", entry.Source, entry.Commit, actual, entry.Hash)
@@ -88,41 +84,11 @@ func fetchPinnedV1Module(ctx context.Context, entry v1.LockedModule, cacheRoot, 
 	if err != nil {
 		return err
 	}
-	defer os.RemoveAll(stage)
+	defer func() { _ = os.RemoveAll(stage) }()
 	for _, name := range files {
-		clean := filepath.Clean(filepath.FromSlash(name))
-		if filepath.IsAbs(clean) || clean == ".." || strings.HasPrefix(clean, ".."+string(filepath.Separator)) {
-			return fmt.Errorf("invalid tracked file path %q", name)
-		}
-		sourcePath := filepath.Join(checkout, clean)
-		info, err := os.Lstat(sourcePath)
-		if err != nil {
-			return err
-		}
-		if !info.Mode().IsRegular() {
-			return fmt.Errorf("unsupported non-regular file %q", name)
-		}
-		destination := filepath.Join(stage, clean)
-		if err := os.MkdirAll(filepath.Dir(destination), 0o755); err != nil {
-			return err
-		}
-		in, err := os.Open(sourcePath)
-		if err != nil {
-			return err
-		}
-		out, err := os.OpenFile(destination, os.O_CREATE|os.O_EXCL|os.O_WRONLY, info.Mode().Perm())
-		if err != nil {
-			_ = in.Close()
-			return err
-		}
-		_, copyErr := io.Copy(out, in)
-		closeErr := out.Close()
-		_ = in.Close()
-		if copyErr != nil {
-			return copyErr
-		}
-		if closeErr != nil {
-			return closeErr
+		path := filepath.FromSlash(name)
+		if err := copyV1RegularFile(filepath.Join(checkout, path), filepath.Join(stage, path)); err != nil {
+			return fmt.Errorf("copyV1RegularFile: %w", err)
 		}
 	}
 	if err := os.Rename(stage, installed); err != nil {

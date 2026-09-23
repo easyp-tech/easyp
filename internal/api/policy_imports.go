@@ -7,43 +7,41 @@ import (
 	"os"
 	"path/filepath"
 
+	v1 "github.com/easyp-tech/easyp/internal/config/v1"
 	"github.com/easyp-tech/easyp/internal/logger"
 )
 
 // findV1PolicyModuleDir finds the nearest module containing the scanned files.
 // A policy can also be used without a module manifest.
 func findV1PolicyModuleDir(projectRoot, scanDir string) (string, error) {
-	for dir := scanDir; ; dir = filepath.Dir(dir) {
-		_, err := os.Stat(filepath.Join(dir, "protobuf.mod"))
-		switch {
-		case errors.Is(err, os.ErrNotExist):
-		case err != nil:
-			return "", fmt.Errorf("stat protobuf.mod in %s: %w", dir, err)
-		default:
-			return dir, nil
+	for _, dir := range ancestorDirs(scanDir, projectRoot) {
+		_, err := os.Stat(filepath.Join(dir, v1.ModuleFile))
+		if errors.Is(err, os.ErrNotExist) {
+			continue
 		}
-		if dir == projectRoot || dir == filepath.Dir(dir) {
-			return "", nil
+		if err != nil {
+			return "", fmt.Errorf("Stat: %w", err)
 		}
+		return dir, nil
 	}
+	return "", nil
 }
 
 func resolveV1PolicyImportRoots(ctx context.Context, log logger.Logger, moduleDir string) ([]string, error) {
 	_, module, err := readV1Manifest(moduleDir)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("readV1Manifest: %w", err)
+	}
+	roots, err := moduleV1SourceRoots(moduleDir, module)
+	if err != nil {
+		return nil, fmt.Errorf("moduleV1SourceRoots: %w", err)
 	}
 	dependencies, err := resolveV1DependencySources(ctx, log, moduleDir, module)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("resolveV1DependencySources: %w", err)
 	}
 	if err := checkV1ImportPathCollisions(moduleDir, module.Roots, dependencies.paths()); err != nil {
-		return nil, fmt.Errorf("module %s: %w", module.Name, err)
+		return nil, fmt.Errorf("checkV1ImportPathCollisions: %w", err)
 	}
-	roots := make([]string, 0, len(module.Roots)+len(dependencies))
-	for _, root := range module.Roots {
-		roots = append(roots, filepath.Join(moduleDir, root))
-	}
-	roots = append(roots, dependencies.paths()...)
-	return roots, nil
+	return append(roots.paths(), dependencies.paths()...), nil
 }

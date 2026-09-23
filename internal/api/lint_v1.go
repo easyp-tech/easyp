@@ -1,14 +1,13 @@
 package api
 
 import (
+	"bytes"
 	"fmt"
 	iofs "io/fs"
 	"os"
 	"path/filepath"
-	"strings"
 
 	"github.com/urfave/cli/v2"
-	"gopkg.in/yaml.v3"
 
 	"github.com/easyp-tech/easyp/internal/config"
 	v1 "github.com/easyp-tech/easyp/internal/config/v1"
@@ -23,7 +22,7 @@ func (l Lint) actionV1(ctx *cli.Context, log logger.Logger, configPath, projectR
 	if err != nil {
 		return fmt.Errorf("ReadFile: %w", err)
 	}
-	_, err = v1.ParsePolicy(strings.NewReader(string(raw)))
+	_, err = v1.ParsePolicy(bytes.NewReader(raw))
 	if err != nil {
 		return fmt.Errorf("ParsePolicy: %w", err)
 	}
@@ -41,11 +40,11 @@ func (l Lint) actionV1(ctx *cli.Context, log logger.Logger, configPath, projectR
 	if err != nil {
 		return fmt.Errorf("WalkDir: %w", err)
 	}
-	apps := map[string]*core.Core{}
+	apps := map[v1LintAppKey]*core.Core{}
 	moduleRoots := map[string][]string{}
 	var issues []core.IssueInfo
 	for _, file := range files {
-		policy, policyKey, err := resolveV1LintPolicy(file, projectRoot, configPath)
+		policy, policyKey, err := resolveV1LintPolicy(filepath.Dir(file), projectRoot, configPath)
 		if err != nil {
 			return fmt.Errorf("resolveV1LintPolicy: %w", err)
 		}
@@ -56,7 +55,7 @@ func (l Lint) actionV1(ctx *cli.Context, log logger.Logger, configPath, projectR
 		if err != nil {
 			return fmt.Errorf("findV1PolicyModuleDir: %w", err)
 		}
-		appKey := policyKey + "|" + moduleDir
+		appKey := v1LintAppKey{policy: policyKey, moduleDir: moduleDir}
 		app, ok := apps[appKey]
 		if !ok {
 			lintConfig, err := policy.LintConfig()
@@ -99,52 +98,49 @@ func (l Lint) actionV1(ctx *cli.Context, log logger.Logger, configPath, projectR
 	return ErrHasLintIssue
 }
 
-func resolveV1LintPolicy(file, projectRoot, configPath string) (v1.Policy, string, error) {
+type v1LintPolicySources struct {
+	linters  string
+	settings string
+	issues   string
+}
+
+type v1LintAppKey struct {
+	policy    v1LintPolicySources
+	moduleDir string
+}
+
+func resolveV1LintPolicy(directory, projectRoot, configPath string) (v1.Policy, v1LintPolicySources, error) {
 	var result v1.Policy
-	sources := map[string]string{}
+	var sources v1LintPolicySources
 	var foundFile bool
-	for dir := filepath.Dir(file); ; dir = filepath.Dir(dir) {
-		path := filepath.Join(dir, "easyp.yaml")
-		if dir == projectRoot {
-			path = configPath
-		}
-		raw, found, err := readOptionalFile(path)
+	for _, dir := range ancestorDirs(directory, projectRoot) {
+		path := v1PolicyPath(dir, projectRoot, configPath)
+		file, found, err := readV1PolicyFile(path)
 		if err != nil {
-			return v1.Policy{}, "", fmt.Errorf("%s: %w", path, err)
+			return v1.Policy{}, v1LintPolicySources{}, fmt.Errorf("readV1PolicyFile: %w", err)
 		}
-		if found {
-			foundFile = true
-			var sections map[string]yaml.Node
-			if err := yaml.Unmarshal(raw, &sections); err != nil {
-				return v1.Policy{}, "", fmt.Errorf("%s: %w", path, err)
-			}
-			policy, err := v1.ParsePolicy(strings.NewReader(string(raw)))
-			if err != nil {
-				return v1.Policy{}, "", fmt.Errorf("%s: %w", path, err)
-			}
-			if _, ok := sections["linters"]; ok && sources["linters"] == "" {
-				result.Linters = policy.Linters
-				sources["linters"] = path
-			}
-			if _, ok := sections["linters-settings"]; ok && sources["linters-settings"] == "" {
-				result.LinterSettings = policy.LinterSettings
-				sources["linters-settings"] = path
-			}
-			if _, ok := sections["issues"]; ok && sources["issues"] == "" {
-				result.Issues = policy.Issues
-				sources["issues"] = path
-			}
+		if !found {
+			continue
 		}
-		if dir == projectRoot || dir == filepath.Dir(dir) {
-			break
+		foundFile = true
+		if file.has("linters") && sources.linters == "" {
+			result.Linters = file.policy.Linters
+			sources.linters = path
+		}
+		if file.has("linters-settings") && sources.settings == "" {
+			result.LinterSettings = file.policy.LinterSettings
+			sources.settings = path
+		}
+		if file.has("issues") && sources.issues == "" {
+			result.Issues = file.policy.Issues
+			sources.issues = path
 		}
 	}
 	if !foundFile {
-		return v1.Policy{}, "", fmt.Errorf("no easyp.yaml policy for %s", file)
+		return v1.Policy{}, v1LintPolicySources{}, fmt.Errorf("no easyp.yaml policy for %s", directory)
 	}
 	if result.Linters.Default == "" {
 		result.Linters.Default = "STANDARD"
 	}
-	key := sources["linters"] + "|" + sources["linters-settings"] + "|" + sources["issues"]
-	return result, key, nil
+	return result, sources, nil
 }

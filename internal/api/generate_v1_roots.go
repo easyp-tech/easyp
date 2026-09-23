@@ -1,6 +1,12 @@
 package api
 
-import "path/filepath"
+import (
+	"fmt"
+	"os"
+	"path/filepath"
+
+	v1 "github.com/easyp-tech/easyp/internal/config/v1"
+)
 
 type v1SourceRoot struct {
 	path   string
@@ -33,4 +39,20 @@ func (roots v1SourceRoots) fileModules() (map[string]string, error) {
 		}
 	}
 	return modules, nil
+}
+
+func moduleV1SourceRoots(directory string, module v1.Module) (v1SourceRoots, error) {
+	roots := make(v1SourceRoots, 0, len(module.Roots))
+	for _, root := range module.Roots {
+		path := filepath.Join(directory, root)
+		info, err := os.Stat(path)
+		if err != nil {
+			return nil, fmt.Errorf("Stat: %w", err)
+		}
+		if !info.IsDir() {
+			return nil, fmt.Errorf("module %s has invalid root %q: not a directory", module.Name, root)
+		}
+		roots = append(roots, v1SourceRoot{path: path, module: module.Name})
+	}
+	return roots, nil
 }

@@ -12,7 +12,7 @@ import (
 	v1 "github.com/easyp-tech/easyp/internal/config/v1"
 )
 
-const legacyEasyPConfigFile = "easyp.yaml"
+const legacyEasyPConfigFile = v1.PolicyFile
 
 type legacyDependencyGitRepo struct {
 	URL string `yaml:"url"`

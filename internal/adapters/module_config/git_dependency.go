@@ -6,12 +6,13 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 
 	"github.com/easyp-tech/easyp/internal/adapters/modfile"
 	v1 "github.com/easyp-tech/easyp/internal/config/v1"
 )
 
-const dependencyManifestFile = "protobuf.mod"
+const dependencyManifestFile = v1.ModuleFile
 
 type gitDependencyMode string
 
@@ -32,7 +33,7 @@ func ReadGitDependency(dir, source string) (v1.Module, error) {
 	}
 	var rootManifest v1.Module
 	var rootIsV1 bool
-	if len(modes) > 0 && modes[0] == gitDependencyManifest {
+	if slices.Contains(modes, gitDependencyManifest) {
 		rootManifest, rootIsV1, err = readGitDependencyManifest(filepath.Join(dir, dependencyManifestFile), source)
 		if err != nil {
 			return v1.Module{}, fmt.Errorf("readGitDependencyManifest: %w", err)
@@ -41,14 +42,14 @@ func ReadGitDependency(dir, source string) (v1.Module, error) {
 			return rootManifest, nil
 		}
 	}
-	nested, found, hasNested, err := readNestedGitDependencyModule(dir, source)
+	nested, err := readNestedGitDependencyModule(dir, source)
 	if err != nil {
 		return v1.Module{}, fmt.Errorf("readNestedGitDependencyModule: %w", err)
 	}
-	if found {
-		return nested, nil
+	if nested.found {
+		return nested.module, nil
 	}
-	if hasNested && len(modes) == 0 {
+	if nested.hasManifests && len(modes) == 0 {
 		return v1.Module{}, fmt.Errorf("dependency %s is not declared by a nested protobuf.mod in %s", source, dir)
 	}
 	module := v1.Module{Name: source}

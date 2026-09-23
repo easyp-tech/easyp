@@ -17,7 +17,7 @@ func TestResolveV1BreakingPolicyInheritsWholeSection(t *testing.T) {
 	require.NoError(t, os.WriteFile(rootPolicy, []byte("version: v1\nbreaking:\n  baseline: git:main\n  ignore: [generated]\n"), 0o644))
 	require.NoError(t, os.WriteFile(filepath.Join(childDir, "easyp.yaml"), []byte("version: v1\nlinters:\n  default: MINIMAL\n"), 0o644))
 
-	policy, source, err := resolveV1BreakingPolicy(filepath.Join(childDir, "item.proto"), root, rootPolicy)
+	policy, source, err := resolveV1BreakingPolicy(childDir, root, rootPolicy)
 	require.NoError(t, err)
 	require.Equal(t, rootPolicy, source)
 	require.Equal(t, "git:main", policy.Breaking.Baseline)

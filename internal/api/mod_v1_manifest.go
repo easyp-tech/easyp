@@ -1,11 +1,11 @@
 package api
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 
 	moduleconfig "github.com/easyp-tech/easyp/internal/adapters/module_config"
 	v1 "github.com/easyp-tech/easyp/internal/config/v1"
@@ -20,9 +20,9 @@ func augmentV1ManifestRequirements(original []byte, root string, module v1.Modul
 	}
 	imports, err := v1RootImports(root, module.Roots)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("v1RootImports: %w", err)
 	}
-	var additions []string
+	var additions []v1ManifestRequirement
 	for _, entry := range lock.Modules {
 		if existing[entry.Source] {
 			continue
@@ -30,7 +30,7 @@ func augmentV1ManifestRequirements(original []byte, root string, module v1.Modul
 		installDir := v1ModuleCachePath(cacheRoot, entry)
 		dependency, err := moduleconfig.ReadGitDependency(installDir, entry.Source)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("ReadGitDependency: %w", err)
 		}
 		direct := false
 		for _, depRoot := range dependency.Roots {
@@ -44,7 +44,7 @@ func augmentV1ManifestRequirements(original []byte, root string, module v1.Modul
 					continue
 				}
 				if err != nil {
-					return nil, fmt.Errorf("stat import %s: %w", importPath, err)
+					return nil, fmt.Errorf("Stat: %w", err)
 				}
 				if info.Mode().IsRegular() {
 					direct = true
@@ -55,22 +55,11 @@ func augmentV1ManifestRequirements(original []byte, root string, module v1.Modul
 				break
 			}
 		}
-		line := fmt.Sprintf("require %s %s", entry.Source, entry.Version)
-		if !direct {
-			line += " // indirect"
-		}
-		additions = append(additions, line)
+		additions = append(additions, v1ManifestRequirement{Requirement: v1.Requirement{Module: entry.Source, Version: entry.Version}, indirect: !direct})
 	}
-	if len(additions) == 0 {
-		return original, nil
-	}
-	updated := append([]byte(nil), original...)
-	if len(updated) > 0 && updated[len(updated)-1] != '\n' {
-		updated = append(updated, '\n')
-	}
-	updated = append(updated, []byte(strings.Join(additions, "\n")+"\n")...)
-	if _, err := v1.ParseModule(strings.NewReader(string(updated))); err != nil {
-		return nil, fmt.Errorf("updated protobuf.mod: %w", err)
+	updated := appendV1Requirements(original, additions)
+	if _, err := v1.ParseModule(bytes.NewReader(updated)); err != nil {
+		return nil, fmt.Errorf("ParseModule: %w", err)
 	}
 	return updated, nil
 }
@@ -90,7 +79,7 @@ func v1RootImports(moduleDir string, roots []string) (map[string]bool, error) {
 			return nil
 		})
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("walkV1ProtoFiles: %w", err)
 		}
 	}
 	return imports, nil

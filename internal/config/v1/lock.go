@@ -63,7 +63,7 @@ func (lock Lock) Validate() error {
 		if !semver.IsValid(entry.Version) && !IsCommitRef(entry.Version) {
 			return fmt.Errorf("%s: invalid locked version %q", entry.Source, entry.Version)
 		}
-		if (len(entry.Commit) != 40 && len(entry.Commit) != 64) || !isHex(entry.Commit) {
+		if !IsCommitRef(entry.Commit) {
 			return fmt.Errorf("%s: invalid commit %q", entry.Source, entry.Commit)
 		}
 		if IsCommitRef(entry.Version) && !strings.EqualFold(entry.Version, entry.Commit) {

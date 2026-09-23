@@ -2,6 +2,7 @@ package v1
 
 import (
 	"bufio"
+	"bytes"
 	"fmt"
 	"io"
 	"path/filepath"
@@ -16,11 +17,13 @@ type Module struct {
 	Replaces []Replacement
 }
 
+// Requirement names a dependency and its optional version or commit.
 type Requirement struct {
 	Module  string
 	Version string
 }
 
+// Replacement redirects a dependency to a local module directory.
 type Replacement struct {
 	Module string
 	Target string
@@ -38,10 +41,11 @@ func IsModuleManifest(raw []byte) bool {
 		}
 		break
 	}
-	_, err := ParseModule(strings.NewReader(string(raw)))
+	_, err := ParseModule(bytes.NewReader(raw))
 	return err == nil
 }
 
+// ParseModule reads the v1 module identity, roots and dependency directives.
 func ParseModule(r io.Reader) (Module, error) {
 	var result Module
 	scanner := bufio.NewScanner(r)
@@ -109,7 +113,7 @@ func ParseModule(r io.Reader) (Module, error) {
 		}
 	}
 	if err := scanner.Err(); err != nil {
-		return Module{}, err
+		return Module{}, fmt.Errorf("Err: %w", err)
 	}
 	if block != "" {
 		return Module{}, fmt.Errorf("protobuf.mod: unclosed %s block", block)

@@ -10,6 +10,7 @@ import (
 	"github.com/urfave/cli/v2"
 
 	"github.com/easyp-tech/easyp/internal/config"
+	v1 "github.com/easyp-tech/easyp/internal/config/v1"
 	"github.com/easyp-tech/easyp/internal/flags"
 )
 
@@ -41,14 +42,14 @@ func (v Validate) Action(ctx *cli.Context) error {
 	if !filepath.IsAbs(configPath) {
 		wd, err := os.Getwd()
 		if err != nil {
-			return fmt.Errorf("os.Getwd: %w", err)
+			return fmt.Errorf("Getwd: %w", err)
 		}
 		configPath = filepath.Join(wd, configPath)
 	}
 
-	issues, err := validateConfigPath(configPath)
+	issues, err := v1.ValidatePath(configPath)
 	if err != nil {
-		return fmt.Errorf("validate config: %w", err)
+		return fmt.Errorf("ValidatePath: %w", err)
 	}
 
 	// Separate errors from warnings - only errors cause validation failure
@@ -73,7 +74,7 @@ func (v Validate) Action(ctx *cli.Context) error {
 		enc := json.NewEncoder(os.Stdout)
 		enc.SetIndent("", "  ")
 		if err := enc.Encode(result); err != nil {
-			return fmt.Errorf("json.Encode: %w", err)
+			return fmt.Errorf("Encode: %w", err)
 		}
 	case flags.TextFormat:
 		printValidateText(result)

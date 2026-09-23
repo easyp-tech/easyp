@@ -2,12 +2,10 @@ package api
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"log/slog"
 	"os"
 	"path/filepath"
-	"strings"
 
 	"github.com/samber/lo"
 	"github.com/urfave/cli/v2"
@@ -28,10 +26,6 @@ func getLogger(ctx *cli.Context) logger.Logger {
 	return logger.NewNop()
 }
 
-var (
-	ErrPathNotAbsolute = errors.New("path is not absolute")
-)
-
 const (
 	envEasypPath     = "EASYPPATH"
 	defaultEasypPath = ".easyp"
@@ -49,14 +43,14 @@ func getEasypPath(log logger.Logger) (string, error) {
 	if easypPath == "" {
 		userHomeDir, err := os.UserHomeDir()
 		if err != nil {
-			return "", fmt.Errorf("os.UserHomeDir: %w", err)
+			return "", fmt.Errorf("UserHomeDir: %w", err)
 		}
 		easypPath = filepath.Join(userHomeDir, defaultEasypPath)
 	}
 
 	easypPath, err := filepath.Abs(easypPath)
 	if err != nil {
-		return "", ErrPathNotAbsolute
+		return "", fmt.Errorf("Abs: %w", err)
 	}
 
 	log.Debug(context.Background(), "Use storage", slog.String("path", easypPath))
@@ -134,24 +128,4 @@ func convertManagedModeConfig(cfg config.ManagedMode) core.ManagedModeConfig {
 			}
 		}),
 	}
-}
-
-func IsExistingDir(path string) bool {
-	if path == "" || strings.ContainsRune(path, '\x00') {
-		return false
-	}
-
-	// Очистим путь от лишнего (типа "./../")
-	cleanPath := filepath.Clean(path)
-
-	info, err := os.Stat(cleanPath)
-	if err != nil {
-		return false
-	}
-
-	if !info.IsDir() {
-		return false
-	}
-
-	return true
 }

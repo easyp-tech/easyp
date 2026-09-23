@@ -72,7 +72,7 @@ generate:
 `, source, source)))
 					require.NoError(t, err)
 					descriptors := generateV1Descriptors(t, root, func(ctx *cli.Context) error {
-						return generateSelectedV1Module(ctx, logger.NewNop(), filepath.Join(root, "easyp.gen.yaml"), root, source, gen)
+						return generateSelectedV1Module(ctx, logger.NewNop(), filepath.Join(root, "easyp.gen.yaml"), root, v1ModuleSelection{source: source}, gen)
 					})
 					require.Len(t, descriptors, 1)
 					require.Equal(t, "example.com/selected/dep/v1;depv1", descriptors["dep/v1/dep.proto"].GetOptions().GetGoPackage())
@@ -82,20 +82,20 @@ generate:
 	}
 }
 
-func TestSelectedV1ModuleDirsPrefersGeneratorSiblingThenRepositoryRoot(t *testing.T) {
+func TestSelectV1ModulesPrefersGeneratorSiblingThenRepositoryRoot(t *testing.T) {
 	root := t.TempDir()
 	configDir := filepath.Join(root, "projects", "app")
 	writeV1GenerateFixture(t, root, "protobuf.mod", "module example.com/root\n")
 	writeV1GenerateFixture(t, filepath.Join(root, "projects"), "protobuf.mod", "module example.com/intermediate\n")
 
-	dirs, err := selectedV1ModuleDirs(root, configDir, nil)
+	dirs, err := selectV1Modules(root, configDir, nil)
 	require.NoError(t, err)
-	require.Equal(t, []string{root}, dirs)
+	require.Equal(t, []v1ModuleSelection{{directory: root}}, dirs)
 
 	writeV1GenerateFixture(t, configDir, "protobuf.mod", "module example.com/app\n")
-	dirs, err = selectedV1ModuleDirs(root, configDir, nil)
+	dirs, err = selectV1Modules(root, configDir, nil)
 	require.NoError(t, err)
-	require.Equal(t, []string{configDir}, dirs)
+	require.Equal(t, []v1ModuleSelection{{directory: configDir}}, dirs)
 }
 
 func TestGenerateSelectedV1ModuleUsesGeneratorSiblingRequirements(t *testing.T) {
@@ -109,7 +109,7 @@ func TestGenerateSelectedV1ModuleUsesGeneratorSiblingRequirements(t *testing.T) 
 	gen, err := v1.ParseGenerate(strings.NewReader("version: v1\ngenerate:\n  modules: [example.com/dep]\n"))
 	require.NoError(t, err)
 	descriptors := generateV1Descriptors(t, root, func(ctx *cli.Context) error {
-		return generateSelectedV1Module(ctx, logger.NewNop(), filepath.Join(configDir, "easyp.gen.yaml"), root, "example.com/dep", gen)
+		return generateSelectedV1Module(ctx, logger.NewNop(), filepath.Join(configDir, "easyp.gen.yaml"), root, v1ModuleSelection{source: "example.com/dep"}, gen)
 	})
 	require.Contains(t, descriptors, "dep/v1/dep.proto")
 }

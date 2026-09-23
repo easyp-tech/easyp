@@ -367,10 +367,11 @@ func TestTidyV1WritesLockedGitDependency(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	roots, err := lockedV1DependencyRoots(context.Background(), root, module, filepath.Join(cacheBase, "v1", "git"))
+	sources, err := lockedV1DependencySources(context.Background(), root, module, filepath.Join(cacheBase, "v1", "git"))
 	if err != nil {
 		t.Fatal(err)
 	}
+	roots := sources.paths()
 	if len(roots) != 1 {
 		t.Fatalf("dependency roots = %v", roots)
 	}
@@ -474,7 +475,7 @@ func TestGenerateV1UsesLockedGitDependency(t *testing.T) {
 	}
 	cliCtx := cli.NewContext(&cli.App{Metadata: map[string]any{}}, flag.NewFlagSet("test", flag.ContinueOnError), nil)
 	cliCtx.Context = context.Background()
-	if err := generateV1Module(cliCtx, logger.NewNop(), filepath.Join(root, "easyp.gen.yaml"), root, gen); err != nil {
+	if err := generateSelectedV1Module(cliCtx, logger.NewNop(), filepath.Join(root, "easyp.gen.yaml"), root, v1ModuleSelection{directory: root}, gen); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := os.Stat(filepath.Join(root, "gen", "python", "user_pb2.py")); err != nil {

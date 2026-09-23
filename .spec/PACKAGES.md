@@ -27,11 +27,15 @@ The command list is created from values implementing `internal/api.Handler`.
 | `breaking_check.go` | Implements `breaking` and its Git reference handling. |
 | `mod.go` | Implements the `mod` command and module subcommands. |
 | `init.go` | Implements project initialization. |
-| `validate.go` | Implements configuration validation. |
-| `ls_files.go` | Implements listing installed dependency files. |
+| `validate.go` | Selects the validation target and renders issues returned by `config/v1.ValidatePath`. |
+| `ls_files_v1.go` | Lists module and dependency files using their import paths. |
 | `schema_gen.go` | Implements config schema generation. |
 | `completion.go` | Implements shell completion support. |
-| `temporaly_helper.go` | Provides logger access, `buildCore`, managed-mode conversion, and cache-path resolution. |
+| `runtime.go`, `roots.go` | Provide logger access, core construction, and command root resolution. |
+| `generate_v1_selection.go`, `generate_v1_config.go` | Resolve selected modules and translate generation configuration into core inputs. |
+| `policy_v1.go` | Reads optional policy files and supplies shared ancestor traversal for lint and breaking checks. |
+| `mod_v1_cache.go`, `mod_v1_checkout.go`, `mod_v1_files.go` | Resolve Git cache paths and checkouts, hash tracked files, and copy regular files. |
+| `mod_v1_manifest_edit.go`, `atomic_file.go` | Preserve manifest comments during requirement edits and replace files atomically. |
 
 The package instantiates adapters and translates `config.Config` into the core's dependency types.
 
@@ -43,7 +47,7 @@ The package instantiates adapters and translates `config.Config` into the core's
 | File group | Description |
 |------------|-------------|
 | `core.go`, `dom.go` | Defines `Core`, its ports, proto representations, rules, issues, and plugin/input values. |
-| `lint.go`, `check_lint_ignore.go` | Walks local proto files, reads imports, and applies rules and ignore behavior. |
+| `lint.go` | Walks local proto files, reads imports, and applies rules and ignore behavior. |
 | `breaking_check.go`, `breaking_checker.go` | Loads current and historical proto models and checks compatibility. |
 | `generate.go`, `generate_bucket.go`, `generate_insertion_point.go` | Builds descriptors, invokes plugins, stages generated files, and supports insertion points. |
 | `managed_mode.go` | Applies configured descriptor option changes. |
@@ -100,9 +104,20 @@ Each rule follows the `core.Rule` interface: it provides a message and validates
 | `config.go` | Defines configuration, generation inputs/plugins, managed mode, parsing, and validation. |
 | `lint.go` | Defines lint configuration. |
 | `breaking_check.go` | Defines breaking-check configuration. |
-| `default.go` | Provides default configuration values. |
 | `yaml_validators.go`, `validate_raw.go` | Validate YAML nodes and raw configuration. |
 | `plugin_opts.go` | Supports plugin option values expressed as scalars or sequences. |
+
+### `internal/config/v1`
+**V1 configuration models and validation** — owns the module manifest, lockfile, producer policy, and generation configuration.
+
+| File | Description |
+|------|-------------|
+| `files.go` | Defines standard v1 configuration filenames. |
+| `module.go`, `lock.go` | Parse and validate `protobuf.mod` and `protobuf.lock`. |
+| `policy.go`, `generate.go` | Define named policy and generation models with their parsers. |
+| `plugin.go`, `plugin_options.go` | Validate plugin sources and decode plugin options. |
+| `validate.go`, `validate_path.go` | Validate individual files or all supported files below a directory. |
+| `validate_yaml.go` | Supplies YAML validators and structured issues through the shared schema collector. |
 
 ### `mcp/easypconfig`
 **Configuration schema metadata and MCP tool** — defines the config-schema model, generates JSON Schema, indexes schema paths, and serves schema descriptions.

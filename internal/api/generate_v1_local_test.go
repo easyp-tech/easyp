@@ -33,12 +33,12 @@ func TestLocalV1DependencyRootsFromLegacyAndBuf(t *testing.T) {
 		Requires: []v1.Requirement{{Module: "example.com/old-easyp", Version: "v1.0.0"}, {Module: "example.com/old-buf", Version: "v1.0.0"}},
 		Replaces: []v1.Replacement{{Module: "example.com/old-easyp", Target: "old-easyp"}, {Module: "example.com/old-buf", Target: "old-buf"}},
 	}
-	roots, err := localV1DependencyRoots(root, module, map[string]bool{})
+	roots, err := localV1DependencySources(root, module, map[string]bool{})
 	if err != nil {
 		t.Fatal(err)
 	}
 	want := []string{filepath.Join(root, "old-easyp", "proto"), filepath.Join(root, "old-buf", "schemas")}
-	if !reflect.DeepEqual(roots, want) {
+	if !reflect.DeepEqual(roots.paths(), want) {
 		t.Fatalf("roots = %v, want %v", roots, want)
 	}
 }

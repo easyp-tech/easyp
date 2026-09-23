@@ -17,13 +17,11 @@ type Init struct{}
 
 var (
 	flagInitDirectoryPath = &cli.StringFlag{
-		Name:       "dir",
-		Usage:      "directory path to initialize",
-		Required:   true,
-		HasBeenSet: true,
-		Value:      ".",
-		Aliases:    []string{"d"},
-		EnvVars:    []string{"EASYP_INIT_DIR"},
+		Name:    "dir",
+		Usage:   "directory path to initialize",
+		Value:   ".",
+		Aliases: []string{"d"},
+		EnvVars: []string{"EASYP_INIT_DIR"},
 	}
 	flagInitModule = &cli.StringFlag{
 		Name:  "module",
@@ -56,5 +54,8 @@ func (i Init) Action(ctx *cli.Context) error {
 	if err := os.MkdirAll(rootAbs, 0o755); err != nil {
 		return fmt.Errorf("MkdirAll: %w", err)
 	}
-	return initializeV1(ctx.Context, rootAbs, ctx.String(flagInitModule.Name), prompter.InteractivePrompter{})
+	if err := initializeV1(ctx.Context, rootAbs, ctx.String(flagInitModule.Name), prompter.InteractivePrompter{}); err != nil {
+		return fmt.Errorf("initializeV1: %w", err)
+	}
+	return nil
 }

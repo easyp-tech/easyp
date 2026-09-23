@@ -2,7 +2,6 @@ package api
 
 import (
 	"bytes"
-	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -27,27 +26,27 @@ func (m Mod) Tidy(ctx *cli.Context) error {
 	if err != nil {
 		return fmt.Errorf("readV1Manifest: %w", err)
 	}
-	existing, err := readV1Lock(filepath.Join(root, "protobuf.lock"))
+	existing, err := readV1Lock(filepath.Join(root, v1.LockFile))
 	if err != nil && !errors.Is(err, os.ErrNotExist) {
-		return fmt.Errorf("read existing protobuf.lock: %w", err)
+		return fmt.Errorf("readV1Lock: %w", err)
 	}
 	lock, err := resolveV1LockWithPins(ctx, root, module, existing)
 	if err != nil {
-		return err
+		return fmt.Errorf("resolveV1LockWithPins: %w", err)
 	}
-	cacheRoot, err := getEasypPath(getLogger(ctx))
+	cacheRoot, err := gitCachePath(getLogger(ctx))
 	if err != nil {
-		return err
+		return fmt.Errorf("gitCachePath: %w", err)
 	}
-	updated, err := augmentV1ManifestRequirements(original, root, module, lock, filepath.Join(cacheRoot, "v1", "git"))
+	updated, err := augmentV1ManifestRequirements(original, root, module, lock, cacheRoot)
 	if err != nil {
-		return err
+		return fmt.Errorf("augmentV1ManifestRequirements: %w", err)
 	}
 	return writeV1ResolvedFiles(root, original, updated, lock)
 }
 
 func readV1Manifest(root string) ([]byte, v1.Module, error) {
-	original, err := os.ReadFile(filepath.Join(root, "protobuf.mod"))
+	original, err := os.ReadFile(filepath.Join(root, v1.ModuleFile))
 	if err != nil {
 		return nil, v1.Module{}, fmt.Errorf("ReadFile: %w", err)
 	}
@@ -76,32 +75,24 @@ func writeV1ResolvedFiles(root string, original, updated []byte, lock v1.Lock) e
 	return nil
 }
 
-func resolveV1Lock(ctx *cli.Context, root string, module v1.Module) (v1.Lock, error) {
-	return resolveV1LockWithPins(ctx, root, module, v1.Lock{})
-}
-
 func resolveV1LockWithPins(ctx *cli.Context, root string, module v1.Module, existing v1.Lock) (v1.Lock, error) {
 	if len(module.Replaces) > 0 {
 		return v1.Lock{}, fmt.Errorf("module %s: remove local replacements before writing a reproducible lock", module.Name)
 	}
-	cacheRoot, err := getEasypPath(getLogger(ctx))
+	cacheRoot, err := gitCachePath(getLogger(ctx))
 	if err != nil {
 		return v1.Lock{}, err
 	}
-	callCtx := ctx.Context
-	if callCtx == nil {
-		callCtx = context.Background()
-	}
-	gitCacheRoot := filepath.Join(cacheRoot, "v1", "git")
+	gitCacheRoot := cacheRoot
 	pins := make(map[string]v1.LockedModule, len(existing.Modules))
 	for _, entry := range existing.Modules {
 		pins[entry.Source] = entry
 	}
-	lock, err := buildV1LockWithPins(callCtx, module, gitCacheRoot, pins)
+	lock, err := buildV1LockWithPins(ctx.Context, module, gitCacheRoot, pins)
 	if err != nil {
 		return v1.Lock{}, fmt.Errorf("module %s: %w", module.Name, err)
 	}
-	if err := downloadV1Lock(callCtx, lock, gitCacheRoot); err != nil {
+	if err := downloadV1Lock(ctx.Context, lock, gitCacheRoot); err != nil {
 		return v1.Lock{}, fmt.Errorf("module %s: %w", module.Name, err)
 	}
 	dependencyRoots, err := rootsFromV1Lock(lock, gitCacheRoot)
@@ -124,24 +115,12 @@ func resolveV1LockWithPins(ctx *cli.Context, root string, module v1.Module, exis
 func writeV1Lock(root string, lock v1.Lock) error {
 	raw, err := yaml.Marshal(lock)
 	if err != nil {
-		return err
+		return fmt.Errorf("Marshal: %w", err)
 	}
 
-	lockPath := filepath.Join(root, "protobuf.lock")
-	tmp, err := os.CreateTemp(root, ".protobuf.lock-*")
-	if err != nil {
-		return err
-	}
-	defer os.Remove(tmp.Name())
-	if _, err := tmp.Write(append([]byte("# protobuf.lock - GENERATED FILE, DO NOT EDIT MANUALLY\n"), raw...)); err != nil {
-		_ = tmp.Close()
-		return err
-	}
-	if err := tmp.Close(); err != nil {
-		return err
-	}
-	if err := os.Rename(tmp.Name(), lockPath); err != nil {
-		return fmt.Errorf("write protobuf.lock: %w", err)
+	raw = append([]byte("# protobuf.lock - GENERATED FILE, DO NOT EDIT MANUALLY\n"), raw...)
+	if err := writeAtomicFile(filepath.Join(root, v1.LockFile), raw, 0o600); err != nil {
+		return fmt.Errorf("writeAtomicFile: %w", err)
 	}
 	return nil
 }
@@ -156,23 +135,19 @@ func (m Mod) Download(ctx *cli.Context) error {
 	if err != nil {
 		return fmt.Errorf("readV1Manifest: %w", err)
 	}
-	lock, err := readV1Lock(filepath.Join(root, "protobuf.lock"))
+	lock, err := readV1Lock(filepath.Join(root, v1.LockFile))
 	if err != nil {
 		return fmt.Errorf("read protobuf.lock; run easyp mod tidy: %w", err)
 	}
 	if err := validateV1Requirements(remoteV1Requirements(module), lock); err != nil {
 		return err
 	}
-	cacheBase, err := getEasypPath(getLogger(ctx))
+	cacheBase, err := gitCachePath(getLogger(ctx))
 	if err != nil {
 		return err
 	}
-	callCtx := ctx.Context
-	if callCtx == nil {
-		callCtx = context.Background()
-	}
-	gitCacheRoot := filepath.Join(cacheBase, "v1", "git")
-	if err := downloadV1Lock(callCtx, lock, gitCacheRoot); err != nil {
+	gitCacheRoot := cacheBase
+	if err := downloadV1Lock(ctx.Context, lock, gitCacheRoot); err != nil {
 		return err
 	}
 	_, err = rootsFromV1Lock(lock, gitCacheRoot)

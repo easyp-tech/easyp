@@ -5,10 +5,8 @@ import (
 	"io/fs"
 	"path/filepath"
 	"slices"
-	"strings"
 
 	"github.com/urfave/cli/v2"
-	"gopkg.in/yaml.v3"
 
 	"github.com/easyp-tech/easyp/internal/config"
 	v1 "github.com/easyp-tech/easyp/internal/config/v1"
@@ -38,7 +36,7 @@ func (b BreakingCheck) checkV1Policies(ctx *cli.Context, log logger.Logger, conf
 	}
 	var issues []core.IssueInfo
 	for _, source := range sources {
-		policy, _, err := resolveV1BreakingPolicy(filepath.Join(filepath.Dir(source), "policy.proto"), projectRoot, configPath)
+		policy, _, err := resolveV1BreakingPolicy(filepath.Dir(source), projectRoot, configPath)
 		if err != nil {
 			return nil, fmt.Errorf("resolveV1BreakingPolicy: %w", err)
 		}
@@ -56,7 +54,7 @@ func (b BreakingCheck) checkV1Policies(ctx *cli.Context, log logger.Logger, conf
 			return nil, fmt.Errorf("BreakingCheck for %s: %w", source, err)
 		}
 		for _, issue := range found {
-			_, owner, err := resolveV1BreakingPolicy(filepath.Join(scanRoot, issue.Path), projectRoot, configPath)
+			_, owner, err := resolveV1BreakingPolicy(filepath.Dir(filepath.Join(scanRoot, issue.Path)), projectRoot, configPath)
 			if err != nil {
 				return nil, fmt.Errorf("resolveV1BreakingPolicy: %w", err)
 			}
@@ -70,7 +68,7 @@ func (b BreakingCheck) checkV1Policies(ctx *cli.Context, log logger.Logger, conf
 
 func discoverV1BreakingPolicySources(scanPath, projectRoot, configPath string) ([]string, error) {
 	sources := map[string]struct{}{}
-	_, owner, err := resolveV1BreakingPolicy(filepath.Join(scanPath, "policy.proto"), projectRoot, configPath)
+	_, owner, err := resolveV1BreakingPolicy(scanPath, projectRoot, configPath)
 	if err != nil {
 		return nil, err
 	}
@@ -79,10 +77,10 @@ func discoverV1BreakingPolicySources(scanPath, projectRoot, configPath string) (
 		if walkErr != nil {
 			return walkErr
 		}
-		if entry.IsDir() || entry.Name() != "easyp.yaml" || path == configPath {
+		if entry.IsDir() || entry.Name() != v1.PolicyFile || path == configPath {
 			return nil
 		}
-		_, source, err := resolveV1BreakingPolicy(filepath.Join(filepath.Dir(path), "policy.proto"), projectRoot, configPath)
+		_, source, err := resolveV1BreakingPolicy(filepath.Dir(path), projectRoot, configPath)
 		if err != nil {
 			return err
 		}
@@ -100,32 +98,16 @@ func discoverV1BreakingPolicySources(scanPath, projectRoot, configPath string) (
 	return result, nil
 }
 
-func resolveV1BreakingPolicy(file, projectRoot, configPath string) (v1.Policy, string, error) {
-	for dir := filepath.Dir(file); ; dir = filepath.Dir(dir) {
-		path := filepath.Join(dir, "easyp.yaml")
-		if dir == projectRoot {
-			path = configPath
-		}
-		raw, found, err := readOptionalFile(path)
+func resolveV1BreakingPolicy(directory, projectRoot, configPath string) (v1.Policy, string, error) {
+	for _, dir := range ancestorDirs(directory, projectRoot) {
+		path := v1PolicyPath(dir, projectRoot, configPath)
+		file, found, err := readV1PolicyFile(path)
 		if err != nil {
-			return v1.Policy{}, "", fmt.Errorf("%s: %w", path, err)
+			return v1.Policy{}, "", fmt.Errorf("readV1PolicyFile: %w", err)
 		}
-		if found {
-			policy, err := v1.ParsePolicy(strings.NewReader(string(raw)))
-			if err != nil {
-				return v1.Policy{}, "", fmt.Errorf("%s ParsePolicy: %w", path, err)
-			}
-			var sections map[string]yaml.Node
-			if err := yaml.Unmarshal(raw, &sections); err != nil {
-				return v1.Policy{}, "", fmt.Errorf("%s: %w", path, err)
-			}
-			if _, ok := sections["breaking"]; ok || dir == projectRoot {
-				return policy, path, nil
-			}
-		}
-		if dir == projectRoot || dir == filepath.Dir(dir) {
-			break
+		if found && (file.has("breaking") || dir == projectRoot) {
+			return file.policy, path, nil
 		}
 	}
-	return v1.Policy{}, "", fmt.Errorf("no easyp.yaml policy for %s", file)
+	return v1.Policy{}, "", fmt.Errorf("no easyp.yaml policy for %s", directory)
 }

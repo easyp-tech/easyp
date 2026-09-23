@@ -1,10 +1,8 @@
 package api
 
 import (
-	"context"
 	"errors"
 	"fmt"
-	"io"
 	"os"
 	"path/filepath"
 
@@ -24,15 +22,11 @@ func (m Mod) Vendor(ctx *cli.Context) error {
 	if len(module.Replaces) != 0 {
 		return fmt.Errorf("module %s: remove local replacements before vendoring a reproducible lock", module.Name)
 	}
-	cacheBase, err := getEasypPath(getLogger(ctx))
+	cacheBase, err := gitCachePath(getLogger(ctx))
 	if err != nil {
-		return fmt.Errorf("getEasypPath: %w", err)
+		return fmt.Errorf("gitCachePath: %w", err)
 	}
-	callCtx := ctx.Context
-	if callCtx == nil {
-		callCtx = context.Background()
-	}
-	dependencyRoots, err := lockedV1DependencySources(callCtx, root, module, filepath.Join(cacheBase, "v1", "git"))
+	dependencyRoots, err := lockedV1DependencySources(ctx.Context, root, module, cacheBase)
 	if err != nil {
 		return fmt.Errorf("lockedV1DependencySources: %w", err)
 	}
@@ -47,7 +41,7 @@ func writeV1Vendor(root string, roots v1SourceRoots) error {
 	if err != nil {
 		return fmt.Errorf("MkdirTemp: %w", err)
 	}
-	defer os.RemoveAll(stage)
+	defer func() { _ = os.RemoveAll(stage) }()
 	for _, source := range roots {
 		err := walkV1ProtoFiles(source.path, func(path string) error {
 			importPath, err := filepath.Rel(source.path, path)
@@ -57,48 +51,16 @@ func writeV1Vendor(root string, roots v1SourceRoots) error {
 			if !filepath.IsLocal(importPath) {
 				return fmt.Errorf("invalid import path %q", importPath)
 			}
-			return copyV1VendorFile(path, filepath.Join(stage, importPath))
+			if err := copyV1RegularFile(path, filepath.Join(stage, importPath)); err != nil {
+				return fmt.Errorf("copyV1RegularFile: %w", err)
+			}
+			return nil
 		})
 		if err != nil {
 			return fmt.Errorf("vendor %s: %w", source.module, err)
 		}
 	}
 	return replaceV1Vendor(root, stage)
-}
-
-func copyV1VendorFile(source, destination string) error {
-	info, err := os.Lstat(source)
-	if err != nil {
-		return fmt.Errorf("Lstat: %w", err)
-	}
-	if !info.Mode().IsRegular() {
-		return fmt.Errorf("proto source %s is not a regular file", source)
-	}
-	if err := os.MkdirAll(filepath.Dir(destination), 0o755); err != nil {
-		return fmt.Errorf("MkdirAll: %w", err)
-	}
-	in, err := os.Open(source)
-	if err != nil {
-		return fmt.Errorf("Open: %w", err)
-	}
-	out, err := os.OpenFile(destination, os.O_CREATE|os.O_EXCL|os.O_WRONLY, info.Mode().Perm())
-	if err != nil {
-		_ = in.Close()
-		return fmt.Errorf("OpenFile: %w", err)
-	}
-	_, copyErr := io.Copy(out, in)
-	closeOutErr := out.Close()
-	closeInErr := in.Close()
-	if copyErr != nil {
-		return fmt.Errorf("Copy: %w", copyErr)
-	}
-	if closeOutErr != nil {
-		return fmt.Errorf("Close: %w", closeOutErr)
-	}
-	if closeInErr != nil {
-		return fmt.Errorf("Close: %w", closeInErr)
-	}
-	return nil
 }
 
 func replaceV1Vendor(root, stage string) error {

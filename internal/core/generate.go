@@ -14,6 +14,7 @@ import (
 	"strings"
 
 	"github.com/bufbuild/protocompile"
+	"github.com/bufbuild/protocompile/linker"
 	"github.com/bufbuild/protocompile/protoutil"
 	"github.com/bufbuild/protocompile/wellknownimports"
 	"google.golang.org/protobuf/proto"
@@ -43,7 +44,6 @@ func (c *Core) Generate(ctx context.Context, root, descriptorSetOut string, incl
 
 	q := Query{
 		Imports: append([]string{}, c.importRoots...),
-		Plugins: c.plugins,
 	}
 
 	for _, inputFilesDir := range c.inputs.InputFilesDir {
@@ -73,7 +73,7 @@ func (c *Core) Generate(ctx context.Context, root, descriptorSetOut string, incl
 			return nil
 		})
 		if err != nil {
-			return fmt.Errorf("fsWalker.WalkDir: %w", err)
+			return fmt.Errorf("WalkDir: %w", err)
 		}
 	}
 
@@ -83,7 +83,8 @@ func (c *Core) Generate(ctx context.Context, root, descriptorSetOut string, incl
 		return ErrEmptyInputFiles
 	}
 
-	slices.Reverse(q.Imports) // local first, dependencies last
+	// Search local roots before dependency roots.
+	slices.Reverse(q.Imports)
 
 	compiler := protocompile.Compiler{
 		Resolver: protocompile.CompositeResolver{
@@ -98,70 +99,10 @@ func (c *Core) Generate(ctx context.Context, root, descriptorSetOut string, incl
 
 	res, err := compiler.Compile(ctx, q.Files...)
 	if err != nil {
-		return fmt.Errorf("compiler.Compile: %w", err)
+		return fmt.Errorf("Compile: %w", err)
 	}
 
-	// Use slice to preserve correct order
-	var fileDescriptors []*descriptorpb.FileDescriptorProto
-	processedFiles := make(map[string]bool)
-	dependencyFiles := make([]string, 0)
-
-	// Recursive function to add file and its dependencies in correct order
-	var addFileWithDeps func(protoreflect.FileDescriptor) error
-	addFileWithDeps = func(file protoreflect.FileDescriptor) error {
-		fileName := file.Path()
-		// If already processed - skip
-		if processedFiles[fileName] {
-			return nil
-		}
-
-		// IMPORTANT: first recursively add all dependencies
-		for i := range file.Imports().Len() {
-			dep := file.Imports().Get(i)
-
-			if err := addFileWithDeps(dep); err != nil {
-				// Ignore errors for optional dependencies
-				c.logger.Warn(ctx, "could not compile dependency",
-					slog.String("dependency", dep.Path()),
-					slog.Any("error", err))
-			}
-		}
-
-		descriptor := protoutil.ProtoFromFileDescriptor(file)
-
-		// Only after dependencies add the file itself (if not already added)
-		if !processedFiles[fileName] {
-			fileDescriptors = append(fileDescriptors, descriptor)
-			processedFiles[fileName] = true
-			dependencyFiles = append(dependencyFiles, fileName)
-		}
-
-		return nil
-	}
-
-	// Process all files and their dependencies
-	for _, file := range res {
-		reflectFd := file.(protoreflect.FileDescriptor)
-		descriptor := protoutil.ProtoFromFileDescriptor(file)
-
-		// First add all dependencies of this file
-		for i := range reflectFd.Imports().Len() {
-			dep := reflectFd.Imports().Get(i)
-
-			if err := addFileWithDeps(dep); err != nil {
-				c.logger.Warn(ctx, "could not compile dependency",
-					slog.String("dependency", dep.Path()),
-					slog.Any("error", err))
-			}
-		}
-
-		// Then add the file itself (if not already added)
-		fileName := descriptor.GetName()
-		if !processedFiles[fileName] {
-			fileDescriptors = append(fileDescriptors, descriptor)
-			processedFiles[fileName] = true
-		}
-	}
+	fileDescriptors, dependencyFiles := collectFileDescriptors(res)
 
 	// Log file order for debugging
 	fileNames := make([]string, len(fileDescriptors))
@@ -204,11 +145,11 @@ func (c *Core) Generate(ctx context.Context, root, descriptorSetOut string, incl
 
 		data, err := proto.MarshalOptions{Deterministic: true}.Marshal(descriptorSet)
 		if err != nil {
-			return fmt.Errorf("proto.Marshal: %w", err)
+			return fmt.Errorf("Marshal: %w", err)
 		}
 
 		if err := os.WriteFile(descriptorSetOut, data, 0644); err != nil {
-			return fmt.Errorf("os.WriteFile: %w", err)
+			return fmt.Errorf("WriteFile: %w", err)
 		}
 	}
 
@@ -280,12 +221,41 @@ func (c *Core) Generate(ctx context.Context, root, descriptorSetOut string, incl
 
 	err = filesToWrite.DumpToFs(ctx)
 	if err != nil {
-		return fmt.Errorf("filesToWrite.DumpToFs: %w", err)
+		return fmt.Errorf("DumpToFs: %w", err)
 	}
 
 	c.logger.Info(ctx, "code generation completed")
 
 	return nil
+}
+
+// collectFileDescriptors orders each descriptor after its imports, preserving
+// the compiler's target order and recording files first reached as dependencies.
+func collectFileDescriptors(files linker.Files) ([]*descriptorpb.FileDescriptorProto, []string) {
+	var descriptors []*descriptorpb.FileDescriptorProto
+	var dependencies []string
+	processed := make(map[string]bool)
+
+	var visit func(protoreflect.FileDescriptor, bool)
+	visit = func(file protoreflect.FileDescriptor, dependency bool) {
+		name := file.Path()
+		if processed[name] {
+			return
+		}
+		for i := range file.Imports().Len() {
+			visit(file.Imports().Get(i), true)
+		}
+		descriptors = append(descriptors, protoutil.ProtoFromFileDescriptor(file))
+		processed[name] = true
+		if dependency {
+			dependencies = append(dependencies, name)
+		}
+	}
+
+	for _, file := range files {
+		visit(file, false)
+	}
+	return descriptors, dependencies
 }
 
 // addFileWithInsertionPoint add file to bucket with insertion point support

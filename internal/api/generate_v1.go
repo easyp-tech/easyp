@@ -1,7 +1,7 @@
 package api
 
 import (
-	"errors"
+	"bytes"
 	"fmt"
 	"io/fs"
 	"os"
@@ -28,30 +28,25 @@ func (g Generate) generate(ctx *cli.Context, log logger.Logger) error {
 	}
 
 	for _, configPath := range configs {
-		fp, err := os.Open(configPath)
+		gen, err := readV1GenerateConfig(configPath)
 		if err != nil {
-			return fmt.Errorf("Open: %w", err)
-		}
-		gen, parseErr := v1.ParseGenerate(fp)
-		_ = fp.Close()
-		if parseErr != nil {
-			return fmt.Errorf("%s: %w", configPath, parseErr)
+			return fmt.Errorf("readV1GenerateConfig: %w", err)
 		}
 		if err := inheritV1GenerateOptions(workDir, configPath, &gen); err != nil {
 			return fmt.Errorf("inheritV1GenerateOptions: %w", err)
 		}
 		if len(gen.Plugins) == 0 {
-			continue // a root defaults file may contain only options
+			continue
 		}
-		moduleDirs, err := selectedV1ModuleDirs(workDir, filepath.Dir(configPath), gen.Generate.Modules)
+		modules, err := selectV1Modules(workDir, filepath.Dir(configPath), gen.Generate.Modules)
 		if err != nil {
 			return fmt.Errorf("%s: %w", configPath, err)
 		}
 		if len(gen.Generate.Packages) > 0 {
 			return fmt.Errorf("%s: generate.packages matching is not specified precisely enough for v1", configPath)
 		}
-		for _, moduleDir := range moduleDirs {
-			if err := generateSelectedV1Module(ctx, log, configPath, workDir, moduleDir, gen); err != nil {
+		for _, module := range modules {
+			if err := generateSelectedV1Module(ctx, log, configPath, workDir, module, gen); err != nil {
 				return fmt.Errorf("generateSelectedV1Module: %w", err)
 			}
 		}
@@ -64,7 +59,7 @@ func discoverV1GenerateConfigs(root, project string) ([]string, error) {
 		if !filepath.IsAbs(project) {
 			project = filepath.Join(root, project)
 		}
-		path := filepath.Join(project, "easyp.gen.yaml")
+		path := filepath.Join(project, v1.GenerateFile)
 		if _, err := os.Stat(path); err != nil {
 			return nil, fmt.Errorf("find project generator %s: %w", path, err)
 		}
@@ -81,7 +76,7 @@ func discoverV1GenerateConfigs(root, project string) ([]string, error) {
 			}
 			return nil
 		}
-		if entry.Name() == "easyp.gen.yaml" {
+		if entry.Name() == v1.GenerateFile {
 			paths = append(paths, path)
 		}
 		return nil
@@ -89,40 +84,14 @@ func discoverV1GenerateConfigs(root, project string) ([]string, error) {
 	return paths, err
 }
 
-func selectedV1ModuleDirs(repoRoot, configDir string, names []string) ([]string, error) {
-	if len(names) == 0 {
-		for _, dir := range []string{configDir, repoRoot} {
-			_, err := os.Stat(filepath.Join(dir, "protobuf.mod"))
-			switch {
-			case errors.Is(err, os.ErrNotExist):
-			case err != nil:
-				return nil, fmt.Errorf("module in %s: %w", dir, err)
-			default:
-				return []string{dir}, nil
-			}
-		}
-		return nil, fmt.Errorf("no protobuf.mod for generator in %s", configDir)
+func readV1GenerateConfig(path string) (v1.Generate, error) {
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		return v1.Generate{}, fmt.Errorf("ReadFile: %w", err)
 	}
-	result := make([]string, 0, len(names))
-	for _, name := range names {
-		if filepath.IsAbs(name) {
-			result = append(result, name) // canonical local Git source identity
-			continue
-		}
-		path := filepath.Clean(filepath.Join(repoRoot, name))
-		rel, err := filepath.Rel(repoRoot, path)
-		if err != nil || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
-			return nil, fmt.Errorf("module path %q leaves repository", name)
-		}
-		if _, err := os.Stat(filepath.Join(path, "protobuf.mod")); err != nil {
-			if !os.IsNotExist(err) {
-				return nil, fmt.Errorf("module %q: %w", name, err)
-			}
-			// A module identity may name a requirement in protobuf.lock.
-			result = append(result, name)
-			continue
-		}
-		result = append(result, path)
+	gen, err := v1.ParseGenerate(bytes.NewReader(raw))
+	if err != nil {
+		return v1.Generate{}, fmt.Errorf("%s: %w", path, err)
 	}
-	return result, nil
+	return gen, nil
 }

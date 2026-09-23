@@ -69,7 +69,7 @@ generate:
 `, source)))
 			require.NoError(t, err)
 			descriptors := generateV1Descriptors(t, root, func(ctx *cli.Context) error {
-				return generateV1Module(ctx, logger.NewNop(), filepath.Join(root, "easyp.gen.yaml"), root, gen)
+				return generateSelectedV1Module(ctx, logger.NewNop(), filepath.Join(root, "easyp.gen.yaml"), root, v1ModuleSelection{directory: root}, gen)
 			})
 			require.Equal(t, "example.com/original/dep/v1;depv1", descriptors["dep/v1/dep.proto"].GetOptions().GetGoPackage())
 			require.Equal(t, "example.com/current/root/v1;rootv1", descriptors["root/v1/root.proto"].GetOptions().GetGoPackage())

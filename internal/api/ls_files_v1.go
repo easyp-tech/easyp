@@ -106,9 +106,6 @@ func listV1Files(ctx *cli.Context, moduleDir string, module v1.Module) (v1ListRe
 		if err != nil {
 			return v1ListResult{}, fmt.Errorf("resolveV1DependencySources: %w", err)
 		}
-		if err := checkV1ImportPathCollisions(moduleDir, module.Roots, dependencies.paths()); err != nil {
-			return v1ListResult{}, fmt.Errorf("checkV1ImportPathCollisions: %w", err)
-		}
 		for _, dependency := range dependencies {
 			result.Roots = append(result.Roots, v1ListedRoot{Path: filepath.ToSlash(dependency.path), Source: "dependency"})
 			if err := indexV1ProtoRoot(dependency.path, "dependency", index, nil); err != nil {
@@ -159,29 +156,35 @@ func collectV1ListedImports(index map[string]v1ListedFile, result *v1ListResult)
 			if seen[importPath] {
 				continue
 			}
-			resolved, ok := index[importPath]
-			if !ok {
-				if !filepath.IsLocal(importPath) {
-					result.Errors = append(result.Errors, v1ListError{Code: "invalid_import", Message: fmt.Sprintf("%s imports %q", file.ImportPath, importPath)})
-					continue
-				}
-				_, err := wellknownimports.Content.ReadFile(importPath)
-				if errors.Is(err, os.ErrNotExist) {
-					result.Errors = append(result.Errors, v1ListError{Code: "import_not_found", Message: fmt.Sprintf("%s imports %q", file.ImportPath, importPath)})
-					continue
-				}
-				if err != nil {
-					result.Errors = append(result.Errors, v1ListError{Code: "open_error", Message: fmt.Sprintf("%s: %v", importPath, err)})
-					continue
-				}
-				resolved = v1ListedFile{AbsPath: wellKnownV1Root + "/" + importPath, ImportPath: importPath, Source: "wellknown", Root: wellKnownV1Root}
-				index[importPath] = resolved
+			resolved, issue := resolveV1ListedImport(file.ImportPath, importPath, index)
+			if issue != nil {
+				result.Errors = append(result.Errors, *issue)
+				continue
 			}
 			seen[importPath] = true
 			result.Files = append(result.Files, resolved)
 			queue = append(queue, resolved)
 		}
 	}
+}
+
+func resolveV1ListedImport(owner, importPath string, index map[string]v1ListedFile) (v1ListedFile, *v1ListError) {
+	if file, found := index[importPath]; found {
+		return file, nil
+	}
+	if !filepath.IsLocal(importPath) {
+		return v1ListedFile{}, &v1ListError{Code: "invalid_import", Message: fmt.Sprintf("%s imports %q", owner, importPath)}
+	}
+	_, err := wellknownimports.Content.ReadFile(importPath)
+	if errors.Is(err, os.ErrNotExist) {
+		return v1ListedFile{}, &v1ListError{Code: "import_not_found", Message: fmt.Sprintf("%s imports %q", owner, importPath)}
+	}
+	if err != nil {
+		return v1ListedFile{}, &v1ListError{Code: "open_error", Message: fmt.Sprintf("%s: %v", importPath, err)}
+	}
+	file := v1ListedFile{AbsPath: wellKnownV1Root + "/" + importPath, ImportPath: importPath, Source: "wellknown", Root: wellKnownV1Root}
+	index[importPath] = file
+	return file, nil
 }
 
 func readV1ListedImports(file v1ListedFile) ([]string, error) {

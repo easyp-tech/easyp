@@ -1,6 +1,7 @@
 package api
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"os"
@@ -33,7 +34,7 @@ func (g Get) Action(ctx *cli.Context) error {
 	}
 	requirement, err := parseV1GetRequirement(ctx.Args().First())
 	if err != nil {
-		return err
+		return fmt.Errorf("parseV1GetRequirement: %w", err)
 	}
 	root, err := os.Getwd()
 	if err != nil {
@@ -48,19 +49,19 @@ func (g Get) Action(ctx *cli.Context) error {
 	}
 	updated, err := addDirectV1Requirement(original, requirement)
 	if err != nil {
-		return err
+		return fmt.Errorf("addDirectV1Requirement: %w", err)
 	}
-	updatedModule, err := v1.ParseModule(strings.NewReader(string(updated)))
+	updatedModule, err := v1.ParseModule(bytes.NewReader(updated))
 	if err != nil {
-		return fmt.Errorf("updated protobuf.mod: %w", err)
+		return fmt.Errorf("ParseModule: %w", err)
 	}
-	existing, err := readV1Lock(filepath.Join(root, "protobuf.lock"))
+	existing, err := readV1Lock(filepath.Join(root, v1.LockFile))
 	if err != nil && !errors.Is(err, os.ErrNotExist) {
-		return fmt.Errorf("read existing protobuf.lock: %w", err)
+		return fmt.Errorf("readV1Lock: %w", err)
 	}
 	lock, err := resolveV1LockWithPins(ctx, root, updatedModule, existing)
 	if err != nil {
-		return err
+		return fmt.Errorf("resolveV1LockWithPins: %w", err)
 	}
 	updated = appendV1IndirectRequirements(updated, updatedModule, lock)
 	return writeV1ResolvedFiles(root, original, updated, lock)
@@ -88,68 +89,27 @@ func parseV1GetRequirement(spec string) (v1.Requirement, error) {
 // the manifest. A repeated get leaves an existing version in place unless the
 // user explicitly requests another one.
 func addDirectV1Requirement(original []byte, target v1.Requirement) ([]byte, error) {
-	lines := strings.Split(string(original), "\n")
-	inRequire := false
 	found := false
-	for i, line := range lines {
-		body, comment, hasComment := splitV1ManifestComment(line)
-		trimmed := strings.TrimSpace(body)
-		if strings.HasSuffix(trimmed, "(") && strings.TrimSpace(strings.TrimSuffix(trimmed, "(")) == "require" {
-			inRequire = true
-			continue
-		}
-		if trimmed == ")" && inRequire {
-			inRequire = false
-			continue
-		}
-		fields := strings.Fields(body)
-		entry := inRequire && len(fields) >= 1 && len(fields) <= 2 && fields[0] == target.Module
-		directive := !inRequire && len(fields) >= 2 && len(fields) <= 3 && fields[0] == "require" && fields[1] == target.Module
-		if !entry && !directive {
-			continue
+	updated, err := editV1RequirementLines(original, func(line v1RequirementLine) (string, error) {
+		if line.module != target.Module {
+			return line.String(), nil
 		}
 		if found {
-			return nil, fmt.Errorf("protobuf.mod: duplicate require %s", target.Module)
+			return "", fmt.Errorf("protobuf.mod: duplicate require %s", target.Module)
 		}
 		found = true
-		version := target.Version
-		if version == "" {
-			version = fields[len(fields)-1]
-			if version == target.Module {
-				version = ""
-			}
+		if target.Version != "" {
+			line = line.withVersion(target.Version)
 		}
-		indent := body[:len(body)-len(strings.TrimLeft(body, " \t"))]
-		statement := target.Module
-		if directive {
-			statement = "require " + statement
-		}
-		if version != "" {
-			statement += " " + version
-		}
-		if hasComment {
-			words := strings.Fields(comment)
-			if len(words) > 0 && words[0] == "indirect" {
-				comment = strings.TrimSpace(strings.TrimPrefix(strings.TrimSpace(comment), "indirect"))
-			}
-			if strings.TrimSpace(comment) != "" {
-				statement += " // " + strings.TrimSpace(comment)
-			}
-		}
-		lines[i] = indent + statement
+		return line.direct().String(), nil
+	})
+	if err != nil {
+		return nil, fmt.Errorf("editV1RequirementLines: %w", err)
 	}
 	if found {
-		return []byte(strings.Join(lines, "\n")), nil
+		return updated, nil
 	}
-	updated := append([]byte(nil), original...)
-	if len(updated) > 0 && updated[len(updated)-1] != '\n' {
-		updated = append(updated, '\n')
-	}
-	line := "require " + target.Module
-	if target.Version != "" {
-		line += " " + target.Version
-	}
-	return append(updated, []byte(line+"\n")...), nil
+	return appendV1Requirements(original, []v1ManifestRequirement{{Requirement: target}}), nil
 }
 
 func appendV1IndirectRequirements(original []byte, module v1.Module, lock v1.Lock) []byte {
@@ -157,16 +117,13 @@ func appendV1IndirectRequirements(original []byte, module v1.Module, lock v1.Loc
 	for _, requirement := range module.Requires {
 		existing[requirement.Module] = true
 	}
-	updated := append([]byte(nil), original...)
+	var additions []v1ManifestRequirement
 	for _, entry := range lock.Modules {
 		if existing[entry.Source] {
 			continue
 		}
-		if len(updated) > 0 && updated[len(updated)-1] != '\n' {
-			updated = append(updated, '\n')
-		}
-		updated = append(updated, []byte(fmt.Sprintf("require %s %s // indirect\n", entry.Source, entry.Version))...)
+		additions = append(additions, v1ManifestRequirement{Requirement: v1.Requirement{Module: entry.Source, Version: entry.Version}, indirect: true})
 		existing[entry.Source] = true
 	}
-	return updated
+	return appendV1Requirements(original, additions)
 }

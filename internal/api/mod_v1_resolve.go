@@ -4,17 +4,13 @@ import (
 	"context"
 	"crypto/sha256"
 	"fmt"
-	"io"
 	"os"
 	"os/exec"
-	"path/filepath"
 	"slices"
 	"strings"
 
 	"golang.org/x/mod/semver"
-	"golang.org/x/mod/sumdb/dirhash"
 
-	moduleconfig "github.com/easyp-tech/easyp/internal/adapters/module_config"
 	v1 "github.com/easyp-tech/easyp/internal/config/v1"
 )
 
@@ -93,94 +89,6 @@ func buildV1LockWithPins(ctx context.Context, root v1.Module, cacheRoot string, 
 		lock.Modules = append(lock.Modules, seen[source+"@"+selected[source]].lock)
 	}
 	return lock, nil
-}
-
-func fetchV1Module(ctx context.Context, source, version, cacheRoot string) (fetchedV1Module, error) {
-	if err := os.MkdirAll(cacheRoot, 0o755); err != nil {
-		return fetchedV1Module{}, err
-	}
-	var checkout string
-	var module v1.Module
-	var commit string
-	if version == "" {
-		var err error
-		checkout, module, commit, err = cloneHeadV1GitModule(ctx, source, cacheRoot)
-		if err != nil {
-			return fetchedV1Module{}, fmt.Errorf("resolve %s at Git HEAD: %w", source, err)
-		}
-		defer os.RemoveAll(checkout)
-		version = commit
-	} else if v1.IsCommitRef(version) {
-		var err error
-		checkout, err = clonePinnedV1GitModule(ctx, v1.LockedModule{Source: source, Commit: version}, cacheRoot)
-		if err != nil {
-			return fetchedV1Module{}, fmt.Errorf("fetch %s@%s: %w", source, version, err)
-		}
-		defer os.RemoveAll(checkout)
-		commit, err = gitV1(ctx, checkout, "rev-parse", "HEAD")
-		if err != nil {
-			return fetchedV1Module{}, err
-		}
-		module, err = moduleconfig.ReadGitDependency(checkout, source)
-		if err != nil {
-			return fetchedV1Module{}, err
-		}
-	} else {
-		var err error
-		checkout, err = os.MkdirTemp(cacheRoot, "git-*")
-		if err != nil {
-			return fetchedV1Module{}, err
-		}
-		defer os.RemoveAll(checkout)
-		candidate, err := findV1GitModuleTag(ctx, source, version)
-		if err != nil {
-			return fetchedV1Module{}, fmt.Errorf("findV1GitModuleTag: %w", err)
-		}
-		tag := candidate.tag(version)
-		if _, err := gitV1(ctx, "", "clone", "--quiet", "--depth=1", "--branch", tag, "--no-checkout", "--", candidate.remote, checkout); err != nil {
-			return fetchedV1Module{}, fmt.Errorf("clone %s@%s: %w", source, version, err)
-		}
-		commit, err = gitV1(ctx, checkout, "rev-parse", "--verify", "refs/tags/"+tag+"^{commit}")
-		if err != nil {
-			return fetchedV1Module{}, fmt.Errorf("%s: %s is not a Git tag: %w", source, version, err)
-		}
-		if _, err := gitV1(ctx, checkout, "checkout", "--quiet", "--detach", strings.TrimSpace(commit)); err != nil {
-			return fetchedV1Module{}, err
-		}
-		module, err = readV1GitModuleCandidate(checkout, source, candidate)
-		if err != nil {
-			return fetchedV1Module{}, fmt.Errorf("%s@%s: %w", source, version, err)
-		}
-	}
-	commit = strings.TrimSpace(commit)
-	filesRaw, err := gitV1(ctx, checkout, "ls-files", "-z")
-	if err != nil {
-		return fetchedV1Module{}, err
-	}
-	var files []string
-	for _, name := range strings.Split(filesRaw, "\x00") {
-		if name == "" {
-			continue
-		}
-		path := filepath.Join(checkout, filepath.FromSlash(name))
-		info, err := os.Lstat(path)
-		if err != nil {
-			return fetchedV1Module{}, err
-		}
-		if !info.Mode().IsRegular() {
-			return fetchedV1Module{}, fmt.Errorf("%s@%s: unsupported non-regular file %q", source, version, name)
-		}
-		files = append(files, name)
-	}
-	hash, err := dirhash.Hash1(files, func(name string) (io.ReadCloser, error) {
-		return os.Open(filepath.Join(checkout, filepath.FromSlash(name)))
-	})
-	if err != nil {
-		return fetchedV1Module{}, fmt.Errorf("hash %s@%s: %w", source, version, err)
-	}
-	return fetchedV1Module{config: module, lock: v1.LockedModule{
-		Source: source, Version: version, Commit: commit, Hash: hash,
-	}}, nil
 }
 
 func gitV1(ctx context.Context, dir string, args ...string) (string, error) {

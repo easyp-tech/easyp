@@ -78,6 +78,43 @@ func TestAddDirectV1RequirementPromotesIndirectInBlock(t *testing.T) {
 	require.Equal(t, "module example.com/app\nrequire ( // dependencies\n  example.com/dep v1.1.0\n  example.com/other v1.0.0 // indirect\n)\n", string(updated))
 }
 
+func TestAddDirectV1RequirementPreservesFormatting(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name     string
+		original string
+		version  string
+		want     string
+	}{
+		{
+			name:     "update preserves spacing and comment",
+			original: "require\thttps://example.com/dep\t v1.0.0  // keep this\n",
+			version:  "v1.1.0",
+			want:     "require\thttps://example.com/dep\t v1.1.0  // keep this\n",
+		},
+		{
+			name:     "versionless stays versionless",
+			original: "require (\n\thttps://example.com/dep\t// keep this\n)\n",
+			want:     "require (\n\thttps://example.com/dep\t// keep this\n)\n",
+		},
+		{
+			name:     "pin versionless and retain comment",
+			original: "require https://example.com/dep  // indirect needed by clients\n",
+			version:  "v1.1.0",
+			want:     "require https://example.com/dep v1.1.0  // needed by clients\n",
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			updated, err := addDirectV1Requirement([]byte(tc.original), v1.Requirement{Module: "https://example.com/dep", Version: tc.version})
+			require.NoError(t, err)
+			require.Equal(t, tc.want, string(updated))
+		})
+	}
+}
+
 func TestParseV1GetRequirement(t *testing.T) {
 	t.Parallel()
 	for _, tc := range []struct {

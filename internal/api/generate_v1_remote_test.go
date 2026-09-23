@@ -57,7 +57,7 @@ func TestGenerateV1SendsPinnedRemotePluginVersion(t *testing.T) {
 	t.Setenv("EASYPPATH", filepath.Join(t.TempDir(), "cache"))
 	ctx := cli.NewContext(&cli.App{Metadata: map[string]any{}}, flag.NewFlagSet("test", flag.ContinueOnError), nil)
 	ctx.Context = context.Background()
-	if err := generateV1Module(ctx, logger.NewNop(), filepath.Join(root, "easyp.gen.yaml"), root, gen); err != nil {
+	if err := generateSelectedV1Module(ctx, logger.NewNop(), filepath.Join(root, "easyp.gen.yaml"), root, v1ModuleSelection{directory: root}, gen); err != nil {
 		t.Fatal(err)
 	}
 	select {

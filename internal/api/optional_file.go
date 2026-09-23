@@ -2,6 +2,7 @@ package api
 
 import (
 	"errors"
+	"fmt"
 	"os"
 )
 
@@ -11,7 +12,7 @@ func readOptionalFile(path string) ([]byte, bool, error) {
 		return nil, false, nil
 	}
 	if err != nil {
-		return nil, false, err
+		return nil, false, fmt.Errorf("ReadFile: %w", err)
 	}
 	return raw, true, nil
 }

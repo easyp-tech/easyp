@@ -187,7 +187,7 @@ func listV1CandidateTags(ctx context.Context, candidate v1GitModuleCandidate) ([
 
 func readV1GitModuleCandidate(checkout, source string, candidate v1GitModuleCandidate) (v1.Module, error) {
 	if candidate.subdir != "" {
-		manifestPath := filepath.Join(checkout, candidate.subdir, "protobuf.mod")
+		manifestPath := filepath.Join(checkout, candidate.subdir, v1.ModuleFile)
 		raw, err := os.ReadFile(manifestPath)
 		if err != nil {
 			return v1.Module{}, fmt.Errorf("ReadFile: %s: %w", manifestPath, err)

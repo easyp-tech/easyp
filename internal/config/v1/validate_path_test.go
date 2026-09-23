@@ -1,4 +1,4 @@
-package api
+package v1
 
 import (
 	"os"
@@ -17,7 +17,7 @@ func TestValidateConfigPathChecksAllNestedConfigs(t *testing.T) {
 	writeValidationFixture(t, root, "api/deep/protobuf.lock", "version: 2\nmodules: []\n")
 	writeValidationFixture(t, root, "api/deep/other.yaml", "anything: true\n")
 
-	issues, err := validateConfigPath(root)
+	issues, err := ValidatePath(root)
 	require.NoError(t, err)
 	files := make(map[string]bool)
 	for _, issue := range issues {
@@ -36,14 +36,14 @@ func TestValidateConfigPathKeepsExplicitFileSelection(t *testing.T) {
 	selected := writeValidationFixture(t, root, "easyp.yaml", "version: v1\n")
 	writeValidationFixture(t, root, "nested/easyp.gen.yaml", "plugins:\n  - invalid: true\n")
 
-	issues, err := validateConfigPath(selected)
+	issues, err := ValidatePath(selected)
 	require.NoError(t, err)
 	assert.Empty(t, issues)
 }
 
 func TestValidateConfigPathRejectsEmptyDirectory(t *testing.T) {
 	t.Parallel()
-	_, err := validateConfigPath(t.TempDir())
+	_, err := ValidatePath(t.TempDir())
 	require.ErrorContains(t, err, "no configuration files")
 }
 

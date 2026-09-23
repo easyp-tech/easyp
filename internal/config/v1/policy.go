@@ -12,29 +12,42 @@ import (
 
 // Policy is the producer-side v1 easyp.yaml configuration.
 type Policy struct {
-	Version string `yaml:"version"`
-	Linters struct {
-		Default string   `yaml:"default"`
-		Enable  []string `yaml:"enable"`
-		Disable []string `yaml:"disable"`
-		Extends string   `yaml:"extends"`
-	} `yaml:"linters"`
+	Version        string                       `yaml:"version"`
+	Linters        LinterPolicy                 `yaml:"linters"`
 	LinterSettings map[string]map[string]string `yaml:"linters-settings"`
-	Issues         struct {
-		ExcludeRules []struct {
-			Path    string   `yaml:"path"`
-			Linters []string `yaml:"linters"`
-		} `yaml:"exclude-rules"`
-	} `yaml:"issues"`
-	Breaking struct {
-		Baseline       string   `yaml:"baseline"`
-		Categories     []string `yaml:"categories"`
-		IgnoreUnstable bool     `yaml:"ignore_unstable"`
-		Extends        string   `yaml:"extends"`
-		Ignore         []string `yaml:"ignore"`
-	} `yaml:"breaking"`
+	Issues         IssuePolicy                  `yaml:"issues"`
+	Breaking       BreakingPolicy               `yaml:"breaking"`
 }
 
+// LinterPolicy selects the default preset and individual linter rules.
+type LinterPolicy struct {
+	Default string   `yaml:"default"`
+	Enable  []string `yaml:"enable"`
+	Disable []string `yaml:"disable"`
+	Extends string   `yaml:"extends"`
+}
+
+// IssuePolicy controls suppression of lint findings.
+type IssuePolicy struct {
+	ExcludeRules []IssueExcludeRule `yaml:"exclude-rules"`
+}
+
+// IssueExcludeRule selects the linters and paths to exclude from reporting.
+type IssueExcludeRule struct {
+	Path    string   `yaml:"path"`
+	Linters []string `yaml:"linters"`
+}
+
+// BreakingPolicy selects a baseline and compatibility checks.
+type BreakingPolicy struct {
+	Baseline       string   `yaml:"baseline"`
+	Categories     []string `yaml:"categories"`
+	IgnoreUnstable bool     `yaml:"ignore_unstable"`
+	Extends        string   `yaml:"extends"`
+	Ignore         []string `yaml:"ignore"`
+}
+
+// ParsePolicy reads and validates a v1 lint and breaking policy.
 func ParsePolicy(r io.Reader) (Policy, error) {
 	var result Policy
 	decoder := yaml.NewDecoder(r)
@@ -59,6 +72,7 @@ func ParsePolicy(r io.Reader) (Policy, error) {
 	return result, nil
 }
 
+// LintConfig translates the policy into the lint engine configuration.
 func (p Policy) LintConfig() (config.LintConfig, error) {
 	if p.Linters.Extends != "" {
 		return config.LintConfig{}, fmt.Errorf("linters.extends policy loading is not implemented")

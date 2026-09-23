@@ -52,3 +52,27 @@ func TestListV1FilesLocalOnlyDoesNotRequireLock(t *testing.T) {
 	require.Equal(t, "event.proto", listed.Files[0].ImportPath)
 	require.Empty(t, listed.Errors)
 }
+
+func TestListV1FilesRejectsDuplicateDependencyImports(t *testing.T) {
+	t.Parallel()
+	root := t.TempDir()
+	dependency := t.TempDir()
+	replacement, err := filepath.Rel(root, dependency)
+	require.NoError(t, err)
+	writeV1GenerateFixture(t, root, "event.proto", "syntax = \"proto3\";\n")
+	writeV1GenerateFixture(t, dependency, "protobuf.mod", "module example.com/dep\n")
+	writeV1GenerateFixture(t, dependency, "event.proto", "syntax = \"proto3\";\n")
+	set := flag.NewFlagSet("ls-files", flag.ContinueOnError)
+	set.Bool(flagLsFilesIncludeImports.Name, true, "")
+	ctx := cli.NewContext(&cli.App{}, set, nil)
+	ctx.Context = t.Context()
+	module := v1.Module{
+		Name: "example.com/root", Roots: []string{"."},
+		Requires: []v1.Requirement{{Module: "example.com/dep", Version: "v1.0.0"}},
+		Replaces: []v1.Replacement{{Module: "example.com/dep", Target: replacement}},
+	}
+
+	_, err = listV1Files(ctx, root, module)
+	require.ErrorContains(t, err, "duplicate import path")
+	require.ErrorContains(t, err, "event.proto")
+}
