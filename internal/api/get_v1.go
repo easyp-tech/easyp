@@ -89,25 +89,23 @@ func parseV1GetRequirement(spec string) (v1.Requirement, error) {
 // the manifest. A repeated get leaves an existing version in place unless the
 // user explicitly requests another one.
 func addDirectV1Requirement(original []byte, target v1.Requirement) ([]byte, error) {
+	lines := strings.Split(string(original), "\n")
 	found := false
-	updated, err := editV1RequirementLines(original, func(line v1RequirementLine) (string, error) {
+	for _, line := range parseV1RequirementLines(lines) {
 		if line.module != target.Module {
-			return line.String(), nil
+			continue
 		}
 		if found {
-			return "", fmt.Errorf("protobuf.mod: duplicate require %s", target.Module)
+			return nil, fmt.Errorf("protobuf.mod: duplicate require %s", target.Module)
 		}
 		found = true
 		if target.Version != "" {
 			line = line.withVersion(target.Version)
 		}
-		return line.direct().String(), nil
-	})
-	if err != nil {
-		return nil, fmt.Errorf("editV1RequirementLines: %w", err)
+		lines[line.index] = line.direct().String()
 	}
 	if found {
-		return updated, nil
+		return []byte(strings.Join(lines, "\n")), nil
 	}
 	return appendV1Requirements(original, []v1ManifestRequirement{{Requirement: target}}), nil
 }

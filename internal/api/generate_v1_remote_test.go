@@ -5,18 +5,20 @@ import (
 	"flag"
 	"fmt"
 	"net"
-	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 
-	v1 "github.com/easyp-tech/easyp/internal/config/v1"
-	"github.com/easyp-tech/easyp/internal/logger"
-	pluginv1 "github.com/easyp-tech/service/api/generator/v1"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"github.com/urfave/cli/v2"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/pluginpb"
+
+	v1 "github.com/easyp-tech/easyp/internal/config/v1"
+	"github.com/easyp-tech/easyp/internal/logger"
+	pluginv1 "github.com/easyp-tech/service/api/generator/v1"
 )
 
 type testV1RemotePlugin struct {
@@ -32,43 +34,45 @@ func (s *testV1RemotePlugin) GenerateCode(_ context.Context, request *pluginv1.G
 }
 
 func TestGenerateV1SendsPinnedRemotePluginVersion(t *testing.T) {
-	listener, err := net.Listen("tcp", "127.0.0.1:0")
-	if err != nil {
-		t.Fatal(err)
+	// buildCore configures the process-wide lint toggle, so generation tests run sequentially.
+	tests := []struct {
+		name        string
+		version     string
+		wantRequest string
+	}{
+		{name: "release", version: "v1.2.3", wantRequest: "python:v1.2.3"},
+		{name: "prerelease", version: "v2.0.0-rc.1", wantRequest: "python:v2.0.0-rc.1"},
 	}
-	server := grpc.NewServer()
-	remote := &testV1RemotePlugin{called: make(chan string, 1)}
-	pluginv1.RegisterServiceAPIServer(server, remote)
-	go func() { _ = server.Serve(listener) }()
-	t.Cleanup(server.Stop)
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			listener, err := net.Listen("tcp", "127.0.0.1:0")
+			require.NoError(t, err)
+			server := grpc.NewServer()
+			remote := &testV1RemotePlugin{called: make(chan string, 1)}
+			pluginv1.RegisterServiceAPIServer(server, remote)
+			serveErr := make(chan error, 1)
+			go func() { serveErr <- server.Serve(listener) }()
+			t.Cleanup(func() {
+				server.Stop()
+				assert.NoError(t, <-serveErr)
+			})
 
-	root := t.TempDir()
-	if err := os.WriteFile(filepath.Join(root, "protobuf.mod"), []byte("module example.com/root\n"), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(filepath.Join(root, "item.proto"), []byte("syntax = \"proto3\";\npackage item.v1;\nmessage Item {}\n"), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	configText := fmt.Sprintf("version: v1\nplugins:\n  - remote: http://%s/python\n    version: v1.2.3\n    out: gen\n", listener.Addr())
-	gen, err := v1.ParseGenerate(strings.NewReader(configText))
-	if err != nil {
-		t.Fatal(err)
-	}
-	t.Setenv("EASYPPATH", filepath.Join(t.TempDir(), "cache"))
-	ctx := cli.NewContext(&cli.App{Metadata: map[string]any{}}, flag.NewFlagSet("test", flag.ContinueOnError), nil)
-	ctx.Context = context.Background()
-	if err := generateSelectedV1Module(ctx, logger.NewNop(), filepath.Join(root, "easyp.gen.yaml"), root, v1ModuleSelection{directory: root}, gen); err != nil {
-		t.Fatal(err)
-	}
-	select {
-	case got := <-remote.called:
-		if got != "python:v1.2.3" {
-			t.Fatalf("remote plugin name = %q", got)
-		}
-	default:
-		t.Fatal("remote plugin was not called")
-	}
-	if _, err := os.Stat(filepath.Join(root, "gen", "remote.txt")); err != nil {
-		t.Fatal(err)
+			root := t.TempDir()
+			writeV1GenerateFixture(t, root, "item.proto", "syntax = \"proto3\";\npackage item.v1;\nmessage Item {}\n")
+			configText := fmt.Sprintf("version: v1\nplugins:\n  - remote: http://%s/python\n    version: %s\n    out: gen\n", listener.Addr(), tt.version)
+			gen, err := v1.ParseGenerate(strings.NewReader(configText))
+			require.NoError(t, err)
+			ctx := cli.NewContext(&cli.App{Metadata: map[string]any{}}, flag.NewFlagSet("test", flag.ContinueOnError), nil)
+			ctx.Context = t.Context()
+			module := v1.Module{Name: "example.com/root", Roots: []string{"."}}
+
+			err = generateV1ModuleWithRoots(ctx, logger.NewNop(), filepath.Join(root, "easyp.gen.yaml"), root, gen, module, nil)
+
+			require.NoError(t, err)
+			require.Len(t, remote.called, 1)
+			assert.Equal(t, tt.wantRequest, <-remote.called)
+			assert.FileExists(t, filepath.Join(root, "gen", "remote.txt"))
+		})
 	}
 }

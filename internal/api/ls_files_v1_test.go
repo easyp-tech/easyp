@@ -55,24 +55,40 @@ func TestListV1FilesLocalOnlyDoesNotRequireLock(t *testing.T) {
 
 func TestListV1FilesRejectsDuplicateDependencyImports(t *testing.T) {
 	t.Parallel()
-	root := t.TempDir()
-	dependency := t.TempDir()
-	replacement, err := filepath.Rel(root, dependency)
-	require.NoError(t, err)
-	writeV1GenerateFixture(t, root, "event.proto", "syntax = \"proto3\";\n")
-	writeV1GenerateFixture(t, dependency, "protobuf.mod", "module example.com/dep\n")
-	writeV1GenerateFixture(t, dependency, "event.proto", "syntax = \"proto3\";\n")
-	set := flag.NewFlagSet("ls-files", flag.ContinueOnError)
-	set.Bool(flagLsFilesIncludeImports.Name, true, "")
-	ctx := cli.NewContext(&cli.App{}, set, nil)
-	ctx.Context = t.Context()
-	module := v1.Module{
-		Name: "example.com/root", Roots: []string{"."},
-		Requires: []v1.Requirement{{Module: "example.com/dep", Version: "v1.0.0"}},
-		Replaces: []v1.Replacement{{Module: "example.com/dep", Target: replacement}},
-	}
 
-	_, err = listV1Files(ctx, root, module)
-	require.ErrorContains(t, err, "duplicate import path")
-	require.ErrorContains(t, err, "event.proto")
+	tests := []struct {
+		name       string
+		importPath string
+	}{
+		{name: "root_import", importPath: "event.proto"},
+		{name: "nested_import", importPath: "events/v1/event.proto"},
+	}
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			root := t.TempDir()
+			dependency := t.TempDir()
+			replacement, err := filepath.Rel(root, dependency)
+			require.NoError(t, err)
+			writeV1GenerateFixture(t, root, tt.importPath, "syntax = \"proto3\";\n")
+			writeV1GenerateFixture(t, dependency, "protobuf.mod", "module example.com/dep\n")
+			writeV1GenerateFixture(t, dependency, tt.importPath, "syntax = \"proto3\";\n")
+			set := flag.NewFlagSet("ls-files", flag.ContinueOnError)
+			set.Bool(flagLsFilesIncludeImports.Name, true, "")
+			ctx := cli.NewContext(&cli.App{}, set, nil)
+			ctx.Context = t.Context()
+			module := v1.Module{
+				Name: "example.com/root", Roots: []string{"."},
+				Requires: []v1.Requirement{{Module: "example.com/dep", Version: "v1.0.0"}},
+				Replaces: []v1.Replacement{{Module: "example.com/dep", Target: replacement}},
+			}
+
+			_, err = listV1Files(ctx, root, module)
+
+			require.ErrorContains(t, err, "duplicate import path")
+			require.ErrorContains(t, err, tt.importPath)
+		})
+	}
 }

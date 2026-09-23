@@ -109,45 +109,60 @@ func resolveV1GenerationModule(ctx context.Context, log logger.Logger, repoRoot,
 	if consumer.Name == selection.source {
 		return readV1GenerationModule(ctx, log, consumerDir)
 	}
+
+	var moduleDir string
+	var dependencyRoots v1SourceRoots
 	for _, replacement := range consumer.Replaces {
 		if replacement.Module != selection.source {
 			continue
 		}
-		roots, err := resolveV1DependencySources(ctx, log, consumerDir, consumer)
+		dependencyRoots, err = resolveV1DependencySources(ctx, log, consumerDir, consumer)
 		if err != nil {
 			return v1GenerationModule{}, fmt.Errorf("resolveV1DependencySources: %w", err)
 		}
-		moduleDir := filepath.Clean(filepath.Join(consumerDir, replacement.Target))
-		return readV1GenerationDependency(moduleDir, selection.source, roots)
+		moduleDir = filepath.Clean(filepath.Join(consumerDir, replacement.Target))
+		break
 	}
-	return resolveV1LockedGenerationModule(ctx, log, consumerDir, consumer, selection.source)
-}
-
-func resolveV1LockedGenerationModule(ctx context.Context, log logger.Logger, consumerDir string, consumer v1.Module, source string) (v1GenerationModule, error) {
-	gitCacheRoot, err := gitCachePath(log)
-	if err != nil {
-		return v1GenerationModule{}, fmt.Errorf("gitCachePath: %w", err)
-	}
-	dependencyRoots, err := lockedV1DependencySources(ctx, consumerDir, consumer, gitCacheRoot)
-	if err != nil {
-		return v1GenerationModule{}, fmt.Errorf("lockedV1DependencySources: %w", err)
-	}
-	lock, err := readV1Lock(filepath.Join(consumerDir, v1.LockFile))
-	if err != nil {
-		return v1GenerationModule{}, fmt.Errorf("readV1Lock: %w", err)
-	}
-	for _, entry := range lock.Modules {
-		if entry.Source != source {
-			continue
+	if moduleDir == "" {
+		gitCacheRoot, err := gitCachePath(log)
+		if err != nil {
+			return v1GenerationModule{}, fmt.Errorf("gitCachePath: %w", err)
+		}
+		dependencyRoots, err = lockedV1DependencySources(ctx, consumerDir, consumer, gitCacheRoot)
+		if err != nil {
+			return v1GenerationModule{}, fmt.Errorf("lockedV1DependencySources: %w", err)
+		}
+		lock, err := readV1Lock(filepath.Join(consumerDir, v1.LockFile))
+		if err != nil {
+			return v1GenerationModule{}, fmt.Errorf("readV1Lock: %w", err)
+		}
+		for _, entry := range lock.Modules {
+			if entry.Source == selection.source {
+				moduleDir = v1ModuleCachePath(gitCacheRoot, entry)
+				break
+			}
+		}
+		if moduleDir == "" {
+			return v1GenerationModule{}, fmt.Errorf("module %q is not selected in %s", selection.source, filepath.Join(consumerDir, v1.LockFile))
 		}
 		localRoots, err := localV1DependencySources(consumerDir, consumer, map[string]bool{})
 		if err != nil {
 			return v1GenerationModule{}, fmt.Errorf("localV1DependencySources: %w", err)
 		}
 		dependencyRoots = append(dependencyRoots, localRoots...)
-		return readV1GenerationDependency(v1ModuleCachePath(gitCacheRoot, entry), source, dependencyRoots)
 	}
-	return v1GenerationModule{}, fmt.Errorf("module %q is not selected in %s", source, filepath.Join(consumerDir, v1.LockFile))
+
+	module, err := moduleconfig.ReadGitDependency(moduleDir, selection.source)
+	if err != nil {
+		return v1GenerationModule{}, fmt.Errorf("ReadGitDependency: %w", err)
+	}
+	otherRoots := make(v1SourceRoots, 0, len(dependencyRoots))
+	for _, root := range dependencyRoots {
+		if root.module != selection.source {
+			otherRoots = append(otherRoots, root)
+		}
+	}
+	return v1GenerationModule{directory: moduleDir, module: module, dependencies: otherRoots}, nil
 }
 
 func readV1GenerationModule(ctx context.Context, log logger.Logger, directory string) (v1GenerationModule, error) {
@@ -160,20 +175,6 @@ func readV1GenerationModule(ctx context.Context, log logger.Logger, directory st
 		return v1GenerationModule{}, fmt.Errorf("resolveV1DependencySources: %w", err)
 	}
 	return v1GenerationModule{directory: directory, module: module, dependencies: dependencies}, nil
-}
-
-func readV1GenerationDependency(directory, source string, dependencies v1SourceRoots) (v1GenerationModule, error) {
-	module, err := moduleconfig.ReadGitDependency(directory, source)
-	if err != nil {
-		return v1GenerationModule{}, fmt.Errorf("ReadGitDependency: %w", err)
-	}
-	otherRoots := make(v1SourceRoots, 0, len(dependencies))
-	for _, root := range dependencies {
-		if root.module != source {
-			otherRoots = append(otherRoots, root)
-		}
-	}
-	return v1GenerationModule{directory: directory, module: module, dependencies: otherRoots}, nil
 }
 
 func findV1LocalModuleByName(repoRoot, name string) (string, error) {

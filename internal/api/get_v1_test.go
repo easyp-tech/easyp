@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/urfave/cli/v2"
 
@@ -105,12 +106,17 @@ func TestAddDirectV1RequirementPreservesFormatting(t *testing.T) {
 			want:     "require https://example.com/dep v1.1.0  // needed by clients\n",
 		},
 	}
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			updated, err := addDirectV1Requirement([]byte(tc.original), v1.Requirement{Module: "https://example.com/dep", Version: tc.version})
+			original := []byte(tt.original)
+			target := v1.Requirement{Module: "https://example.com/dep", Version: tt.version}
+
+			updated, err := addDirectV1Requirement(original, target)
+
 			require.NoError(t, err)
-			require.Equal(t, tc.want, string(updated))
+			assert.Equal(t, tt.want, string(updated))
 		})
 	}
 }
@@ -211,4 +217,51 @@ func TestGetResolutionFailureLeavesManifestAndLockUnchanged(t *testing.T) {
 	require.Equal(t, manifest, current)
 	_, err = os.Stat(filepath.Join(root, "protobuf.lock"))
 	require.ErrorIs(t, err, os.ErrNotExist)
+}
+
+func TestAddDirectV1RequirementAddsAndRejectsDuplicates(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name     string
+		original string
+		version  string
+		want     string
+		wantErr  string
+	}{
+		{
+			name:     "append versionless with missing final newline",
+			original: "module example.com/root",
+			want:     "module example.com/root\nrequire example.com/dep\n",
+		},
+		{
+			name:     "append version without editing other directives",
+			original: "module example.com/root\nroots proto\nrequire example.com/other v1.0.0 // keep\n",
+			version:  "v1.1.0",
+			want:     "module example.com/root\nroots proto\nrequire example.com/other v1.0.0 // keep\nrequire example.com/dep v1.1.0\n",
+		},
+		{
+			name:     "duplicate in block and standalone requirement",
+			original: "require (\n example.com/dep v1.0.0\n)\nrequire example.com/dep\n",
+			wantErr:  "duplicate require example.com/dep",
+		},
+	}
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			original := []byte(tt.original)
+
+			updated, err := addDirectV1Requirement(original, v1.Requirement{Module: "example.com/dep", Version: tt.version})
+
+			assert.Equal(t, tt.original, string(original))
+			if tt.wantErr != "" {
+				require.ErrorContains(t, err, tt.wantErr)
+				assert.Nil(t, updated)
+				return
+			}
+			require.NoError(t, err)
+			assert.Equal(t, tt.want, string(updated))
+		})
+	}
 }

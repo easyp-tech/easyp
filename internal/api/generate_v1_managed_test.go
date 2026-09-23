@@ -8,6 +8,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/urfave/cli/v2"
 	"google.golang.org/protobuf/proto"
@@ -18,26 +19,29 @@ import (
 )
 
 func TestGenerateV1ManagedRulesMatchModuleIdentities(t *testing.T) {
-	for _, tc := range []struct {
+	// Generation configures the process-wide lint toggle; remote cases also set EASYPPATH.
+	tests := []struct {
 		name   string
 		remote bool
 	}{
-		{name: "local replacement"},
-		{name: "locked dependency", remote: true},
-	} {
-		t.Run(tc.name, func(t *testing.T) {
+		{name: "local_replacement"},
+		{name: "locked_dependency", remote: true},
+	}
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
 			root := t.TempDir()
 			dependency := t.TempDir()
 			cacheBase := t.TempDir()
 			t.Setenv("EASYPPATH", cacheBase)
 			source := "example.com/dep"
-			if tc.remote {
+			if tt.remote {
 				source = dependency
 			}
 			writeV1GenerateFixture(t, dependency, "protobuf.mod", "module "+source+"\nroots proto\n")
 			writeV1GenerateFixture(t, dependency, "proto/dep/v1/dep.proto", "syntax = \"proto3\"; package dep.v1; option go_package = \"example.com/original/dep/v1;depv1\"; message Dep {}\n")
 			manifest := fmt.Sprintf("module example.com/root\nroots proto\nrequire %s v1.0.0\n", source)
-			if tc.remote {
+			if tt.remote {
 				runTestGit(t, dependency, "init", "-q")
 				runTestGit(t, dependency, "add", ".")
 				runTestGit(t, dependency, "-c", "user.name=EasyP Test", "-c", "user.email=test@example.com", "commit", "-qm", "initial")
@@ -71,8 +75,10 @@ generate:
 			descriptors := generateV1Descriptors(t, root, func(ctx *cli.Context) error {
 				return generateSelectedV1Module(ctx, logger.NewNop(), filepath.Join(root, "easyp.gen.yaml"), root, v1ModuleSelection{directory: root}, gen)
 			})
-			require.Equal(t, "example.com/original/dep/v1;depv1", descriptors["dep/v1/dep.proto"].GetOptions().GetGoPackage())
-			require.Equal(t, "example.com/current/root/v1;rootv1", descriptors["root/v1/root.proto"].GetOptions().GetGoPackage())
+			require.Contains(t, descriptors, "dep/v1/dep.proto")
+			require.Contains(t, descriptors, "root/v1/root.proto")
+			assert.Equal(t, "example.com/original/dep/v1;depv1", descriptors["dep/v1/dep.proto"].GetOptions().GetGoPackage())
+			assert.Equal(t, "example.com/current/root/v1;rootv1", descriptors["root/v1/root.proto"].GetOptions().GetGoPackage())
 		})
 	}
 }

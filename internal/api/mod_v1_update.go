@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/urfave/cli/v2"
 	"golang.org/x/mod/semver"
@@ -35,10 +36,7 @@ func (m Mod) Update(ctx *cli.Context) error {
 		}
 		updatedVersions[requirement.Module] = version
 	}
-	updated, err := rewriteV1RequiredVersions(original, updatedVersions)
-	if err != nil {
-		return fmt.Errorf("rewriteV1RequiredVersions: %w", err)
-	}
+	updated := rewriteV1RequiredVersions(original, updatedVersions)
 	updatedModule, err := v1.ParseModule(bytes.NewReader(updated))
 	if err != nil {
 		return fmt.Errorf("ParseModule: %w", err)
@@ -88,14 +86,16 @@ func latestCompatibleV1Tag(ctx context.Context, source, current string) (string,
 	return best, nil
 }
 
-func rewriteV1RequiredVersions(original []byte, updates map[string]string) ([]byte, error) {
-	return editV1RequirementLines(original, func(line v1RequirementLine) (string, error) {
+func rewriteV1RequiredVersions(original []byte, updates map[string]string) []byte {
+	lines := strings.Split(string(original), "\n")
+	for _, line := range parseV1RequirementLines(lines) {
 		version, ok := updates[line.module]
 		if !ok || line.version == "" {
-			return line.String(), nil
+			continue
 		}
-		return line.withVersion(version).String(), nil
-	})
+		lines[line.index] = line.withVersion(version).String()
+	}
+	return []byte(strings.Join(lines, "\n"))
 }
 
 func writeV1Manifest(root string, raw []byte) error {

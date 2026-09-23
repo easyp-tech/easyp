@@ -201,9 +201,4 @@ type (
 	Inputs struct {
 		InputFilesDir []InputFilesDir
 	}
-	// Query collects source files and import roots for code generation.
-	Query struct {
-		Imports []string
-		Files   []string
-	}
 )

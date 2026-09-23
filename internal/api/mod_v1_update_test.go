@@ -16,13 +16,31 @@ func TestRewriteV1RequiredVersionsBlockWhitespace(t *testing.T) {
 	tests := []struct {
 		name    string
 		opening string
+		want    string
 	}{
-		{name: "single space", opening: "require ("},
-		{name: "no space", opening: "require("},
-		{name: "tab", opening: "require\t("},
-		{name: "multiple spaces", opening: "require   ("},
+		{
+			name:    "single space",
+			opening: "require (",
+			want:    "module example.com/root\nrequire ( // dependencies\n\thttps://example.com/common.git v1.1.0 // indirect\n)\n",
+		},
+		{
+			name:    "no space",
+			opening: "require(",
+			want:    "module example.com/root\nrequire( // dependencies\n\thttps://example.com/common.git v1.1.0 // indirect\n)\n",
+		},
+		{
+			name:    "tab",
+			opening: "require\t(",
+			want:    "module example.com/root\nrequire\t( // dependencies\n\thttps://example.com/common.git v1.1.0 // indirect\n)\n",
+		},
+		{
+			name:    "multiple spaces",
+			opening: "require   (",
+			want:    "module example.com/root\nrequire   ( // dependencies\n\thttps://example.com/common.git v1.1.0 // indirect\n)\n",
+		},
 	}
 	for _, tt := range tests {
+		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
@@ -30,11 +48,11 @@ func TestRewriteV1RequiredVersionsBlockWhitespace(t *testing.T) {
 			_, err := v1.ParseModule(strings.NewReader(original))
 			require.NoError(t, err)
 
-			updated, err := rewriteV1RequiredVersions([]byte(original), map[string]string{
+			updated := rewriteV1RequiredVersions([]byte(original), map[string]string{
 				"https://example.com/common.git": "v1.1.0",
 			})
-			require.NoError(t, err)
-			assert.Equal(t, strings.Replace(original, "v1.0.0", "v1.1.0", 1), string(updated))
+
+			assert.Equal(t, tt.want, string(updated))
 		})
 	}
 }

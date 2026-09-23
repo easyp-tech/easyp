@@ -1,7 +1,6 @@
 package api
 
 import (
-	"fmt"
 	"strings"
 
 	v1 "github.com/easyp-tech/easyp/internal/config/v1"
@@ -10,6 +9,7 @@ import (
 // v1RequirementLine keeps the source spelling so edits preserve comments and
 // whitespace outside the version or indirect marker being changed.
 type v1RequirementLine struct {
+	index      int
 	body       string
 	comment    string
 	hasComment bool
@@ -17,8 +17,8 @@ type v1RequirementLine struct {
 	version    string
 }
 
-func editV1RequirementLines(original []byte, edit func(v1RequirementLine) (string, error)) ([]byte, error) {
-	lines := strings.Split(string(original), "\n")
+func parseV1RequirementLines(lines []string) []v1RequirementLine {
+	var requirements []v1RequirementLine
 	inRequire := false
 	for i, line := range lines {
 		body, comment, hasComment := splitV1ManifestComment(line)
@@ -41,17 +41,13 @@ func editV1RequirementLines(original []byte, edit func(v1RequirementLine) (strin
 		if len(fields) < 1 || len(fields) > 2 {
 			continue
 		}
-		entry := v1RequirementLine{body: body, comment: comment, hasComment: hasComment, module: fields[0]}
+		entry := v1RequirementLine{index: i, body: body, comment: comment, hasComment: hasComment, module: fields[0]}
 		if len(fields) == 2 {
 			entry.version = fields[1]
 		}
-		updated, err := edit(entry)
-		if err != nil {
-			return nil, fmt.Errorf("edit: %w", err)
-		}
-		lines[i] = updated
+		requirements = append(requirements, entry)
 	}
-	return []byte(strings.Join(lines, "\n")), nil
+	return requirements
 }
 
 func (line v1RequirementLine) withVersion(version string) v1RequirementLine {

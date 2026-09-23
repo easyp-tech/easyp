@@ -3,6 +3,7 @@ package api
 import (
 	"fmt"
 	"path/filepath"
+	"slices"
 
 	"github.com/easyp-tech/easyp/internal/config"
 	v1 "github.com/easyp-tech/easyp/internal/config/v1"
@@ -30,6 +31,7 @@ func prepareV1GeneratorConfig(configPath, moduleDir string, gen v1.Generate, mod
 		})
 	}
 	cfg.Generate.Managed = gen.Generate.Managed
+	cfg.Generate.Managed.Override = slices.Clone(gen.Generate.Managed.Override)
 	if prefix := gen.Options.Go.PackagePrefix; prefix != nil && *prefix != "" {
 		cfg.Generate.Managed.Enabled = true
 		rule := config.ManagedOverrideRule{FileOption: "go_package_prefix", Value: *prefix}

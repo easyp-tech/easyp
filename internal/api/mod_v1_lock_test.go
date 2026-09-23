@@ -11,11 +11,14 @@ import (
 	"strings"
 	"testing"
 
-	v1 "github.com/easyp-tech/easyp/internal/config/v1"
-	"github.com/easyp-tech/easyp/internal/logger"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"github.com/urfave/cli/v2"
 	"golang.org/x/mod/sumdb/dirhash"
 	"gopkg.in/yaml.v3"
+
+	v1 "github.com/easyp-tech/easyp/internal/config/v1"
+	"github.com/easyp-tech/easyp/internal/logger"
 )
 
 func TestBuildV1LockPinsGitCommitAndGoStyleH1(t *testing.T) {
@@ -306,77 +309,60 @@ func TestDownloadV1LockKeepsCommitAfterTagMoves(t *testing.T) {
 }
 
 func TestTidyV1WritesLockedGitDependency(t *testing.T) {
-	remote := filepath.Join(t.TempDir(), "dependency")
-	if err := os.MkdirAll(remote, 0o755); err != nil {
-		t.Fatal(err)
+	// The command uses the process working directory and EASYPPATH.
+	tests := []struct {
+		name    string
+		version string
+	}{
+		{name: "tagged requirement", version: "v1.0.0"},
+		{name: "versionless requirement"},
 	}
-	if err := os.WriteFile(filepath.Join(remote, "protobuf.mod"), []byte(fmt.Sprintf("module %s\n", remote)), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(filepath.Join(remote, "dep.proto"), []byte("syntax = \"proto3\";\npackage dep.v1;\nmessage Item { string id = 1; }\n"), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	runTestGit(t, remote, "init", "-q")
-	runTestGit(t, remote, "add", ".")
-	runTestGit(t, remote, "-c", "user.name=EasyP Test", "-c", "user.email=test@example.com", "commit", "-qm", "initial")
-	runTestGit(t, remote, "tag", "v1.0.0")
-	commit := strings.TrimSpace(runTestGit(t, remote, "rev-parse", "HEAD"))
-	wantHash, err := dirhash.Hash1([]string{"dep.proto", "protobuf.mod"}, func(name string) (io.ReadCloser, error) {
-		return os.Open(filepath.Join(remote, name))
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	root := t.TempDir()
-	manifest := fmt.Sprintf("module example.com/root\nrequire %s v1.0.0\n", remote)
-	if err := os.WriteFile(filepath.Join(root, "protobuf.mod"), []byte(manifest), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	cacheBase := filepath.Join(t.TempDir(), "cache")
-	t.Setenv("EASYPPATH", cacheBase)
-	oldDir, err := os.Getwd()
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := os.Chdir(root); err != nil {
-		t.Fatal(err)
-	}
-	t.Cleanup(func() { _ = os.Chdir(oldDir) })
-	cliCtx := &cli.Context{Context: context.Background(), App: &cli.App{Metadata: map[string]any{}}}
-	if err := (Mod{}).Tidy(cliCtx); err != nil {
-		t.Fatal(err)
-	}
-	raw, err := os.ReadFile(filepath.Join(root, "protobuf.lock"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	var lock v1.Lock
-	if err := yaml.Unmarshal(raw, &lock); err != nil {
-		t.Fatal(err)
-	}
-	if lock.Version != 1 || len(lock.Modules) != 1 || lock.Modules[0].Commit != commit || lock.Modules[0].Hash != wantHash {
-		t.Fatalf("unexpected lock: %#v", lock)
-	}
-	if err := (Mod{}).Download(cliCtx); err != nil {
-		t.Fatal(err)
-	}
-	if _, err := os.Stat(filepath.Join(v1ModuleCachePath(filepath.Join(cacheBase, "v1", "git"), lock.Modules[0]), "dep.proto")); err != nil {
-		t.Fatal(err)
-	}
-	module, err := v1.ParseModule(strings.NewReader(manifest))
-	if err != nil {
-		t.Fatal(err)
-	}
-	sources, err := lockedV1DependencySources(context.Background(), root, module, filepath.Join(cacheBase, "v1", "git"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	roots := sources.paths()
-	if len(roots) != 1 {
-		t.Fatalf("dependency roots = %v", roots)
-	}
-	if _, err := os.Stat(filepath.Join(roots[0], "dep.proto")); err != nil {
-		t.Fatal(err)
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			remote := t.TempDir()
+			require.NoError(t, os.WriteFile(filepath.Join(remote, v1.ModuleFile), []byte("module "+remote+"\n"), 0o644))
+			require.NoError(t, os.WriteFile(filepath.Join(remote, "dep.proto"), []byte("syntax = \"proto3\";\npackage dep.v1;\nmessage Item { string id = 1; }\n"), 0o644))
+			runTestGit(t, remote, "init", "-q")
+			runTestGit(t, remote, "add", ".")
+			runTestGit(t, remote, "-c", "user.name=EasyP Test", "-c", "user.email=test@example.com", "commit", "-qm", "initial")
+			runTestGit(t, remote, "tag", "v1.0.0")
+			commit := strings.TrimSpace(runTestGit(t, remote, "rev-parse", "HEAD"))
+			wantHash, err := dirhash.Hash1([]string{"dep.proto", v1.ModuleFile}, func(name string) (io.ReadCloser, error) {
+				return os.Open(filepath.Join(remote, name))
+			})
+			require.NoError(t, err)
+			root := t.TempDir()
+			manifest := fmt.Sprintf("module example.com/root\nrequire %s %s\n", remote, tt.version)
+			require.NoError(t, os.WriteFile(filepath.Join(root, v1.ModuleFile), []byte(manifest), 0o644))
+			cacheBase := t.TempDir()
+			t.Setenv("EASYPPATH", cacheBase)
+			t.Chdir(root)
+			cliCtx := cli.NewContext(&cli.App{Metadata: map[string]any{}}, flag.NewFlagSet("test", flag.ContinueOnError), nil)
+
+			err = (Mod{}).Tidy(cliCtx)
+
+			require.NoError(t, err)
+			lock, err := readV1Lock(filepath.Join(root, v1.LockFile))
+			require.NoError(t, err)
+			require.Len(t, lock.Modules, 1)
+			assert.Equal(t, 1, lock.Version)
+			wantVersion := tt.version
+			if wantVersion == "" {
+				wantVersion = commit
+			}
+			assert.Equal(t, v1.LockedModule{Source: remote, Version: wantVersion, Commit: commit, Hash: wantHash}, lock.Modules[0])
+			require.NoError(t, (Mod{}).Download(cliCtx))
+			cache := filepath.Join(cacheBase, "v1", "git")
+			assert.FileExists(t, filepath.Join(v1ModuleCachePath(cache, lock.Modules[0]), "dep.proto"))
+			module, err := v1.ParseModule(strings.NewReader(manifest))
+			require.NoError(t, err)
+			sources, err := lockedV1DependencySources(context.Background(), root, module, cache)
+			require.NoError(t, err)
+			roots := sources.paths()
+			require.Len(t, roots, 1)
+			assert.FileExists(t, filepath.Join(roots[0], "dep.proto"))
+		})
 	}
 }
 
@@ -428,58 +414,48 @@ func TestDownloadV1LockRejectsUnsafeCommit(t *testing.T) {
 }
 
 func TestGenerateV1UsesLockedGitDependency(t *testing.T) {
-	remote := filepath.Join(t.TempDir(), "dependency")
-	if err := os.MkdirAll(remote, 0o755); err != nil {
-		t.Fatal(err)
+	// EASYPPATH is process-wide, so each case runs with its own environment in sequence.
+	tests := []struct {
+		name           string
+		dependencyRoot string
+	}{
+		{name: "repository root", dependencyRoot: "."},
+		{name: "configured proto root", dependencyRoot: "proto"},
 	}
-	for name, content := range map[string]string{
-		"protobuf.mod": fmt.Sprintf("module %s\n", remote),
-		"dep.proto":    "syntax = \"proto3\";\npackage dep.v1;\nmessage Item { string id = 1; }\n",
-	} {
-		if err := os.WriteFile(filepath.Join(remote, name), []byte(content), 0o644); err != nil {
-			t.Fatal(err)
-		}
-	}
-	runTestGit(t, remote, "init", "-q")
-	runTestGit(t, remote, "add", ".")
-	runTestGit(t, remote, "-c", "user.name=EasyP Test", "-c", "user.email=test@example.com", "commit", "-qm", "initial")
-	runTestGit(t, remote, "tag", "v1.0.0")
-	root := t.TempDir()
-	manifest := fmt.Sprintf("module example.com/root\nrequire %s v1.0.0\n", remote)
-	if err := os.WriteFile(filepath.Join(root, "protobuf.mod"), []byte(manifest), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(filepath.Join(root, "user.proto"), []byte("syntax = \"proto3\";\npackage user.v1;\nimport \"dep.proto\";\nmessage User { dep.v1.Item item = 1; }\n"), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	module, err := v1.ParseModule(strings.NewReader(manifest))
-	if err != nil {
-		t.Fatal(err)
-	}
-	cacheBase := filepath.Join(t.TempDir(), "cache")
-	t.Setenv("EASYPPATH", cacheBase)
-	lock, err := buildV1Lock(context.Background(), module, filepath.Join(cacheBase, "v1", "git"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	raw, err := yaml.Marshal(lock)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(filepath.Join(root, "protobuf.lock"), raw, 0o644); err != nil {
-		t.Fatal(err)
-	}
-	gen, err := v1.ParseGenerate(strings.NewReader("version: v1\nplugins:\n  - name: python\n    out: ./gen/python\n"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	cliCtx := cli.NewContext(&cli.App{Metadata: map[string]any{}}, flag.NewFlagSet("test", flag.ContinueOnError), nil)
-	cliCtx.Context = context.Background()
-	if err := generateSelectedV1Module(cliCtx, logger.NewNop(), filepath.Join(root, "easyp.gen.yaml"), root, v1ModuleSelection{directory: root}, gen); err != nil {
-		t.Fatal(err)
-	}
-	if _, err := os.Stat(filepath.Join(root, "gen", "python", "user_pb2.py")); err != nil {
-		t.Fatal(err)
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			remote := t.TempDir()
+			require.NoError(t, os.MkdirAll(filepath.Join(remote, tt.dependencyRoot), 0o755))
+			dependencyManifest := fmt.Sprintf("module %s\nroots %s\n", remote, tt.dependencyRoot)
+			require.NoError(t, os.WriteFile(filepath.Join(remote, v1.ModuleFile), []byte(dependencyManifest), 0o644))
+			require.NoError(t, os.WriteFile(filepath.Join(remote, tt.dependencyRoot, "dep.proto"), []byte("syntax = \"proto3\";\npackage dep.v1;\nmessage Item { string id = 1; }\n"), 0o644))
+			runTestGit(t, remote, "init", "-q")
+			runTestGit(t, remote, "add", ".")
+			runTestGit(t, remote, "-c", "user.name=EasyP Test", "-c", "user.email=test@example.com", "commit", "-qm", "initial")
+			runTestGit(t, remote, "tag", "v1.0.0")
+			root := t.TempDir()
+			manifest := fmt.Sprintf("module example.com/root\nrequire %s v1.0.0\n", remote)
+			require.NoError(t, os.WriteFile(filepath.Join(root, v1.ModuleFile), []byte(manifest), 0o644))
+			require.NoError(t, os.WriteFile(filepath.Join(root, "user.proto"), []byte("syntax = \"proto3\";\npackage user.v1;\nimport \"dep.proto\";\nmessage User { dep.v1.Item item = 1; }\n"), 0o644))
+			module, err := v1.ParseModule(strings.NewReader(manifest))
+			require.NoError(t, err)
+			cacheBase := t.TempDir()
+			t.Setenv("EASYPPATH", cacheBase)
+			lock, err := buildV1Lock(context.Background(), module, filepath.Join(cacheBase, "v1", "git"))
+			require.NoError(t, err)
+			raw, err := yaml.Marshal(lock)
+			require.NoError(t, err)
+			require.NoError(t, os.WriteFile(filepath.Join(root, v1.LockFile), raw, 0o644))
+			gen, err := v1.ParseGenerate(strings.NewReader("version: v1\nplugins:\n  - name: python\n    out: ./gen/python\n"))
+			require.NoError(t, err)
+			cliCtx := cli.NewContext(&cli.App{Metadata: map[string]any{}}, flag.NewFlagSet("test", flag.ContinueOnError), nil)
+
+			err = generateSelectedV1Module(cliCtx, logger.NewNop(), filepath.Join(root, v1.GenerateFile), root, v1ModuleSelection{directory: root}, gen)
+
+			require.NoError(t, err)
+			assert.FileExists(t, filepath.Join(root, "gen", "python", "user_pb2.py"))
+		})
 	}
 }
 
@@ -833,14 +809,44 @@ func TestTidyV1MixedBufAndLegacyEasyPDependencies(t *testing.T) {
 }
 
 func TestRewriteV1RequiredVersionsHTTPSIdentity(t *testing.T) {
-	original := []byte("module https://example.com/user.git\nrequire https://example.com/common.git v1.0.0 // indirect\n")
-	updated, err := rewriteV1RequiredVersions(original, map[string]string{"https://example.com/common.git": "v1.1.0"})
-	if err != nil {
-		t.Fatal(err)
+	t.Parallel()
+
+	tests := []struct {
+		name     string
+		original string
+		updates  map[string]string
+		want     string
+	}{
+		{
+			name:     "preserve URL and indirect comment",
+			original: "module https://example.com/user.git\nrequire https://example.com/common.git v1.0.0 // indirect\n",
+			updates:  map[string]string{"https://example.com/common.git": "v1.1.0"},
+			want:     "module https://example.com/user.git\nrequire https://example.com/common.git v1.1.0 // indirect\n",
+		},
+		{
+			name:     "leave versionless dependency untouched",
+			original: "module https://example.com/user.git\nrequire https://example.com/common.git // latest head\n",
+			updates:  map[string]string{"https://example.com/common.git": "v1.1.0"},
+			want:     "module https://example.com/user.git\nrequire https://example.com/common.git // latest head\n",
+		},
+		{
+			name:     "leave unselected dependency untouched",
+			original: "module https://example.com/user.git\nrequire https://example.com/common.git v1.0.0 // indirect\n",
+			updates:  map[string]string{"https://example.com/other.git": "v1.1.0"},
+			want:     "module https://example.com/user.git\nrequire https://example.com/common.git v1.0.0 // indirect\n",
+		},
 	}
-	want := "require https://example.com/common.git v1.1.0 // indirect"
-	if !strings.Contains(string(updated), want) {
-		t.Fatalf("missing %q in %s", want, updated)
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			original := []byte(tt.original)
+
+			updated := rewriteV1RequiredVersions(original, tt.updates)
+
+			assert.Equal(t, tt.want, string(updated))
+			assert.Equal(t, tt.original, string(original))
+		})
 	}
 }
 

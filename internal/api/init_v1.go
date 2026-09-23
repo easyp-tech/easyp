@@ -16,8 +16,8 @@ import (
 )
 
 type initialConfigFile struct {
-	name string
-	data []byte
+	name     string
+	contents []byte
 }
 
 // initializeV1 writes the three independent v1 files. All overwrite choices
@@ -30,16 +30,21 @@ func initializeV1(ctx context.Context, root, identity string, prompt prompter.Pr
 	if err != nil {
 		return fmt.Errorf("initialModuleIdentity: %w", err)
 	}
-	targets, err := initialConfigFiles(identity)
-	if err != nil {
-		return fmt.Errorf("initialConfigFiles: %w", err)
+	manifest := []byte("module " + identity + "\n")
+	if _, err := v1.ParseModule(bytes.NewReader(manifest)); err != nil {
+		return fmt.Errorf("ParseModule: %w", err)
 	}
-	selected, err := selectInitialConfigFiles(ctx, root, targets, prompt)
-	if err != nil {
-		return fmt.Errorf("selectInitialConfigFiles: %w", err)
+	files := []initialConfigFile{
+		{name: v1.ModuleFile, contents: manifest},
+		{name: v1.PolicyFile, contents: []byte("version: v1\nlinters:\n  default: STANDARD\nbreaking:\n  baseline: git:main\n")},
+		{name: v1.GenerateFile, contents: []byte("version: v1\nplugins: []\n")},
 	}
-	for _, target := range selected {
-		if err := writeAtomicFile(filepath.Join(root, target.name), target.data, 0o600); err != nil {
+	selected, err := confirmInitialConfigFiles(ctx, root, files, prompt)
+	if err != nil {
+		return fmt.Errorf("confirmInitialConfigFiles: %w", err)
+	}
+	for _, file := range selected {
+		if err := writeAtomicFile(filepath.Join(root, file.name), file.contents, 0o600); err != nil {
 			return fmt.Errorf("writeAtomicFile: %w", err)
 		}
 	}
@@ -85,49 +90,29 @@ func initialModuleIdentity(ctx context.Context, root, identity string, prompt pr
 	return strings.TrimSpace(value), nil
 }
 
-func initialConfigFiles(identity string) ([]initialConfigFile, error) {
-	moduleContents := []byte("module " + identity + "\n")
-	if _, err := v1.ParseModule(bytes.NewReader(moduleContents)); err != nil {
-		return nil, fmt.Errorf("module identity %q: %w", identity, err)
-	}
-	policyContents := []byte("version: v1\nlinters:\n  default: STANDARD\nbreaking:\n  baseline: git:main\n")
-	if _, err := v1.ParsePolicy(bytes.NewReader(policyContents)); err != nil {
-		return nil, fmt.Errorf("ParsePolicy: %w", err)
-	}
-	genContents := []byte("version: v1\nplugins: []\n")
-	if _, err := v1.ParseGenerate(bytes.NewReader(genContents)); err != nil {
-		return nil, fmt.Errorf("ParseGenerate: %w", err)
-	}
-	return []initialConfigFile{
-		{name: v1.ModuleFile, data: moduleContents},
-		{name: v1.PolicyFile, data: policyContents},
-		{name: v1.GenerateFile, data: genContents},
-	}, nil
-}
-
-func selectInitialConfigFiles(ctx context.Context, root string, targets []initialConfigFile, prompt prompter.Prompter) ([]initialConfigFile, error) {
+func confirmInitialConfigFiles(ctx context.Context, root string, files []initialConfigFile, prompt prompter.Prompter) ([]initialConfigFile, error) {
 	var selected []initialConfigFile
-	for _, target := range targets {
-		path := filepath.Join(root, target.name)
+	for _, file := range files {
+		path := filepath.Join(root, file.name)
 		current, found, err := readOptionalFile(path)
 		if err != nil {
 			return nil, fmt.Errorf("readOptionalFile: %w", err)
 		}
 		if !found {
-			selected = append(selected, target)
+			selected = append(selected, file)
 			continue
 		}
-		if bytes.Equal(current, target.data) {
+		if bytes.Equal(current, file.contents) {
 			continue
 		}
-		overwrite, err := prompt.Confirm(ctx, target.name+" already exists. Overwrite?", false)
+		overwrite, err := prompt.Confirm(ctx, file.name+" already exists. Overwrite?", false)
 		if err != nil {
 			return nil, fmt.Errorf("Confirm: %w", err)
 		}
 		if !overwrite {
 			continue
 		}
-		selected = append(selected, target)
+		selected = append(selected, file)
 	}
 	return selected, nil
 }

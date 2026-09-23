@@ -42,16 +42,15 @@ func (c *Core) SetFileModules(modules map[string]string) {
 func (c *Core) Generate(ctx context.Context, root, descriptorSetOut string, includeImports bool) error {
 	c.logger.Info(ctx, "starting code generation", slog.String("root", root))
 
-	q := Query{
-		Imports: append([]string{}, c.importRoots...),
-	}
+	imports := append([]string{}, c.importRoots...)
+	var files []string
 
 	for _, inputFilesDir := range c.inputs.InputFilesDir {
 		searchPath := filepath.Join(inputFilesDir.Root, inputFilesDir.Path)
 		fsWalker := fs.NewFSWalker(root, searchPath)
 		importRoot := filepath.Join(root, inputFilesDir.Root)
-		if !slices.Contains(q.Imports, importRoot) {
-			q.Imports = append(q.Imports, importRoot)
+		if !slices.Contains(imports, importRoot) {
+			imports = append(imports, importRoot)
 		}
 
 		err := fsWalker.WalkDir(func(walkPath string, err error) error {
@@ -68,7 +67,7 @@ func (c *Core) Generate(ctx context.Context, root, descriptorSetOut string, incl
 
 			// Convert to relative path matching proto import format
 			addedFile := stripPrefix(walkPath, inputFilesDir.Root)
-			q.Files = append(q.Files, addedFile)
+			files = append(files, addedFile)
 
 			return nil
 		})
@@ -77,59 +76,47 @@ func (c *Core) Generate(ctx context.Context, root, descriptorSetOut string, incl
 		}
 	}
 
-	c.logger.Debug(ctx, "resolved imports and files", slog.Any("imports", q.Imports), slog.Any("files", q.Files))
+	c.logger.Debug(ctx, "resolved imports and files", slog.Any("imports", imports), slog.Any("files", files))
 
-	if len(q.Files) == 0 {
+	if len(files) == 0 {
 		return ErrEmptyInputFiles
 	}
 
 	// Search local roots before dependency roots.
-	slices.Reverse(q.Imports)
+	slices.Reverse(imports)
 
 	compiler := protocompile.Compiler{
-		Resolver: protocompile.CompositeResolver{
-			wellknownimports.WithStandardImports(
-				&protocompile.SourceResolver{
-					ImportPaths: q.Imports,
-				},
-			),
-		},
+		Resolver:       wellknownimports.WithStandardImports(&protocompile.SourceResolver{ImportPaths: imports}),
 		SourceInfoMode: protocompile.SourceInfoStandard,
 	}
 
-	res, err := compiler.Compile(ctx, q.Files...)
+	compiled, err := compiler.Compile(ctx, files...)
 	if err != nil {
 		return fmt.Errorf("Compile: %w", err)
 	}
 
-	fileDescriptors, dependencyFiles := collectFileDescriptors(res)
+	fileDescriptors, dependencyFiles := collectFileDescriptors(compiled)
 
-	// Log file order for debugging
 	fileNames := make([]string, len(fileDescriptors))
 	for i, fd := range fileDescriptors {
 		fileNames[i] = fd.GetName()
 	}
 	c.logger.Debug(ctx, "resolved file descriptor order", slog.Int("file_count", len(fileDescriptors)), slog.Any("files", fileNames))
 
-	// Build file to module mapping for managed mode
-	fileToModule := c.buildFileToModuleMap(q.Files)
-
-	// Apply managed mode to file descriptors
 	if c.managedMode.Enabled {
 		c.logger.Debug(ctx, "applying managed mode to file descriptors")
+		fileToModule := c.buildFileToModuleMap(files)
 		if err := ApplyManagedMode(fileDescriptors, c.managedMode, fileToModule); err != nil {
 			return fmt.Errorf("ApplyManagedMode: %w", err)
 		}
 	}
 
 	if descriptorSetOut != "" {
-		var descriptorsToSave []*descriptorpb.FileDescriptorProto
-		if includeImports {
-			descriptorsToSave = fileDescriptors
-		} else {
-			// Filter out imports, keep only target files
+		descriptorsToSave := fileDescriptors
+		if !includeImports {
+			descriptorsToSave = nil
 			targetFiles := make(map[string]bool)
-			for _, f := range q.Files {
+			for _, f := range files {
 				targetFiles[f] = true
 			}
 			for _, fd := range fileDescriptors {
@@ -148,7 +135,7 @@ func (c *Core) Generate(ctx context.Context, root, descriptorSetOut string, incl
 			return fmt.Errorf("Marshal: %w", err)
 		}
 
-		if err := os.WriteFile(descriptorSetOut, data, 0644); err != nil {
+		if err := os.WriteFile(descriptorSetOut, data, 0o644); err != nil {
 			return fmt.Errorf("WriteFile: %w", err)
 		}
 	}
@@ -156,7 +143,7 @@ func (c *Core) Generate(ctx context.Context, root, descriptorSetOut string, incl
 	filesToWrite := NewGenerateBucket()
 
 	for _, plugin := range c.plugins {
-		filesToGenerate := q.Files
+		filesToGenerate := files
 
 		if plugin.WithImports {
 			filesToGenerate = append(filesToGenerate, dependencyFiles...)
@@ -188,32 +175,25 @@ func (c *Core) Generate(ctx context.Context, root, descriptorSetOut string, incl
 			return fmt.Errorf("execute plugin %s: %w, executor: %s", source, err, executor.GetName())
 		}
 
-		// Check for plugin errors
 		if resp.Error != nil {
 			return fmt.Errorf("plugin %s error: %s, executor: %s", plugin.Source, *resp.Error, executor.GetName())
 		}
 
-		// Output information about generated files (for debugging)
+		outputDir := root
+		if plugin.Out != "" {
+			outputDir = filepath.Join(root, plugin.Out)
+		}
 		for _, file := range resp.File {
-			// Determine base directory for output files considering plugin.Out
-			var baseDir string
-			if plugin.Out != "" {
-				baseDir = filepath.Join(root, plugin.Out)
-			} else {
-				baseDir = root
-			}
-
-			p := filepath.Join(baseDir, file.GetName())
+			path := filepath.Join(outputDir, file.GetName())
 
 			c.logger.Debug(ctx, "generated file",
 				slog.String("plugin", source),
 				slog.String("file", file.GetName()),
 				slog.String("plugin_out", plugin.Out),
-				slog.String("full_path", p),
+				slog.String("full_path", path),
 			)
 
-			// Write file to bucket with insertion point support
-			if err := addFileWithInsertionPoint(ctx, p, file, filesToWrite); err != nil {
+			if err := addFileWithInsertionPoint(ctx, path, file, filesToWrite); err != nil {
 				return fmt.Errorf("addFileWithInsertionPoint: %w", err)
 			}
 		}

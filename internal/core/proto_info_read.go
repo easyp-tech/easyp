@@ -91,19 +91,15 @@ func (c *Core) openImportFile(disk FS, importName string) (io.ReadCloser, error)
 		return nil, fmt.Errorf("invalid import path %q", importName)
 	}
 	f, err := disk.Open(importName)
-	if err != nil {
-		if !errors.Is(err, os.ErrNotExist) {
-			return nil, fmt.Errorf("Open: %w", err)
-		}
-		f, err = c.openDependencyImport(importName)
-		if err != nil {
-			return nil, fmt.Errorf("openDependencyImport: %w", err)
-		}
+	switch {
+	case errors.Is(err, os.ErrNotExist):
+		// Search dependency roots when the current filesystem has no matching file.
+	case err != nil:
+		return nil, fmt.Errorf("Open: %w", err)
+	default:
+		return f, nil
 	}
-	return f, nil
-}
 
-func (c *Core) openDependencyImport(importName string) (io.ReadCloser, error) {
 	for _, root := range c.importRoots {
 		fullPath := filepath.Join(root, importName)
 		f, err := os.Open(fullPath)
@@ -116,7 +112,7 @@ func (c *Core) openDependencyImport(importName string) (io.ReadCloser, error) {
 		return f, nil
 	}
 
-	f, err := wellknownimports.Content.Open(importName)
+	f, err = wellknownimports.Content.Open(importName)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
 			return nil, &OpenImportFileError{FileName: importName}
