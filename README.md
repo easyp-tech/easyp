@@ -145,14 +145,17 @@ breaking:
 
 # Configuration validation
 
-`easyp validate-config` validates a v1 `easyp.yaml` or `easyp.gen.yaml` (selected with `--config`) and exits with a non-zero status when errors are found.
+`easyp validate-config` recursively validates every `easyp.yaml`, `easyp.gen.yaml`, `protobuf.mod`, and `protobuf.lock` under the current directory. Use `--config` to validate one file or all matching files under a selected directory. Errors include the file path and, for YAML structure errors, the line and column. The command exits with a non-zero status when errors are found.
 
 ```sh
-# Validate the default easyp.yaml with JSON output (default)
+# Validate all EasyP configuration and module files below the current directory
 easyp validate-config
 
-# Validate the generator file with text output
+# Validate one generator file with text output
 easyp --format text validate-config --config easyp.gen.yaml
+
+# Validate every matching file below a directory
+easyp validate-config --config ./services
 ```
 
 ## Community

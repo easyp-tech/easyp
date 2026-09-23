@@ -141,13 +141,14 @@ The default output is indented JSON. Text output lists roots, files, and resolut
 
 ### `easyp validate-config [flags]`
 
-Validates the configuration file for syntax and required fields.
+Recursively validates `easyp.yaml`, `easyp.gen.yaml`, `protobuf.mod`, and `protobuf.lock` below the current directory. An explicit `--config` selects one file or a directory to scan.
 
 This command aliases the global configuration flag as a command flag.
 
 ```bash
 easyp validate-config --config easyp.yaml
 easyp validate-config --format text
+easyp validate-config --config ./services
 ```
 
 The default output is JSON with `valid`, and when applicable `errors` and `warnings`. Text output begins with `VALID: true` or `VALID: false`.

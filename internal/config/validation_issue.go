@@ -7,6 +7,7 @@ const (
 
 // ValidationIssue describes a problem with a v1 configuration file.
 type ValidationIssue struct {
+	File     string `json:"file,omitempty" yaml:"file,omitempty"`
 	Code     string `json:"code" yaml:"code"`
 	Message  string `json:"message" yaml:"message"`
 	Line     int    `json:"line,omitempty" yaml:"line,omitempty"`

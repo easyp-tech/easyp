@@ -124,7 +124,7 @@ command-specific:
   line in `internal/api/lint.go`.
 - `validate-config` prints a result, not an error envelope. JSON output has
   `valid`, optional `errors`, and optional `warnings`; every validation issue
-  contains `code`, `message`, optional `line`, `column`, and `severity`.
+  contains `code`, `message`, `file`, optional `line` and `column`, and `severity`.
 - In text mode, `validate-config` prints `VALID: true|false`, followed by
   `ERRORS` and/or `WARNINGS` rows when present.
 - Explicit `errExit` cases are logged to stderr through the configured

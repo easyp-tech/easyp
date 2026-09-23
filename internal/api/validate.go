@@ -19,9 +19,9 @@ func (v Validate) Command() *cli.Command {
 	return &cli.Command{
 		Name:        "validate-config",
 		Aliases:     []string{"validate"},
-		Usage:       "validate easyp config file",
-		Description: "validate a v1 EasyP configuration or module file",
-		UsageText:   "validate-config [--config path] [--format json|text]",
+		Usage:       "validate EasyP configuration files",
+		Description: "recursively validate v1 EasyP files in the current directory or a selected path",
+		UsageText:   "validate-config [--config file-or-directory] [--format json|text]",
 		Flags: []cli.Flag{
 			flags.Config,
 			flags.Format,
@@ -37,7 +37,7 @@ type validateResult struct {
 }
 
 func (v Validate) Action(ctx *cli.Context) error {
-	configPath := ctx.String(flags.Config.Name)
+	configPath := validationTarget(ctx)
 	if !filepath.IsAbs(configPath) {
 		wd, err := os.Getwd()
 		if err != nil {
@@ -46,11 +46,7 @@ func (v Validate) Action(ctx *cli.Context) error {
 		configPath = filepath.Join(wd, configPath)
 	}
 
-	if _, err := os.Stat(configPath); err != nil {
-		return fmt.Errorf("config not found: %w", err)
-	}
-
-	issues, err := validateConfigFile(configPath)
+	issues, err := validateConfigPath(configPath)
 	if err != nil {
 		return fmt.Errorf("validate config: %w", err)
 	}
@@ -92,6 +88,15 @@ func (v Validate) Action(ctx *cli.Context) error {
 	return ErrHasValidateIssue
 }
 
+func validationTarget(ctx *cli.Context) string {
+	for _, scope := range ctx.Lineage() {
+		if scope.IsSet(flags.Config.Name) {
+			return scope.String(flags.Config.Name)
+		}
+	}
+	return "."
+}
+
 func printValidateText(res validateResult) {
 	if res.Valid {
 		fmt.Println("VALID: true")
@@ -103,17 +108,17 @@ func printValidateText(res validateResult) {
 
 	if len(res.Errors) > 0 {
 		fmt.Fprintln(w, "ERRORS:")
-		fmt.Fprintln(w, "  #\tLOCATION\tCODE\tMESSAGE")
+		fmt.Fprintln(w, "  #\tFILE\tLOCATION\tCODE\tMESSAGE")
 		for i, e := range res.Errors {
-			fmt.Fprintf(w, "  %d\t%s\t%s\t%s\n", i+1, validationLocation(e), e.Code, e.Message)
+			fmt.Fprintf(w, "  %d\t%s\t%s\t%s\t%s\n", i+1, e.File, validationLocation(e), e.Code, e.Message)
 		}
 	}
 
 	if len(res.Warnings) > 0 {
 		fmt.Fprintln(w, "WARNINGS:")
-		fmt.Fprintln(w, "  #\tLOCATION\tCODE\tMESSAGE")
+		fmt.Fprintln(w, "  #\tFILE\tLOCATION\tCODE\tMESSAGE")
 		for i, e := range res.Warnings {
-			fmt.Fprintf(w, "  %d\t%s\t%s\t%s\n", i+1, validationLocation(e), e.Code, e.Message)
+			fmt.Fprintf(w, "  %d\t%s\t%s\t%s\t%s\n", i+1, e.File, validationLocation(e), e.Code, e.Message)
 		}
 	}
 
