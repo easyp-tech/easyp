@@ -1,10 +1,10 @@
 package api
 
 import (
+	"bytes"
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 
 	"github.com/easyp-tech/easyp/internal/config"
 	v1 "github.com/easyp-tech/easyp/internal/config/v1"
@@ -17,33 +17,46 @@ func validateConfigFile(path string) ([]config.ValidationIssue, error) {
 		return nil, err
 	}
 	name := filepath.Base(path)
-	var validationErr error
 	switch name {
 	case "easyp.gen.yaml":
-		gen, err := v1.ParseGenerate(strings.NewReader(string(raw)))
-		if err != nil {
-			validationErr = err
-		} else {
-			validationErr = gen.Generate.Managed.Validate()
+		issues := v1.ValidateGenerateYAML(raw)
+		if config.HasErrors(issues) {
+			return issues, nil
 		}
+		_, err := v1.ParseGenerate(bytes.NewReader(raw))
+		if err != nil {
+			return append(issues, v1ValidationError(name, err)), nil
+		}
+		return issues, nil
 	case "protobuf.mod":
-		_, validationErr = v1.ParseModule(strings.NewReader(string(raw)))
+		_, err = v1.ParseModule(bytes.NewReader(raw))
 	case "protobuf.lock":
-		_, validationErr = v1.ParseLock(strings.NewReader(string(raw)))
+		_, err = v1.ParseLock(bytes.NewReader(raw))
 	default:
-		policy, err := v1.ParsePolicy(strings.NewReader(string(raw)))
-		if err != nil {
-			validationErr = err
-		} else if _, err := policy.LintConfig(); err != nil {
-			validationErr = err
-		} else if _, err := policy.BreakingConfig(""); err != nil {
-			validationErr = err
+		issues := v1.ValidatePolicyYAML(raw)
+		if config.HasErrors(issues) {
+			return issues, nil
 		}
+		policy, err := v1.ParsePolicy(bytes.NewReader(raw))
+		if err != nil {
+			return append(issues, v1ValidationError(name, err)), nil
+		}
+		if _, err := policy.LintConfig(); err != nil {
+			return append(issues, v1ValidationError(name, err)), nil
+		}
+		if _, err := policy.BreakingConfig(""); err != nil {
+			return append(issues, v1ValidationError(name, err)), nil
+		}
+		return issues, nil
 	}
-	if validationErr != nil {
-		return []config.ValidationIssue{{
-			Code: "v1_validation", Message: fmt.Sprintf("%s: %v", name, validationErr), Severity: config.SeverityError,
-		}}, nil
+	if err != nil {
+		return []config.ValidationIssue{v1ValidationError(name, err)}, nil
 	}
 	return nil, nil
+}
+
+func v1ValidationError(name string, err error) config.ValidationIssue {
+	return config.ValidationIssue{
+		Code: "v1_validation", Message: fmt.Sprintf("%s: %v", name, err), Severity: config.SeverityError,
+	}
 }

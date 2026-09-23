@@ -103,19 +103,26 @@ func printValidateText(res validateResult) {
 
 	if len(res.Errors) > 0 {
 		fmt.Fprintln(w, "ERRORS:")
-		fmt.Fprintln(w, "  #\tCODE\tMESSAGE")
+		fmt.Fprintln(w, "  #\tLOCATION\tCODE\tMESSAGE")
 		for i, e := range res.Errors {
-			fmt.Fprintf(w, "  %d\t%s\t%s\n", i+1, e.Code, e.Message)
+			fmt.Fprintf(w, "  %d\t%s\t%s\t%s\n", i+1, validationLocation(e), e.Code, e.Message)
 		}
 	}
 
 	if len(res.Warnings) > 0 {
 		fmt.Fprintln(w, "WARNINGS:")
-		fmt.Fprintln(w, "  #\tCODE\tMESSAGE")
+		fmt.Fprintln(w, "  #\tLOCATION\tCODE\tMESSAGE")
 		for i, e := range res.Warnings {
-			fmt.Fprintf(w, "  %d\t%s\t%s\n", i+1, e.Code, e.Message)
+			fmt.Fprintf(w, "  %d\t%s\t%s\t%s\n", i+1, validationLocation(e), e.Code, e.Message)
 		}
 	}
 
 	_ = w.Flush()
+}
+
+func validationLocation(issue config.ValidationIssue) string {
+	if issue.Line == 0 {
+		return "-"
+	}
+	return fmt.Sprintf("%d:%d", issue.Line, issue.Column)
 }
