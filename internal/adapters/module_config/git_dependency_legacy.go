@@ -2,6 +2,7 @@ package moduleconfig
 
 import (
 	"fmt"
+	"os"
 	"strings"
 
 	"golang.org/x/mod/semver"
@@ -30,17 +31,15 @@ type legacyDependencyConfig struct {
 	Generate legacyDependencyGenerate `yaml:"generate"`
 }
 
-func readLegacyEasyPRootsAndRequires(dir string) ([]string, []v1.Requirement, error) {
-	raw, found, err := readOptionalDependencyConfig(dir, legacyEasyPConfigFile)
+func readLegacyEasyPRootsAndRequires(path string) ([]string, []v1.Requirement, error) {
+	raw, err := os.ReadFile(path)
 	if err != nil {
-		return nil, nil, fmt.Errorf("readOptionalDependencyConfig: %w", err)
-	}
-	if !found {
-		return nil, nil, nil
+		return nil, nil, fmt.Errorf("ReadFile: %s: %w", path, err)
 	}
 	var old legacyDependencyConfig
-	if err := yaml.Unmarshal(raw, &old); err != nil {
-		return nil, nil, fmt.Errorf("Unmarshal: %s: %w", legacyEasyPConfigFile, err)
+	err = yaml.Unmarshal(raw, &old)
+	if err != nil {
+		return nil, nil, fmt.Errorf("Unmarshal: %s: %w", path, err)
 	}
 	var roots []string
 	var requires []v1.Requirement

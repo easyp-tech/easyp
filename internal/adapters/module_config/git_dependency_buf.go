@@ -2,6 +2,7 @@ package moduleconfig
 
 import (
 	"fmt"
+	"os"
 
 	"gopkg.in/yaml.v3"
 )
@@ -33,61 +34,59 @@ type bufDependencyConfig struct {
 	Build   bufDependencyBuild    `yaml:"build"`
 }
 
-func readBufDependencyRoots(dir string) ([]string, bool, error) {
-	raw, found, err := readOptionalDependencyConfig(dir, bufWorkConfigFile)
+func readBufDependencyWorkspace(path string) ([]string, error) {
+	raw, err := os.ReadFile(path)
 	if err != nil {
-		return nil, false, fmt.Errorf("readOptionalDependencyConfig: %w", err)
+		return nil, fmt.Errorf("ReadFile: %s: %w", path, err)
 	}
-	if found {
-		var workspace bufDependencyWorkspaceConfig
-		err = yaml.Unmarshal(raw, &workspace)
-		if err != nil {
-			return nil, true, fmt.Errorf("Unmarshal: %s: %w", bufWorkConfigFile, err)
-		}
-		if workspace.Version != "v1" || len(workspace.Directories) == 0 {
-			return nil, true, fmt.Errorf("%s: expected v1 with nonempty directories", bufWorkConfigFile)
-		}
-		return workspace.Directories, true, nil
-	}
-	raw, found, err = readOptionalDependencyConfig(dir, bufModuleConfigFile)
+	var workspace bufDependencyWorkspaceConfig
+	err = yaml.Unmarshal(raw, &workspace)
 	if err != nil {
-		return nil, false, fmt.Errorf("readOptionalDependencyConfig: %w", err)
+		return nil, fmt.Errorf("Unmarshal: %s: %w", path, err)
 	}
-	if !found {
-		return nil, false, nil
+	if workspace.Version != "v1" || len(workspace.Directories) == 0 {
+		return nil, fmt.Errorf("%s: expected v1 with nonempty directories", path)
+	}
+	return workspace.Directories, nil
+}
+
+func readBufDependencyModule(path string) ([]string, error) {
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		return nil, fmt.Errorf("ReadFile: %s: %w", path, err)
 	}
 	var buf bufDependencyConfig
 	err = yaml.Unmarshal(raw, &buf)
 	if err != nil {
-		return nil, true, fmt.Errorf("Unmarshal: %s: %w", bufModuleConfigFile, err)
+		return nil, fmt.Errorf("Unmarshal: %s: %w", path, err)
 	}
 	switch buf.Version {
 	case "v2":
 		if len(buf.Modules) == 0 {
-			return nil, true, fmt.Errorf("%s v2: missing modules", bufModuleConfigFile)
+			return nil, fmt.Errorf("%s v2: missing modules", path)
 		}
 		roots := make([]string, 0, len(buf.Modules))
 		for _, item := range buf.Modules {
 			if item.Path == "" {
-				return nil, true, fmt.Errorf("%s v2: module path is empty", bufModuleConfigFile)
+				return nil, fmt.Errorf("%s v2: module path is empty", path)
 			}
 			if len(item.Includes) > 0 || len(item.Excludes) > 0 {
-				return nil, true, fmt.Errorf("%s v2: modules.includes/excludes are not supported as Git dependency import roots", bufModuleConfigFile)
+				return nil, fmt.Errorf("%s v2: modules.includes/excludes are not supported as Git dependency import roots", path)
 			}
 			roots = append(roots, item.Path)
 		}
-		return roots, true, nil
+		return roots, nil
 	case "v1":
-		return []string{"."}, true, nil
+		return []string{"."}, nil
 	case "v1beta1":
 		if len(buf.Build.Excludes) > 0 {
-			return nil, true, fmt.Errorf("%s v1beta1: build.excludes is not supported as Git dependency import roots", bufModuleConfigFile)
+			return nil, fmt.Errorf("%s v1beta1: build.excludes is not supported as Git dependency import roots", path)
 		}
 		if len(buf.Build.Roots) > 0 {
-			return buf.Build.Roots, true, nil
+			return buf.Build.Roots, nil
 		}
-		return []string{"."}, true, nil
+		return []string{"."}, nil
 	default:
-		return nil, true, fmt.Errorf("%s: unsupported version %q", bufModuleConfigFile, buf.Version)
+		return nil, fmt.Errorf("%s: unsupported version %q", path, buf.Version)
 	}
 }

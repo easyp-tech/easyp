@@ -70,10 +70,25 @@ func TestReadGitDependencyModuleFormats(t *testing.T) {
 			name: "v1 manifest wins",
 			files: map[string]string{
 				"protobuf.mod": "module example.com/dependency\nroots proto\nrequire example.com/common v1.2.0\n",
-				"buf.yaml":     "version: v2\nmodules:\n  - path: old\n",
+				"buf.yaml":     "invalid: [lower priority]",
+				"easyp.yaml":   "generate: [invalid legacy config]",
 			},
 			roots:    []string{"proto"},
 			requires: []v1.Requirement{{Module: "example.com/common", Version: "v1.2.0"}},
+		},
+		{
+			name: "legacy requirements and buf roots are combined",
+			files: map[string]string{
+				"protobuf.mod":  "direct (\n  example.com/common@v1.2.0\n)\n",
+				"buf.work.yaml": "version: v1\ndirectories: [proto/buf]\n",
+				"buf.yaml":      "invalid: [lower priority]",
+				"easyp.yaml":    "generate:\n  inputs:\n    - directory:\n        path: proto/legacy\n        root: proto/legacy\n    - git_repo:\n        url: example.com/other@v1.3.0\n",
+			},
+			roots: []string{"proto/buf"},
+			requires: []v1.Requirement{
+				{Module: "example.com/common", Version: "v1.2.0"},
+				{Module: "example.com/other", Version: "v1.3.0"},
+			},
 		},
 	}
 	for _, tc := range tests {
@@ -108,29 +123,23 @@ func TestReadGitDependencyRejectsInvalidBufWorkspaceBeforeFallback(t *testing.T)
 	require.ErrorContains(t, err, bufWorkConfigFile)
 }
 
-func TestReadOptionalDependencyConfig(t *testing.T) {
+func TestDetectGitDependencyModes(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
-		name      string
-		setup     func(string) error
-		wantFound bool
-		wantError bool
+		name  string
+		files []string
+		want  []gitDependencyMode
 	}{
-		{name: "missing file"},
+		{name: "missing files"},
 		{
-			name: "present file",
-			setup: func(path string) error {
-				return os.WriteFile(path, []byte("version: v1\n"), 0o644)
-			},
-			wantFound: true,
+			name:  "all formats in stable order",
+			files: []string{legacyEasyPConfigFile, bufModuleConfigFile, dependencyManifestFile, bufWorkConfigFile},
+			want:  []gitDependencyMode{gitDependencyManifest, gitDependencyBufWorkspace, gitDependencyBufModule, gitDependencyLegacyEasyP},
 		},
 		{
-			name: "file cannot be read",
-			setup: func(path string) error {
-				return os.Mkdir(path, 0o755)
-			},
-			wantError: true,
+			name:  "nested manifest is not a root mode",
+			files: []string{"nested/" + dependencyManifestFile},
 		},
 	}
 
@@ -138,21 +147,24 @@ func TestReadOptionalDependencyConfig(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 			dir := t.TempDir()
-			if tc.setup != nil {
-				require.NoError(t, tc.setup(filepath.Join(dir, "config.yaml")))
+			for _, name := range tc.files {
+				path := filepath.Join(dir, name)
+				require.NoError(t, os.MkdirAll(filepath.Dir(path), 0o755))
+				require.NoError(t, os.WriteFile(path, []byte(""), 0o644))
 			}
-			data, found, err := readOptionalDependencyConfig(dir, "config.yaml")
-			if tc.wantError {
-				require.Error(t, err)
-				return
-			}
+			modes, err := detectGitDependencyModes(dir)
 			require.NoError(t, err)
-			require.Equal(t, tc.wantFound, found)
-			if found {
-				require.Equal(t, "version: v1\n", string(data))
-			}
+			require.Equal(t, tc.want, modes)
 		})
 	}
+}
+
+func TestReadGitDependencyReportsUnreadableSelectedConfig(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	require.NoError(t, os.Mkdir(filepath.Join(dir, bufModuleConfigFile), 0o755))
+	_, err := ReadGitDependency(dir, "example.com/dependency")
+	require.ErrorContains(t, err, bufModuleConfigFile)
 }
 
 func TestReadGitDependencyModuleRejectsEscapingRoot(t *testing.T) {

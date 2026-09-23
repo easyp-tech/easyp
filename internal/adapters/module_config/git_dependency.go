@@ -13,26 +13,64 @@ import (
 
 const dependencyManifestFile = "protobuf.mod"
 
+type gitDependencyMode string
+
+const (
+	gitDependencyManifest     gitDependencyMode = dependencyManifestFile
+	gitDependencyBufWorkspace gitDependencyMode = bufWorkConfigFile
+	gitDependencyBufModule    gitDependencyMode = bufModuleConfigFile
+	gitDependencyLegacyEasyP  gitDependencyMode = legacyEasyPConfigFile
+)
+
 // ReadGitDependency adapts metadata in a checked-out Git repository to
 // the roots and requirements needed by the v1 resolver. Its identity is the
 // source named by the requiring module for pre-v1 repositories.
 func ReadGitDependency(dir, source string) (v1.Module, error) {
-	module, isV1, err := readGitDependencyManifest(dir, source)
+	modes, err := detectGitDependencyModes(dir)
 	if err != nil {
-		return v1.Module{}, fmt.Errorf("readGitDependencyManifest: %w", err)
+		return v1.Module{}, fmt.Errorf("detectGitDependencyModes: %w", err)
 	}
-	if isV1 {
-		return module, nil
+	module := v1.Module{Name: source}
+	var bufRoots, legacyRoots []string
+	foundBuf := false
+	for _, mode := range modes {
+		path := filepath.Join(dir, string(mode))
+		switch mode {
+		case gitDependencyManifest:
+			parsed, isV1, err := readGitDependencyManifest(path, source)
+			if err != nil {
+				return v1.Module{}, fmt.Errorf("readGitDependencyManifest: %w", err)
+			}
+			if isV1 {
+				return parsed, nil
+			}
+			module.Requires = append(module.Requires, parsed.Requires...)
+		case gitDependencyBufWorkspace:
+			bufRoots, err = readBufDependencyWorkspace(path)
+			if err != nil {
+				return v1.Module{}, fmt.Errorf("readBufDependencyWorkspace: %w", err)
+			}
+			foundBuf = true
+		case gitDependencyBufModule:
+			if foundBuf {
+				continue
+			}
+			bufRoots, err = readBufDependencyModule(path)
+			if err != nil {
+				return v1.Module{}, fmt.Errorf("readBufDependencyModule: %w", err)
+			}
+			foundBuf = true
+		case gitDependencyLegacyEasyP:
+			roots, requires, err := readLegacyEasyPRootsAndRequires(path)
+			if err != nil {
+				return v1.Module{}, fmt.Errorf("readLegacyEasyPRootsAndRequires: %w", err)
+			}
+			legacyRoots = roots
+			module.Requires = append(module.Requires, requires...)
+		default:
+			return v1.Module{}, fmt.Errorf("unsupported dependency config mode %q", mode)
+		}
 	}
-	bufRoots, foundBuf, err := readBufDependencyRoots(dir)
-	if err != nil {
-		return v1.Module{}, fmt.Errorf("readBufDependencyRoots: %w", err)
-	}
-	legacyRoots, legacyRequires, err := readLegacyEasyPRootsAndRequires(dir)
-	if err != nil {
-		return v1.Module{}, fmt.Errorf("readLegacyEasyPRootsAndRequires: %w", err)
-	}
-	module.Requires = append(module.Requires, legacyRequires...)
 	if foundBuf {
 		module.Roots = bufRoots
 	} else {
@@ -49,14 +87,33 @@ func ReadGitDependency(dir, source string) (v1.Module, error) {
 	return module, nil
 }
 
-func readGitDependencyManifest(dir, source string) (v1.Module, bool, error) {
-	module := v1.Module{Name: source}
-	manifest, found, err := readOptionalDependencyConfig(dir, dependencyManifestFile)
-	if err != nil {
-		return v1.Module{}, false, fmt.Errorf("readOptionalDependencyConfig: %w", err)
+// detectGitDependencyModes only looks for root-level config files. Parsing and
+// format-specific precedence belong to ReadGitDependency.
+func detectGitDependencyModes(dir string) ([]gitDependencyMode, error) {
+	var modes []gitDependencyMode
+	for _, mode := range []gitDependencyMode{
+		gitDependencyManifest,
+		gitDependencyBufWorkspace,
+		gitDependencyBufModule,
+		gitDependencyLegacyEasyP,
+	} {
+		_, err := os.Lstat(filepath.Join(dir, string(mode)))
+		if errors.Is(err, os.ErrNotExist) {
+			continue
+		}
+		if err != nil {
+			return nil, fmt.Errorf("Lstat: %w", err)
+		}
+		modes = append(modes, mode)
 	}
-	if !found {
-		return module, false, nil
+	return modes, nil
+}
+
+func readGitDependencyManifest(path, source string) (v1.Module, bool, error) {
+	module := v1.Module{Name: source}
+	manifest, err := os.ReadFile(path)
+	if err != nil {
+		return v1.Module{}, false, fmt.Errorf("ReadFile: %w", err)
 	}
 	if v1.IsModuleManifest(manifest) {
 		parsed, err := v1.ParseModule(bytes.NewReader(manifest))
@@ -64,13 +121,13 @@ func readGitDependencyManifest(dir, source string) (v1.Module, bool, error) {
 			return v1.Module{}, false, fmt.Errorf("ParseModule: %w", err)
 		}
 		if parsed.Name != source {
-			return v1.Module{}, false, fmt.Errorf("%s declares module %s, want %s", dir, parsed.Name, source)
+			return v1.Module{}, false, fmt.Errorf("%s declares module %s, want %s", path, parsed.Name, source)
 		}
 		return parsed, true, nil
 	}
 	legacy, err := modfile.Parse(manifest)
 	if err != nil {
-		return v1.Module{}, false, fmt.Errorf("Parse: %s: %w", dependencyManifestFile, err)
+		return v1.Module{}, false, fmt.Errorf("Parse: %s: %w", path, err)
 	}
 	for _, raw := range legacy.Direct {
 		requirement, err := parseLegacyV1Requirement(raw)
@@ -80,15 +137,4 @@ func readGitDependencyManifest(dir, source string) (v1.Module, bool, error) {
 		module.Requires = append(module.Requires, requirement)
 	}
 	return module, false, nil
-}
-
-func readOptionalDependencyConfig(dir, filename string) ([]byte, bool, error) {
-	raw, err := os.ReadFile(filepath.Join(dir, filename))
-	if err != nil {
-		if errors.Is(err, os.ErrNotExist) {
-			return nil, false, nil
-		}
-		return nil, false, fmt.Errorf("ReadFile: %w", err)
-	}
-	return raw, true, nil
 }
