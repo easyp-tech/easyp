@@ -29,6 +29,7 @@ func Get(ctx context.Context, root string, requirement v1.Requirement, repositor
 	if err != nil {
 		return fmt.Errorf("ParseModule: %w", err)
 	}
+	updatedModule = directV1Module(updated, updatedModule)
 	existing, err := ReadLock(filepath.Join(root, v1.LockFile))
 	if err != nil && !errors.Is(err, os.ErrNotExist) {
 		return fmt.Errorf("ReadLock: %w", err)
@@ -41,7 +42,7 @@ func Get(ctx context.Context, root string, requirement v1.Requirement, repositor
 	if err != nil {
 		return fmt.Errorf("manifestRequirementVersions: %w", err)
 	}
-	updated = appendV1IndirectRequirements(updated, updatedModule, lock, versions)
+	updated = syncV1IndirectRequirements(updated, updatedModule, lock, versions)
 	return writeV1ResolvedFiles(root, original, updated, lock)
 }
 
@@ -70,18 +71,51 @@ func addDirectV1Requirement(original []byte, target v1.Requirement) ([]byte, err
 	return appendV1Requirements(original, []v1ManifestRequirement{{Requirement: target}}), nil
 }
 
-func appendV1IndirectRequirements(original []byte, module v1.Module, lock v1.Lock, versions map[string]string) []byte {
-	existing := make(map[string]bool, len(module.Requires))
-	for _, requirement := range module.Requires {
-		existing[requirement.Module] = true
+func syncV1IndirectRequirements(original []byte, module v1.Module, lock v1.Lock, versions map[string]string) []byte {
+	lines := strings.Split(string(original), "\n")
+	indirect := make(map[string]v1RequirementLine)
+	for _, line := range parseV1RequirementLines(lines) {
+		if line.indirect() {
+			indirect[line.module] = line
+		}
 	}
+
+	direct := make(map[string]bool, len(module.Requires))
+	for _, requirement := range module.Requires {
+		direct[requirement.Module] = true
+	}
+
 	var additions []v1ManifestRequirement
 	for _, entry := range lock.Modules {
-		if existing[entry.Source] {
+		if direct[entry.Source] {
+			delete(indirect, entry.Source)
 			continue
 		}
-		additions = append(additions, v1ManifestRequirement{Requirement: v1.Requirement{Module: entry.Source, Version: versions[entry.Source]}, indirect: true})
-		existing[entry.Source] = true
+		if line, ok := indirect[entry.Source]; ok {
+			line = line.withVersion(versions[entry.Source])
+			lines[line.index] = line.String()
+			delete(indirect, entry.Source)
+			continue
+		}
+		additions = append(additions, v1ManifestRequirement{
+			Requirement: v1.Requirement{Module: entry.Source, Version: versions[entry.Source]},
+			indirect:    true,
+		})
 	}
-	return appendV1Requirements(original, additions)
+
+	if len(indirect) > 0 {
+		stale := make(map[int]bool, len(indirect))
+		for _, line := range indirect {
+			stale[line.index] = true
+		}
+		kept := make([]string, 0, len(lines)-len(stale))
+		for index, line := range lines {
+			if !stale[index] {
+				kept = append(kept, line)
+			}
+		}
+		lines = kept
+	}
+
+	return appendV1Requirements([]byte(strings.Join(lines, "\n")), additions)
 }

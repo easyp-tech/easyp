@@ -14,6 +14,7 @@ import (
 
 const (
 	versionlessCommitA    = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+	versionlessCommitANew = "dddddddddddddddddddddddddddddddddddddddd"
 	versionlessCommitBOld = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
 	versionlessCommitBNew = "cccccccccccccccccccccccccccccccccccccccc"
 	versionlessHash       = "h1:47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU="
@@ -114,6 +115,69 @@ func TestTransitiveVersionlessRequirementRemainsUpdatable(t *testing.T) {
 	}
 }
 
+func TestGetRefreshesDerivedTransitiveRequirements(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name            string
+		updatedRequires []v1.Requirement
+		wantB           string
+	}{
+		{
+			name:            "updated upstream pin replaces derived requirement",
+			updatedRequires: []v1.Requirement{{Module: "example.com/B", Version: versionlessCommitBNew}},
+			wantB:           "require example.com/B " + versionlessCommitBNew + " // indirect\n",
+		},
+		{
+			name: "removed upstream dependency removes derived requirement",
+		},
+	}
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			root := t.TempDir()
+			manifest := "module example.com/app\nrequire example.com/A\n"
+			require.NoError(t, os.WriteFile(filepath.Join(root, v1.ModuleFile), []byte(manifest), 0o600))
+			repository := &movingHeadRepository{
+				cacheDir: t.TempDir(),
+				bHead:    versionlessCommitBOld,
+				aModule: v1.Module{
+					Name:     "example.com/A",
+					Roots:    []string{"."},
+					Requires: []v1.Requirement{{Module: "example.com/B", Version: versionlessCommitBOld}},
+				},
+				bModule: v1.Module{Name: "example.com/B", Roots: []string{"."}},
+			}
+			for _, name := range []string{"A", "B"} {
+				directory := filepath.Join(repository.cacheDir, name)
+				require.NoError(t, os.MkdirAll(directory, 0o755))
+				require.NoError(t, os.WriteFile(filepath.Join(directory, name+".proto"), []byte("syntax = \"proto3\";\n"), 0o644))
+			}
+
+			require.NoError(t, Tidy(t.Context(), root, repository))
+			before, err := os.ReadFile(filepath.Join(root, v1.ModuleFile))
+			require.NoError(t, err)
+			oldB := "require example.com/B " + versionlessCommitBOld + " // indirect\n"
+			assert.Contains(t, string(before), oldB)
+
+			repository.bHead = versionlessCommitBNew
+			repository.aModule.Requires = tt.updatedRequires
+			require.NoError(t, Get(t.Context(), root, v1.Requirement{Module: "example.com/A", Version: versionlessCommitANew}, repository))
+
+			after, err := os.ReadFile(filepath.Join(root, v1.ModuleFile))
+			require.NoError(t, err)
+			assert.NotContains(t, string(after), oldB)
+			if tt.wantB != "" {
+				assert.Contains(t, string(after), tt.wantB)
+			} else {
+				assert.NotContains(t, string(after), "require example.com/B")
+			}
+		})
+	}
+}
+
 type movingHeadRepository struct {
 	cacheDir, bHead string
 	aModule         v1.Module
@@ -123,7 +187,10 @@ type movingHeadRepository struct {
 func (r *movingHeadRepository) Fetch(_ context.Context, source, version string) (Fetched, error) {
 	switch source {
 	case "example.com/A":
-		return Fetched{Module: r.aModule, Lock: v1.LockedModule{Source: source, Version: versionlessCommitA, Commit: versionlessCommitA, Hash: versionlessHash}}, nil
+		if version == "" {
+			version = versionlessCommitA
+		}
+		return Fetched{Module: r.aModule, Lock: v1.LockedModule{Source: source, Version: version, Commit: version, Hash: versionlessHash}}, nil
 	case "example.com/B":
 		if version == "" {
 			version = r.bHead

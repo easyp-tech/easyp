@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	v1 "github.com/easyp-tech/easyp/internal/config/v1"
+	"github.com/easyp-tech/easyp/internal/core/path_helpers"
 	"github.com/easyp-tech/easyp/internal/logger"
 	"github.com/easyp-tech/easyp/internal/modules"
 )
@@ -137,10 +138,7 @@ func isOptionsOnlyParent(configPath string, configs []string) (bool, error) {
 			return walkErr
 		}
 		if entry.IsDir() {
-			if childDirs[path] {
-				return filepath.SkipDir
-			}
-			if path != dir && (entry.Name() == ".git" || entry.Name() == "easyp_vendor" || strings.HasPrefix(entry.Name(), ".")) {
+			if childDirs[path] || path_helpers.ShouldSkipV1SourceDir(dir, path) {
 				return filepath.SkipDir
 			}
 			return nil
