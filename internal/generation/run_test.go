@@ -145,15 +145,17 @@ func TestRunWithoutManifest(t *testing.T) {
 	}
 }
 
-func TestRunRejectsMultipleDescriptorTargets(t *testing.T) {
+func TestRunCombinesMultipleDescriptorTargets(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
-		name  string
-		files map[string]string
+		name      string
+		files     map[string]string
+		wantFiles []string
 	}{
 		{
-			name: "two modules in one generator",
+			name:      "two modules in one generator",
+			wantFiles: []string{"m1.proto", "m2.proto"},
 			files: map[string]string{
 				"easyp.gen.yaml":    "version: v1\ngenerate:\n  modules: [m1, m2]\n",
 				"m1/protobuf.mod":   "module example.com/m1\nroots proto\n",
@@ -163,7 +165,8 @@ func TestRunRejectsMultipleDescriptorTargets(t *testing.T) {
 			},
 		},
 		{
-			name: "two generator files",
+			name:      "two generator files",
+			wantFiles: []string{"root.proto", "child.proto"},
 			files: map[string]string{
 				"easyp.gen.yaml":          "version: v1\nplugins:\n  - name: python\n    out: gen/python\n",
 				"protobuf.mod":            "module example.com/root\nroots proto\n",
@@ -188,10 +191,16 @@ func TestRunRejectsMultipleDescriptorTargets(t *testing.T) {
 
 			err := Run(t.Context(), logger.NewNop(), nil, Request{WorkDir: root, DescriptorSetOut: output})
 
-			require.ErrorContains(t, err, "descriptor set requires exactly one selected module")
+			require.NoError(t, err)
 			contents, readErr := os.ReadFile(output)
 			require.NoError(t, readErr)
-			assert.Equal(t, "existing descriptor", string(contents))
+			var descriptors descriptorpb.FileDescriptorSet
+			require.NoError(t, proto.Unmarshal(contents, &descriptors))
+			names := make([]string, 0, len(descriptors.File))
+			for _, file := range descriptors.File {
+				names = append(names, file.GetName())
+			}
+			assert.ElementsMatch(t, tt.wantFiles, names)
 		})
 	}
 }

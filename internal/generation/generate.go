@@ -95,12 +95,11 @@ func Run(ctx context.Context, log logger.Logger, cache modules.Cache, request Re
 		}
 		descriptorTargets = selected
 	}
-	if len(descriptorTargets) != 1 {
-		return fmt.Errorf("descriptor set requires exactly one selected module; got %d", len(descriptorTargets))
+	if len(descriptorTargets) == 0 {
+		return fmt.Errorf("descriptor set has no selected modules")
 	}
-	target := descriptorTargets[0]
-	if err := generateSelectedV1Module(ctx, log, cache, request, target.configPath, workDir, target.module, target.config); err != nil {
-		return fmt.Errorf("generateSelectedV1Module: %w", err)
+	if err := generateV1DescriptorSet(ctx, log, cache, request, descriptorTargets); err != nil {
+		return fmt.Errorf("generateV1DescriptorSet: %w", err)
 	}
 	return nil
 }
