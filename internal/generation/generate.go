@@ -79,21 +79,19 @@ func Run(ctx context.Context, log logger.Logger, cache modules.Cache, request Re
 	if request.DescriptorSetOut == "" {
 		return nil
 	}
-	// A generator with only inherited options is not a separate target when
-	// another config selects a module for this run.
-	selectedElsewhere := false
-	for _, target := range descriptorTargets {
-		if len(target.config.Plugins) > 0 || len(target.config.Generate.Modules) > 0 {
-			selectedElsewhere = true
-			break
-		}
-	}
-	if selectedElsewhere && request.Project == "" {
+	if request.Project == "" {
 		selected := descriptorTargets[:0]
 		for _, target := range descriptorTargets {
-			if len(target.config.Plugins) > 0 || len(target.config.Generate.Modules) > 0 {
-				selected = append(selected, target)
+			if len(target.config.Plugins) == 0 && len(target.config.Generate.Modules) == 0 {
+				inherited, err := isOptionsOnlyParent(target.configPath, configs)
+				if err != nil {
+					return fmt.Errorf("isOptionsOnlyParent: %w", err)
+				}
+				if inherited {
+					continue
+				}
 			}
+			selected = append(selected, target)
 		}
 		descriptorTargets = selected
 	}
@@ -105,6 +103,56 @@ func Run(ctx context.Context, log logger.Logger, cache modules.Cache, request Re
 		return fmt.Errorf("generateSelectedV1Module: %w", err)
 	}
 	return nil
+}
+
+// isOptionsOnlyParent reports whether a config has child generators but no
+// module or proto files of its own. Such a config only supplies inherited options.
+func isOptionsOnlyParent(configPath string, configs []string) (bool, error) {
+	dir := filepath.Dir(configPath)
+	childDirs := make(map[string]bool)
+	for _, other := range configs {
+		if other == configPath {
+			continue
+		}
+		childDir := filepath.Dir(other)
+		rel, err := filepath.Rel(dir, childDir)
+		if err != nil {
+			return false, err
+		}
+		if filepath.IsLocal(rel) {
+			childDirs[childDir] = true
+		}
+	}
+	if len(childDirs) == 0 {
+		return false, nil
+	}
+	if _, err := os.Stat(filepath.Join(dir, v1.ModuleFile)); err == nil {
+		return false, nil
+	} else if !os.IsNotExist(err) {
+		return false, err
+	}
+
+	hasOwnProto := false
+	err := filepath.WalkDir(dir, func(path string, entry fs.DirEntry, walkErr error) error {
+		if walkErr != nil {
+			return walkErr
+		}
+		if entry.IsDir() {
+			if childDirs[path] {
+				return filepath.SkipDir
+			}
+			if path != dir && (entry.Name() == ".git" || entry.Name() == "easyp_vendor" || strings.HasPrefix(entry.Name(), ".")) {
+				return filepath.SkipDir
+			}
+			return nil
+		}
+		if filepath.Ext(path) == ".proto" {
+			hasOwnProto = true
+			return filepath.SkipAll
+		}
+		return nil
+	})
+	return !hasOwnProto, err
 }
 
 func discoverV1GenerateConfigs(root, project string) ([]string, error) {

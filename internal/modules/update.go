@@ -23,6 +23,7 @@ func Update(ctx context.Context, root string, repository VersionedRepository) er
 	if len(module.Replaces) > 0 {
 		return fmt.Errorf("module %s: remove local replacements before updating a reproducible lock", module.Name)
 	}
+	module = directV1Module(original, module)
 	updatedVersions := make(map[string]string, len(module.Requires))
 	for _, requirement := range module.Requires {
 		version, err := latestCompatibleV1Tag(ctx, requirement.Module, requirement.Version, repository)
@@ -36,6 +37,7 @@ func Update(ctx context.Context, root string, repository VersionedRepository) er
 	if err != nil {
 		return fmt.Errorf("ParseModule: %w", err)
 	}
+	updatedModule = directV1Module(updated, updatedModule)
 	lock, err := resolveV1LockWithPins(ctx, root, updatedModule, v1.Lock{}, repository)
 	if err != nil {
 		return fmt.Errorf("resolveV1LockWithPins: %w", err)

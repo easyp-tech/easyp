@@ -23,15 +23,35 @@ func TestTransitiveVersionlessRequirementRemainsUpdatable(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
-		name              string
-		get               bool
-		transitiveVersion string
-		wantManifestB     string
-		wantUpdatedB      string
+		name                     string
+		get                      bool
+		transitiveVersion        string
+		changeUpstream           bool
+		updatedTransitiveVersion string
+		wantManifestB            string
+		wantUpdatedManifestB     string
+		wantUpdatedB             string
 	}{
 		{name: "tidy keeps versionless indirect", wantManifestB: "require example.com/B // indirect\n", wantUpdatedB: versionlessCommitBNew},
 		{name: "get keeps versionless indirect", get: true, wantManifestB: "require example.com/B // indirect\n", wantUpdatedB: versionlessCommitBNew},
 		{name: "explicit transitive commit stays pinned", transitiveVersion: versionlessCommitBOld, wantManifestB: "require example.com/B " + versionlessCommitBOld + " // indirect\n", wantUpdatedB: versionlessCommitBOld},
+		{
+			name:                     "changed upstream commit replaces derived pin",
+			transitiveVersion:        versionlessCommitBOld,
+			changeUpstream:           true,
+			updatedTransitiveVersion: versionlessCommitBNew,
+			wantManifestB:            "require example.com/B " + versionlessCommitBOld + " // indirect\n",
+			wantUpdatedManifestB:     "require example.com/B " + versionlessCommitBNew + " // indirect\n",
+			wantUpdatedB:             versionlessCommitBNew,
+		},
+		{
+			name:                 "upstream removes commit pin",
+			transitiveVersion:    versionlessCommitBOld,
+			changeUpstream:       true,
+			wantManifestB:        "require example.com/B " + versionlessCommitBOld + " // indirect\n",
+			wantUpdatedManifestB: "require example.com/B // indirect\n",
+			wantUpdatedB:         versionlessCommitBNew,
+		},
 	}
 	for _, tt := range tests {
 		tt := tt
@@ -67,7 +87,20 @@ func TestTransitiveVersionlessRequirementRemainsUpdatable(t *testing.T) {
 			assert.Contains(t, string(updatedManifest), tt.wantManifestB)
 
 			repository.bHead = versionlessCommitBNew
+			if tt.changeUpstream {
+				repository.aModule.Requires[0].Version = tt.updatedTransitiveVersion
+			}
 			require.NoError(t, Update(t.Context(), root, repository))
+			updatedManifest, err = os.ReadFile(filepath.Join(root, v1.ModuleFile))
+			require.NoError(t, err)
+			wantUpdatedManifestB := tt.wantUpdatedManifestB
+			if wantUpdatedManifestB == "" {
+				wantUpdatedManifestB = tt.wantManifestB
+			}
+			assert.Contains(t, string(updatedManifest), wantUpdatedManifestB)
+			if tt.changeUpstream {
+				assert.NotContains(t, string(updatedManifest), tt.wantManifestB)
+			}
 			lock, err := ReadLock(filepath.Join(root, v1.LockFile))
 			require.NoError(t, err)
 			for _, entry := range lock.Modules {

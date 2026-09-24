@@ -71,3 +71,40 @@ func TestV1RequirementEditsRespectModuleBlocks(t *testing.T) {
 		})
 	}
 }
+
+func TestDirectV1Module(t *testing.T) {
+	t.Parallel()
+	const commit = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+	tests := []struct {
+		name     string
+		manifest string
+		want     []v1.Requirement
+	}{
+		{
+			name:     "explicit commit remains a direct constraint",
+			manifest: "module example.com/app\nrequire example.com/dep " + commit + " // user pin\n",
+			want:     []v1.Requirement{{Module: "example.com/dep", Version: commit}},
+		},
+		{
+			name:     "derived commit is excluded",
+			manifest: "module example.com/app\nrequire (\n  example.com/direct\n  example.com/dep " + commit + " // indirect\n)\n",
+			want:     []v1.Requirement{{Module: "example.com/direct"}},
+		},
+	}
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			original := []byte(tt.manifest)
+			module, err := v1.ParseModule(bytes.NewReader(original))
+			require.NoError(t, err)
+
+			direct := directV1Module(original, module)
+
+			assert.Equal(t, tt.want, direct.Requires)
+			assert.Equal(t, module.Name, direct.Name)
+			assert.Equal(t, module.Roots, direct.Roots)
+			assert.Equal(t, module.Replaces, direct.Replaces)
+		})
+	}
+}

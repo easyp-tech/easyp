@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	v1 "github.com/easyp-tech/easyp/internal/config/v1"
 )
@@ -13,6 +14,13 @@ import (
 // augmentV1ManifestRequirements records selected transitive modules. A module
 // imported by a root .proto file is direct even if it arrived transitively.
 func augmentV1ManifestRequirements(original []byte, root string, module v1.Module, lock v1.Lock, repository Cache) ([]byte, error) {
+	lines := strings.Split(string(original), "\n")
+	indirect := make(map[string]v1RequirementLine)
+	for _, line := range parseV1RequirementLines(lines) {
+		if line.indirect() {
+			indirect[line.module] = line
+		}
+	}
 	existing := make(map[string]bool, len(module.Requires))
 	for _, requirement := range module.Requires {
 		existing[requirement.Module] = true
@@ -28,6 +36,7 @@ func augmentV1ManifestRequirements(original []byte, root string, module v1.Modul
 	var additions []v1ManifestRequirement
 	for _, entry := range lock.Modules {
 		if existing[entry.Source] {
+			delete(indirect, entry.Source)
 			continue
 		}
 		installDir, dependency, err := repository.Cached(entry)
@@ -57,9 +66,31 @@ func augmentV1ManifestRequirements(original []byte, root string, module v1.Modul
 				break
 			}
 		}
+		if line, ok := indirect[entry.Source]; ok {
+			line = line.withVersion(versions[entry.Source])
+			if direct {
+				line = line.direct()
+			}
+			lines[line.index] = line.String()
+			delete(indirect, entry.Source)
+			continue
+		}
 		additions = append(additions, v1ManifestRequirement{Requirement: v1.Requirement{Module: entry.Source, Version: versions[entry.Source]}, indirect: !direct})
 	}
-	updated := appendV1Requirements(original, additions)
+	if len(indirect) > 0 {
+		stale := make(map[int]bool, len(indirect))
+		for _, line := range indirect {
+			stale[line.index] = true
+		}
+		kept := make([]string, 0, len(lines)-len(stale))
+		for index, line := range lines {
+			if !stale[index] {
+				kept = append(kept, line)
+			}
+		}
+		lines = kept
+	}
+	updated := appendV1Requirements([]byte(strings.Join(lines, "\n")), additions)
 	if _, err := v1.ParseModule(bytes.NewReader(updated)); err != nil {
 		return nil, fmt.Errorf("ParseModule: %w", err)
 	}

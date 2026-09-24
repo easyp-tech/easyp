@@ -57,7 +57,10 @@ func (line v1RequirementLine) withVersion(version string) v1RequirementLine {
 	if version == line.version {
 		return line
 	}
-	if line.version == "" {
+	if version == "" {
+		at := strings.LastIndex(line.body, line.version)
+		line.body = strings.TrimRight(line.body[:at], " \t") + line.body[at+len(line.version):]
+	} else if line.version == "" {
 		at := strings.LastIndex(line.body, line.module) + len(line.module)
 		line.body = line.body[:at] + " " + version + line.body[at:]
 	} else {
@@ -68,9 +71,13 @@ func (line v1RequirementLine) withVersion(version string) v1RequirementLine {
 	return line
 }
 
-func (line v1RequirementLine) direct() v1RequirementLine {
+func (line v1RequirementLine) indirect() bool {
 	words := strings.Fields(line.comment)
-	if !line.hasComment || len(words) == 0 || words[0] != "indirect" {
+	return line.hasComment && len(words) > 0 && words[0] == "indirect"
+}
+
+func (line v1RequirementLine) direct() v1RequirementLine {
+	if !line.indirect() {
 		return line
 	}
 	line.comment = strings.TrimSpace(strings.TrimPrefix(strings.TrimSpace(line.comment), "indirect"))
@@ -81,6 +88,19 @@ func (line v1RequirementLine) direct() v1RequirementLine {
 	}
 	line.body = strings.TrimRight(line.body, " \t")
 	return line
+}
+
+// directV1Module excludes requirements recorded as derived // indirect lines.
+// The parsed module keeps roots and replacements, while explicit requirements
+// remain the only inputs to dependency resolution during an update.
+func directV1Module(original []byte, module v1.Module) v1.Module {
+	module.Requires = nil
+	for _, line := range parseV1RequirementLines(strings.Split(string(original), "\n")) {
+		if !line.indirect() {
+			module.Requires = append(module.Requires, v1.Requirement{Module: line.module, Version: line.version})
+		}
+	}
+	return module
 }
 
 func (line v1RequirementLine) String() string {
