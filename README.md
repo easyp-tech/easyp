@@ -115,6 +115,10 @@ While Protocol Buffers offer significant technical advantages over REST/JSON, ac
 
 The v1 pilot uses `protobuf.mod` for module identity, source roots, and dependencies. `easyp.gen.yaml` selects modules and plugins; `easyp.yaml` configures lint and breaking checks. Run `easyp get <module>[@version|@commit]` from the module directory to add a direct requirement and record its transitive dependencies as `// indirect`. The command writes pinned commits and content hashes to `protobuf.lock`; `easyp mod tidy` resolves requirements already in the manifest.
 
+The [`easyp_config_describe` MCP tool](mcp/easypconfig/README.md) describes the editable v1 YAML files and uses the same JSON Schemas as the CLI.
+
+In `easyp.yaml` and `easyp.gen.yaml`, EasyP expands environment variables before parsing and validation. Use `${NAME}`, `${NAME:-default}` for a fallback, or `$${NAME}` to keep a literal `${NAME}`. An unset variable without a fallback expands to an empty string. Substitutions inside YAML comments are ignored. `protobuf.mod` and `protobuf.lock` do not expand environment variables.
+
 ```text
 # protobuf.mod
 module github.com/acme/contracts

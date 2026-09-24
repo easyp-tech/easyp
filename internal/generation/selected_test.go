@@ -117,7 +117,6 @@ func TestSelectV1ModulesPrefersGeneratorSiblingThenRepositoryRoot(t *testing.T) 
 		name          string
 		manifests     map[string]string
 		wantDirectory string
-		wantError     string
 	}{
 		{
 			name: "sibling_manifest",
@@ -137,9 +136,9 @@ func TestSelectV1ModulesPrefersGeneratorSiblingThenRepositoryRoot(t *testing.T) 
 			wantDirectory: ".",
 		},
 		{
-			name:      "missing_manifest",
-			manifests: map[string]string{"projects/protobuf.mod": "module example.com/intermediate\n"},
-			wantError: "no protobuf.mod for generator",
+			name:          "generator_without_manifest",
+			manifests:     map[string]string{"projects/protobuf.mod": "module example.com/intermediate\n"},
+			wantDirectory: "projects/app",
 		},
 	}
 	for _, tt := range tests {
@@ -155,10 +154,6 @@ func TestSelectV1ModulesPrefersGeneratorSiblingThenRepositoryRoot(t *testing.T) 
 
 			modules, err := selectV1Modules(root, configDir, nil)
 
-			if tt.wantError != "" {
-				require.ErrorContains(t, err, tt.wantError)
-				return
-			}
 			require.NoError(t, err)
 			assert.Equal(t, []v1ModuleSelection{{directory: filepath.Join(root, tt.wantDirectory)}}, modules)
 		})

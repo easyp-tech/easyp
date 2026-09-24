@@ -93,23 +93,27 @@ func TestListV1FilesRejectsDuplicateDependencyImports(t *testing.T) {
 // The CLI owns process flags, environment, and cwd, so these cases are sequential.
 func TestLsFilesLocalOnlyWithoutCacheEnvironment(t *testing.T) {
 	tests := []struct {
-		name     string
-		manifest string
+		name           string
+		manifest       string
+		includeImports bool
 	}{
 		{name: "local module", manifest: "module example.com/root\n"},
 		{name: "uninstalled dependency", manifest: "module example.com/root\nrequire example.com/missing v1.0.0\n"},
+		{name: "without protobuf.mod", includeImports: true},
 	}
 	for _, tt := range tests {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			root := t.TempDir()
-			writeV1GenerateFixture(t, root, "protobuf.mod", tt.manifest)
+			if tt.manifest != "" {
+				writeV1GenerateFixture(t, root, "protobuf.mod", tt.manifest)
+			}
 			writeV1GenerateFixture(t, root, "event.proto", "syntax = \"proto3\";\n")
 			t.Chdir(root)
 			t.Setenv("HOME", "")
 			t.Setenv("EASYPPATH", "")
 			flags := flag.NewFlagSet("ls-files", flag.ContinueOnError)
-			flags.Bool(flagLsFilesIncludeImports.Name, false, "")
+			flags.Bool(flagLsFilesIncludeImports.Name, tt.includeImports, "")
 			ctx := cli.NewContext(cli.NewApp(), flags, nil)
 			ctx.Context = t.Context()
 

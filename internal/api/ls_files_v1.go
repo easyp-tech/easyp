@@ -72,13 +72,13 @@ func (l LsFiles) Action(ctx *cli.Context) error {
 	if err != nil {
 		return fmt.Errorf("Getwd: %w", err)
 	}
-	_, module, err := modules.ReadManifest(root)
+	module, err := modules.ReadModuleOrDefault(root)
 	if err != nil {
-		return fmt.Errorf("ReadManifest: %w", err)
+		return fmt.Errorf("ReadModuleOrDefault: %w", err)
 	}
 	includeImports := ctx.Bool(flagLsFilesIncludeImports.Name)
 	var cache modules.Cache
-	if includeImports {
+	if includeImports && len(modules.RemoteRequirements(module)) > 0 {
 		cache, err = moduleCache(ctx)
 		if err != nil {
 			return fmt.Errorf("moduleCache: %w", err)

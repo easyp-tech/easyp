@@ -69,7 +69,7 @@ func generatorV1ModuleDir(repoRoot, configDir string) (string, error) {
 		}
 		return dir, nil
 	}
-	return "", fmt.Errorf("no protobuf.mod for generator in %s", configDir)
+	return configDir, nil
 }
 
 type v1GenerationModule struct {
@@ -165,9 +165,9 @@ func resolveV1GenerationModule(ctx context.Context, cache modules.Cache, repoRoo
 }
 
 func readV1GenerationModule(ctx context.Context, cache modules.Cache, directory string) (v1GenerationModule, error) {
-	_, module, err := modules.ReadManifest(directory)
+	module, err := modules.ReadModuleOrDefault(directory)
 	if err != nil {
-		return v1GenerationModule{}, fmt.Errorf("ReadManifest: %w", err)
+		return v1GenerationModule{}, fmt.Errorf("ReadModuleOrDefault: %w", err)
 	}
 	dependencies, err := modules.EnsureSources(ctx, directory, module, cache)
 	if err != nil {

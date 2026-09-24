@@ -26,6 +26,19 @@ func ReadManifest(root string) ([]byte, v1.Module, error) {
 	return original, module, nil
 }
 
+// ReadModuleOrDefault treats a directory without protobuf.mod as one local
+// source root without dependencies or a module identity.
+func ReadModuleOrDefault(root string) (v1.Module, error) {
+	_, module, err := ReadManifest(root)
+	if errors.Is(err, os.ErrNotExist) {
+		return v1.Module{Roots: []string{"."}}, nil
+	}
+	if err != nil {
+		return v1.Module{}, fmt.Errorf("ReadManifest: %w", err)
+	}
+	return module, nil
+}
+
 func writeV1ResolvedFiles(root string, original, updated []byte, lock v1.Lock) error {
 	changed := !bytes.Equal(original, updated)
 	if changed {

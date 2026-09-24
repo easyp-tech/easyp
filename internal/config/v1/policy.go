@@ -1,6 +1,7 @@
 package v1
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"strings"
@@ -49,8 +50,12 @@ type BreakingPolicy struct {
 
 // ParsePolicy reads and validates a v1 lint and breaking policy.
 func ParsePolicy(r io.Reader) (Policy, error) {
+	raw, err := expandConfigYAML(r)
+	if err != nil {
+		return Policy{}, fmt.Errorf("expandConfigYAML: %w", err)
+	}
 	var result Policy
-	decoder := yaml.NewDecoder(r)
+	decoder := yaml.NewDecoder(bytes.NewReader(raw))
 	decoder.KnownFields(true)
 	if err := decoder.Decode(&result); err != nil {
 		return Policy{}, fmt.Errorf("decode easyp.yaml: %w", err)

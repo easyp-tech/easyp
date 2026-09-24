@@ -141,6 +141,12 @@ breaking:
 `,
 			expectedCount: 2,
 		},
+		{
+			name:          "nested plugin option issue",
+			filename:      GenerateFile,
+			contents:      "plugins:\n  - name: python\n    out: gen\n    opts:\n      invalid:\n        nested: value\n",
+			expectedCount: 1,
+		},
 	}
 
 	for _, tt := range tests {
@@ -161,6 +167,61 @@ breaking:
 				assert.Positive(t, issue.Line)
 				assert.Positive(t, issue.Column)
 			}
+		})
+	}
+}
+
+func TestValidateFileUsesGeneratedSchema(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name     string
+		filename string
+		contents string
+		path     string
+	}{
+		{
+			name:     "unknown linter setting",
+			filename: PolicyFile,
+			contents: "linters-settings:\n  UNKNOWN:\n    suffix: BAD\n",
+			path:     `["linters-settings"].UNKNOWN`,
+		},
+		{
+			name:     "invalid baseline",
+			filename: PolicyFile,
+			contents: "breaking:\n  baseline: main\n",
+			path:     "breaking.baseline",
+		},
+		{
+			name:     "plugin without identity",
+			filename: GenerateFile,
+			contents: "plugins:\n  - out: gen\n",
+			path:     "plugins[0]",
+		},
+		{
+			name:     "managed override without value",
+			filename: GenerateFile,
+			contents: "generate:\n  managed:\n    override:\n      - file_option: go_package_prefix\n",
+			path:     "generate.managed.override[0].value",
+		},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			path := filepath.Join(t.TempDir(), tt.filename)
+			require.NoError(t, os.WriteFile(path, []byte(tt.contents), 0o644))
+
+			issues, err := ValidateFile(path)
+
+			require.NoError(t, err)
+			require.NotEmpty(t, issues)
+			assert.Equal(t, "yaml_validation", issues[0].Code)
+			assert.Contains(t, issues[0].Message, tt.path)
+			assert.Positive(t, issues[0].Line)
+			assert.Positive(t, issues[0].Column)
 		})
 	}
 }

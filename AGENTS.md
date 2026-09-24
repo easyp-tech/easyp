@@ -23,7 +23,8 @@ Human-facing docs: [README.md](README.md) and https://easyp.tech.
 | `internal/rules` | Lint rules (each rule + colocated `_test.go`) |
 | `internal/config` | `easyp.yaml` parsing and validation |
 | `internal/adapters` | Git, storage, lockfile, plugins |
-| `mcp/easypconfig` | MCP tool + config schema metadata (source of truth) |
+| `mcp/easypconfig` | MCP descriptions of v1 `easyp.yaml` and `easyp.gen.yaml` |
+| `internal/config/v1` | v1 parsing, validation, and JSON Schema source |
 | `schemas/` | Generated JSON Schema artifacts |
 | `docs/` | Documentation site (Vite) |
 
@@ -65,7 +66,7 @@ After behavior changes, run the relevant tests (at least the packages you touche
 ## Conventions
 
 - **New lint rules**: add `internal/rules/<rule>.go` + `_test.go`, register via the existing rule builder; mirror patterns in neighboring rules.
-- **`easyp.yaml` schema**: change metadata/validation in `mcp/easypconfig` and/or `internal/config`, then regenerate `schemas/` with `task schema:generate`. Do not hand-edit generated schema JSON.
+- **v1 YAML schemas**: change types and schema rules in `internal/config/v1`, then regenerate `schemas/` with `task schema:generate`. The MCP tool reads the same schema through `v1.SchemaJSON`; update its field descriptions when behavior changes. Do not hand-edit generated schema JSON.
 - **Tests**: use `testify`; regenerate mocks with `task mocks` when core/storage interfaces change.
 - Prefer pointing agents/humans at README and docs over copying long usage text into this file.
 

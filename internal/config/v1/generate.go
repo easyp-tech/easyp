@@ -1,6 +1,7 @@
 package v1
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 
@@ -38,8 +39,12 @@ type GoOptions struct {
 
 // ParseGenerate reads and validates a v1 generation configuration.
 func ParseGenerate(r io.Reader) (Generate, error) {
+	raw, err := expandConfigYAML(r)
+	if err != nil {
+		return Generate{}, fmt.Errorf("expandConfigYAML: %w", err)
+	}
 	var result Generate
-	decoder := yaml.NewDecoder(r)
+	decoder := yaml.NewDecoder(bytes.NewReader(raw))
 	decoder.KnownFields(true)
 	if err := decoder.Decode(&result); err != nil {
 		return Generate{}, fmt.Errorf("decode easyp.gen.yaml: %w", err)

@@ -74,3 +74,37 @@ func TestWriteV1ResolvedFiles(t *testing.T) {
 		})
 	}
 }
+
+func TestReadModuleOrDefault(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name     string
+		manifest string
+		want     v1.Module
+		wantErr  string
+	}{
+		{name: "missing manifest", want: v1.Module{Roots: []string{"."}}},
+		{name: "declared roots", manifest: "module example.com/app\nroots proto\n", want: v1.Module{Name: "example.com/app", Roots: []string{"proto"}}},
+		{name: "invalid manifest", manifest: "roots proto\n", wantErr: "missing module directive"},
+	}
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			root := t.TempDir()
+			if tt.manifest != "" {
+				require.NoError(t, os.WriteFile(filepath.Join(root, v1.ModuleFile), []byte(tt.manifest), 0o644))
+			}
+
+			module, err := ReadModuleOrDefault(root)
+
+			if tt.wantErr != "" {
+				require.ErrorContains(t, err, tt.wantErr)
+				return
+			}
+			require.NoError(t, err)
+			assert.Equal(t, tt.want, module)
+		})
+	}
+}

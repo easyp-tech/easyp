@@ -76,3 +76,35 @@ func TestRunUsesExplicitWorkingDirectory(t *testing.T) {
 		})
 	}
 }
+
+func TestRunWithoutManifest(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name      string
+		configDir string
+	}{
+		{name: "root generator"},
+		{name: "nested generator", configDir: "app"},
+	}
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			root := t.TempDir()
+			writeV1GenerateFixture(t, root, filepath.Join(tt.configDir, "easyp.gen.yaml"), "version: v1\nplugins:\n  - name: python\n    out: gen/python\n")
+			writeV1GenerateFixture(t, root, filepath.Join(tt.configDir, "proto/item.proto"), "syntax = \"proto3\"; package item.v1; message Item {}\n")
+			output := filepath.Join(root, "descriptor.pb")
+
+			err := Run(t.Context(), logger.NewNop(), nil, Request{WorkDir: root, DescriptorSetOut: output})
+
+			require.NoError(t, err)
+			raw, err := os.ReadFile(output)
+			require.NoError(t, err)
+			var descriptors descriptorpb.FileDescriptorSet
+			require.NoError(t, proto.Unmarshal(raw, &descriptors))
+			require.Len(t, descriptors.File, 1)
+			assert.Equal(t, "proto/item.proto", descriptors.File[0].GetName())
+		})
+	}
+}
