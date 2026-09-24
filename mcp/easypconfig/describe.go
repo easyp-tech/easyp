@@ -5,25 +5,29 @@ import (
 	"regexp"
 	"sort"
 	"strings"
-	"sync"
-
-	"github.com/easyp-tech/easyp/internal/rules"
 )
 
 const (
-	ToolName      = "easyp_config_describe"
-	SchemaVersion = "easyp-config-v1"
+	// ToolName is the stable MCP tool name.
+	ToolName = "easyp_config_describe"
+	// SchemaVersion identifies the v1 configuration model returned by the tool.
+	SchemaVersion = "v1"
 )
 
+var arrayIndex = regexp.MustCompile(`\[(?:\d+|\*)\]`)
+
+// DescribeInput selects a v1 configuration file and a dot path within it.
 type DescribeInput struct {
-	Path            string `json:"path,omitempty"`
-	IncludeSchema   *bool  `json:"include_schema,omitempty"`
-	IncludeFields   *bool  `json:"include_fields,omitempty"`
-	IncludeExamples *bool  `json:"include_examples,omitempty"`
-	IncludeChildren *bool  `json:"include_children,omitempty"`
-	ExamplesLimit   *int   `json:"examples_limit,omitempty"`
+	File            string `json:"file,omitempty" jsonschema:"Config filename: easyp.yaml or easyp.gen.yaml. Defaults to easyp.yaml."`
+	Path            string `json:"path,omitempty" jsonschema:"Dot path to a section or field. Empty means the full file."`
+	IncludeSchema   *bool  `json:"include_schema,omitempty" jsonschema:"Include the JSON Schema fragment. Default true."`
+	IncludeFields   *bool  `json:"include_fields,omitempty" jsonschema:"Include field documentation. Default true."`
+	IncludeExamples *bool  `json:"include_examples,omitempty" jsonschema:"Include valid v1 examples. Default true."`
+	IncludeChildren *bool  `json:"include_children,omitempty" jsonschema:"Include descendants of the selected path. Default true."`
+	ExamplesLimit   *int   `json:"examples_limit,omitempty" jsonschema:"Maximum examples, from 1 to 50. Default 10."`
 }
 
+// FieldDoc describes one field from the current v1 configuration schema.
 type FieldDoc struct {
 	Path          string   `json:"path"`
 	Type          string   `json:"type"`
@@ -35,6 +39,7 @@ type FieldDoc struct {
 	Notes         []string `json:"notes,omitempty"`
 }
 
+// Example is a v1 configuration snippet that can be parsed by EasyP.
 type Example struct {
 	Title       string   `json:"title"`
 	Description string   `json:"description,omitempty"`
@@ -42,8 +47,10 @@ type Example struct {
 	Paths       []string `json:"paths,omitempty"`
 }
 
+// DescribeOutput contains the selected schema, field details, and examples.
 type DescribeOutput struct {
 	SchemaVersion string         `json:"schema_version"`
+	File          string         `json:"file"`
 	SelectedPath  string         `json:"selected_path"`
 	Schema        map[string]any `json:"schema,omitempty"`
 	Fields        []FieldDoc     `json:"fields,omitempty"`
@@ -51,221 +58,35 @@ type DescribeOutput struct {
 	Notes         []string       `json:"notes,omitempty"`
 }
 
-type nodeDoc struct {
-	Fields   []FieldDoc
-	Examples []Example
-	Notes    []string
-}
-
-type spec struct {
-	SchemaVersion string
-	SchemaByPath  map[string]map[string]any
-	DocsByPath    map[string]nodeDoc
-}
-
-var (
-	specOnce sync.Once
-	specData spec
-
-	arrayIndexPattern = regexp.MustCompile(`\[\d+\]`)
-)
-
+// Describe explains a v1 config path using the same JSON Schema as schema-gen.
 func Describe(input DescribeInput) (DescribeOutput, error) {
-	s := getSpec()
-	return s.describe(input)
-}
-
-func getSpec() spec {
-	specOnce.Do(func() {
-		specData = newSpec()
-	})
-	return specData
-}
-
-func (s spec) describe(input DescribeInput) (DescribeOutput, error) {
-	selectedPath, ok := s.resolvePath(input.Path)
+	file, _, err := configFile(input.File)
+	if err != nil {
+		return DescribeOutput{}, err
+	}
+	index, err := SchemaByPathFor(file)
+	if err != nil {
+		return DescribeOutput{}, fmt.Errorf("SchemaByPathFor: %w", err)
+	}
+	path := normalizePath(input.Path)
+	schema, ok := index[path]
 	if !ok {
-		return DescribeOutput{}, fmt.Errorf("unknown path %q", input.Path)
+		return DescribeOutput{}, fmt.Errorf("unknown path %q in %s", input.Path, file)
 	}
 
-	includeSchema := boolOrDefault(input.IncludeSchema, true)
-	includeFields := boolOrDefault(input.IncludeFields, true)
-	includeExamples := boolOrDefault(input.IncludeExamples, true)
-	includeChildren := boolOrDefault(input.IncludeChildren, true)
-	examplesLimit := intOrDefault(input.ExamplesLimit, 10)
-	if examplesLimit < 1 {
-		examplesLimit = 1
+	out := DescribeOutput{SchemaVersion: SchemaVersion, File: file, SelectedPath: path}
+	if enabled(input.IncludeSchema) {
+		out.Schema = schema
 	}
-	if examplesLimit > 50 {
-		examplesLimit = 50
+	paths := selectedPaths(index, path, enabled(input.IncludeChildren))
+	if enabled(input.IncludeFields) {
+		out.Fields = describeFields(file, index, paths)
 	}
-
-	paths := s.pathsFor(selectedPath, includeChildren)
-
-	out := DescribeOutput{
-		SchemaVersion: s.SchemaVersion,
-		SelectedPath:  selectedPath,
+	if enabled(input.IncludeExamples) {
+		out.Examples = selectExamples(file, path, exampleLimit(input.ExamplesLimit))
 	}
-
-	if includeSchema {
-		out.Schema = cloneSchemaMap(s.SchemaByPath[selectedPath])
-	}
-	if includeFields {
-		out.Fields = s.collectFields(paths)
-	}
-	if includeExamples {
-		out.Examples = s.collectExamples(paths, examplesLimit)
-	}
-	out.Notes = s.collectNotes(paths)
-
+	out.Notes = notesFor(file, path)
 	return out, nil
-}
-
-func (s spec) resolvePath(rawPath string) (string, bool) {
-	path := normalizePath(rawPath)
-	if s.hasPath(path) {
-		return path, true
-	}
-
-	normPath := removeArrayMarkers(path)
-	for _, candidate := range s.allPaths() {
-		if removeArrayMarkers(candidate) == normPath {
-			return candidate, true
-		}
-	}
-
-	return "", false
-}
-
-func (s spec) pathsFor(selectedPath string, includeChildren bool) []string {
-	if !includeChildren {
-		return []string{selectedPath}
-	}
-
-	allPaths := s.allPaths()
-	paths := make([]string, 0, len(allPaths))
-	for _, p := range allPaths {
-		if isPathWithin(selectedPath, p) {
-			paths = append(paths, p)
-		}
-	}
-	return paths
-}
-
-func (s spec) collectFields(paths []string) []FieldDoc {
-	seen := make(map[string]struct{})
-	out := make([]FieldDoc, 0)
-	for _, p := range paths {
-		doc, ok := s.DocsByPath[p]
-		if !ok {
-			continue
-		}
-		for _, f := range doc.Fields {
-			if _, exists := seen[f.Path]; exists {
-				continue
-			}
-			seen[f.Path] = struct{}{}
-			out = append(out, cloneFieldDoc(f))
-		}
-	}
-
-	sort.Slice(out, func(i, j int) bool {
-		return out[i].Path < out[j].Path
-	})
-	return out
-}
-
-func (s spec) collectExamples(paths []string, limit int) []Example {
-	out := make([]Example, 0, limit)
-	seen := make(map[string]struct{})
-	for _, p := range paths {
-		doc, ok := s.DocsByPath[p]
-		if !ok {
-			continue
-		}
-		for _, ex := range doc.Examples {
-			key := exampleKey(ex)
-			if _, exists := seen[key]; exists {
-				continue
-			}
-			seen[key] = struct{}{}
-			out = append(out, cloneExample(ex))
-			if len(out) >= limit {
-				return out
-			}
-		}
-	}
-	return out
-}
-
-func (s spec) collectNotes(paths []string) []string {
-	seen := make(map[string]struct{})
-	out := make([]string, 0)
-	for _, p := range paths {
-		doc, ok := s.DocsByPath[p]
-		if !ok {
-			continue
-		}
-		for _, note := range doc.Notes {
-			if _, exists := seen[note]; exists {
-				continue
-			}
-			seen[note] = struct{}{}
-			out = append(out, note)
-		}
-	}
-	return out
-}
-
-func (s spec) hasPath(path string) bool {
-	if _, ok := s.SchemaByPath[path]; ok {
-		return true
-	}
-	if _, ok := s.DocsByPath[path]; ok {
-		return true
-	}
-	return false
-}
-
-func (s spec) allPaths() []string {
-	seen := make(map[string]struct{})
-	paths := make([]string, 0, len(s.SchemaByPath)+len(s.DocsByPath))
-
-	for p := range s.SchemaByPath {
-		if _, ok := seen[p]; ok {
-			continue
-		}
-		seen[p] = struct{}{}
-		paths = append(paths, p)
-	}
-	for p := range s.DocsByPath {
-		if _, ok := seen[p]; ok {
-			continue
-		}
-		seen[p] = struct{}{}
-		paths = append(paths, p)
-	}
-
-	sort.Strings(paths)
-	return paths
-}
-
-func boolOrDefault(v *bool, def bool) bool {
-	if v == nil {
-		return def
-	}
-	return *v
-}
-
-func intOrDefault(v *int, def int) int {
-	if v == nil {
-		return def
-	}
-	return *v
-}
-
-func lintUseAllowedValues() []string {
-	return append([]string(nil), rules.AllLintUseValues()...)
 }
 
 func normalizePath(path string) string {
@@ -273,66 +94,103 @@ func normalizePath(path string) string {
 	if path == "" || path == "$" || strings.EqualFold(path, "root") {
 		return "$"
 	}
-
 	path = strings.TrimPrefix(path, "$.")
 	path = strings.TrimPrefix(path, ".")
-	path = strings.ReplaceAll(path, "[*]", "[]")
-	path = arrayIndexPattern.ReplaceAllString(path, "[]")
-	path = strings.TrimSuffix(path, ".")
-
-	return path
+	path = arrayIndex.ReplaceAllString(path, "[]")
+	return strings.TrimSuffix(path, ".")
 }
 
-func removeArrayMarkers(path string) string {
-	return strings.ReplaceAll(path, "[]", "")
+func enabled(value *bool) bool {
+	return value == nil || *value
 }
 
-func isPathWithin(base, candidate string) bool {
-	if base == "$" {
-		return true
+func exampleLimit(value *int) int {
+	if value == nil {
+		return 10
 	}
-	if base == candidate {
-		return true
+	if *value < 1 {
+		return 1
 	}
-	if strings.HasPrefix(candidate, base+".") {
-		return true
+	if *value > 50 {
+		return 50
 	}
-	if strings.HasPrefix(candidate, base+"[].") {
-		return true
-	}
-	if candidate == base+"[]" {
-		return true
-	}
-	return false
+	return *value
 }
 
-func cloneFieldDoc(in FieldDoc) FieldDoc {
-	out := in
-	out.AllowedValues = append([]string(nil), in.AllowedValues...)
-	out.Examples = append([]string(nil), in.Examples...)
-	out.Notes = append([]string(nil), in.Notes...)
-	return out
-}
-
-func cloneExample(in Example) Example {
-	out := in
-	out.Paths = append([]string(nil), in.Paths...)
-	return out
-}
-
-func exampleKey(ex Example) string {
-	return strings.Join([]string{
-		ex.Title,
-		ex.Description,
-		ex.YAML,
-		strings.Join(ex.Paths, "\x1f"),
-	}, "\x1e")
-}
-
-func newSpec() spec {
-	return spec{
-		SchemaVersion: SchemaVersion,
-		SchemaByPath:  SchemaByPath(),
-		DocsByPath:    docsByPath(),
+func selectedPaths(index map[string]map[string]any, path string, children bool) []string {
+	if !children {
+		return []string{path}
 	}
+	paths := make([]string, 0, len(index))
+	for candidate := range index {
+		if within(path, candidate) {
+			paths = append(paths, candidate)
+		}
+	}
+	sort.Strings(paths)
+	return paths
+}
+
+func within(parent, path string) bool {
+	return parent == "$" || path == parent || strings.HasPrefix(path, parent+".") || strings.HasPrefix(path, parent+"[]")
+}
+
+func describeFields(file string, index map[string]map[string]any, paths []string) []FieldDoc {
+	fields := make([]FieldDoc, 0, len(paths))
+	for _, path := range paths {
+		if path == "$" || strings.HasSuffix(path, "[]") {
+			continue
+		}
+		fields = append(fields, schemaField(file, index, path))
+	}
+	return fields
+}
+
+func schemaField(file string, index map[string]map[string]any, path string) FieldDoc {
+	schema := index[path]
+	field := FieldDoc{Path: path, Type: schemaType(schema), Description: fieldDescription(file, path)}
+	field.Notes = notesFor(file, path)
+	if description, ok := schema["description"].(string); ok && description != "" {
+		field.Description = description
+	}
+	if values, ok := schema["enum"].([]any); ok {
+		for _, value := range values {
+			if name, ok := value.(string); ok {
+				field.AllowedValues = append(field.AllowedValues, name)
+			}
+		}
+	}
+	parent := "$"
+	name := path
+	if lastDot := strings.LastIndex(path, "."); lastDot >= 0 {
+		parent, name = path[:lastDot], path[lastDot+1:]
+	}
+	if parentSchema, ok := index[parent]; ok {
+		if required, ok := parentSchema["required"].([]any); ok {
+			for _, item := range required {
+				field.Required = field.Required || item == name
+			}
+		}
+	}
+	return field
+}
+
+func schemaType(schema map[string]any) string {
+	if typ, ok := schema["type"].(string); ok {
+		return typ
+	}
+	if _, ok := schema["oneOf"]; ok {
+		return "oneOf"
+	}
+	if _, ok := schema["anyOf"]; ok {
+		return "anyOf"
+	}
+	return "any"
+}
+
+func fieldDescription(file, path string) string {
+	if description := descriptions[file][path]; description != "" {
+		return description
+	}
+	return "Configuration value."
 }

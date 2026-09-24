@@ -1,18 +1,6 @@
 package api
 
-import (
-	"errors"
-	"fmt"
-	"os"
-
-	"github.com/urfave/cli/v2"
-
-	"github.com/easyp-tech/easyp/internal/core/models"
-	"github.com/easyp-tech/easyp/internal/flags"
-	"github.com/easyp-tech/easyp/internal/fs/fs"
-
-	"github.com/easyp-tech/easyp/internal/config"
-)
+import "github.com/urfave/cli/v2"
 
 var _ Handler = (*Mod)(nil)
 
@@ -34,14 +22,16 @@ func (m Mod) Command() *cli.Command {
 		Description: "update modules version using version from config",
 		Action:      m.Update,
 	}
-	vendorCmd := &cli.Command{
-		Name:        "vendor",
-		Usage:       "copy proto files from deps to vendor dir",
-		UsageText:   "copy proto files from deps to vendor dir",
-		Description: "copy proto files from deps to vendor dir",
-		Action:      m.Vendor,
+	tidyCmd := &cli.Command{
+		Name:   "tidy",
+		Usage:  "resolve protobuf.mod and write protobuf.lock",
+		Action: m.Tidy,
 	}
-
+	vendorCmd := &cli.Command{
+		Name:   "vendor",
+		Usage:  "copy locked protobuf imports into easyp_vendor",
+		Action: m.Vendor,
+	}
 	return &cli.Command{
 		Name:                   "mod",
 		Aliases:                []string{"m"},
@@ -55,7 +45,7 @@ func (m Mod) Command() *cli.Command {
 		After:                  nil,
 		Action:                 nil,
 		OnUsageError:           nil,
-		Subcommands:            []*cli.Command{downloadCmd, updateCmd, vendorCmd},
+		Subcommands:            []*cli.Command{downloadCmd, updateCmd, tidyCmd, vendorCmd},
 		Flags:                  []cli.Flag{},
 		SkipFlagParsing:        false,
 		HideHelp:               false,
@@ -65,105 +55,4 @@ func (m Mod) Command() *cli.Command {
 		HelpName:               "help",
 		CustomHelpTemplate:     "",
 	}
-}
-
-func (m Mod) Download(ctx *cli.Context) error {
-	log := getLogger(ctx)
-
-	workingDir, err := os.Getwd()
-	if err != nil {
-		return fmt.Errorf("os.Getwd: %w", err)
-	}
-	dirWalker := fs.NewFSWalker(workingDir, ".")
-
-	cfg, err := config.New(ctx.Context, ctx.String(flags.Config.Name))
-	if err != nil {
-		return fmt.Errorf("config.New: %w", err)
-	}
-
-	app, err := buildCore(ctx.Context, log, *cfg, dirWalker)
-	if err != nil {
-		return fmt.Errorf("buildCore: %w", err)
-	}
-
-	if err := app.Download(ctx.Context); err != nil {
-		if errors.Is(err, models.ErrVersionNotFound) {
-			os.Exit(1)
-		}
-
-		return fmt.Errorf("cmd.Download: %w", err)
-	}
-	return nil
-}
-
-func (m Mod) Update(ctx *cli.Context) error {
-	log := getLogger(ctx)
-
-	workingDir, err := os.Getwd()
-	if err != nil {
-		return fmt.Errorf("os.Getwd: %w", err)
-	}
-	dirWalker := fs.NewFSWalker(workingDir, ".")
-
-	cfg, err := config.New(ctx.Context, ctx.String(flags.Config.Name))
-	if err != nil {
-		return fmt.Errorf("config.New: %w", err)
-	}
-
-	app, err := buildCore(ctx.Context, log, *cfg, dirWalker)
-	if err != nil {
-		return fmt.Errorf("buildCore: %w", err)
-	}
-
-	if err := app.Update(ctx.Context); err != nil {
-		if errors.Is(err, models.ErrVersionNotFound) {
-			os.Exit(1)
-		}
-
-		return fmt.Errorf("cmd.Download: %w", err)
-	}
-	return nil
-}
-
-func (m Mod) Vendor(ctx *cli.Context) error {
-	log := getLogger(ctx)
-
-	workingDir, err := os.Getwd()
-	if err != nil {
-		return fmt.Errorf("os.Getwd: %w", err)
-	}
-	dirWalker := fs.NewFSWalker(workingDir, ".")
-
-	cfg, err := config.New(ctx.Context, ctx.String(flags.Config.Name))
-	if err != nil {
-		return fmt.Errorf("config.New: %w", err)
-	}
-
-	app, err := buildCore(ctx.Context, log, *cfg, dirWalker)
-	if err != nil {
-		return fmt.Errorf("buildCore: %w", err)
-	}
-
-	if err := app.Vendor(ctx.Context); err != nil {
-		if errors.Is(err, models.ErrVersionNotFound) {
-			os.Exit(1)
-		}
-
-		return fmt.Errorf("cmd.Download: %w", err)
-	}
-	return nil
-}
-
-func getDepsFromGenerateDeps(cfg config.Generate) []string {
-	res := make([]string, 0, len(cfg.Inputs))
-	for _, input := range cfg.Inputs {
-		url := input.GitRepo.URL
-		if url == "" {
-			continue
-		}
-
-		res = append(res, url)
-	}
-
-	return res
 }

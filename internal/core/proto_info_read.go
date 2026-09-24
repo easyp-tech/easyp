@@ -2,6 +2,7 @@ package core
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -10,14 +11,13 @@ import (
 	"github.com/yoheimuta/go-protoparser/v4"
 	"github.com/yoheimuta/go-protoparser/v4/interpret/unordered"
 
-	"github.com/easyp-tech/easyp/internal/core/models"
 	"github.com/easyp-tech/easyp/wellknownimports"
 )
 
 func (c *Core) protoInfoRead(ctx context.Context, fs FS, path string) (ProtoInfo, error) {
 	f, err := fs.Open(path)
 	if err != nil {
-		return ProtoInfo{}, fmt.Errorf("fs.Open: %w", err)
+		return ProtoInfo{}, fmt.Errorf("Open: %w", err)
 	}
 	defer c.close(ctx, f, path)
 
@@ -42,12 +42,12 @@ func (c *Core) protoInfoRead(ctx context.Context, fs FS, path string) (ProtoInfo
 func readProtoFile(f io.Reader) (*unordered.Proto, error) {
 	got, err := protoparser.Parse(f)
 	if err != nil {
-		return nil, fmt.Errorf("protoparser.Parse: %w", err)
+		return nil, fmt.Errorf("Parse: %w", err)
 	}
 
 	proto, err := unordered.InterpretProto(got)
 	if err != nil {
-		return nil, fmt.Errorf("unordered.InterpretProto: %w", err)
+		return nil, fmt.Errorf("InterpretProto: %w", err)
 	}
 
 	return proto, nil
@@ -73,63 +73,51 @@ func (c *Core) readFilesFromImport(
 }
 
 func (c *Core) readFileFromImport(ctx context.Context, disk FS, importName string) (*unordered.Proto, error) {
-	// first try to read it locally
-	f, err := disk.Open(importName)
-	if err == nil {
-		// locally import
-		defer c.close(ctx, f, importName)
-
-		proto, err := readProtoFile(f)
-		if err != nil {
-			return nil, fmt.Errorf("readProtoFile: %w, path: %s", err, importName)
-		}
-		return proto, nil
-	}
-
-	for _, dep := range c.deps {
-		module := models.NewModule(dep)
-
-		lockFileInfo, err := c.lockFile.Read(module.Name)
-		if err != nil {
-			return nil, fmt.Errorf("lockFile.Read: %w", err)
-		}
-
-		modulePath := c.storage.GetInstallDir(lockFileInfo.Name, lockFileInfo.Version)
-
-		fullPath := filepath.Join(modulePath, importName)
-		f, err = os.Open(fullPath)
-		if err != nil {
-			if os.IsNotExist(err) {
-				continue
-			}
-
-			return nil, fmt.Errorf("os.Open: %w", err)
-		}
-		defer c.close(ctx, f, fullPath)
-
-		proto, err := readProtoFile(f)
-		if err != nil {
-			return nil, fmt.Errorf("readProtoFile: %w, path: %s", err, importName)
-		}
-
-		return proto, nil
-	}
-
-	f, err = wellknownimports.Content.Open(importName)
+	f, err := c.openImportFile(disk, importName)
 	if err != nil {
-		if os.IsNotExist(err) {
-			//return nil, ErrOpenImportFile
-			return nil, &OpenImportFileError{FileName: importName}
-		}
-
-		return nil, fmt.Errorf("os.Open: %w", err)
+		return nil, fmt.Errorf("openImportFile: %w", err)
 	}
 	defer c.close(ctx, f, importName)
 
 	proto, err := readProtoFile(f)
 	if err != nil {
-		return nil, fmt.Errorf("readProtoFile: %w, path: %s", err, importName)
+		return nil, fmt.Errorf("readProtoFile: %w", &os.PathError{Op: "parse", Path: importName, Err: err})
+	}
+	return proto, nil
+}
+
+func (c *Core) openImportFile(disk FS, importName string) (io.ReadCloser, error) {
+	if !filepath.IsLocal(importName) {
+		return nil, fmt.Errorf("invalid import path %q", importName)
+	}
+	f, err := disk.Open(importName)
+	switch {
+	case errors.Is(err, os.ErrNotExist):
+		// Search dependency roots when the current filesystem has no matching file.
+	case err != nil:
+		return nil, fmt.Errorf("Open: %w", err)
+	default:
+		return f, nil
 	}
 
-	return proto, nil
+	for _, root := range c.importRoots {
+		fullPath := filepath.Join(root, importName)
+		f, err := os.Open(fullPath)
+		if err != nil {
+			if errors.Is(err, os.ErrNotExist) {
+				continue
+			}
+			return nil, fmt.Errorf("Open: %w", err)
+		}
+		return f, nil
+	}
+
+	f, err = wellknownimports.Content.Open(importName)
+	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return nil, &OpenImportFileError{FileName: importName}
+		}
+		return nil, fmt.Errorf("Open: %w", err)
+	}
+	return f, nil
 }

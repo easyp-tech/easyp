@@ -4,8 +4,6 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-
-	"github.com/easyp-tech/easyp/internal/core/models"
 )
 
 func TestParse(t *testing.T) {
@@ -125,7 +123,7 @@ replace github.com/acme/weather@v1.2 => /home/project
 				Direct: []string{"github.com/acme/weather@v1.2"},
 				Replace: []Replace{
 					{
-						Module: models.NewModule("github.com/acme/weather@v1.2"),
+						Module: Module{Name: "github.com/acme/weather", Version: "v1.2"},
 						Path:   "/home/project",
 					},
 				},
@@ -144,7 +142,7 @@ replace (
 				Direct: []string{"github.com/acme/weather@v1.2"},
 				Replace: []Replace{
 					{
-						Module: models.NewModule("github.com/acme/weather@v1.2"),
+						Module: Module{Name: "github.com/acme/weather", Version: "v1.2"},
 						Path:   "../weather",
 					},
 				},
@@ -157,7 +155,7 @@ replace (
 			want: File{
 				Replace: []Replace{
 					{
-						Module: models.NewModule("github.com/acme/weather@v1.2"),
+						Module: Module{Name: "github.com/acme/weather", Version: "v1.2"},
 						Path:   "/home/project",
 					},
 				},
@@ -174,7 +172,7 @@ direct (
 				Direct: []string{"github.com/acme/weather@v1.2"},
 				Replace: []Replace{
 					{
-						Module: models.NewModule("github.com/acme/weather@v1.2"),
+						Module: Module{Name: "github.com/acme/weather", Version: "v1.2"},
 						Path:   "/home/project",
 					},
 				},
@@ -187,7 +185,7 @@ direct (
 			want: File{
 				Replace: []Replace{
 					{
-						Module: models.NewModule("github.com/acme/weather@v1.2"),
+						Module: Module{Name: "github.com/acme/weather", Version: "v1.2"},
 						Path:   "/home/project",
 					},
 				},
@@ -200,7 +198,7 @@ direct (
 			want: File{
 				Replace: []Replace{
 					{
-						Module: models.NewModule("github.com/acme/weather@v1.2"),
+						Module: Module{Name: "github.com/acme/weather", Version: "v1.2"},
 						Path:   "/home/project",
 					},
 				},
@@ -216,11 +214,11 @@ direct (
 			want: File{
 				Replace: []Replace{
 					{
-						Module: models.NewModule("github.com/acme/weather@v1.2"),
+						Module: Module{Name: "github.com/acme/weather", Version: "v1.2"},
 						Path:   "/home/weather-v1",
 					},
 					{
-						Module: models.NewModule("github.com/acme/weather@v2.0"),
+						Module: Module{Name: "github.com/acme/weather", Version: "v2.0"},
 						Path:   "/home/weather-v2",
 					},
 				},
@@ -297,7 +295,7 @@ func TestFormat_ReplaceRoundTrip(t *testing.T) {
 		Direct: []string{"github.com/acme/weather@v1.2"},
 		Replace: []Replace{
 			{
-				Module: models.NewModule("github.com/acme/weather@v1.2"),
+				Module: Module{Name: "github.com/acme/weather", Version: "v1.2"},
 				Path:   "/home/project",
 			},
 		},

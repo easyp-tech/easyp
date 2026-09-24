@@ -1,176 +1,95 @@
-<!-- generated: 2026-07-27, template: core.md -->
 # EasyP Architecture
 
-## Overview
+EasyP v1 separates CLI composition, module operations, generation preparation, and execution. The CLI entry point is `cmd/easyp`; configuration contracts live in `internal/config/v1`.
 
-EasyP is a Go command-line application that uses handlers in `internal/api` to assemble a `core.Core` service from configuration, rules, and infrastructure adapters.
+## Responsibilities and dependencies
+
+| Component | Responsibility and owned state | Dependencies |
+|-----------|--------------------------------|--------------|
+| `internal/api` | Flags, process paths/environment, adapter construction, policy command orchestration, output and exit status | Module/generation operations, configuration, rules, core, concrete adapters |
+| `internal/modules` | Dependency selection, lock validation, source roots and ownership, manifest edits, coordinated project-file updates | V1 models, `Source`/`Cache` contracts, metadata reader, filesystem |
+| `internal/adapters/gitmodules` | Git candidates/revisions, checkout lifetime, cache layout, tracked-file hashes and installation | System Git, `module_config`, module contracts, filesystem |
+| `internal/adapters/module_config` | Adapt repository metadata into a named module and import roots | V1 manifest, legacy EasyP and Buf readers |
+| `internal/generation` | Discover generator configs, inherit options, select modules, translate to engine options, run generation | V1 models, module source operations, core, logger |
+| `internal/core` | Proto parsing/compilation, managed descriptors, plugin execution, lint and breaking engines | Explicit roots/options, rules, plugin executors and Git tree walker |
+| `internal/fs/fs` | Directory walking, exclusive regular-file copy, temporary-file replacement | OS filesystem |
+
+`modules`, `generation`, and the infrastructure adapters do not import the CLI package. Neither module operations nor generation require `*cli.Context`. The CLI resolves `EASYPPATH` and supplies a cache instance; only the Git adapter knows its on-disk layout.
+
+## Dependency operations
+
+`modules.Resolve(ctx, module, source, pins)` owns version selection and traversal. `Source.Fetch` returns module metadata and its reproducible lock entry. The resolver does not run Git, manage checkout paths, or install files. Each revision is fetched once; versionless requirements retain existing pins during tidy. Output lock entries are sorted by source.
+
+The contracts reflect actual consumers:
+
+- `Source`: fetch revision metadata for graph resolution.
+- `Cache`: install/verify a lock and read installed module metadata.
+- `Repository`: source plus cache for `Get` and `Tidy`.
+- `VersionedRepository`: also list versions for `Update`.
+
+`Download` and `Vendor` need only `Cache`. The Git adapter implements these contracts. Unit tests use explicit fake answers/errors without Git; adapter and integration tests retain local repository fixtures.
 
 ```text
-CLI transport
-cmd/easyp/main.go + urfave/cli
-          |
-          v
-Application wiring
-internal/api handlers and buildCore
-          |
-          v
-Domain operations
-internal/core + internal/rules
-          |
-          v
-Adapters and infrastructure
-internal/adapters + filesystem, Git, local cache, plugins
+get / mod tidy / mod update
+  -> read manifest and relevant pins
+  -> Resolve through Source
+  -> Cache.Install and cached metadata
+  -> roots, collisions and unresolved-import checks
+  -> compute manifest edits and lock
+  -> persist project files
+
+mod download
+  -> read manifest and lock
+  -> validate requirements before installation
+  -> install and verify transitive cached metadata
+
+mod vendor
+  -> validate/ensure locked sources and collisions
+  -> copy into temporary directory
+  -> replace easyp_vendor, restoring the old directory on replacement failure
 ```
 
-The primary executable is `cmd/easyp`. It registers command handlers for linting, modules, completion, initialization, generation, schema generation, file listing, configuration validation, and breaking-change checks.
+Manifest editing preserves comments and formatting. `writeV1ResolvedFiles` owns the order of manifest/lock updates and restores the original manifest when lock replacement fails. Restoration errors are returned together with the original error. Each file is replaced through a temporary file; the pair is **not** a filesystem transaction or a crash-atomic update.
 
-## CLI Transport
+## Source roots and ownership
 
-Package: `cmd/easyp` and `internal/api`.
+`modules.ModuleSources` resolves roots relative to the module directory and validates their directories. `SourceRoots` carries both physical paths and module identities. Local replacements precede locked sources in `EnsureSources`; source order is preserved.
 
-| File | Responsibility |
-|------|----------------|
-| `cmd/easyp/main.go` | Creates the `urfave/cli/v2` app, global flags, logger, and handler command list. |
-| `internal/api/interface.go` | Defines the `Handler` interface used to supply `*cli.Command` values. |
-| `internal/api/lint.go` | Resolves paths, loads config, invokes `Core.Lint`, and prints text or JSON issues. |
-| `internal/api/generate.go` | Resolves generation roots and invokes `Core.Generate`. |
-| `internal/api/mod.go` | Defines `mod download`, `mod update`, and `mod vendor`. |
-| `internal/api/breaking_check.go` | Configures the comparison Git ref and invokes `Core.BreakingCheck`. |
-| `internal/api/temporaly_helper.go` | Builds `core.Core` and converts config types into core types. |
+`EnsureLockedSources` may install dependencies. `ReadManifest`, `ReadLock`, `LocalSources`, and `CachedSources` do not download or rewrite project files. `CachedSources` assumes installation/hash verification has already occurred.
 
-Handlers own CLI flags, command-specific exit handling, configuration loading, and output presentation. They use `core.Core` for operations rather than implementing linting, generation, or dependency resolution directly.
+Generation, policy commands, and module operations share root/collision checks. `WalkProtoFiles` owns dependency-source traversal, including exclusion of hidden directories, vendored sources and nested module boundaries. Generator discovery and policy ancestor traversal remain separate: their inclusion and inheritance rules differ.
 
-## Application Wiring
+Git submodule roots are rebased by `module_config` from the nested manifest directory into the checkout directory. Import names remain relative to those roots; repository/module prefixes do not become part of an import.
 
-`buildCore` in `internal/api/temporaly_helper.go` is the composition root for the main commands. It:
-
-1. Builds selected lint rules with `rules.New`.
-2. Opens the project lock file through `adapters/lock_file`.
-3. Resolves `EASYPPATH`, defaulting to `$HOME/.easyp`.
-4. Instantiates storage, module-config, console, and Git-walker adapters.
-5. Combines `protobuf.mod` with Git repository generation inputs.
-6. Converts configured plugins, inputs, managed-mode rules, and breaking-check settings.
-7. Constructs `core.Core`.
-
-The hard-coded vendor directory passed to the core is `easyp_vendor`. Package-manager behavior is documented in depth in [config/dependency.md](./config/dependency.md).
-
-## Domain Operations
-
-Package: `internal/core`.
-
-| File | Responsibility |
-|------|----------------|
-| `core.go` | Defines `Core`, its injected dependencies, and shared sentinels. |
-| `lint.go` | Downloads dependencies, walks `.proto` files, applies configured rules, and returns issues. |
-| `generate.go` | Resolves imports and inputs, compiles descriptors, applies managed mode, executes plugins, and writes output. |
-| `breaking_check.go` | Reads current and Git-ref proto states, collects entities by package, and compares them. |
-| `download.go`, `update.go`, `get.go`, `vendor.go` | Implement module acquisition, lock updates, cached installation, and vendoring. |
-| `dom.go` | Defines proto-domain representations such as `ProtoInfo`, `Issue`, and `ProtoData`. |
-| `managed_mode.go` | Applies configured file and field option changes to descriptors. |
-
-`Core` depends on consumer-facing interfaces such as `Rule`, `Storage`, `LockFile`, `ModuleConfig`, `CurrentProjectGitWalker`, and `DirWalker`. Concrete adapters are injected by the API layer.
-
-## Adapters and Infrastructure
-
-Package: `internal/adapters`.
-
-| Package | Responsibility |
-|---------|----------------|
-| `adapters/storage` | Manages the cache and installed module trees under `EASYPPATH`. |
-| `adapters/lock_file` | Reads, writes, iterates, and checks `protobuf.lock`. |
-| `adapters/modfile` | Parses and writes `protobuf.mod` dependency declarations. |
-| `adapters/repository/git` | Resolves revisions, fetches Git objects, reads repository files, and archives proto sources. |
-| `adapters/go_git` | Provides directory walkers for project Git references. |
-| `adapters/module_config` | Reads supported module layouts from a repository. |
-| `adapters/plugin` | Supplies local, remote, built-in, and command plugin executors. |
-| `adapters/console` | Runs local commands through platform-specific console implementations. |
-| `adapters/prompter` | Provides interactive prompting. |
-
-The `mcp/easypconfig` package is separate from command execution: it registers an MCP tool that describes the `easyp.yaml` schema and generates the schema metadata used by `schema-gen`.
-
-## Directory Structure
+## Generation
 
 ```text
-easyp/
-├── cmd/easyp/                 # CLI executable
-├── internal/
-│   ├── api/                   # urfave/cli command handlers and composition root
-│   ├── core/                  # lint, breaking, generation, and module workflows
-│   │   ├── models/            # module, revision, lock, and error value types
-│   │   └── path_helpers/      # path predicates used by core
-│   ├── adapters/              # Git, storage, lockfile, plugin, and console adapters
-│   ├── config/                # easyp.yaml parsing and validation
-│   ├── rules/                 # concrete protobuf lint rules and registry
-│   ├── fs/                    # filesystem walker implementation
-│   ├── logger/                # logger abstraction and implementations
-│   └── flags/                 # shared CLI flags
-├── mcp/easypconfig/           # MCP config-description tool and schema model
-├── schemas/                   # generated JSON Schema artifacts
-├── docs/                      # Vite documentation site
-└── Taskfile.yml               # build, test, lint, schema, and mock tasks
-```
-
-## Key Design Decisions
-
-1. **CLI handlers are thin adapters.**
-   - Each command implements `api.Handler` and returns a `*cli.Command`.
-   - Handlers load configuration and map known errors to process behavior.
-
-2. **Core logic uses injected interfaces.**
-   - `Core.New` accepts storage, lock-file, module-config, console, Git-walker, and rule dependencies.
-   - This supports mocks under `internal/core/mocks` in tests.
-
-3. **Dependency resolution is Git-based.**
-   - `Core.Download` is used before linting, generation, and breaking checks.
-   - Resolved versions and hashes are persisted in `protobuf.lock`; installed sources are cached outside the project.
-
-4. **Generation uses protobuf descriptors and plugin executors.**
-   - `Core.Generate` compiles files with `protocompile`.
-   - Plugin choice is selected from command, remote, built-in, or local sources.
-
-5. **Schema metadata has a code source of truth.**
-   - `mcp/easypconfig` reflects a schema model and exposes it through MCP.
-   - Generated files in `schemas/` are refreshed through `task schema:generate`.
-
-## Primary Data Flows
-
-### Lint
-
-```text
-easyp lint
-  -> api.Lint.Action
-  -> config.New(easyp.yaml)
-  -> api.buildCore
-  -> Core.Lint
-  -> Core.Download
-  -> DirWalker.WalkDir(.proto files)
-  -> Core.protoInfoRead + configured Rule.Validate
-  -> []core.IssueInfo
-  -> text or JSON output
-```
-
-### Generation
-
-```text
-easyp generate
-  -> api.Generate.Action
-  -> config.New + api.buildCore
+api.Generate.Action: flags + cwd + cache
+  -> generation.Run(context, logger, cache, Request)
+  -> discover configs / inherit generation options
+  -> select sibling, workspace, replacement or locked module
+  -> ensure sources and reject import collisions
+  -> translate v1 config to core.Options
+  -> core.New(complete options)
   -> Core.Generate
-  -> dependency and input resolution
-  -> protocompile.Compiler.Compile
-  -> optional ApplyManagedMode
-  -> plugin.Executor.Execute
-  -> GenerateBucket.DumpToFs
+  -> compile descriptors / managed mode / plugins / generated output
 ```
 
-### Breaking Change Check
+`generation/config.go` owns translation to engine types, including output locations and managed-option priority. Managed rule slices are independently constructed for each module. `Core.New` receives and copies import roots and file-module mappings; there are no follow-up `SetImportRoots`/`SetFileModules` calls.
 
-```text
-easyp breaking --against <ref>
-  -> api.BreakingCheck.Action
-  -> Core.BreakingCheck
-  -> current filesystem walker + Git-ref directory walker
-  -> readProtoFiles and collect
-  -> BreakingChecker.Check
-  -> []core.IssueInfo
-```
+`Request.WorkDir` controls discovery, relative descriptor output and local plugin execution. Plugin output remains relative to the generator config. Generation no longer builds unrelated lint rules or modifies the global comment-ignore setting.
+
+## Policy and validation commands
+
+Lint/breaking keep their existing policy traversal and comparison semantics. Their CLI adapters prepare shared module import roots before constructing the engine. `runtime.go:buildCore` constructs only lint/breaking engines. The existing comment-ignore setting is still global to those engines; this refactor does not make concurrent policy runs independent.
+
+`validate-config` calls `config/v1.ValidatePath`; recursive file discovery and structured YAML validation belong to that package. Schema generation remains under `mcp/easypconfig` and uses the same v1 models.
+
+## Verification boundaries
+
+- Resolver, version selection, config conversion, manifest editing and collision rules: parallel table-driven unit tests.
+- Git/checkouts/hash verification and filesystem replacement: temporary local repositories/directories.
+- CLI: retained integration tests for get/tidy/download/update/vendor, nested modules, policies and error propagation. Cases changing environment/cwd run sequentially.
+- Generation: explicit working directories and cache dependencies allow parallel execution without CLI/environment setup.
+
+See [dependency management](config/dependency.md) for the v1 module contract and [package reference](PACKAGES.md) for file ownership.

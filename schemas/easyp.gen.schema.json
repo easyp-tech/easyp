@@ -1,0 +1,260 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "easyp.gen.yaml v1",
+  "description": "Structural v1 YAML schema. EasyP CLI validation applies additional semantic checks.",
+  "type": "object",
+  "properties": {
+    "generate": {
+      "type": "object",
+      "properties": {
+        "managed": {
+          "type": "object",
+          "properties": {
+            "disable": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "field": {
+                    "type": "string"
+                  },
+                  "field_option": {
+                    "type": "string"
+                  },
+                  "file_option": {
+                    "type": "string"
+                  },
+                  "module": {
+                    "type": "string"
+                  },
+                  "package": {
+                    "type": "string"
+                  },
+                  "path": {
+                    "type": "string"
+                  }
+                },
+                "additionalProperties": false,
+                "anyOf": [
+                  {
+                    "required": [
+                      "module"
+                    ]
+                  },
+                  {
+                    "required": [
+                      "package"
+                    ]
+                  },
+                  {
+                    "required": [
+                      "path"
+                    ]
+                  },
+                  {
+                    "required": [
+                      "file_option"
+                    ]
+                  },
+                  {
+                    "required": [
+                      "field_option"
+                    ]
+                  },
+                  {
+                    "required": [
+                      "field"
+                    ]
+                  }
+                ],
+                "not": {
+                  "required": [
+                    "file_option",
+                    "field_option"
+                  ]
+                }
+              }
+            },
+            "enabled": {
+              "type": "boolean"
+            },
+            "override": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "field": {
+                    "type": "string"
+                  },
+                  "field_option": {
+                    "type": "string"
+                  },
+                  "file_option": {
+                    "type": "string"
+                  },
+                  "module": {
+                    "type": "string"
+                  },
+                  "package": {
+                    "type": "string"
+                  },
+                  "path": {
+                    "type": "string"
+                  },
+                  "value": {}
+                },
+                "additionalProperties": false,
+                "oneOf": [
+                  {
+                    "required": [
+                      "file_option"
+                    ]
+                  },
+                  {
+                    "required": [
+                      "field_option"
+                    ]
+                  }
+                ],
+                "required": [
+                  "value"
+                ]
+              }
+            }
+          },
+          "additionalProperties": false
+        },
+        "modules": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "packages": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "options": {
+      "type": "object",
+      "properties": {
+        "go": {
+          "type": "object",
+          "properties": {
+            "package_prefix": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "plugins": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "command": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "name": {
+            "type": "string"
+          },
+          "opts": {
+            "oneOf": [
+              {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              {
+                "type": "object",
+                "additionalProperties": {
+                  "oneOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "boolean"
+                    },
+                    {
+                      "type": "array",
+                      "items": {
+                        "oneOf": [
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "type": "number"
+                          },
+                          {
+                            "type": "boolean"
+                          }
+                        ]
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          "out": {
+            "type": "string"
+          },
+          "path": {
+            "type": "string"
+          },
+          "remote": {
+            "type": "string"
+          },
+          "version": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false,
+        "oneOf": [
+          {
+            "required": [
+              "name"
+            ]
+          },
+          {
+            "required": [
+              "path"
+            ]
+          },
+          {
+            "required": [
+              "command"
+            ]
+          },
+          {
+            "required": [
+              "remote"
+            ]
+          }
+        ],
+        "required": [
+          "out"
+        ]
+      }
+    },
+    "version": {
+      "type": "string",
+      "const": "v1"
+    }
+  },
+  "additionalProperties": false
+}

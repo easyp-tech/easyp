@@ -1,14 +1,13 @@
 package flags
 
-import "github.com/urfave/cli/v2"
+import (
+	"github.com/urfave/cli/v2"
 
-const (
-	globalCategory = "global"
+	v1 "github.com/easyp-tech/easyp/internal/config/v1"
 )
 
 const (
-	// Max file size is 1mb.
-	defaultConfigFilePath = "easyp.yaml"
+	globalCategory = "global"
 )
 
 // Flags.
@@ -17,12 +16,8 @@ var (
 		Name:        "cfg",
 		Category:    globalCategory,
 		DefaultText: "specify the path to the configuration file",
-		FilePath:    "",
 		Usage:       "Specify the absolute or relative path to the configuration file for setting up the application.",
-		Required:    true,
-		Hidden:      false,
-		HasBeenSet:  true,
-		Value:       defaultConfigFilePath,
+		Value:       v1.PolicyFile,
 		Aliases:     []string{"config"},
 		EnvVars:     []string{"EASYP_CFG"},
 		TakesFile:   true,

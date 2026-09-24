@@ -3,29 +3,26 @@ package core
 
 import (
 	"errors"
+	"maps"
+	"slices"
 
 	"github.com/easyp-tech/easyp/internal/adapters/console"
-	"github.com/easyp-tech/easyp/internal/adapters/modfile"
 	"github.com/easyp-tech/easyp/internal/adapters/plugin"
 	"github.com/easyp-tech/easyp/internal/logger"
 )
 
 // Core provide to business logic of EasyP.
 type Core struct {
-	rules        []Rule
-	ignore       []string
-	deps         []string
-	replaces     []modfile.Replace
-	ignoreOnly   map[string][]string
-	logger       logger.Logger
-	plugins      []Plugin
-	inputs       Inputs
-	console      console.Console
-	storage      Storage
-	moduleConfig ModuleConfig
-	lockFile     LockFile
-	managedMode  ManagedModeConfig
-	vendorDir    string
+	rules         []Rule
+	ignore        []string
+	ignoreOnly    map[string][]string
+	logger        logger.Logger
+	plugins       []Plugin
+	pluginWorkDir string
+	inputs        Inputs
+	importRoots   []string
+	fileModules   map[string]string
+	managedMode   ManagedModeConfig
 
 	breakingCheckConfig     BreakingCheckConfig
 	currentProjectGitWalker CurrentProjectGitWalker
@@ -42,44 +39,41 @@ var (
 	ErrEmptyInputFiles        = errors.New("empty input files")
 )
 
-func New(
-	rules []Rule,
-	ignore []string,
-	deps []string,
-	replaces []modfile.Replace,
-	ignoreOnly map[string][]string,
-	logger logger.Logger,
-	plugins []Plugin,
-	inputs Inputs,
-	console console.Console,
-	storage Storage,
-	moduleConfig ModuleConfig,
-	lockFile LockFile,
-	currentProjectGitWalker CurrentProjectGitWalker,
-	breakingCheckConfig BreakingCheckConfig,
-	managedMode ManagedModeConfig,
-	vendorDir string,
-) *Core {
+// Options configures the lint, breaking, and generation engines.
+type Options struct {
+	Rules                   []Rule
+	Ignore                  []string
+	IgnoreOnly              map[string][]string
+	Logger                  logger.Logger
+	Plugins                 []Plugin
+	PluginWorkDir           string
+	Inputs                  Inputs
+	ImportRoots             []string
+	FileModules             map[string]string
+	CurrentProjectGitWalker CurrentProjectGitWalker
+	BreakingCheckConfig     BreakingCheckConfig
+	ManagedModeConfig       ManagedModeConfig
+}
+
+// New creates a Core with the configured engines.
+func New(options Options) *Core {
+	terminal := console.New()
 	return &Core{
-		rules:                   rules,
-		ignore:                  ignore,
-		deps:                    deps,
-		replaces:                replaces,
-		ignoreOnly:              ignoreOnly,
-		logger:                  logger,
-		plugins:                 plugins,
-		inputs:                  inputs,
-		console:                 console,
-		storage:                 storage,
-		moduleConfig:            moduleConfig,
-		lockFile:                lockFile,
-		currentProjectGitWalker: currentProjectGitWalker,
-		breakingCheckConfig:     breakingCheckConfig,
-		managedMode:             managedMode,
-		localExecutor:           plugin.NewLocalPluginExecutor(console, logger),
-		remoteExecutor:          plugin.NewRemotePluginExecutor(logger),
-		builtinExecutor:         plugin.NewBuiltinPluginExecutor(logger),
-		commandExecutor:         plugin.NewCommandPluginExecutor(console, logger),
-		vendorDir:               vendorDir,
+		rules:                   options.Rules,
+		ignore:                  options.Ignore,
+		ignoreOnly:              options.IgnoreOnly,
+		logger:                  options.Logger,
+		plugins:                 options.Plugins,
+		pluginWorkDir:           options.PluginWorkDir,
+		inputs:                  options.Inputs,
+		importRoots:             slices.Clone(options.ImportRoots),
+		fileModules:             maps.Clone(options.FileModules),
+		currentProjectGitWalker: options.CurrentProjectGitWalker,
+		breakingCheckConfig:     options.BreakingCheckConfig,
+		managedMode:             options.ManagedModeConfig,
+		localExecutor:           plugin.NewLocalPluginExecutor(options.Logger),
+		remoteExecutor:          plugin.NewRemotePluginExecutor(options.Logger),
+		builtinExecutor:         plugin.NewBuiltinPluginExecutor(options.Logger),
+		commandExecutor:         plugin.NewCommandPluginExecutor(terminal, options.Logger),
 	}
 }

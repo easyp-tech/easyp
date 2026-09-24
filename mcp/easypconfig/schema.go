@@ -2,170 +2,91 @@ package easypconfig
 
 import (
 	"encoding/json"
+	"fmt"
 	"sort"
-	"sync"
 
-	invjsonschema "github.com/invopop/jsonschema"
+	v1 "github.com/easyp-tech/easyp/internal/config/v1"
 )
 
-var (
-	schemaCacheOnce sync.Once
-	cachedByPath    map[string]map[string]any
-)
-
-func SchemaByPath() map[string]map[string]any {
-	ensureSchemaCache()
-	return cloneSchemaByPath(cachedByPath)
-}
-
+// MarshalConfigJSONSchema returns the v1 easyp.yaml schema.
 func MarshalConfigJSONSchema() ([]byte, error) {
-	schema := reflectConfigSchema()
-	return json.MarshalIndent(schema, "", "  ")
+	return v1.SchemaJSON("easyp")
 }
 
-func ensureSchemaCache() {
-	schemaCacheOnce.Do(func() {
-		root := buildRootSchemaMap()
-		cachedByPath = buildSchemaByPath(root)
-	})
-}
-
-func buildRootSchemaMap() map[string]any {
-	root := invSchemaToMap(reflectConfigSchema())
-	if len(root) == 0 {
-		return map[string]any{}
+// SchemaByPath returns independently owned easyp.yaml schema fragments.
+func SchemaByPath() map[string]map[string]any {
+	index, err := SchemaByPathFor(v1.PolicyFile)
+	if err != nil {
+		return nil
 	}
-	return root
-}
-
-func reflectConfigSchema() *invjsonschema.Schema {
-	reflector := &invjsonschema.Reflector{
-		Anonymous:      true,
-		DoNotReference: true,
-	}
-	return reflector.Reflect(configSchemaRoot{})
-}
-
-func buildSchemaByPath(root map[string]any) map[string]map[string]any {
-	if len(root) == 0 {
-		return map[string]map[string]any{}
-	}
-
-	index := map[string]map[string]any{
-		"$": root,
-	}
-	walkSchemaPaths(index, "$", root)
 	return index
 }
 
-func walkSchemaPaths(index map[string]map[string]any, basePath string, schema map[string]any) {
-	for _, key := range []string{"allOf", "anyOf", "oneOf"} {
-		branches, ok := asSchemaArray(schema[key])
+// SchemaByPathFor indexes the JSON Schema of a v1 EasyP YAML configuration file.
+func SchemaByPathFor(file string) (map[string]map[string]any, error) {
+	_, schemaName, err := configFile(file)
+	if err != nil {
+		return nil, err
+	}
+	raw, err := v1.SchemaJSON(schemaName)
+	if err != nil {
+		return nil, fmt.Errorf("SchemaJSON: %w", err)
+	}
+	var root map[string]any
+	if err := json.Unmarshal(raw, &root); err != nil {
+		return nil, fmt.Errorf("Unmarshal: %w", err)
+	}
+	index := map[string]map[string]any{"$": root}
+	indexSchema(index, "$", root)
+	return index, nil
+}
+
+func configFile(file string) (string, string, error) {
+	switch file {
+	case "", v1.PolicyFile:
+		return v1.PolicyFile, "easyp", nil
+	case v1.GenerateFile:
+		return v1.GenerateFile, "easyp.gen", nil
+	default:
+		return "", "", fmt.Errorf("unknown config file %q", file)
+	}
+}
+
+func indexSchema(index map[string]map[string]any, base string, schema map[string]any) {
+	properties, ok := schema["properties"].(map[string]any)
+	if ok {
+		names := make([]string, 0, len(properties))
+		for name := range properties {
+			names = append(names, name)
+		}
+		sort.Strings(names)
+		for _, name := range names {
+			child, ok := properties[name].(map[string]any)
+			if !ok {
+				continue
+			}
+			path := name
+			if base != "$" {
+				path = base + "." + name
+			}
+			index[path] = child
+			indexSchema(index, path, child)
+		}
+	}
+	if item, ok := schema["items"].(map[string]any); ok {
+		path := base + "[]"
+		index[path] = item
+		indexSchema(index, path, item)
+	}
+	for _, keyword := range []string{"oneOf", "anyOf", "allOf"} {
+		branches, ok := schema[keyword].([]any)
 		if !ok {
 			continue
 		}
 		for _, branch := range branches {
-			walkSchemaPaths(index, basePath, branch)
-		}
-	}
-
-	props, ok := asSchemaMap(schema["properties"])
-	if ok {
-		names := make([]string, 0, len(props))
-		for name := range props {
-			names = append(names, name)
-		}
-		sort.Strings(names)
-
-		for _, name := range names {
-			child, ok := asSchemaMap(props[name])
-			if !ok {
-				continue
+			if child, ok := branch.(map[string]any); ok {
+				indexSchema(index, base, child)
 			}
-			childPath := joinSchemaPath(basePath, name)
-			if _, exists := index[childPath]; !exists {
-				index[childPath] = child
-			}
-			walkSchemaPaths(index, childPath, child)
 		}
 	}
-
-	if items, ok := asSchemaMap(schema["items"]); ok {
-		arrayPath := basePath + "[]"
-		if _, exists := index[arrayPath]; !exists {
-			index[arrayPath] = items
-		}
-		walkSchemaPaths(index, arrayPath, items)
-	}
-}
-
-func joinSchemaPath(base, child string) string {
-	if base == "$" {
-		return child
-	}
-	return base + "." + child
-}
-
-func asSchemaArray(v any) ([]map[string]any, bool) {
-	arr, ok := v.([]any)
-	if !ok {
-		return nil, false
-	}
-	out := make([]map[string]any, 0, len(arr))
-	for _, item := range arr {
-		m, ok := asSchemaMap(item)
-		if !ok {
-			continue
-		}
-		out = append(out, m)
-	}
-	if len(out) == 0 {
-		return nil, false
-	}
-	return out, true
-}
-
-func asSchemaMap(v any) (map[string]any, bool) {
-	m, ok := v.(map[string]any)
-	if !ok {
-		return nil, false
-	}
-	return m, true
-}
-
-func invSchemaToMap(schema *invjsonschema.Schema) map[string]any {
-	if schema == nil {
-		return nil
-	}
-
-	data, err := json.Marshal(schema)
-	if err != nil {
-		return map[string]any{}
-	}
-
-	var out map[string]any
-	if err := json.Unmarshal(data, &out); err != nil {
-		return map[string]any{}
-	}
-	return out
-}
-
-func cloneSchemaMap(in map[string]any) map[string]any {
-	return cloneJSON(in, map[string]any{})
-}
-
-func cloneSchemaByPath(in map[string]map[string]any) map[string]map[string]any {
-	return cloneJSON(in, map[string]map[string]any{})
-}
-
-func cloneJSON[T any](in T, fallback T) T {
-	data, err := json.Marshal(in)
-	if err != nil {
-		return fallback
-	}
-	var out T
-	if err := json.Unmarshal(data, &out); err != nil {
-		return fallback
-	}
-	return out
 }

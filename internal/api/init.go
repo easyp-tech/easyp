@@ -2,14 +2,12 @@ package api
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
 
 	"github.com/urfave/cli/v2"
 
 	"github.com/easyp-tech/easyp/internal/adapters/prompter"
-	"github.com/easyp-tech/easyp/internal/config"
-	"github.com/easyp-tech/easyp/internal/core"
-	"github.com/easyp-tech/easyp/internal/fs/fs"
-	"github.com/easyp-tech/easyp/internal/rules"
 )
 
 var _ Handler = (*Init)(nil)
@@ -19,13 +17,15 @@ type Init struct{}
 
 var (
 	flagInitDirectoryPath = &cli.StringFlag{
-		Name:       "dir",
-		Usage:      "directory path to initialize",
-		Required:   true,
-		HasBeenSet: true,
-		Value:      ".",
-		Aliases:    []string{"d"},
-		EnvVars:    []string{"EASYP_INIT_DIR"},
+		Name:    "dir",
+		Usage:   "directory path to initialize",
+		Value:   ".",
+		Aliases: []string{"d"},
+		EnvVars: []string{"EASYP_INIT_DIR"},
+	}
+	flagInitModule = &cli.StringFlag{
+		Name:  "module",
+		Usage: "canonical protobuf module identity for a new v1 project",
 	}
 )
 
@@ -40,52 +40,22 @@ func (i Init) Command() *cli.Command {
 		Action:      i.Action,
 		Flags: []cli.Flag{
 			flagInitDirectoryPath,
+			flagInitModule,
 		},
 	}
 }
 
 // Action implements Handler.
 func (i Init) Action(ctx *cli.Context) error {
-	log := getLogger(ctx)
-
-	rootPath := ctx.String(flagInitDirectoryPath.Name)
-	dirFS := fs.NewFSWalker(rootPath, ".")
-
-	cfg := &config.Config{}
-
-	app, err := buildCore(ctx.Context, log, *cfg, dirFS)
+	rootAbs, err := filepath.Abs(ctx.String(flagInitDirectoryPath.Name))
 	if err != nil {
-		return fmt.Errorf("buildCore: %w", err)
+		return fmt.Errorf("Abs: %w", err)
 	}
-
-	opts := core.InitOptions{
-		TemplateData: defaultTemplateData(),
-		Prompter:     prompter.InteractivePrompter{},
+	if err := os.MkdirAll(rootAbs, 0o755); err != nil {
+		return fmt.Errorf("MkdirAll: %w", err)
 	}
-
-	err = app.Initialize(ctx.Context, dirFS, opts)
-	if err != nil {
-		return fmt.Errorf("app.Initialize: %w", err)
+	if err := initializeV1(ctx.Context, rootAbs, ctx.String(flagInitModule.Name), prompter.InteractivePrompter{}); err != nil {
+		return fmt.Errorf("initializeV1: %w", err)
 	}
-
 	return nil
-}
-
-// defaultTemplateData builds InitTemplateData from all available rule groups.
-func defaultTemplateData() core.InitTemplateData {
-	groups := rules.AllGroups()
-	lintGroups := make([]core.LintGroup, len(groups))
-	for i, g := range groups {
-		lintGroups[i] = core.LintGroup{
-			Name:  g.Name,
-			Rules: g.Rules,
-		}
-	}
-
-	return core.InitTemplateData{
-		LintGroups:          lintGroups,
-		EnumZeroValueSuffix: "_NONE",
-		ServiceSuffix:       "API",
-		AgainstGitRef:       "master",
-	}
 }

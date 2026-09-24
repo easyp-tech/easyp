@@ -8,10 +8,8 @@ import (
 
 	"github.com/urfave/cli/v2"
 
-	"github.com/easyp-tech/easyp/internal/config"
 	"github.com/easyp-tech/easyp/internal/core"
 	"github.com/easyp-tech/easyp/internal/flags"
-	"github.com/easyp-tech/easyp/internal/fs/fs"
 	"github.com/easyp-tech/easyp/internal/logger"
 )
 
@@ -101,27 +99,9 @@ func (b BreakingCheck) action(ctx *cli.Context, log logger.Logger) error {
 		return fmt.Errorf("resolveRoots: %w", err)
 	}
 
-	cfg, err := config.New(ctx.Context, configPath)
+	issues, err := b.checkV1Policies(ctx, log, configPath, projectRoot, breakingCheckRoot)
 	if err != nil {
-		return fmt.Errorf("config.New: %w", err)
-	}
-
-	path := ctx.String(flagLintDirectoryPath.Name)
-	against := ctx.String(flagAgainstBranchName.Name)
-	if cfg.BreakingCheck.AgainstGitRef == "" {
-		cfg.BreakingCheck.AgainstGitRef = against
-	}
-
-	// Walker for Core (lockfile etc) - strictly based on project root
-	projectWalker := fs.NewFSWalker(projectRoot, ".")
-	app, err := buildCore(ctx.Context, log, *cfg, projectWalker)
-	if err != nil {
-		return fmt.Errorf("buildCore: %w", err)
-	}
-
-	issues, err := app.BreakingCheck(ctx.Context, projectRoot, breakingCheckRoot, path)
-	if err != nil {
-		return fmt.Errorf("app.BreakingCheck: %w", err)
+		return fmt.Errorf("checkV1Policies: %w", err)
 	}
 
 	if len(issues) == 0 {

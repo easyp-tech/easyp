@@ -11,10 +11,8 @@ import (
 
 	"github.com/urfave/cli/v2"
 
-	"github.com/easyp-tech/easyp/internal/config"
 	"github.com/easyp-tech/easyp/internal/core"
 	"github.com/easyp-tech/easyp/internal/flags"
-	"github.com/easyp-tech/easyp/internal/fs/fs"
 	"github.com/easyp-tech/easyp/internal/logger"
 )
 
@@ -102,42 +100,7 @@ func (l Lint) action(ctx *cli.Context, log logger.Logger) error {
 	if err != nil {
 		return err
 	}
-
-	cfg, err := config.New(ctx.Context, configPath)
-	if err != nil {
-		return fmt.Errorf("config.New: %w", err)
-	}
-
-	// Walker for Core (lockfile etc) - strictly based on project root
-	projectWalker := fs.NewFSWalker(projectRoot, ".")
-	app, err := buildCore(ctx.Context, log, *cfg, projectWalker)
-	if err != nil {
-		return fmt.Errorf("buildCore: %w", err)
-	}
-
-	path := ctx.String(flagLintDirectoryPath.Name)
-
-	// Walker for Linting - based on requested root and path
-	lintWalker := fs.NewFSWalker(lintRoot, path)
-	issues, err := app.Lint(ctx.Context, lintWalker)
-	if err != nil {
-		return fmt.Errorf("c.Lint: %w", err)
-	}
-
-	if len(issues) == 0 {
-		return nil
-	}
-
-	format := flags.GetFormat(ctx, flags.TextFormat)
-	if err := printIssues(
-		format,
-		os.Stdout,
-		issues,
-	); err != nil {
-		return fmt.Errorf("printLintErrors: %w", err)
-	}
-
-	return ErrHasLintIssue
+	return l.actionV1(ctx, log, configPath, projectRoot, lintRoot)
 }
 
 func printIssues(format string, w io.Writer, issues []core.IssueInfo) error {

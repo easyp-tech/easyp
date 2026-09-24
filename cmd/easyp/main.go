@@ -45,11 +45,12 @@ func main() {
 		Commands: buildCommand(
 			api.Lint{},
 			api.Mod{},
+			api.Get{},
 			api.Completion{},
 			api.Init{},
 			api.Generate{},
-			api.SchemaGen{},
 			api.LsFiles{},
+			api.SchemaGen{},
 			api.Validate{},
 			api.BreakingCheck{},
 		),
