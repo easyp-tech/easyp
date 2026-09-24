@@ -21,6 +21,10 @@ func augmentV1ManifestRequirements(original []byte, root string, module v1.Modul
 	if err != nil {
 		return nil, fmt.Errorf("v1RootImports: %w", err)
 	}
+	versions, err := manifestRequirementVersions(lock, repository)
+	if err != nil {
+		return nil, fmt.Errorf("manifestRequirementVersions: %w", err)
+	}
 	var additions []v1ManifestRequirement
 	for _, entry := range lock.Modules {
 		if existing[entry.Source] {
@@ -53,7 +57,7 @@ func augmentV1ManifestRequirements(original []byte, root string, module v1.Modul
 				break
 			}
 		}
-		additions = append(additions, v1ManifestRequirement{Requirement: v1.Requirement{Module: entry.Source, Version: entry.Version}, indirect: !direct})
+		additions = append(additions, v1ManifestRequirement{Requirement: v1.Requirement{Module: entry.Source, Version: versions[entry.Source]}, indirect: !direct})
 	}
 	updated := appendV1Requirements(original, additions)
 	if _, err := v1.ParseModule(bytes.NewReader(updated)); err != nil {

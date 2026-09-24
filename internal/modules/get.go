@@ -37,7 +37,11 @@ func Get(ctx context.Context, root string, requirement v1.Requirement, repositor
 	if err != nil {
 		return fmt.Errorf("resolveV1LockWithPins: %w", err)
 	}
-	updated = appendV1IndirectRequirements(updated, updatedModule, lock)
+	versions, err := manifestRequirementVersions(lock, repository)
+	if err != nil {
+		return fmt.Errorf("manifestRequirementVersions: %w", err)
+	}
+	updated = appendV1IndirectRequirements(updated, updatedModule, lock, versions)
 	return writeV1ResolvedFiles(root, original, updated, lock)
 }
 
@@ -66,7 +70,7 @@ func addDirectV1Requirement(original []byte, target v1.Requirement) ([]byte, err
 	return appendV1Requirements(original, []v1ManifestRequirement{{Requirement: target}}), nil
 }
 
-func appendV1IndirectRequirements(original []byte, module v1.Module, lock v1.Lock) []byte {
+func appendV1IndirectRequirements(original []byte, module v1.Module, lock v1.Lock, versions map[string]string) []byte {
 	existing := make(map[string]bool, len(module.Requires))
 	for _, requirement := range module.Requires {
 		existing[requirement.Module] = true
@@ -76,7 +80,7 @@ func appendV1IndirectRequirements(original []byte, module v1.Module, lock v1.Loc
 		if existing[entry.Source] {
 			continue
 		}
-		additions = append(additions, v1ManifestRequirement{Requirement: v1.Requirement{Module: entry.Source, Version: entry.Version}, indirect: true})
+		additions = append(additions, v1ManifestRequirement{Requirement: v1.Requirement{Module: entry.Source, Version: versions[entry.Source]}, indirect: true})
 		existing[entry.Source] = true
 	}
 	return appendV1Requirements(original, additions)

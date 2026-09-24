@@ -56,7 +56,7 @@ func TestGetAddsDirectAndTransitiveRequirements(t *testing.T) {
 		require.Equal(t, entry.Commit, entry.Version)
 		require.True(t, strings.HasPrefix(entry.Hash, "h1:"))
 		if entry.Source == bar || entry.Source == baz {
-			require.Contains(t, string(manifest), "require "+entry.Source+" "+entry.Version+" // indirect\n")
+			require.Contains(t, string(manifest), "require "+entry.Source+" // indirect\n")
 		}
 	}
 

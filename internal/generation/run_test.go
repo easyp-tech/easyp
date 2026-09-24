@@ -144,3 +144,106 @@ func TestRunWithoutManifest(t *testing.T) {
 		})
 	}
 }
+
+func TestRunRejectsMultipleDescriptorTargets(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name  string
+		files map[string]string
+	}{
+		{
+			name: "two modules in one generator",
+			files: map[string]string{
+				"easyp.gen.yaml":    "version: v1\ngenerate:\n  modules: [m1, m2]\n",
+				"m1/protobuf.mod":   "module example.com/m1\nroots proto\n",
+				"m1/proto/m1.proto": "syntax = \"proto3\"; package m1.v1; message M1 {}\n",
+				"m2/protobuf.mod":   "module example.com/m2\nroots proto\n",
+				"m2/proto/m2.proto": "syntax = \"proto3\"; package m2.v1; message M2 {}\n",
+			},
+		},
+		{
+			name: "two generator files",
+			files: map[string]string{
+				"easyp.gen.yaml":          "version: v1\nplugins:\n  - name: python\n    out: gen/python\n",
+				"protobuf.mod":            "module example.com/root\nroots proto\n",
+				"proto/root.proto":        "syntax = \"proto3\"; package root.v1; message Root {}\n",
+				"child/easyp.gen.yaml":    "version: v1\nplugins:\n  - name: python\n    out: gen/python\n",
+				"child/protobuf.mod":      "module example.com/child\nroots proto\n",
+				"child/proto/child.proto": "syntax = \"proto3\"; package child.v1; message Child {}\n",
+			},
+		},
+	}
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			root := t.TempDir()
+			for path, contents := range tt.files {
+				writeV1GenerateFixture(t, root, path, contents)
+			}
+			output := filepath.Join(root, "all.pb")
+			require.NoError(t, os.WriteFile(output, []byte("existing descriptor"), 0o644))
+
+			err := Run(t.Context(), logger.NewNop(), nil, Request{WorkDir: root, DescriptorSetOut: output})
+
+			require.ErrorContains(t, err, "descriptor set requires exactly one selected module")
+			contents, readErr := os.ReadFile(output)
+			require.NoError(t, readErr)
+			assert.Equal(t, "existing descriptor", string(contents))
+		})
+	}
+}
+
+func TestRunWritesDescriptorWithoutPlugins(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name      string
+		files     map[string]string
+		wantProto string
+	}{
+		{
+			name: "sole generator has no plugins",
+			files: map[string]string{
+				"easyp.gen.yaml":  "version: v1\n",
+				"protobuf.mod":    "module example.com/app\nroots proto\n",
+				"proto/app.proto": "syntax = \"proto3\"; package app.v1; message App {}\n",
+			},
+			wantProto: "app.proto",
+		},
+		{
+			name: "parent options file does not become a descriptor target",
+			files: map[string]string{
+				"easyp.gen.yaml":          "version: v1\noptions:\n  go:\n    package_prefix: example.com/gen\n",
+				"child/easyp.gen.yaml":    "version: v1\nplugins:\n  - name: python\n    out: gen/python\n",
+				"child/protobuf.mod":      "module example.com/child\nroots proto\n",
+				"child/proto/child.proto": "syntax = \"proto3\"; package child.v1; message Child {}\n",
+			},
+			wantProto: "child.proto",
+		},
+	}
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			root := t.TempDir()
+			for path, contents := range tt.files {
+				writeV1GenerateFixture(t, root, path, contents)
+			}
+			output := filepath.Join(root, "all.pb")
+
+			err := Run(t.Context(), logger.NewNop(), nil, Request{WorkDir: root, DescriptorSetOut: output})
+
+			require.NoError(t, err)
+			contents, err := os.ReadFile(output)
+			require.NoError(t, err)
+			var descriptors descriptorpb.FileDescriptorSet
+			require.NoError(t, proto.Unmarshal(contents, &descriptors))
+			require.Len(t, descriptors.File, 1)
+			assert.Equal(t, tt.wantProto, descriptors.File[0].GetName())
+		})
+	}
+}

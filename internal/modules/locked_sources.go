@@ -27,20 +27,35 @@ func EnsureLockedSources(ctx context.Context, moduleDir string, module v1.Module
 	if err := ValidateRequirements(remoteRequires, lock); err != nil {
 		return nil, err
 	}
-	if err := repository.Install(ctx, lock); err != nil {
+	replaced := replacedModules(module)
+	remoteLock := v1.Lock{Version: lock.Version}
+	for _, entry := range lock.Modules {
+		if !replaced[entry.Source] {
+			remoteLock.Modules = append(remoteLock.Modules, entry)
+		}
+	}
+	if err := repository.Install(ctx, remoteLock); err != nil {
 		return nil, err
 	}
-	return CachedSources(lock, repository)
+	return cachedSources(lock, replaced, repository)
 }
 
 // RemoteRequirements excludes requirements supplied by local replacements.
 func RemoteRequirements(module v1.Module) []v1.Requirement {
+	return unreplacedRequirements(module.Requires, replacedModules(module))
+}
+
+func replacedModules(module v1.Module) map[string]bool {
 	replaced := make(map[string]bool, len(module.Replaces))
 	for _, replacement := range module.Replaces {
 		replaced[replacement.Module] = true
 	}
+	return replaced
+}
+
+func unreplacedRequirements(requirements []v1.Requirement, replaced map[string]bool) []v1.Requirement {
 	var remoteRequires []v1.Requirement
-	for _, requirement := range module.Requires {
+	for _, requirement := range requirements {
 		if !replaced[requirement.Module] {
 			remoteRequires = append(remoteRequires, requirement)
 		}
@@ -72,13 +87,20 @@ func cachedRoots(lock v1.Lock, repository Cache) ([]string, error) {
 // CachedSources reads installed module roots and validates their transitive requirements.
 // It does not install or verify cached contents; call Install first.
 func CachedSources(lock v1.Lock, repository Cache) (SourceRoots, error) {
+	return cachedSources(lock, nil, repository)
+}
+
+func cachedSources(lock v1.Lock, replaced map[string]bool, repository Cache) (SourceRoots, error) {
 	var roots SourceRoots
 	for _, entry := range lock.Modules {
+		if replaced[entry.Source] {
+			continue
+		}
 		installDir, dependency, err := repository.Cached(entry)
 		if err != nil {
 			return nil, fmt.Errorf("cached %s: %w", entry.Source, err)
 		}
-		if err := ValidateRequirements(dependency.Requires, lock); err != nil {
+		if err := ValidateRequirements(unreplacedRequirements(dependency.Requires, replaced), lock); err != nil {
 			return nil, fmt.Errorf("dependency %s: %w", dependency.Name, err)
 		}
 		dependencyRoots, err := ModuleSources(installDir, dependency)

@@ -22,6 +22,12 @@ type Request struct {
 	IncludeImports   bool
 }
 
+type generationTarget struct {
+	configPath string
+	config     v1.Generate
+	module     v1ModuleSelection
+}
+
 // Run discovers generator files, prepares selected modules, and executes each generation.
 // Missing locked dependencies are installed in the supplied cache.
 func Run(ctx context.Context, log logger.Logger, cache modules.Cache, request Request) error {
@@ -41,6 +47,7 @@ func Run(ctx context.Context, log logger.Logger, cache modules.Cache, request Re
 		return fmt.Errorf("no easyp.gen.yaml found in %s", workDir)
 	}
 
+	var descriptorTargets []generationTarget
 	for _, configPath := range configs {
 		gen, err := readV1GenerateConfig(configPath)
 		if err != nil {
@@ -49,7 +56,7 @@ func Run(ctx context.Context, log logger.Logger, cache modules.Cache, request Re
 		if err := inheritV1GenerateOptions(workDir, configPath, &gen); err != nil {
 			return fmt.Errorf("inheritV1GenerateOptions: %w", err)
 		}
-		if len(gen.Plugins) == 0 {
+		if len(gen.Plugins) == 0 && request.DescriptorSetOut == "" {
 			continue
 		}
 		modules, err := selectV1Modules(workDir, filepath.Dir(configPath), gen.Generate.Modules)
@@ -60,10 +67,42 @@ func Run(ctx context.Context, log logger.Logger, cache modules.Cache, request Re
 			return fmt.Errorf("%s: generate.packages matching is not specified precisely enough for v1", configPath)
 		}
 		for _, module := range modules {
-			if err := generateSelectedV1Module(ctx, log, cache, request, configPath, workDir, module, gen); err != nil {
-				return fmt.Errorf("generateSelectedV1Module: %w", err)
+			if request.DescriptorSetOut == "" {
+				if err := generateSelectedV1Module(ctx, log, cache, request, configPath, workDir, module, gen); err != nil {
+					return fmt.Errorf("generateSelectedV1Module: %w", err)
+				}
+				continue
+			}
+			descriptorTargets = append(descriptorTargets, generationTarget{configPath: configPath, config: gen, module: module})
+		}
+	}
+	if request.DescriptorSetOut == "" {
+		return nil
+	}
+	// A generator with only inherited options is not a separate target when
+	// another config selects a module for this run.
+	selectedElsewhere := false
+	for _, target := range descriptorTargets {
+		if len(target.config.Plugins) > 0 || len(target.config.Generate.Modules) > 0 {
+			selectedElsewhere = true
+			break
+		}
+	}
+	if selectedElsewhere && request.Project == "" {
+		selected := descriptorTargets[:0]
+		for _, target := range descriptorTargets {
+			if len(target.config.Plugins) > 0 || len(target.config.Generate.Modules) > 0 {
+				selected = append(selected, target)
 			}
 		}
+		descriptorTargets = selected
+	}
+	if len(descriptorTargets) != 1 {
+		return fmt.Errorf("descriptor set requires exactly one selected module; got %d", len(descriptorTargets))
+	}
+	target := descriptorTargets[0]
+	if err := generateSelectedV1Module(ctx, log, cache, request, target.configPath, workDir, target.module, target.config); err != nil {
+		return fmt.Errorf("generateSelectedV1Module: %w", err)
 	}
 	return nil
 }
