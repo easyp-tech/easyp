@@ -1,6 +1,13 @@
 package api
 
-import "github.com/urfave/cli/v2"
+import (
+	"fmt"
+	"os"
+
+	"github.com/urfave/cli/v2"
+
+	"github.com/easyp-tech/easyp/internal/generation"
+)
 
 var _ Handler = (*Generate)(nil)
 
@@ -45,6 +52,16 @@ func (g Generate) Command() *cli.Command {
 
 // Action implements Handler.
 func (g Generate) Action(ctx *cli.Context) error {
-	log := getLogger(ctx)
-	return g.generate(ctx, log)
+	root, err := os.Getwd()
+	if err != nil {
+		return fmt.Errorf("Getwd: %w", err)
+	}
+	cache, err := moduleCache(ctx)
+	if err != nil {
+		return fmt.Errorf("moduleCache: %w", err)
+	}
+	return generation.Run(ctx.Context, getLogger(ctx), cache, generation.Request{
+		WorkDir: root, Project: ctx.String(flagGenerateProject.Name),
+		DescriptorSetOut: ctx.String(flagGenerateDescriptorSetOut.Name), IncludeImports: ctx.Bool(flagGenerateIncludeImports.Name),
+	})
 }

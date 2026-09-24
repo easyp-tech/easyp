@@ -5,14 +5,14 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"net/url"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 
+	"github.com/easyp-tech/easyp/internal/adapters/gitmodules"
 	"github.com/easyp-tech/easyp/internal/adapters/prompter"
 	v1 "github.com/easyp-tech/easyp/internal/config/v1"
+	disk "github.com/easyp-tech/easyp/internal/fs/fs"
 )
 
 type initialConfigFile struct {
@@ -44,8 +44,8 @@ func initializeV1(ctx context.Context, root, identity string, prompt prompter.Pr
 		return fmt.Errorf("confirmInitialConfigFiles: %w", err)
 	}
 	for _, file := range selected {
-		if err := writeAtomicFile(filepath.Join(root, file.name), file.contents, 0o600); err != nil {
-			return fmt.Errorf("writeAtomicFile: %w", err)
+		if err := disk.WriteAtomicFile(filepath.Join(root, file.name), file.contents, 0o600); err != nil {
+			return fmt.Errorf("WriteAtomicFile: %w", err)
 		}
 	}
 	return nil
@@ -80,7 +80,7 @@ func initialModuleIdentity(ctx context.Context, root, identity string, prompt pr
 		}
 		return module.Name, nil
 	}
-	if identity := gitV1ModuleIdentity(ctx, root); identity != "" {
+	if identity := gitmodules.WorkspaceIdentity(ctx, root); identity != "" {
 		return identity, nil
 	}
 	value, err := prompt.Input(ctx, "Protobuf module identity (for example github.com/acme/service)", "")
@@ -115,31 +115,4 @@ func confirmInitialConfigFiles(ctx context.Context, root string, files []initial
 		selected = append(selected, file)
 	}
 	return selected, nil
-}
-
-func gitV1ModuleIdentity(ctx context.Context, root string) string {
-	repoRoot, err := gitV1(ctx, root, "rev-parse", "--show-toplevel")
-	if err != nil || filepath.Clean(strings.TrimSpace(repoRoot)) != filepath.Clean(root) {
-		return ""
-	}
-	cmd := exec.CommandContext(ctx, "git", "-C", root, "remote", "get-url", "origin")
-	raw, err := cmd.Output()
-	if err != nil {
-		return ""
-	}
-	remote := strings.TrimSpace(string(raw))
-	if strings.Contains(remote, "://") {
-		parsed, err := url.Parse(remote)
-		if err != nil || parsed.Host == "" {
-			return ""
-		}
-		return strings.TrimSuffix(parsed.Host+"/"+strings.TrimPrefix(parsed.Path, "/"), ".git")
-	}
-	if _, rest, ok := strings.Cut(remote, "@"); ok {
-		host, path, ok := strings.Cut(rest, ":")
-		if ok && host != "" && path != "" {
-			return strings.TrimSuffix(host+"/"+path, ".git")
-		}
-	}
-	return ""
 }

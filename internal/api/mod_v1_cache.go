@@ -2,15 +2,16 @@ package api
 
 import (
 	"fmt"
-	"path/filepath"
 
-	"github.com/easyp-tech/easyp/internal/logger"
+	"github.com/urfave/cli/v2"
+
+	"github.com/easyp-tech/easyp/internal/adapters/gitmodules"
 )
 
-func gitCachePath(log logger.Logger) (string, error) {
-	root, err := getEasypPath(log)
+func moduleCache(ctx *cli.Context) (*gitmodules.Cache, error) {
+	root, err := getEasypPath(getLogger(ctx))
 	if err != nil {
-		return "", fmt.Errorf("getEasypPath: %w", err)
+		return nil, fmt.Errorf("getEasypPath: %w", err)
 	}
-	return filepath.Join(root, "v1", "git"), nil
+	return gitmodules.New(root), nil
 }

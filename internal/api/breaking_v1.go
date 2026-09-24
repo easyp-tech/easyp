@@ -29,9 +29,13 @@ func (b BreakingCheck) checkV1Policies(ctx *cli.Context, log logger.Logger, conf
 	}
 	var importRoots []string
 	if moduleDir != "" {
-		importRoots, err = resolveV1PolicyImportRoots(ctx.Context, log, moduleDir)
+		cache, err := moduleCache(ctx)
 		if err != nil {
-			return nil, fmt.Errorf("resolveV1PolicyImportRoots: %w", err)
+			return nil, fmt.Errorf("moduleCache: %w", err)
+		}
+		importRoots, err = ensureV1PolicyImportRoots(ctx.Context, cache, moduleDir)
+		if err != nil {
+			return nil, fmt.Errorf("ensureV1PolicyImportRoots: %w", err)
 		}
 	}
 	var issues []core.IssueInfo
@@ -44,11 +48,10 @@ func (b BreakingCheck) checkV1Policies(ctx *cli.Context, log logger.Logger, conf
 		if err != nil {
 			return nil, fmt.Errorf("BreakingConfig: %w", err)
 		}
-		app, err := buildCore(log, config.Config{BreakingCheck: breakingConfig})
+		app, err := buildCore(log, config.Config{BreakingCheck: breakingConfig}, importRoots)
 		if err != nil {
 			return nil, fmt.Errorf("buildCore: %w", err)
 		}
-		app.SetImportRoots(importRoots)
 		found, err := app.BreakingCheck(ctx.Context, projectRoot, scanRoot, path)
 		if err != nil {
 			return nil, fmt.Errorf("BreakingCheck for %s: %w", source, err)

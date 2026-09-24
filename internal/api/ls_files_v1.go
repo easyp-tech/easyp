@@ -1,6 +1,7 @@
 package api
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -13,6 +14,7 @@ import (
 
 	v1 "github.com/easyp-tech/easyp/internal/config/v1"
 	"github.com/easyp-tech/easyp/internal/flags"
+	"github.com/easyp-tech/easyp/internal/modules"
 	"github.com/easyp-tech/easyp/wellknownimports"
 )
 
@@ -70,11 +72,19 @@ func (l LsFiles) Action(ctx *cli.Context) error {
 	if err != nil {
 		return fmt.Errorf("Getwd: %w", err)
 	}
-	_, module, err := readV1Manifest(root)
+	_, module, err := modules.ReadManifest(root)
 	if err != nil {
-		return fmt.Errorf("readV1Manifest: %w", err)
+		return fmt.Errorf("ReadManifest: %w", err)
 	}
-	listed, err := listV1Files(ctx, root, module)
+	includeImports := ctx.Bool(flagLsFilesIncludeImports.Name)
+	var cache modules.Cache
+	if includeImports {
+		cache, err = moduleCache(ctx)
+		if err != nil {
+			return fmt.Errorf("moduleCache: %w", err)
+		}
+	}
+	listed, err := listV1Files(ctx.Context, root, module, includeImports, cache)
 	if err != nil {
 		return fmt.Errorf("listV1Files: %w", err)
 	}
@@ -91,7 +101,7 @@ func (l LsFiles) Action(ctx *cli.Context) error {
 	}
 }
 
-func listV1Files(ctx *cli.Context, moduleDir string, module v1.Module) (v1ListResult, error) {
+func listV1Files(ctx context.Context, moduleDir string, module v1.Module, includeImports bool, cache modules.Cache) (v1ListResult, error) {
 	result := v1ListResult{Files: []v1ListedFile{}, Roots: []v1ListedRoot{}}
 	index := make(map[string]v1ListedFile)
 	for _, root := range module.Roots {
@@ -101,14 +111,14 @@ func listV1Files(ctx *cli.Context, moduleDir string, module v1.Module) (v1ListRe
 			return v1ListResult{}, fmt.Errorf("indexV1ProtoRoot: %w", err)
 		}
 	}
-	if ctx.Bool(flagLsFilesIncludeImports.Name) {
-		dependencies, err := resolveV1DependencySources(ctx.Context, getLogger(ctx), moduleDir, module)
+	if includeImports {
+		dependencies, err := modules.EnsureSources(ctx, moduleDir, module, cache)
 		if err != nil {
-			return v1ListResult{}, fmt.Errorf("resolveV1DependencySources: %w", err)
+			return v1ListResult{}, fmt.Errorf("EnsureSources: %w", err)
 		}
 		for _, dependency := range dependencies {
-			result.Roots = append(result.Roots, v1ListedRoot{Path: filepath.ToSlash(dependency.path), Source: "dependency"})
-			if err := indexV1ProtoRoot(dependency.path, "dependency", index, nil); err != nil {
+			result.Roots = append(result.Roots, v1ListedRoot{Path: filepath.ToSlash(dependency.Path), Source: "dependency"})
+			if err := indexV1ProtoRoot(dependency.Path, "dependency", index, nil); err != nil {
 				return v1ListResult{}, fmt.Errorf("indexV1ProtoRoot: %w", err)
 			}
 		}
@@ -120,7 +130,7 @@ func listV1Files(ctx *cli.Context, moduleDir string, module v1.Module) (v1ListRe
 }
 
 func indexV1ProtoRoot(root, source string, index map[string]v1ListedFile, selected *[]v1ListedFile) error {
-	return walkV1ProtoFiles(root, func(path string) error {
+	return modules.WalkProtoFiles(root, func(path string) error {
 		importPath, err := filepath.Rel(root, path)
 		if err != nil {
 			return fmt.Errorf("Rel: %w", err)
@@ -189,13 +199,13 @@ func resolveV1ListedImport(owner, importPath string, index map[string]v1ListedFi
 
 func readV1ListedImports(file v1ListedFile) ([]string, error) {
 	if file.Source != "wellknown" {
-		return readV1ProtoImports(filepath.FromSlash(file.AbsPath))
+		return modules.ReadProtoImports(filepath.FromSlash(file.AbsPath))
 	}
 	raw, err := wellknownimports.Content.ReadFile(file.ImportPath)
 	if err != nil {
 		return nil, fmt.Errorf("ReadFile: %w", err)
 	}
-	return parseV1ProtoImports(file.ImportPath, raw)
+	return modules.ParseProtoImports(file.ImportPath, raw)
 }
 
 func printV1ListedFiles(result v1ListResult) error {

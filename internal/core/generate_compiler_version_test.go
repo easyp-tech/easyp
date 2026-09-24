@@ -8,11 +8,11 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/easyp-tech/easyp/internal/adapters/console"
-	pluginexecutor "github.com/easyp-tech/easyp/internal/adapters/plugin"
-	"github.com/easyp-tech/easyp/internal/logger"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/pluginpb"
+
+	pluginexecutor "github.com/easyp-tech/easyp/internal/adapters/plugin"
+	"github.com/easyp-tech/easyp/internal/logger"
 )
 
 type captureExecutor struct {
@@ -100,7 +100,7 @@ func TestGenerateGoHeaderUsesCompilerVersion(t *testing.T) {
 		})
 	}
 
-	localExecutor := pluginexecutor.NewLocalPluginExecutor(console.New(), logger.NewNop())
+	localExecutor := pluginexecutor.NewLocalPluginExecutor(logger.NewNop())
 	app := testCoreWithPlugins(plugins, localExecutor)
 
 	if err := app.Generate(context.Background(), root, "", false); err != nil {

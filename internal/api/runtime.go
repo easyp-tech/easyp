@@ -7,7 +7,6 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/samber/lo"
 	"github.com/urfave/cli/v2"
 
 	"github.com/easyp-tech/easyp/internal/adapters/go_git"
@@ -58,7 +57,7 @@ func getEasypPath(log logger.Logger) (string, error) {
 	return easypPath, nil
 }
 
-func buildCore(log logger.Logger, cfg config.Config) (*core.Core, error) {
+func buildCore(log logger.Logger, cfg config.Config, importRoots []string) (*core.Core, error) {
 	core.SetAllowCommentIgnores(cfg.Lint.AllowCommentIgnores)
 
 	lintRules, ignoreOnly, err := rules.New(cfg.Lint)
@@ -66,66 +65,16 @@ func buildCore(log logger.Logger, cfg config.Config) (*core.Core, error) {
 		return nil, fmt.Errorf("New: %w", err)
 	}
 
-	plugins := make([]core.Plugin, 0, len(cfg.Generate.Plugins))
-	for _, item := range cfg.Generate.Plugins {
-		plugins = append(plugins, core.Plugin{
-			Source: core.PluginSource{
-				Name: item.Name, Remote: item.Remote, Path: item.Path, Command: item.Command,
-			},
-			Out: item.Out, Options: item.Opts, WithImports: item.WithImports,
-		})
-	}
-
-	inputs := core.Inputs{}
-	for _, item := range cfg.Generate.Inputs {
-		if item.InputFilesDir.Path != "" {
-			inputs.InputFilesDir = append(inputs.InputFilesDir, core.InputFilesDir{
-				Path: item.InputFilesDir.Path,
-				Root: item.InputFilesDir.Root,
-			})
-		}
-	}
-
 	return core.New(core.Options{
 		Rules:                   lintRules,
 		Ignore:                  append(append([]string(nil), cfg.Lint.Ignore...), defaultVendorDir),
 		IgnoreOnly:              ignoreOnly,
 		Logger:                  log,
-		Plugins:                 plugins,
-		Inputs:                  inputs,
+		ImportRoots:             importRoots,
 		CurrentProjectGitWalker: go_git.New(),
 		BreakingCheckConfig: core.BreakingCheckConfig{
 			IgnoreDirs:    append(append([]string(nil), cfg.BreakingCheck.Ignore...), defaultVendorDir),
 			AgainstGitRef: cfg.BreakingCheck.AgainstGitRef,
 		},
-		ManagedModeConfig: convertManagedModeConfig(cfg.Generate.Managed),
 	}), nil
-}
-
-// convertManagedModeConfig converts config.ManagedMode to core.ManagedModeConfig.
-func convertManagedModeConfig(cfg config.ManagedMode) core.ManagedModeConfig {
-	return core.ManagedModeConfig{
-		Enabled: cfg.Enabled,
-		Disable: lo.Map(cfg.Disable, func(r config.ManagedDisableRule, _ int) core.ManagedDisableRule {
-			return core.ManagedDisableRule{
-				Module:      r.Module,
-				Package:     r.Package,
-				Path:        r.Path,
-				FileOption:  core.FileOptionType(r.FileOption),
-				FieldOption: core.FieldOptionType(r.FieldOption),
-				Field:       r.Field,
-			}
-		}),
-		Override: lo.Map(cfg.Override, func(r config.ManagedOverrideRule, _ int) core.ManagedOverrideRule {
-			return core.ManagedOverrideRule{
-				FileOption:  core.FileOptionType(r.FileOption),
-				FieldOption: core.FieldOptionType(r.FieldOption),
-				Value:       r.Value,
-				Module:      r.Module,
-				Package:     r.Package,
-				Path:        r.Path,
-				Field:       r.Field,
-			}
-		}),
-	}
 }

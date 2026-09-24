@@ -5,34 +5,51 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/protobuf/types/descriptorpb"
+
+	"github.com/easyp-tech/easyp/internal/logger"
 )
 
 func TestGenerateV1ManagedModeAppliesToModuleFiles(t *testing.T) {
 	t.Parallel()
-
-	root := t.TempDir()
-	writeProtoWithoutGoPackage(t, root, "pinger/v1/service.proto")
-	executor := &captureExecutor{}
-	app := testCoreWithPlugins([]Plugin{{Source: PluginSource{Name: "custom-plugin"}, Out: "."}}, executor)
-	app.inputs.InputFilesDir = []InputFilesDir{{Path: "pinger", Root: "."}}
-	app.managedMode = ManagedModeConfig{
-		Enabled: true,
-		Override: []ManagedOverrideRule{{
-			Module:     "example.com/contracts",
-			FileOption: FileOptionGoPackagePrefix,
-			Value:      "pinger-service/internal/grpc/gen",
-		}},
+	tests := []struct {
+		name        string
+		module      string
+		wantPackage string
+	}{
+		{name: "matching module", module: "example.com/contracts", wantPackage: "pinger-service/internal/grpc/gen/pinger/v1;pingerv1"},
+		{name: "different module", module: "example.com/other"},
 	}
-	app.SetFileModules(map[string]string{"pinger/v1/service.proto": "example.com/contracts"})
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			root := t.TempDir()
+			writeProtoWithoutGoPackage(t, root, "pinger/v1/service.proto")
+			executor := &captureExecutor{}
+			identities := map[string]string{"pinger/v1/service.proto": tt.module}
+			app := New(Options{
+				Logger:            logger.NewNop(),
+				Plugins:           []Plugin{{Source: PluginSource{Name: "custom-plugin"}, Out: "."}},
+				Inputs:            Inputs{InputFilesDir: []InputFilesDir{{Path: "pinger", Root: "."}}},
+				FileModules:       identities,
+				ManagedModeConfig: ManagedModeConfig{Enabled: true, Override: []ManagedOverrideRule{{Module: "example.com/contracts", FileOption: FileOptionGoPackagePrefix, Value: "pinger-service/internal/grpc/gen"}}},
+			})
+			app.localExecutor = executor
+			identities["pinger/v1/service.proto"] = "changed after construction"
 
-	require.NoError(t, app.Generate(t.Context(), root, "", false))
-	require.Len(t, executor.requests, 1)
-	req := executor.requests[0]
-	require.Equal(t, []string{"pinger/v1/service.proto"}, req.GetFileToGenerate())
-	target := findFileDescriptor(t, req.GetProtoFile(), "pinger/v1/service.proto")
-	require.Equal(t, "pinger-service/internal/grpc/gen/pinger/v1;pingerv1", target.GetOptions().GetGoPackage())
+			err := app.Generate(t.Context(), root, "", false)
+
+			require.NoError(t, err)
+			require.Len(t, executor.requests, 1)
+			request := executor.requests[0]
+			assert.Equal(t, []string{"pinger/v1/service.proto"}, request.GetFileToGenerate())
+			target := findFileDescriptor(t, request.GetProtoFile(), "pinger/v1/service.proto")
+			assert.Equal(t, tt.wantPackage, target.GetOptions().GetGoPackage())
+		})
+	}
 }
 
 func writeProtoWithoutGoPackage(t *testing.T, root, relPath string) {

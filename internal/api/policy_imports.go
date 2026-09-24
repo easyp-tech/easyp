@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 
 	v1 "github.com/easyp-tech/easyp/internal/config/v1"
-	"github.com/easyp-tech/easyp/internal/logger"
+	"github.com/easyp-tech/easyp/internal/modules"
 )
 
 // findV1PolicyModuleDir finds the nearest module containing the scanned files.
@@ -27,21 +27,21 @@ func findV1PolicyModuleDir(projectRoot, scanDir string) (string, error) {
 	return "", nil
 }
 
-func resolveV1PolicyImportRoots(ctx context.Context, log logger.Logger, moduleDir string) ([]string, error) {
-	_, module, err := readV1Manifest(moduleDir)
+func ensureV1PolicyImportRoots(ctx context.Context, cache modules.Cache, moduleDir string) ([]string, error) {
+	_, module, err := modules.ReadManifest(moduleDir)
 	if err != nil {
-		return nil, fmt.Errorf("readV1Manifest: %w", err)
+		return nil, fmt.Errorf("ReadManifest: %w", err)
 	}
-	roots, err := moduleV1SourceRoots(moduleDir, module)
+	roots, err := modules.ModuleSources(moduleDir, module)
 	if err != nil {
-		return nil, fmt.Errorf("moduleV1SourceRoots: %w", err)
+		return nil, fmt.Errorf("ModuleSources: %w", err)
 	}
-	dependencies, err := resolveV1DependencySources(ctx, log, moduleDir, module)
+	dependencies, err := modules.EnsureSources(ctx, moduleDir, module, cache)
 	if err != nil {
-		return nil, fmt.Errorf("resolveV1DependencySources: %w", err)
+		return nil, fmt.Errorf("EnsureSources: %w", err)
 	}
-	if err := checkV1ImportPathCollisions(moduleDir, module.Roots, dependencies.paths()); err != nil {
-		return nil, fmt.Errorf("checkV1ImportPathCollisions: %w", err)
+	if err := modules.CheckImportCollisions(moduleDir, module.Roots, dependencies.Paths()); err != nil {
+		return nil, fmt.Errorf("CheckImportCollisions: %w", err)
 	}
-	return append(roots.paths(), dependencies.paths()...), nil
+	return append(roots.Paths(), dependencies.Paths()...), nil
 }

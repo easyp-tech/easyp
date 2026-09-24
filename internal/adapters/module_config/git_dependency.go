@@ -153,3 +153,26 @@ func readGitDependencyManifest(path, source string) (v1.Module, bool, error) {
 	}
 	return module, false, nil
 }
+
+// ReadGitDependencyAt verifies the candidate module directory before adapting repository-relative roots.
+func ReadGitDependencyAt(checkout, source, subdir string) (v1.Module, error) {
+	if subdir != "" {
+		manifestPath := filepath.Join(checkout, subdir, v1.ModuleFile)
+		raw, err := os.ReadFile(manifestPath)
+		if err != nil {
+			return v1.Module{}, fmt.Errorf("ReadFile: %s: %w", manifestPath, err)
+		}
+		module, err := v1.ParseModule(bytes.NewReader(raw))
+		if err != nil {
+			return v1.Module{}, fmt.Errorf("ParseModule: %s: %w", manifestPath, err)
+		}
+		if module.Name != source {
+			return v1.Module{}, fmt.Errorf("%s declares module %s, want %s", manifestPath, module.Name, source)
+		}
+	}
+	module, err := ReadGitDependency(checkout, source)
+	if err != nil {
+		return v1.Module{}, fmt.Errorf("ReadGitDependency: %w", err)
+	}
+	return module, nil
+}

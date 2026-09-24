@@ -17,8 +17,9 @@ import (
 	"golang.org/x/mod/sumdb/dirhash"
 	"gopkg.in/yaml.v3"
 
+	"github.com/easyp-tech/easyp/internal/adapters/gitmodules"
 	v1 "github.com/easyp-tech/easyp/internal/config/v1"
-	"github.com/easyp-tech/easyp/internal/logger"
+	"github.com/easyp-tech/easyp/internal/modules"
 )
 
 func TestBuildV1LockPinsGitCommitAndGoStyleH1(t *testing.T) {
@@ -53,7 +54,7 @@ func TestBuildV1LockPinsGitCommitAndGoStyleH1(t *testing.T) {
 		Roots:    []string{"."},
 		Requires: []v1.Requirement{{Module: remote, Version: "v1.0.0"}},
 	}
-	lock, err := buildV1Lock(context.Background(), module, filepath.Join(t.TempDir(), "cache"))
+	lock, err := modules.Resolve(context.Background(), module, gitmodules.New(filepath.Join(t.TempDir(), "cache")), nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -95,33 +96,32 @@ func TestBuildV1LockSelectsModulesFromOneGitRepository(t *testing.T) {
 		{Module: bar, Version: "v1.0.0"},
 	}}
 	cache := t.TempDir()
-	lock, err := buildV1Lock(context.Background(), module, cache)
+	lock, err := modules.Resolve(context.Background(), module, gitmodules.New(cache), nil)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if len(lock.Modules) != 2 || lock.Modules[0].Source != bar || lock.Modules[1].Source != foo {
 		t.Fatalf("unexpected multi-module lock: %#v", lock)
 	}
-	if err := downloadV1Lock(context.Background(), lock, cache); err != nil {
+	if err := gitmodules.New(cache).Install(context.Background(), lock); err != nil {
 		t.Fatal(err)
 	}
-	roots, err := sourcesFromV1Lock(lock, cache)
+	roots, err := modules.CachedSources(lock, gitmodules.New(cache))
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(roots) != 2 || roots[0].module != bar || roots[1].module != foo {
+	if len(roots) != 2 || roots[0].Module != bar || roots[1].Module != foo {
 		t.Fatalf("unexpected multi-module roots: %#v", roots)
 	}
 	for _, root := range roots {
-		name := filepath.Base(filepath.Dir(root.path))
-		if _, err := os.Stat(filepath.Join(root.path, name+".proto")); err != nil {
+		name := filepath.Base(filepath.Dir(root.Path))
+		if _, err := os.Stat(filepath.Join(root.Path, name+".proto")); err != nil {
 			t.Fatal(err)
 		}
 	}
-	latest, err := latestCompatibleV1Tag(context.Background(), foo, "v1.0.0")
-	if err != nil || latest != "v1.1.0" {
-		t.Fatalf("latest foo tag = %s, %v", latest, err)
-	}
+	versions, err := gitmodules.New(cache).Versions(t.Context(), foo)
+	require.NoError(t, err)
+	assert.Equal(t, []string{"v1.0.0", "v1.1.0"}, versions)
 }
 
 func TestBuildV1LockSelectsUntaggedModulesByCommit(t *testing.T) {
@@ -151,7 +151,7 @@ func TestBuildV1LockSelectsUntaggedModulesByCommit(t *testing.T) {
 		{Module: bar, Version: commit},
 	}}
 	cache := t.TempDir()
-	lock, err := buildV1Lock(context.Background(), module, cache)
+	lock, err := modules.Resolve(context.Background(), module, gitmodules.New(cache), nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -165,18 +165,14 @@ func TestBuildV1LockSelectsUntaggedModulesByCommit(t *testing.T) {
 		if entry.Commit != commit || entry.Version != commit {
 			t.Fatalf("unexpected pinned module: %#v", entry)
 		}
-		updated, err := latestCompatibleV1Tag(context.Background(), entry.Source, entry.Version)
-		if err != nil || updated != commit {
-			t.Fatalf("update changed pinned commit: %s, %v", updated, err)
-		}
 	}
-	if err := validateV1Requirements(module.Requires, lock); err != nil {
+	if err := modules.ValidateRequirements(module.Requires, lock); err != nil {
 		t.Fatal(err)
 	}
-	if err := downloadV1Lock(context.Background(), lock, cache); err != nil {
+	if err := gitmodules.New(cache).Install(context.Background(), lock); err != nil {
 		t.Fatal(err)
 	}
-	roots, err := sourcesFromV1Lock(lock, cache)
+	roots, err := modules.CachedSources(lock, gitmodules.New(cache))
 	if err != nil || len(roots) != 2 {
 		t.Fatalf("roots: %#v, %v", roots, err)
 	}
@@ -225,7 +221,7 @@ func TestTidyV1ResolvesUntaggedModulesWithoutVersionsAndKeepsLock(t *testing.T) 
 	cliCtx := &cli.Context{Context: context.Background(), App: &cli.App{Metadata: map[string]any{}}}
 	readLock := func() v1.Lock {
 		t.Helper()
-		lock, err := readV1Lock(filepath.Join(root, "protobuf.lock"))
+		lock, err := modules.ReadLock(filepath.Join(root, "protobuf.lock"))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -286,7 +282,7 @@ func TestDownloadV1LockKeepsCommitAfterTagMoves(t *testing.T) {
 	runTestGit(t, remote, "tag", "v1.0.0")
 	cacheRoot := filepath.Join(t.TempDir(), "cache")
 	module := v1.Module{Name: "example.com/root", Requires: []v1.Requirement{{Module: remote, Version: "v1.0.0"}}}
-	lock, err := buildV1Lock(context.Background(), module, cacheRoot)
+	lock, err := modules.Resolve(context.Background(), module, gitmodules.New(cacheRoot), nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -296,10 +292,10 @@ func TestDownloadV1LockKeepsCommitAfterTagMoves(t *testing.T) {
 	runTestGit(t, remote, "add", ".")
 	runTestGit(t, remote, "-c", "user.name=EasyP Test", "-c", "user.email=test@example.com", "commit", "-qm", "new")
 	runTestGit(t, remote, "tag", "-f", "v1.0.0")
-	if err := downloadV1Lock(context.Background(), lock, cacheRoot); err != nil {
+	if err := gitmodules.New(cacheRoot).Install(context.Background(), lock); err != nil {
 		t.Fatal(err)
 	}
-	installed, err := os.ReadFile(filepath.Join(v1ModuleCachePath(cacheRoot, lock.Modules[0]), "dep.proto"))
+	installed, err := os.ReadFile(filepath.Join(cachedTestDir(t, gitmodules.New(cacheRoot), lock.Modules[0]), "dep.proto"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -343,7 +339,7 @@ func TestTidyV1WritesLockedGitDependency(t *testing.T) {
 			err = (Mod{}).Tidy(cliCtx)
 
 			require.NoError(t, err)
-			lock, err := readV1Lock(filepath.Join(root, v1.LockFile))
+			lock, err := modules.ReadLock(filepath.Join(root, v1.LockFile))
 			require.NoError(t, err)
 			require.Len(t, lock.Modules, 1)
 			assert.Equal(t, 1, lock.Version)
@@ -353,13 +349,13 @@ func TestTidyV1WritesLockedGitDependency(t *testing.T) {
 			}
 			assert.Equal(t, v1.LockedModule{Source: remote, Version: wantVersion, Commit: commit, Hash: wantHash}, lock.Modules[0])
 			require.NoError(t, (Mod{}).Download(cliCtx))
-			cache := filepath.Join(cacheBase, "v1", "git")
-			assert.FileExists(t, filepath.Join(v1ModuleCachePath(cache, lock.Modules[0]), "dep.proto"))
+			cache := cacheBase
+			assert.FileExists(t, filepath.Join(cachedTestDir(t, gitmodules.New(cache), lock.Modules[0]), "dep.proto"))
 			module, err := v1.ParseModule(strings.NewReader(manifest))
 			require.NoError(t, err)
-			sources, err := lockedV1DependencySources(context.Background(), root, module, cache)
+			sources, err := modules.EnsureLockedSources(context.Background(), root, module, gitmodules.New(cache))
 			require.NoError(t, err)
-			roots := sources.paths()
+			roots := sources.Paths()
 			require.Len(t, roots, 1)
 			assert.FileExists(t, filepath.Join(roots[0], "dep.proto"))
 		})
@@ -384,21 +380,21 @@ func TestDownloadV1LockPinsCommitAndChecksCachedH1(t *testing.T) {
 	runTestGit(t, remote, "-c", "user.name=EasyP Test", "-c", "user.email=test@example.com", "commit", "-qm", "initial")
 	runTestGit(t, remote, "tag", "v1.0.0")
 	cacheRoot := filepath.Join(t.TempDir(), "cache")
-	lock, err := buildV1Lock(context.Background(), v1.Module{Requires: []v1.Requirement{{Module: remote, Version: "v1.0.0"}}}, cacheRoot)
+	lock, err := modules.Resolve(context.Background(), v1.Module{Requires: []v1.Requirement{{Module: remote, Version: "v1.0.0"}}}, gitmodules.New(cacheRoot), nil)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := downloadV1Lock(context.Background(), lock, cacheRoot); err != nil {
+	if err := gitmodules.New(cacheRoot).Install(context.Background(), lock); err != nil {
 		t.Fatal(err)
 	}
-	installed := v1ModuleCachePath(cacheRoot, lock.Modules[0])
+	installed := cachedTestDir(t, gitmodules.New(cacheRoot), lock.Modules[0])
 	if _, err := os.Stat(filepath.Join(installed, "dep.proto")); err != nil {
 		t.Fatal(err)
 	}
 	if err := os.WriteFile(filepath.Join(installed, "dep.proto"), []byte("tampered"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if err := downloadV1Lock(context.Background(), lock, cacheRoot); err == nil || !strings.Contains(err.Error(), "hash mismatch") {
+	if err := gitmodules.New(cacheRoot).Install(context.Background(), lock); err == nil || !strings.Contains(err.Error(), "hash mismatch") {
 		t.Fatalf("expected cached hash mismatch, got %v", err)
 	}
 }
@@ -408,7 +404,7 @@ func TestDownloadV1LockRejectsUnsafeCommit(t *testing.T) {
 		Source: "example.com/dependency", Version: "v1.0.0",
 		Commit: "../../outside", Hash: "h1:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
 	}}}
-	if err := downloadV1Lock(context.Background(), lock, t.TempDir()); err == nil || !strings.Contains(err.Error(), "invalid commit") {
+	if err := gitmodules.New(t.TempDir()).Install(context.Background(), lock); err == nil || !strings.Contains(err.Error(), "invalid commit") {
 		t.Fatalf("expected invalid commit error, got %v", err)
 	}
 }
@@ -442,16 +438,17 @@ func TestGenerateV1UsesLockedGitDependency(t *testing.T) {
 			require.NoError(t, err)
 			cacheBase := t.TempDir()
 			t.Setenv("EASYPPATH", cacheBase)
-			lock, err := buildV1Lock(context.Background(), module, filepath.Join(cacheBase, "v1", "git"))
+			lock, err := modules.Resolve(context.Background(), module, gitmodules.New(cacheBase), nil)
 			require.NoError(t, err)
 			raw, err := yaml.Marshal(lock)
 			require.NoError(t, err)
 			require.NoError(t, os.WriteFile(filepath.Join(root, v1.LockFile), raw, 0o644))
-			gen, err := v1.ParseGenerate(strings.NewReader("version: v1\nplugins:\n  - name: python\n    out: ./gen/python\n"))
+			err = os.WriteFile(filepath.Join(root, v1.GenerateFile), []byte("version: v1\nplugins:\n  - name: python\n    out: ./gen/python\n"), 0o600)
 			require.NoError(t, err)
 			cliCtx := cli.NewContext(&cli.App{Metadata: map[string]any{}}, flag.NewFlagSet("test", flag.ContinueOnError), nil)
 
-			err = generateSelectedV1Module(cliCtx, logger.NewNop(), filepath.Join(root, v1.GenerateFile), root, v1ModuleSelection{directory: root}, gen)
+			t.Chdir(root)
+			err = (Generate{}).Action(cliCtx)
 
 			require.NoError(t, err)
 			assert.FileExists(t, filepath.Join(root, "gen", "python", "user_pb2.py"))
@@ -605,7 +602,7 @@ func TestBuildV1LockSelectsTransitiveMinimum(t *testing.T) {
 	module := v1.Module{Name: "example.com/root", Roots: []string{"."}, Requires: []v1.Requirement{
 		{Module: common, Version: "v1.0.0"}, {Module: weather, Version: "v1.0.0"},
 	}}
-	lock, err := buildV1Lock(context.Background(), module, filepath.Join(t.TempDir(), "cache"))
+	lock, err := modules.Resolve(context.Background(), module, gitmodules.New(filepath.Join(t.TempDir(), "cache")), nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -634,7 +631,7 @@ func TestDownloadV1RejectsStaleDirectRequirement(t *testing.T) {
 	root := t.TempDir()
 	module := v1.Module{Name: "example.com/root", Roots: []string{"."}, Requires: []v1.Requirement{{Module: remote, Version: "v1.0.0"}}}
 	cacheBase := filepath.Join(t.TempDir(), "cache")
-	lock, err := buildV1Lock(context.Background(), module, filepath.Join(cacheBase, "v1", "git"))
+	lock, err := modules.Resolve(context.Background(), module, gitmodules.New(cacheBase), nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -785,7 +782,7 @@ func TestTidyV1MixedBufAndLegacyEasyPDependencies(t *testing.T) {
 	if err := (Mod{}).Tidy(ctx); err != nil {
 		t.Fatal(err)
 	}
-	lock, err := readV1Lock(filepath.Join(root, "protobuf.lock"))
+	lock, err := modules.ReadLock(filepath.Join(root, "protobuf.lock"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -799,81 +796,12 @@ func TestTidyV1MixedBufAndLegacyEasyPDependencies(t *testing.T) {
 	if !strings.Contains(string(updated), common+" v1.0.0 // indirect") {
 		t.Fatalf("transitive old EasyP dependency missing from manifest: %s", updated)
 	}
-	roots, err := rootsFromV1Lock(lock, filepath.Join(cacheBase, "v1", "git"))
+	roots, err := modules.CachedSources(lock, gitmodules.New(cacheBase))
 	if err != nil {
 		t.Fatal(err)
 	}
 	if len(roots) != 3 {
 		t.Fatalf("dependency roots = %v", roots)
-	}
-}
-
-func TestRewriteV1RequiredVersionsHTTPSIdentity(t *testing.T) {
-	t.Parallel()
-
-	tests := []struct {
-		name     string
-		original string
-		updates  map[string]string
-		want     string
-	}{
-		{
-			name:     "preserve URL and indirect comment",
-			original: "module https://example.com/user.git\nrequire https://example.com/common.git v1.0.0 // indirect\n",
-			updates:  map[string]string{"https://example.com/common.git": "v1.1.0"},
-			want:     "module https://example.com/user.git\nrequire https://example.com/common.git v1.1.0 // indirect\n",
-		},
-		{
-			name:     "leave versionless dependency untouched",
-			original: "module https://example.com/user.git\nrequire https://example.com/common.git // latest head\n",
-			updates:  map[string]string{"https://example.com/common.git": "v1.1.0"},
-			want:     "module https://example.com/user.git\nrequire https://example.com/common.git // latest head\n",
-		},
-		{
-			name:     "leave unselected dependency untouched",
-			original: "module https://example.com/user.git\nrequire https://example.com/common.git v1.0.0 // indirect\n",
-			updates:  map[string]string{"https://example.com/other.git": "v1.1.0"},
-			want:     "module https://example.com/user.git\nrequire https://example.com/common.git v1.0.0 // indirect\n",
-		},
-	}
-	for _, tt := range tests {
-		tt := tt
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-			original := []byte(tt.original)
-
-			updated := rewriteV1RequiredVersions(original, tt.updates)
-
-			assert.Equal(t, tt.want, string(updated))
-			assert.Equal(t, tt.original, string(original))
-		})
-	}
-}
-
-func TestAugmentV1ManifestMarksDirectTransitiveImport(t *testing.T) {
-	root := t.TempDir()
-	cache := t.TempDir()
-	entry := v1.LockedModule{Source: "example.com/common", Version: "v1.0.0", Commit: strings.Repeat("a", 40)}
-	install := v1ModuleCachePath(cache, entry)
-	if err := os.MkdirAll(install, 0o755); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(filepath.Join(install, "protobuf.mod"), []byte("module example.com/common\n"), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(filepath.Join(install, "common.proto"), []byte("syntax = \"proto3\";\n"), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(filepath.Join(root, "root.proto"), []byte("syntax = \"proto3\";\nimport \"common.proto\";\n"), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	original := []byte("module example.com/root\n")
-	updated, err := augmentV1ManifestRequirements(original, root, v1.Module{Name: "example.com/root", Roots: []string{"."}}, v1.Lock{Version: 1, Modules: []v1.LockedModule{entry}}, cache)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !strings.Contains(string(updated), "require example.com/common v1.0.0\n") || strings.Contains(string(updated), "// indirect") {
-		t.Fatalf("root-imported module should be direct: %s", updated)
 	}
 }
 

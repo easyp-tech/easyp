@@ -1,219 +1,52 @@
-<!-- generated: 2026-07-27, template: core.md -->
 # EasyP Package Reference
 
-This reference groups source packages by their role. Generated mocks are omitted except where they establish a test seam.
+## Application packages
 
-## Executable
+| Package | Main files | Responsibility |
+|---------|------------|----------------|
+| `cmd/easyp` | `main.go` | CLI entry point, logger and global flags |
+| `internal/api` | `get_v1.go`, `mod_v1*.go`, `generate.go` | Parse command inputs and call module/generation operations |
+| `internal/api` | `lint_v1.go`, `breaking_v1.go`, `policy_v1.go`, `policy_imports.go`, `runtime.go` | Policy selection, import-root preparation, lint/breaking engine composition and output |
+| `internal/api` | `validate.go`, `schema_gen.go`, `ls_files_v1.go`, `init_v1.go` | Validation presentation, schema generation, file listing and project initialization |
+| `internal/modules` | `resolve.go` | Select revisions through the small `Source` contract |
+| `internal/modules` | `operations.go`, `get.go`, `update.go`, `vendor.go`, `repository.go` | Independent application operations and their required source/cache contracts |
+| `internal/modules` | `sources.go`, `local_sources.go`, `locked_sources.go`, `collisions.go`, `walk.go`, `imports.go` | Roots, ownership, replacements, lock validation, source walking and imports |
+| `internal/modules` | `manifest_edit.go`, `manifest_requirements.go`, `project_files.go` | Preserve manifest text, classify direct/indirect requirements and coordinate persistence |
+| `internal/generation` | `generate.go`, `inherit.go`, `selection.go` | Discover configs, inherit options and select modules |
+| `internal/generation` | `config.go`, `module.go` | Translate config and construct a fully configured generation engine |
+| `internal/core` | `core.go`, `dom.go`, `proto_info_read.go`, `lint.go` | Engine options, proto representations and lint execution |
+| `internal/core` | `generate.go`, `managed_mode.go`, `generate_bucket.go`, `generate_insertion_point.go` | Descriptor compilation, managed mode, plugins and output |
+| `internal/core` | `breaking_check.go`, `breaking_checker.go` | Read and compare current/historical proto models |
+| `internal/rules` | `builder.go` and individual rules | Named lint groups and implementations of `core.Rule` |
 
-### `cmd/easyp`
-**CLI entry point** — creates the EasyP `urfave/cli/v2` application and installs its commands.
+`modules` and `generation` are callable with `context.Context` and explicit inputs. Core no longer owns dependency downloads or lock updates. CLI code does not know the physical Git cache layout.
 
-| File | Description |
-|------|-------------|
-| `main.go` | Initializes `slog`-backed logging, sets global flags, registers API handlers, and runs the app. |
+## Configuration and metadata
 
-The command list is created from values implementing `internal/api.Handler`.
+| Package | Responsibility |
+|---------|----------------|
+| `internal/config/v1` | `protobuf.mod`, `protobuf.lock`, producer policy, generation config, recursive validation and YAML issues |
+| `internal/config` | Shared lint/breaking/managed types and legacy EasyP parsing used for dependency metadata |
+| `internal/adapters/module_config` | Select supported dependency metadata modes and adapt nested module, Buf and legacy EasyP roots/requirements |
+| `internal/adapters/modfile` | Legacy `direct`/`replace` manifest parsing for dependency compatibility |
+| `mcp/easypconfig` | Schema metadata/generation and the MCP config-description tool |
 
-## API Layer
+Generated JSON Schemas belong in `schemas/`; regenerate with `task schema:generate`, then run `task schema:check`.
 
-### `internal/api`
-**Command wiring** — maps CLI commands and flags to configuration parsing, `core.Core` construction, execution, and CLI output.
+## Infrastructure
 
-| File | Description |
-|------|-------------|
-| `interface.go` | Declares the `Handler` command-provider interface. |
-| `lint.go` | Implements `lint`, issue output formats, and lint exit behavior. |
-| `generate.go` | Implements `generate` and root resolution. |
-| `breaking_check.go` | Implements `breaking` and its Git reference handling. |
-| `mod.go` | Implements the `mod` command and module subcommands. |
-| `init.go` | Implements project initialization. |
-| `validate.go` | Selects the validation target and renders issues returned by `config/v1.ValidatePath`. |
-| `ls_files_v1.go` | Lists module and dependency files using their import paths. |
-| `schema_gen.go` | Implements config schema generation. |
-| `completion.go` | Implements shell completion support. |
-| `runtime.go`, `roots.go` | Provide logger access, core construction, and command root resolution. |
-| `generate_v1_selection.go`, `generate_v1_config.go` | Resolve selected modules and translate generation configuration into core inputs. |
-| `policy_v1.go` | Reads optional policy files and supplies shared ancestor traversal for lint and breaking checks. |
-| `mod_v1_cache.go`, `mod_v1_checkout.go`, `mod_v1_files.go` | Resolve Git cache paths and checkouts, hash tracked files, and copy regular files. |
-| `mod_v1_manifest_edit.go`, `atomic_file.go` | Preserve manifest comments during requirement edits and replace files atomically. |
+| Package | Main files / contract |
+|---------|-----------------------|
+| `internal/adapters/gitmodules` | `cache.go`, `git.go`: cache layout and Git execution; `checkout.go`, `git_source.go`: revision/candidate selection; `download.go`, `files.go`: installation and tracked-file hashing; `identity.go`: optional Git origin identity |
+| `internal/adapters/plugin` | Local, remote, built-in WASM and command executors; `Info` carries the explicit local execution directory |
+| `internal/adapters/go_git` | Historical project-tree walkers for breaking checks |
+| `internal/adapters/console` | Platform command execution |
+| `internal/adapters/prompter` | Interactive prompting |
+| `internal/fs/fs` | Core filesystem walker, exclusive regular-file copying and atomic replacement of an individual file |
+| `internal/logger` | Logger contract and implementations |
+| `internal/flags` | Shared CLI flags |
+| `internal/version` | Build/compiler version metadata |
 
-The package instantiates adapters and translates `config.Config` into the core's dependency types.
+The Git adapter reads module formats through `module_config`; it does not parse YAML. Filesystem helpers do not interpret manifests, locks or module identities.
 
-## Application and Domain Layer
-
-### `internal/core`
-**Business workflows** — performs linting, protobuf compilation and generation, dependency management, and breaking-change analysis.
-
-| File group | Description |
-|------------|-------------|
-| `core.go`, `dom.go` | Defines `Core`, its ports, proto representations, rules, issues, and plugin/input values. |
-| `lint.go` | Walks local proto files, reads imports, and applies rules and ignore behavior. |
-| `breaking_check.go`, `breaking_checker.go` | Loads current and historical proto models and checks compatibility. |
-| `generate.go`, `generate_bucket.go`, `generate_insertion_point.go` | Builds descriptors, invokes plugins, stages generated files, and supports insertion points. |
-| `managed_mode.go` | Applies configured descriptor option changes. |
-| `download.go`, `update.go`, `get.go`, `vendor.go` | Resolve, install, lock, update, and vendor modules. |
-| `module_path.go`, `proto_info_read.go`, `fs.go` | Resolve module paths, parse proto imports, and define filesystem ports. |
-| `init.go`, `init_template.go` | Provide project initialization behavior. |
-| `instruction_parser.go` | Parses protobuf option/instruction names. |
-
-The package owns consumer-side interfaces including `Storage`, `LockFile`, `ModuleConfig`, `Rule`, `Repo`, and `CurrentProjectGitWalker`.
-
-### `internal/core/models`
-**Module value objects and sentinels** — represents dependencies, resolved revisions, cached-install metadata, lock entries, and module errors.
-
-| File | Description |
-|------|-------------|
-| `module.go` | Defines `Module`, `RequestedVersion`, `ModuleHash`, install metadata, and pseudo-version parsing. |
-| `revision.go` | Defines resolved Git commit and version data. |
-| `lock_file_info.go` | Defines a lock-file entry. |
-| `module_config.go` | Defines module directories and transitive dependencies. |
-| `cache_download_paths.go` | Defines cache archive and info paths. |
-| `errors.go` | Defines dependency-management sentinel errors. |
-
-### `internal/core/path_helpers`
-**Path predicates** — contains helpers used when walking selected or ignored paths.
-
-| File | Description |
-|------|-------------|
-| `is_target_path.go` | Tests whether a path matches the targeted path set. |
-
-## Rule Layer
-
-### `internal/rules`
-**Concrete protobuf lint rules** — builds the selected rule set from lint configuration and implements buf-compatible naming, package, import, comment, enum, service, and RPC checks.
-
-| File group | Description |
-|------------|-------------|
-| `builder.go` | Defines named rule groups and creates `[]core.Rule` from configuration. |
-| `package_*.go`, `directory_*.go` | Validate package declarations, directories, and language package options. |
-| `message_*.go`, `oneof_*.go`, `enum_*.go` | Validate message, oneof, and enum names and values. |
-| `service_*.go`, `rpc_*.go` | Validate service and RPC naming, request/response forms, and streaming policy. |
-| `import_*.go` | Validate import use and forbid weak or public imports. |
-| `comment_*.go` | Validate comments for protobuf declarations. |
-| `protovalidate.go` | Supports protovalidate-aware rule behavior. |
-
-Each rule follows the `core.Rule` interface: it provides a message and validates a `core.ProtoInfo`.
-
-## Configuration and Schema
-
-### `internal/config`
-**`easyp.yaml` parser and validator** — loads YAML after environment substitution and validates configuration objects.
-
-| File | Description |
-|------|-------------|
-| `config.go` | Defines configuration, generation inputs/plugins, managed mode, parsing, and validation. |
-| `lint.go` | Defines lint configuration. |
-| `breaking_check.go` | Defines breaking-check configuration. |
-| `yaml_validators.go`, `validate_raw.go` | Validate YAML nodes and raw configuration. |
-| `plugin_opts.go` | Supports plugin option values expressed as scalars or sequences. |
-
-### `internal/config/v1`
-**V1 configuration models and validation** — owns the module manifest, lockfile, producer policy, and generation configuration.
-
-| File | Description |
-|------|-------------|
-| `files.go` | Defines standard v1 configuration filenames. |
-| `module.go`, `lock.go` | Parse and validate `protobuf.mod` and `protobuf.lock`. |
-| `policy.go`, `generate.go` | Define named policy and generation models with their parsers. |
-| `plugin.go`, `plugin_options.go` | Validate plugin sources and decode plugin options. |
-| `validate.go`, `validate_path.go` | Validate individual files or all supported files below a directory. |
-| `validate_yaml.go` | Supplies YAML validators and structured issues through the shared schema collector. |
-
-### `mcp/easypconfig`
-**Configuration schema metadata and MCP tool** — defines the config-schema model, generates JSON Schema, indexes schema paths, and serves schema descriptions.
-
-| File | Description |
-|------|-------------|
-| `tool.go` | Registers the MCP config-description tool. |
-| `describe.go` | Describes the complete schema or a requested schema path. |
-| `schema.go`, `schema_model.go` | Reflects and models the JSON Schema source. |
-| `tool_schemas.go` | Defines MCP tool input and output schemas. |
-| `generate.go` | Generates schema content used by the CLI. |
-| `spec_docs.go` | Holds schema documentation metadata. |
-
-`schemas/` contains generated JSON Schema artifacts. Do not hand-edit them; regenerate through `task schema:generate`.
-
-## Adapter Layer
-
-### `internal/adapters/storage`
-**Dependency cache and installation adapter** — manages archives, installed module directories, metadata, hashes, and lock-aware path lookup under `EASYPPATH`.
-
-| File group | Description |
-|------------|-------------|
-| `storage.go`, `install.go` | Define storage and install downloaded module archives. |
-| `cache_download.go`, `get_cache_download_paths.go` | Compute cached archive and metadata paths. |
-| `get_install_dir.go`, `get_installed_module_hash.go` | Locate installed modules and verify their hash. |
-| `read_installed_module_info.go`, `write_installed_module_info.go` | Persist install metadata. |
-| `create_cache_repository_dir.go`, `sanitize.go` | Create Git-cache paths and sanitize version components. |
-
-### `internal/adapters/lock_file`
-**Lock-file adapter** — reads, writes, iterates, and checks the project `protobuf.lock`.
-
-| File | Description |
-|------|-------------|
-| `lock_file.go` | Defines the lock-file adapter. |
-| `read.go`, `write.go` | Parse and serialize lock entries. |
-| `deps_iter.go`, `is_empty.go` | Iterate entries and detect an empty lock file. |
-
-### `internal/adapters/modfile`
-**Mod-file adapter** — parses and writes project `protobuf.mod` (`direct` and `replace` blocks).
-
-| File | Description |
-|------|-------------|
-| `modfile.go` | Parse, Format, Read, Write for `protobuf.mod`. `File` holds `Direct` deps and `Replace` entries (`models.Module` + local path). |
-
-### `internal/adapters/repository` and `internal/adapters/repository/git`
-**Git repository adapter** — supplies repository operations required for dependency resolution.
-
-| File group | Description |
-|------------|-------------|
-| `repository.go` | Declares the repository port. |
-| `git/git.go` | Constructs the Git implementation. |
-| `git/read_revision.go` | Resolves a requested version to a revision. |
-| `git/fetch.go`, `git/archive.go` | Fetches Git objects and archives proto content. |
-| `git/read_file.go`, `git/get_files.go` | Reads repository files and lists paths. |
-
-### `internal/adapters/module_config`
-**Remote module-layout reader** — reads module directories and dependencies from supported repository configuration.
-
-| File | Description |
-|------|-------------|
-| `module_config.go` | Defines the adapter. |
-| `read_from_repo.go` | Selects and reads supported module configuration. |
-| `read_buf_work.go`, `read_easyp.go` | Read Buf and EasyP layouts. |
-
-### `internal/adapters/plugin`
-**Code-generation plugin executors** — executes local, remote, built-in, and command-based plugins.
-
-| File group | Description |
-|------------|-------------|
-| `interface.go`, `options.go` | Define executor contracts and plugin invocation metadata. |
-| `local.go`, `remote.go`, `command.go` | Implement execution sources. |
-| `builtin.go`, `builtin_impl.go`, `wasm_embed.go` | Provide built-in plugin support. |
-
-### `internal/adapters/go_git`
-**Historical-tree adapter** — returns directory walkers for the current project's Git references.
-
-### `internal/adapters/console`
-**Local command adapter** — selects shell behavior and represents console errors.
-
-### `internal/adapters/prompter`
-**Interactive input adapter** — provides prompt behavior used by interactive operations.
-
-## Shared Internal Packages
-
-### `internal/fs`
-**Filesystem access** — supplies directory walkers used by core operations.
-
-### `internal/logger`
-**Logging abstraction** — wraps the logger used by CLI setup, core workflows, and adapters.
-
-### `internal/flags`
-**Global command flags** — defines shared config, debug, and output-format flags.
-
-### `internal/version`
-**Build and compiler version information** — supplies the CLI and protobuf compiler version values.
-
-## Package-Manager Reference
-
-For dependency declaration, cache layout, lockfile format, Git resolution, transitive dependencies, and `easyp_vendor`, see [config/dependency.md](./config/dependency.md).
+See [architecture](ARCHITECTURE.md) for direction of dependencies, ownership, and persistence guarantees.

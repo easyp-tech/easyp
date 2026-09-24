@@ -7,11 +7,10 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/urfave/cli/v2"
 
-	v1 "github.com/easyp-tech/easyp/internal/config/v1"
+	"github.com/easyp-tech/easyp/internal/modules"
 )
 
 func TestGetAddsDirectAndTransitiveRequirements(t *testing.T) {
@@ -49,7 +48,7 @@ func TestGetAddsDirectAndTransitiveRequirements(t *testing.T) {
 	require.NoError(t, err)
 	require.Contains(t, string(manifest), "require "+foo+"\n")
 	require.NotContains(t, string(manifest), "require "+foo+" // indirect")
-	lock, err := readV1Lock(filepath.Join(root, "protobuf.lock"))
+	lock, err := modules.ReadLock(filepath.Join(root, "protobuf.lock"))
 	require.NoError(t, err)
 	require.Len(t, lock.Modules, 3)
 	for _, entry := range lock.Modules {
@@ -71,81 +70,33 @@ func TestGetAddsDirectAndTransitiveRequirements(t *testing.T) {
 	require.Equal(t, string(manifest), string(afterTidy))
 }
 
-func TestAddDirectV1RequirementPromotesIndirectInBlock(t *testing.T) {
+func TestParseV1GetRequirement(t *testing.T) {
 	t.Parallel()
-	original := []byte("module example.com/app\nrequire ( // dependencies\n  example.com/dep v1.0.0 // indirect\n  example.com/other v1.0.0 // indirect\n)\n")
-	updated, err := addDirectV1Requirement(original, v1.Requirement{Module: "example.com/dep", Version: "v1.1.0"})
-	require.NoError(t, err)
-	require.Equal(t, "module example.com/app\nrequire ( // dependencies\n  example.com/dep v1.1.0\n  example.com/other v1.0.0 // indirect\n)\n", string(updated))
-}
-
-func TestAddDirectV1RequirementPreservesFormatting(t *testing.T) {
-	t.Parallel()
-
 	tests := []struct {
-		name     string
-		original string
-		version  string
-		want     string
+		name    string
+		input   string
+		module  string
+		version string
+		wantErr string
 	}{
-		{
-			name:     "update preserves spacing and comment",
-			original: "require\thttps://example.com/dep\t v1.0.0  // keep this\n",
-			version:  "v1.1.0",
-			want:     "require\thttps://example.com/dep\t v1.1.0  // keep this\n",
-		},
-		{
-			name:     "versionless stays versionless",
-			original: "require (\n\thttps://example.com/dep\t// keep this\n)\n",
-			want:     "require (\n\thttps://example.com/dep\t// keep this\n)\n",
-		},
-		{
-			name:     "pin versionless and retain comment",
-			original: "require https://example.com/dep  // indirect needed by clients\n",
-			version:  "v1.1.0",
-			want:     "require https://example.com/dep v1.1.0  // needed by clients\n",
-		},
+		{name: "nested URL", input: "https://github.com/acme/repo.git/foo", module: "https://github.com/acme/repo.git/foo"},
+		{name: "tag", input: "github.com/acme/repo/foo@v1.2.3", module: "github.com/acme/repo/foo", version: "v1.2.3"},
+		{name: "commit", input: "github.com/acme/repo@" + strings.Repeat("a", 40), module: "github.com/acme/repo", version: strings.Repeat("a", 40)},
+		{name: "invalid version", input: "github.com/acme/repo@latest", wantErr: "expected a semantic version or full Git commit"},
+		{name: "invalid module", input: "github.com/acme/../repo", wantErr: "invalid Git module identity"},
 	}
 	for _, tt := range tests {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			original := []byte(tt.original)
-			target := v1.Requirement{Module: "https://example.com/dep", Version: tt.version}
-
-			updated, err := addDirectV1Requirement(original, target)
-
-			require.NoError(t, err)
-			assert.Equal(t, tt.want, string(updated))
-		})
-	}
-}
-
-func TestParseV1GetRequirement(t *testing.T) {
-	t.Parallel()
-	for _, tc := range []struct {
-		name    string
-		input   string
-		module  string
-		version string
-		wantErr bool
-	}{
-		{name: "nested URL", input: "https://github.com/acme/repo.git/foo", module: "https://github.com/acme/repo.git/foo"},
-		{name: "tag", input: "github.com/acme/repo/foo@v1.2.3", module: "github.com/acme/repo/foo", version: "v1.2.3"},
-		{name: "commit", input: "github.com/acme/repo@" + strings.Repeat("a", 40), module: "github.com/acme/repo", version: strings.Repeat("a", 40)},
-		{name: "invalid version", input: "github.com/acme/repo@latest", wantErr: true},
-		{name: "invalid module", input: "github.com/acme/../repo", wantErr: true},
-	} {
-		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
-			got, err := parseV1GetRequirement(tc.input)
-			if tc.wantErr {
-				require.Error(t, err)
+			got, err := parseV1GetRequirement(tt.input)
+			if tt.wantErr != "" {
+				require.ErrorContains(t, err, tt.wantErr)
 				return
 			}
 			require.NoError(t, err)
-			require.Equal(t, tc.module, got.Module)
-			require.Equal(t, tc.version, got.Version)
+			require.Equal(t, tt.module, got.Module)
+			require.Equal(t, tt.version, got.Version)
 		})
 	}
 }
@@ -175,7 +126,7 @@ func TestGetPromotesIndirectAndPinsExplicitCommit(t *testing.T) {
 	require.NoError(t, err)
 	require.Contains(t, string(updated), dependency+" "+latest+"\n")
 	require.NotContains(t, string(updated), "// indirect")
-	lock, err := readV1Lock(filepath.Join(root, "protobuf.lock"))
+	lock, err := modules.ReadLock(filepath.Join(root, "protobuf.lock"))
 	require.NoError(t, err)
 	require.Len(t, lock.Modules, 1)
 	require.Equal(t, latest, lock.Modules[0].Commit)
@@ -217,51 +168,4 @@ func TestGetResolutionFailureLeavesManifestAndLockUnchanged(t *testing.T) {
 	require.Equal(t, manifest, current)
 	_, err = os.Stat(filepath.Join(root, "protobuf.lock"))
 	require.ErrorIs(t, err, os.ErrNotExist)
-}
-
-func TestAddDirectV1RequirementAddsAndRejectsDuplicates(t *testing.T) {
-	t.Parallel()
-
-	tests := []struct {
-		name     string
-		original string
-		version  string
-		want     string
-		wantErr  string
-	}{
-		{
-			name:     "append versionless with missing final newline",
-			original: "module example.com/root",
-			want:     "module example.com/root\nrequire example.com/dep\n",
-		},
-		{
-			name:     "append version without editing other directives",
-			original: "module example.com/root\nroots proto\nrequire example.com/other v1.0.0 // keep\n",
-			version:  "v1.1.0",
-			want:     "module example.com/root\nroots proto\nrequire example.com/other v1.0.0 // keep\nrequire example.com/dep v1.1.0\n",
-		},
-		{
-			name:     "duplicate in block and standalone requirement",
-			original: "require (\n example.com/dep v1.0.0\n)\nrequire example.com/dep\n",
-			wantErr:  "duplicate require example.com/dep",
-		},
-	}
-	for _, tt := range tests {
-		tt := tt
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-			original := []byte(tt.original)
-
-			updated, err := addDirectV1Requirement(original, v1.Requirement{Module: "example.com/dep", Version: tt.version})
-
-			assert.Equal(t, tt.original, string(original))
-			if tt.wantErr != "" {
-				require.ErrorContains(t, err, tt.wantErr)
-				assert.Nil(t, updated)
-				return
-			}
-			require.NoError(t, err)
-			assert.Equal(t, tt.want, string(updated))
-		})
-	}
 }

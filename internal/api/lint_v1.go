@@ -15,6 +15,7 @@ import (
 	"github.com/easyp-tech/easyp/internal/flags"
 	"github.com/easyp-tech/easyp/internal/fs/fs"
 	"github.com/easyp-tech/easyp/internal/logger"
+	"github.com/easyp-tech/easyp/internal/modules"
 )
 
 func (l Lint) actionV1(ctx *cli.Context, log logger.Logger, configPath, projectRoot, lintRoot string) error {
@@ -40,6 +41,7 @@ func (l Lint) actionV1(ctx *cli.Context, log logger.Logger, configPath, projectR
 	if err != nil {
 		return fmt.Errorf("WalkDir: %w", err)
 	}
+	var cache modules.Cache
 	apps := map[v1LintAppKey]*core.Core{}
 	moduleRoots := map[string][]string{}
 	var issues []core.IssueInfo
@@ -62,20 +64,27 @@ func (l Lint) actionV1(ctx *cli.Context, log logger.Logger, configPath, projectR
 			if err != nil {
 				return fmt.Errorf("LintConfig: %w", err)
 			}
-			app, err = buildCore(log, config.Config{Lint: lintConfig})
-			if err != nil {
-				return fmt.Errorf("buildCore: %w", err)
-			}
+			var importRoots []string
 			if moduleDir != "" {
 				roots, known := moduleRoots[moduleDir]
 				if !known {
-					roots, err = resolveV1PolicyImportRoots(ctx.Context, log, moduleDir)
+					if cache == nil {
+						cache, err = moduleCache(ctx)
+						if err != nil {
+							return fmt.Errorf("moduleCache: %w", err)
+						}
+					}
+					roots, err = ensureV1PolicyImportRoots(ctx.Context, cache, moduleDir)
 					if err != nil {
-						return fmt.Errorf("resolveV1PolicyImportRoots: %w", err)
+						return fmt.Errorf("ensureV1PolicyImportRoots: %w", err)
 					}
 					moduleRoots[moduleDir] = roots
 				}
-				app.SetImportRoots(roots)
+				importRoots = roots
+			}
+			app, err = buildCore(log, config.Config{Lint: lintConfig}, importRoots)
+			if err != nil {
+				return fmt.Errorf("buildCore: %w", err)
 			}
 			apps[appKey] = app
 		}

@@ -3,6 +3,8 @@ package core
 
 import (
 	"errors"
+	"maps"
+	"slices"
 
 	"github.com/easyp-tech/easyp/internal/adapters/console"
 	"github.com/easyp-tech/easyp/internal/adapters/plugin"
@@ -11,15 +13,16 @@ import (
 
 // Core provide to business logic of EasyP.
 type Core struct {
-	rules       []Rule
-	ignore      []string
-	ignoreOnly  map[string][]string
-	logger      logger.Logger
-	plugins     []Plugin
-	inputs      Inputs
-	importRoots []string
-	fileModules map[string]string
-	managedMode ManagedModeConfig
+	rules         []Rule
+	ignore        []string
+	ignoreOnly    map[string][]string
+	logger        logger.Logger
+	plugins       []Plugin
+	pluginWorkDir string
+	inputs        Inputs
+	importRoots   []string
+	fileModules   map[string]string
+	managedMode   ManagedModeConfig
 
 	breakingCheckConfig     BreakingCheckConfig
 	currentProjectGitWalker CurrentProjectGitWalker
@@ -43,7 +46,10 @@ type Options struct {
 	IgnoreOnly              map[string][]string
 	Logger                  logger.Logger
 	Plugins                 []Plugin
+	PluginWorkDir           string
 	Inputs                  Inputs
+	ImportRoots             []string
+	FileModules             map[string]string
 	CurrentProjectGitWalker CurrentProjectGitWalker
 	BreakingCheckConfig     BreakingCheckConfig
 	ManagedModeConfig       ManagedModeConfig
@@ -58,11 +64,14 @@ func New(options Options) *Core {
 		ignoreOnly:              options.IgnoreOnly,
 		logger:                  options.Logger,
 		plugins:                 options.Plugins,
+		pluginWorkDir:           options.PluginWorkDir,
 		inputs:                  options.Inputs,
+		importRoots:             slices.Clone(options.ImportRoots),
+		fileModules:             maps.Clone(options.FileModules),
 		currentProjectGitWalker: options.CurrentProjectGitWalker,
 		breakingCheckConfig:     options.BreakingCheckConfig,
 		managedMode:             options.ManagedModeConfig,
-		localExecutor:           plugin.NewLocalPluginExecutor(terminal, options.Logger),
+		localExecutor:           plugin.NewLocalPluginExecutor(options.Logger),
 		remoteExecutor:          plugin.NewRemotePluginExecutor(options.Logger),
 		builtinExecutor:         plugin.NewBuiltinPluginExecutor(options.Logger),
 		commandExecutor:         plugin.NewCommandPluginExecutor(terminal, options.Logger),

@@ -28,16 +28,6 @@ import (
 	"github.com/easyp-tech/easyp/internal/version"
 )
 
-// SetImportRoots supplies import paths resolved from module dependencies.
-func (c *Core) SetImportRoots(roots []string) {
-	c.importRoots = append([]string(nil), roots...)
-}
-
-// SetFileModules supplies module identities for managed-mode selectors.
-func (c *Core) SetFileModules(modules map[string]string) {
-	c.fileModules = maps.Clone(modules)
-}
-
 // Generate generates code using source and import roots resolved by the module layer.
 func (c *Core) Generate(ctx context.Context, root, descriptorSetOut string, includeImports bool) error {
 	c.logger.Info(ctx, "starting code generation", slog.String("root", root))
@@ -168,6 +158,7 @@ func (c *Core) Generate(ctx context.Context, root, descriptorSetOut string, incl
 
 		resp, err := executor.Execute(ctx, pluginexecutor.Info{
 			Source:  source,
+			WorkDir: c.pluginWorkDir,
 			Command: plugin.Source.Command,
 			Options: plugin.Options,
 		}, req)
