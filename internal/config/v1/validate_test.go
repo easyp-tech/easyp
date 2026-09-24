@@ -77,6 +77,16 @@ plugins:
 			contents: "module example.com/service\nroots (\n  proto\n)\n",
 		},
 		{
+			name:     "plugin binary path",
+			filename: GenerateFile,
+			contents: "version: v1\nplugins:\n  - path: ./tools/protoc-gen-custom\n    out: gen\n",
+		},
+		{
+			name:     "custom plugin command",
+			filename: GenerateFile,
+			contents: "version: v1\nplugins:\n  - command: [sh, ./tools/run-plugin]\n    out: gen\n",
+		},
+		{
 			name:     "empty dependency graph",
 			filename: LockFile,
 			contents: "version: 1\nmodules: []\n",

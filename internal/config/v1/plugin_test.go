@@ -23,14 +23,42 @@ func TestPluginValidate(t *testing.T) {
 			plugin: Plugin{Remote: "localhost:8080/go", Version: "v1.2.3", Out: "gen"},
 		},
 		{
+			name:   "binary path",
+			plugin: Plugin{Path: "./tools/protoc-gen-custom", Out: "gen"},
+		},
+		{
+			name:   "custom command",
+			plugin: Plugin{Command: []string{"sh", "./tools/run-plugin"}, Out: "gen"},
+		},
+		{
 			name:            "no source",
 			plugin:          Plugin{Out: "gen"},
-			expectedMessage: "exactly one of name or remote is required",
+			expectedMessage: "exactly one of name, path, command or remote is required",
 		},
 		{
 			name:            "both sources",
 			plugin:          Plugin{Name: "go", Remote: "example.com/go", Out: "gen"},
-			expectedMessage: "exactly one of name or remote is required",
+			expectedMessage: "exactly one of name, path, command or remote is required",
+		},
+		{
+			name:            "name and path",
+			plugin:          Plugin{Name: "go", Path: "./tools/protoc-gen-custom", Out: "gen"},
+			expectedMessage: "exactly one of name, path, command or remote is required",
+		},
+		{
+			name:            "empty command",
+			plugin:          Plugin{Command: []string{}, Out: "gen"},
+			expectedMessage: "command executable is required",
+		},
+		{
+			name:            "name and empty command",
+			plugin:          Plugin{Name: "go", Command: []string{}, Out: "gen"},
+			expectedMessage: "exactly one of name, path, command or remote is required",
+		},
+		{
+			name:            "empty command executable",
+			plugin:          Plugin{Command: []string{"", "./tools/run-plugin"}, Out: "gen"},
+			expectedMessage: "command executable is required",
 		},
 		{
 			name:            "missing output directory",
@@ -45,6 +73,16 @@ func TestPluginValidate(t *testing.T) {
 		{
 			name:            "unverifiable local version",
 			plugin:          Plugin{Name: "go", Version: "v1.2.3", Out: "gen"},
+			expectedMessage: "version cannot be verified",
+		},
+		{
+			name:            "unverifiable binary path version",
+			plugin:          Plugin{Path: "./tools/protoc-gen-custom", Version: "v1.2.3", Out: "gen"},
+			expectedMessage: "version cannot be verified",
+		},
+		{
+			name:            "unverifiable custom command version",
+			plugin:          Plugin{Command: []string{"sh", "./tools/run-plugin"}, Version: "v1.2.3", Out: "gen"},
 			expectedMessage: "version cannot be verified",
 		},
 		{

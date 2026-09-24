@@ -159,6 +159,12 @@
       "items": {
         "type": "object",
         "properties": {
+          "command": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
           "name": {
             "type": "string"
           },
@@ -207,6 +213,9 @@
           "out": {
             "type": "string"
           },
+          "path": {
+            "type": "string"
+          },
           "remote": {
             "type": "string"
           },
@@ -219,6 +228,16 @@
           {
             "required": [
               "name"
+            ]
+          },
+          {
+            "required": [
+              "path"
+            ]
+          },
+          {
+            "required": [
+              "command"
             ]
           },
           {

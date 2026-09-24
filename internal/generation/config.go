@@ -24,7 +24,10 @@ func prepareV1GeneratorConfig(configPath, moduleDir string, gen v1.Generate, mod
 		if err != nil {
 			return core.Options{}, fmt.Errorf("Rel: %w", err)
 		}
-		cfg.Plugins = append(cfg.Plugins, core.Plugin{Source: core.PluginSource{Name: plugin.Name, Remote: remote}, Out: outRel, Options: plugin.Opts})
+		cfg.Plugins = append(cfg.Plugins, core.Plugin{
+			Source: core.PluginSource{Name: plugin.Name, Path: plugin.Path, Command: plugin.Command, Remote: remote},
+			Out:    outRel, Options: plugin.Opts,
+		})
 	}
 	cfg.ManagedModeConfig = convertManagedModeConfig(gen.Generate.Managed)
 	if prefix := gen.Options.Go.PackagePrefix; prefix != nil && *prefix != "" {

@@ -77,6 +77,42 @@ func TestRunUsesExplicitWorkingDirectory(t *testing.T) {
 	}
 }
 
+func TestRunUsesExplicitPluginSources(t *testing.T) {
+	t.Parallel()
+	if runtime.GOOS == "windows" {
+		t.Skip("fixture executable uses a POSIX shell")
+	}
+
+	tests := []struct {
+		name         string
+		pluginSource string
+	}{
+		{name: "binary path", pluginSource: "path: ./tools/test-plugin"},
+		{name: "custom command", pluginSource: "command: [sh, ./tools/test-plugin]"},
+	}
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			root := t.TempDir()
+			writeV1GenerateFixture(t, root, "protobuf.mod", "module example.com/app\nroots proto\n")
+			writeV1GenerateFixture(t, root, "proto/item.proto", "syntax = \"proto3\"; package item.v1; message Item {}")
+			writeV1GenerateFixture(t, root, "easyp.gen.yaml", "version: v1\nplugins:\n  - "+tt.pluginSource+"\n    out: gen\n")
+			script := filepath.Join(root, "tools", "test-plugin")
+			require.NoError(t, os.MkdirAll(filepath.Dir(script), 0o755))
+			require.NoError(t, os.WriteFile(script, []byte("#!/bin/sh\ncat >/dev/null\nprintf called > plugin-called.txt\n"), 0o755))
+
+			err := Run(t.Context(), logger.NewNop(), nil, Request{WorkDir: root})
+
+			require.NoError(t, err)
+			called, err := os.ReadFile(filepath.Join(root, "plugin-called.txt"))
+			require.NoError(t, err)
+			assert.Equal(t, "called", string(called))
+		})
+	}
+}
+
 func TestRunWithoutManifest(t *testing.T) {
 	t.Parallel()
 

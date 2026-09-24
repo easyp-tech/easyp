@@ -10,6 +10,8 @@ import (
 // Plugin selects a local, bundled, or remote generator and its output options.
 type Plugin struct {
 	Name    string        `yaml:"name"`
+	Path    string        `yaml:"path"`
+	Command []string      `yaml:"command"`
 	Remote  string        `yaml:"remote"`
 	Version string        `yaml:"version"`
 	Out     string        `yaml:"out"`
@@ -18,8 +20,24 @@ type Plugin struct {
 
 // Validate checks the plugin source and reproducibility requirements.
 func (p Plugin) Validate() error {
-	if (p.Name == "") == (p.Remote == "") {
-		return errors.New("exactly one of name or remote is required")
+	sources := 0
+	if p.Name != "" {
+		sources++
+	}
+	if p.Path != "" {
+		sources++
+	}
+	if p.Command != nil {
+		sources++
+	}
+	if p.Remote != "" {
+		sources++
+	}
+	if sources != 1 {
+		return errors.New("exactly one of name, path, command or remote is required")
+	}
+	if p.Command != nil && (len(p.Command) == 0 || strings.TrimSpace(p.Command[0]) == "") {
+		return errors.New("command executable is required")
 	}
 	if p.Out == "" {
 		return errors.New("out is required")

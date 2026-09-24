@@ -27,6 +27,8 @@ func TestDescribeV1Files(t *testing.T) {
 	}{
 		{name: "default policy", input: DescribeInput{Path: "$.linters.default"}, wantFile: v1.PolicyFile, wantPath: "linters.default", wantField: "linters.default", wantSchema: true},
 		{name: "generator plugin", input: DescribeInput{File: v1.GenerateFile, Path: "plugins[3].out"}, wantFile: v1.GenerateFile, wantPath: "plugins[].out", wantField: "plugins[].out", wantSchema: true},
+		{name: "plugin binary path", input: DescribeInput{File: v1.GenerateFile, Path: "plugins[0].path"}, wantFile: v1.GenerateFile, wantPath: "plugins[].path", wantField: "plugins[].path", wantSchema: true},
+		{name: "custom plugin command", input: DescribeInput{File: v1.GenerateFile, Path: "plugins[0].command"}, wantFile: v1.GenerateFile, wantPath: "plugins[].command", wantField: "plugins[].command", wantSchema: true},
 	}
 
 	for _, tt := range tests {

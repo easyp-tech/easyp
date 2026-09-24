@@ -12,6 +12,53 @@ import (
 	"github.com/easyp-tech/easyp/internal/core"
 )
 
+func TestPrepareV1GeneratorConfigPreservesPluginSource(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name   string
+		plugin v1.Plugin
+		want   core.PluginSource
+	}{
+		{
+			name:   "named plugin",
+			plugin: v1.Plugin{Name: "go", Out: "gen"},
+			want:   core.PluginSource{Name: "go"},
+		},
+		{
+			name:   "binary path",
+			plugin: v1.Plugin{Path: "./tools/protoc-gen-custom", Out: "gen"},
+			want:   core.PluginSource{Path: "./tools/protoc-gen-custom"},
+		},
+		{
+			name:   "custom command",
+			plugin: v1.Plugin{Command: []string{"sh", "./tools/run-plugin"}, Out: "gen"},
+			want:   core.PluginSource{Command: []string{"sh", "./tools/run-plugin"}},
+		},
+		{
+			name:   "remote plugin",
+			plugin: v1.Plugin{Remote: "example.com/protoc-gen-custom", Version: "v1.2.3", Out: "gen"},
+			want:   core.PluginSource{Remote: "example.com/protoc-gen-custom:v1.2.3"},
+		},
+	}
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			root := t.TempDir()
+			module := v1.Module{Name: "example.com/module", Roots: []string{"."}}
+			gen := v1.Generate{Plugins: []v1.Plugin{tt.plugin}}
+
+			cfg, err := prepareV1GeneratorConfig(filepath.Join(root, v1.GenerateFile), root, gen, module)
+
+			require.NoError(t, err)
+			require.Len(t, cfg.Plugins, 1)
+			assert.Equal(t, tt.want, cfg.Plugins[0].Source)
+		})
+	}
+}
+
 func TestPrepareV1GeneratorConfigKeepsManagedOverridesIndependent(t *testing.T) {
 	t.Parallel()
 

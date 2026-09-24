@@ -59,6 +59,8 @@ func documents() map[string]*schema {
 	plugin.Required = []string{"out"}
 	plugin.OneOf = []*schema{
 		{Required: []string{"name"}},
+		{Required: []string{"path"}},
+		{Required: []string{"command"}},
 		{Required: []string{"remote"}},
 	}
 	plugin.Properties["opts"] = &schema{OneOf: []*schema{

@@ -32,6 +32,8 @@ var descriptions = map[string]map[string]string{
 		"generate.managed":                         "Managed file and field option rules.",
 		"plugins":                                  "Generators executed for selected modules.",
 		"plugins[].name":                           "Local or built-in plugin name.",
+		"plugins[].path":                           "Explicit plugin binary path, relative to the generation working directory when not absolute.",
+		"plugins[].command":                        "Custom plugin executable and arguments, run from the generation working directory.",
 		"plugins[].remote":                         "Remote plugin endpoint; requires a pinned version.",
 		"plugins[].version":                        "Pinned version for a remote plugin.",
 		"plugins[].out":                            "Output directory for generated files.",
@@ -68,6 +70,8 @@ func examplesFor(file string) []Example {
 	case v1.GenerateFile:
 		return []Example{
 			{Title: "local_plugin", YAML: "version: v1\nplugins:\n  - name: go\n    out: gen/go\n    opts: [paths=source_relative]\n", Paths: []string{"plugins", "plugins[]", "plugins[].name", "plugins[].out", "plugins[].opts"}},
+			{Title: "binary_path", YAML: "version: v1\nplugins:\n  - path: ./tools/protoc-gen-custom\n    out: gen/custom\n", Paths: []string{"plugins", "plugins[]", "plugins[].path"}},
+			{Title: "custom_command", YAML: "version: v1\nplugins:\n  - command: [sh, ./tools/protoc-plugin.sh]\n    out: gen/script\n", Paths: []string{"plugins", "plugins[]", "plugins[].command"}},
 			{Title: "managed_mode", YAML: "version: v1\ngenerate:\n  managed:\n    enabled: true\n    override:\n      - file_option: go_package_prefix\n        value: example.com/gen\nplugins:\n  - name: go\n    out: gen/go\n", Paths: []string{"generate", "generate.managed", "generate.managed.override"}},
 		}
 	default:

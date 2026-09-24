@@ -138,6 +138,8 @@ plugins:
       paths: source_relative
 ```
 
+A plugin can select one source: `name` for a local or bundled plugin, `path` for an explicit binary, `command` for an executable and its arguments, or `remote` with a pinned `version`. Relative binary paths and commands run from the directory where `easyp generate` starts.
+
 ```yaml
 # easyp.yaml
 version: v1
