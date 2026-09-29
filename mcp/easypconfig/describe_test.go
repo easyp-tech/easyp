@@ -91,7 +91,6 @@ func TestDescribeNotesForReservedFields(t *testing.T) {
 		{name: "package filter", file: v1.GenerateFile, path: "generate.packages", want: "generation fails"},
 		{name: "linter inheritance", file: v1.PolicyFile, path: "linters.extends", want: "not implemented"},
 		{name: "issue path matching", file: v1.PolicyFile, path: "issues.exclude-rules[0].path", want: "not implemented"},
-		{name: "breaking categories", file: v1.PolicyFile, path: "breaking.categories", want: "not supported"},
 		{name: "breaking unstable", file: v1.PolicyFile, path: "breaking.ignore_unstable", want: "not supported"},
 		{name: "breaking inheritance", file: v1.PolicyFile, path: "breaking.extends", want: "not implemented"},
 	}

@@ -39,6 +39,8 @@ type IssueExcludeRule struct {
 	Linters []string `yaml:"linters"`
 }
 
+const breakingCategoryFile = "FILE"
+
 // BreakingPolicy selects a baseline and compatibility checks.
 type BreakingPolicy struct {
 	Baseline       string   `yaml:"baseline"`
@@ -123,14 +125,16 @@ func (p Policy) ExcludesAllIssues() bool {
 	return false
 }
 
-// BreakingConfig maps the v1 baseline onto the existing check set.
-// Category filtering requires a rule mapping of its own.
+// BreakingConfig maps the v1 baseline and supported categories onto the checker.
+// FILE adds declaration-move checks without disabling the existing checks.
 func (p Policy) BreakingConfig(fallbackRef string) (config.BreakingCheck, error) {
 	if p.Breaking.Extends != "" {
 		return config.BreakingCheck{}, fmt.Errorf("breaking.extends policy loading is not implemented")
 	}
-	if len(p.Breaking.Categories) > 0 {
-		return config.BreakingCheck{}, fmt.Errorf("breaking.categories are not supported by the existing checker")
+	for _, category := range p.Breaking.Categories {
+		if category != breakingCategoryFile {
+			return config.BreakingCheck{}, fmt.Errorf("breaking.categories: unsupported category %q; supported: FILE", category)
+		}
 	}
 	if p.Breaking.IgnoreUnstable {
 		return config.BreakingCheck{}, fmt.Errorf("breaking.ignore_unstable is not supported by the existing checker")
@@ -139,5 +143,8 @@ func (p Policy) BreakingConfig(fallbackRef string) (config.BreakingCheck, error)
 	if baseline == "" {
 		baseline = fallbackRef
 	}
-	return config.BreakingCheck{AgainstGitRef: baseline, Ignore: p.Breaking.Ignore}, nil
+	return config.BreakingCheck{
+		AgainstGitRef: baseline, Ignore: p.Breaking.Ignore,
+		Use: append([]string(nil), p.Breaking.Categories...),
+	}, nil
 }

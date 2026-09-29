@@ -2,10 +2,10 @@ version: "3"
 
 vars:
   LINTER_VERSION: "2.1.6"
-  GOTESTSUM_VERSION: "1.11.0"
+  GOTESTSUM_VERSION: "1.13.0"
   HADOLINT_VERSION: "v2.12.1-beta"
   LOCAL_BIN: "{{.USER_WORKING_DIR}}/bin"
-  MOCKERY_VERSION: "v2.41.0"
+  MOCKERY_VERSION: "v2.53.7"
 
 tasks:
   install_linters:

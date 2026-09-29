@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	pluginv1 "github.com/easyp-tech/service/api/generator/v1"
+	pluginv1 "github.com/easyp-tech/service/api/easyp/generator/v1"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc"
@@ -20,7 +20,7 @@ import (
 )
 
 type testV1RemotePlugin struct {
-	pluginv1.UnimplementedServiceAPIServer
+	pluginv1.UnimplementedGeneratorAPIServer
 	called chan string
 }
 
@@ -53,7 +53,7 @@ func TestGenerateV1SendsPinnedRemotePluginVersion(t *testing.T) {
 			require.NoError(t, err)
 			server := grpc.NewServer()
 			remote := &testV1RemotePlugin{called: make(chan string, 1)}
-			pluginv1.RegisterServiceAPIServer(server, remote)
+			pluginv1.RegisterGeneratorAPIServer(server, remote)
 			serveErr := make(chan error, 1)
 			go func() { serveErr <- server.Serve(listener) }()
 			t.Cleanup(func() {

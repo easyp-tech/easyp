@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"slices"
 
 	"github.com/urfave/cli/v2"
 
@@ -75,6 +76,7 @@ func buildCore(log logger.Logger, cfg config.Config, importRoots []string) (*cor
 		BreakingCheckConfig: core.BreakingCheckConfig{
 			IgnoreDirs:    append(append([]string(nil), cfg.BreakingCheck.Ignore...), defaultVendorDir),
 			AgainstGitRef: cfg.BreakingCheck.AgainstGitRef,
+			FilesCheck:    slices.Contains(cfg.BreakingCheck.Use, core.BreakingCheckFilesCheck),
 		},
 	}), nil
 }

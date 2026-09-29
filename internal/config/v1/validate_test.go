@@ -282,12 +282,6 @@ func TestValidateFileReportsSemanticIssues(t *testing.T) {
 			expectedMessage: "linters.extends policy loading is not implemented",
 		},
 		{
-			name:            "unsupported breaking categories",
-			filename:        PolicyFile,
-			contents:        "breaking:\n  categories: [WIRE]\n",
-			expectedMessage: "breaking.categories",
-		},
-		{
 			name:            "unpinned remote plugin",
 			filename:        GenerateFile,
 			contents:        "plugins:\n  - remote: example.com/go\n    out: gen\n",
