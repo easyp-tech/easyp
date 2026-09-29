@@ -12,9 +12,13 @@
           "pattern": "^git:.+$"
         },
         "categories": {
+          "description": "FILE adds checks for declarations moved between files; existing compatibility checks remain enabled.",
           "type": "array",
           "items": {
-            "type": "string"
+            "type": "string",
+            "enum": [
+              "FILE"
+            ]
           }
         },
         "extends": {

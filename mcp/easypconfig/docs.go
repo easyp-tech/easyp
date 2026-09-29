@@ -20,7 +20,7 @@ var descriptions = map[string]map[string]string{
 		"breaking":                                "Compatibility checks against a Git baseline.",
 		"breaking.baseline":                       "Baseline in git:<ref> form.",
 		"breaking.ignore":                         "Paths ignored by breaking checks.",
-		"breaking.categories":                     "Reserved breaking check category filter.",
+		"breaking.categories":                     "Optional compatibility checks; FILE also detects declarations moved between files.",
 		"breaking.extends":                        "Reserved reference to another breaking policy.",
 		"breaking.ignore_unstable":                "Reserved flag for ignoring unstable declarations.",
 	},
@@ -65,11 +65,12 @@ func examplesFor(file string) []Example {
 	case v1.PolicyFile:
 		return []Example{
 			{Title: "lint_policy", YAML: "version: v1\nlinters:\n  default: STANDARD\n  enable: [FILE_LOWER_SNAKE_CASE]\n", Paths: []string{"linters", "linters.default", "linters.enable"}},
-			{Title: "breaking_policy", YAML: "version: v1\nbreaking:\n  baseline: git:main\n", Paths: []string{"breaking", "breaking.baseline"}},
+			{Title: "breaking_policy", YAML: "version: v1\nbreaking:\n  baseline: git:main\n  categories: [FILE]\n", Paths: []string{"breaking", "breaking.baseline", "breaking.categories"}},
 		}
 	case v1.GenerateFile:
 		return []Example{
 			{Title: "local_plugin", YAML: "version: v1\nplugins:\n  - name: go\n    out: gen/go\n    opts: [paths=source_relative]\n", Paths: []string{"plugins", "plugins[]", "plugins[].name", "plugins[].out", "plugins[].opts"}},
+			{Title: "remote_plugin", YAML: "version: v1\nplugins:\n  - remote: plugins.beta.easyp.tech/protocolbuffers/go\n    version: v1.36.11\n    out: gen/go\n    opts: [paths=source_relative]\n", Paths: []string{"plugins", "plugins[]", "plugins[].remote", "plugins[].version"}},
 			{Title: "binary_path", YAML: "version: v1\nplugins:\n  - path: ./tools/protoc-gen-custom\n    out: gen/custom\n", Paths: []string{"plugins", "plugins[]", "plugins[].path"}},
 			{Title: "custom_command", YAML: "version: v1\nplugins:\n  - command: [sh, ./tools/protoc-plugin.sh]\n    out: gen/script\n", Paths: []string{"plugins", "plugins[]", "plugins[].command"}},
 			{Title: "managed_mode", YAML: "version: v1\ngenerate:\n  managed:\n    enabled: true\n    override:\n      - file_option: go_package_prefix\n        value: example.com/gen\nplugins:\n  - name: go\n    out: gen/go\n", Paths: []string{"generate", "generate.managed", "generate.managed.override"}},
@@ -111,7 +112,7 @@ func notesFor(file, path string) []string {
 	case file == v1.PolicyFile && path == "issues.exclude-rules[].path":
 		return []string{"issues.exclude-rules.path matching is not implemented; lint fails when it is set."}
 	case file == v1.PolicyFile && path == "breaking.categories":
-		return []string{"breaking.categories is not supported by the current checker."}
+		return []string{"FILE is the only supported category and adds declaration-move checks. Existing compatibility checks remain enabled; other categories are not supported."}
 	case file == v1.PolicyFile && path == "breaking.ignore_unstable":
 		return []string{"breaking.ignore_unstable is not supported by the current checker."}
 	case file == v1.PolicyFile && path == "breaking.extends":

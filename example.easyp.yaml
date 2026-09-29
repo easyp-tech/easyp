@@ -10,6 +10,8 @@ breaking:
   ignore:
     - some_dir
   against_git_ref: master
+  use:
+    - FILE
 
 generate:
   inputs:

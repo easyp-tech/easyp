@@ -52,6 +52,8 @@ func documents() map[string]*schema {
 		AdditionalProperties: false,
 	}
 	policy.Properties["breaking"].Properties["baseline"].Pattern = "^git:.+$"
+	policy.Properties["breaking"].Properties["categories"].Items.Enum = []string{breakingCategoryFile}
+	policy.Properties["breaking"].Properties["categories"].Description = "FILE adds checks for declarations moved between files; existing compatibility checks remain enabled."
 
 	generate := fromType(reflect.TypeFor[Generate]())
 	generate.Properties["version"] = &schema{Type: "string", Const: "v1"}

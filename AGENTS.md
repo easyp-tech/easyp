@@ -4,7 +4,7 @@ Instructions for AI coding agents working in this repository.
 
 ## Project overview
 
-EasyP is a Protocol Buffers CLI toolkit (`github.com/easyp-tech/easyp`, Go 1.24) that provides:
+EasyP is a Protocol Buffers CLI toolkit (`github.com/easyp-tech/easyp`, Go 1.26.6) that provides:
 
 - linting (buf-compatible rules)
 - breaking change detection
