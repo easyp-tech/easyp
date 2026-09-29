@@ -146,6 +146,7 @@
           "type": "object",
           "properties": {
             "package_prefix": {
+              "description": "Sets go_package without enabling managed defaults for other languages; full managed mode requires generate.managed.enabled.",
               "type": "string"
             }
           },

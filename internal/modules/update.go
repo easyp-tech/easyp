@@ -3,7 +3,9 @@ package modules
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
+	"os"
 	"path/filepath"
 	"strings"
 
@@ -38,7 +40,11 @@ func Update(ctx context.Context, root string, repository VersionedRepository) er
 		return fmt.Errorf("ParseModule: %w", err)
 	}
 	updatedModule = directV1Module(updated, updatedModule)
-	lock, err := resolveV1LockWithPins(ctx, root, updatedModule, v1.Lock{}, repository)
+	existing, err := ReadLock(filepath.Join(root, v1.LockFile))
+	if err != nil && !errors.Is(err, os.ErrNotExist) {
+		return fmt.Errorf("ReadLock: %w", err)
+	}
+	lock, err := resolveV1Lock(ctx, root, updatedModule, existing, repository, false)
 	if err != nil {
 		return fmt.Errorf("resolveV1LockWithPins: %w", err)
 	}

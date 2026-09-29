@@ -63,6 +63,7 @@ func documents() map[string]*schema {
 
 	generate := fromType(reflect.TypeFor[Generate]())
 	generate.Properties["version"] = &schema{Type: "string", Const: "v1"}
+	generate.Properties["options"].Properties["go"].Properties["package_prefix"].Description = "Sets go_package without enabling managed defaults for other languages; full managed mode requires generate.managed.enabled."
 	plugin := generate.Properties["plugins"].Items
 	plugin.Required = []string{"out"}
 	plugin.OneOf = []*schema{

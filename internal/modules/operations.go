@@ -36,11 +36,19 @@ func resolveV1LockWithPins(ctx context.Context, root string, module v1.Module, e
 	if len(module.Replaces) > 0 {
 		return v1.Lock{}, fmt.Errorf("module %s: remove local replacements before writing a reproducible lock", module.Name)
 	}
+	return resolveV1Lock(ctx, root, module, existing, repository, true)
+}
+
+func resolveV1Lock(ctx context.Context, root string, module v1.Module, existing v1.Lock, repository Repository, preserveHeads bool) (v1.Lock, error) {
 	pins := make(map[string]v1.LockedModule, len(existing.Modules))
 	for _, entry := range existing.Modules {
 		pins[entry.Source] = entry
 	}
-	lock, err := Resolve(ctx, module, repository, pins)
+	guard := lockedVersionSource{Source: repository, locked: pins}
+	if !preserveHeads {
+		pins = nil
+	}
+	lock, err := Resolve(ctx, module, guard, pins)
 	if err != nil {
 		return v1.Lock{}, fmt.Errorf("module %s: %w", module.Name, err)
 	}
