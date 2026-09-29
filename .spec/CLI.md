@@ -4,6 +4,8 @@ See [v1 descriptor exports](config/descriptor-export.md) for the single-file and
 
 # EasyP CLI
 
+See [generation and baseline review fixes](config/review-generation-and-baselines.md) for current Go option, breaking and lock integrity semantics.
+
 ## Overview
 
 EasyP is a Protocol Buffers command-line toolkit for projects that lint schemas, generate code, check API compatibility, and manage Git-based dependencies.

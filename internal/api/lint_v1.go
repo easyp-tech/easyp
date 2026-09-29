@@ -33,6 +33,12 @@ func (l Lint) actionV1(ctx *cli.Context, log logger.Logger, configPath, projectR
 		if walkErr != nil {
 			return walkErr
 		}
+		if policySourceExcluded(projectRoot, path) {
+			if entry.IsDir() {
+				return filepath.SkipDir
+			}
+			return nil
+		}
 		if !entry.IsDir() && filepath.Ext(path) == ".proto" {
 			files = append(files, path)
 		}

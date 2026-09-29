@@ -36,7 +36,7 @@ func prepareV1ModuleCore(log logger.Logger, request Request, configPath, moduleD
 	options.Logger = log
 	options.PluginWorkDir = request.WorkDir
 	options.ImportRoots = importRoots.Paths()
-	if options.ManagedModeConfig.Enabled {
+	if options.ManagedModeConfig.Enabled || options.ManagedModeConfig.GoPackageOnly {
 		roots := append(modules.SourceRoots(nil), importRoots...)
 		roots = append(roots, sources...)
 		options.FileModules, err = roots.FileModules()

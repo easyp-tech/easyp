@@ -120,7 +120,7 @@ func (c *Core) PrepareGeneration(ctx context.Context, root string) (*GenerationP
 	}
 	c.logger.Debug(ctx, "resolved file descriptor order", slog.Int("file_count", len(fileDescriptors)), slog.Any("files", fileNames))
 
-	if c.managedMode.Enabled {
+	if c.managedMode.Enabled || c.managedMode.GoPackageOnly {
 		c.logger.Debug(ctx, "applying managed mode to file descriptors")
 		fileToModule := c.buildFileToModuleMap(files)
 		if err := ApplyManagedMode(fileDescriptors, c.managedMode, fileToModule); err != nil {

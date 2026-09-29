@@ -4,7 +4,9 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"maps"
 	"path/filepath"
+	"slices"
 
 	"github.com/yoheimuta/go-protoparser/v4/interpret/unordered"
 	"github.com/yoheimuta/go-protoparser/v4/parser"
@@ -36,45 +38,37 @@ func (c *Core) BreakingCheck(ctx context.Context, projectRoot, workingDir, path 
 		slog.String("path", path),
 	)
 
-	// read current state
-	fsWalker := fs.NewFSWalker(workingDir, path)
-	currentProtoFiles, err := c.readProtoFiles(ctx, fsWalker)
+	current := fs.NewFSWalker(workingDir, path)
+	against, err := c.currentProjectGitWalker.GetDirWalker(workingDir, c.breakingCheckConfig.AgainstGitRef, path)
 	if err != nil {
-		return nil, fmt.Errorf("c.readCurrentProtoFiles: %w", err)
+		return nil, fmt.Errorf("GetDirWalker: %w", err)
 	}
+	return c.CompareBreaking(ctx, current, against, c.importRoots)
+}
 
-	// read from ref branch
-	againstFSWalker, err := c.currentProjectGitWalker.GetDirWalker(
-		workingDir, c.breakingCheckConfig.AgainstGitRef, path,
-	)
+// CompareBreaking compares explicitly scoped inputs with revision-specific imports.
+// Neither filesystem can fall back to the other revision's dependency roots.
+func (c *Core) CompareBreaking(ctx context.Context, current, against DirWalker, againstImportRoots []string) ([]IssueInfo, error) {
+	currentFiles, err := c.readProtoFiles(ctx, current)
 	if err != nil {
-		return nil, fmt.Errorf("c.currentProjectGitWalker.GetDirWalker: %w", err)
+		return nil, fmt.Errorf("readProtoFiles current: %w", err)
 	}
-	againstProtoFiles, err := c.readProtoFiles(ctx, againstFSWalker)
+	baseline := *c
+	baseline.importRoots = againstImportRoots
+	againstFiles, err := baseline.readProtoFiles(ctx, against)
 	if err != nil {
-		return nil, fmt.Errorf("c.readAgainstProtoFiles: %w", err)
+		return nil, fmt.Errorf("readProtoFiles baseline: %w", err)
 	}
-
-	// ---
-
-	currentProtoData, err := collect(currentProtoFiles)
+	currentData, err := collect(currentFiles)
 	if err != nil {
-		return nil, fmt.Errorf("collect(current): %w", err)
+		return nil, fmt.Errorf("collect: %w", err)
 	}
-
-	againstProtoData, err := collect(againstProtoFiles)
+	againstData, err := collect(againstFiles)
 	if err != nil {
-		return nil, fmt.Errorf("collect(against): %w", err)
+		return nil, fmt.Errorf("collect: %w", err)
 	}
-
-	breakingChecker := &BreakingChecker{
-		against: againstProtoData,
-		current: currentProtoData,
-
-		filesCheck: c.breakingCheckConfig.FilesCheck,
-	}
-
-	return breakingChecker.Check()
+	checker := &BreakingChecker{against: againstData, current: currentData, filesCheck: c.breakingCheckConfig.FilesCheck}
+	return checker.Check()
 }
 
 func (c *Core) readProtoFiles(ctx context.Context, fsWalker DirWalker) ([]ProtoInfo, error) {
@@ -109,28 +103,27 @@ func (c *Core) readProtoFiles(ctx context.Context, fsWalker DirWalker) ([]ProtoI
 
 func collect(protoInfos []ProtoInfo) (ProtoData, error) {
 	protoData := make(ProtoData)
-	collectedProtoFiles := make(map[string]struct{})
-
-	for _, protoInfo := range protoInfos {
-		protoFilePath := protoInfo.Path
-		pkgName := GetPackageName(protoInfo.Info)
-
-		if _, ok := collectedProtoFiles[protoFilePath]; !ok {
-			collectProtoFileInfo(protoData, protoInfo.Info, pkgName, protoFilePath)
-			collectedProtoFiles[protoFilePath] = struct{}{}
-		}
-
-		// collects from imports
-		for importPath, protoFile := range protoInfo.ProtoFilesFromImport {
-			protoFilePath := string(importPath)
-			if _, ok := collectedProtoFiles[protoFilePath]; ok {
+	collectedImports := make(map[string]bool)
+	// Dependencies establish the imported context first. Explicit target paths
+	// then take precedence over import aliases, regardless of traversal order.
+	for _, info := range protoInfos {
+		for _, importPath := range slices.Sorted(maps.Keys(info.ProtoFilesFromImport)) {
+			name := string(importPath)
+			if collectedImports[name] {
 				continue
 			}
-
-			pkgName := GetPackageName(protoFile)
-			collectProtoFileInfo(protoData, protoFile, pkgName, protoFilePath)
-			collectedProtoFiles[protoFilePath] = struct{}{}
+			imported := info.ProtoFilesFromImport[importPath]
+			collectProtoFileInfo(protoData, imported, GetPackageName(imported), name)
+			collectedImports[name] = true
 		}
+	}
+	collectedTargets := make(map[string]bool)
+	for _, info := range protoInfos {
+		if collectedTargets[info.Path] {
+			continue
+		}
+		collectProtoFileInfo(protoData, info.Info, GetPackageName(info.Info), info.Path)
+		collectedTargets[info.Path] = true
 	}
 
 	return protoData, nil

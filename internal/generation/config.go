@@ -31,7 +31,7 @@ func prepareV1GeneratorConfig(configPath, moduleDir string, gen v1.Generate, mod
 	}
 	cfg.ManagedModeConfig = convertManagedModeConfig(gen.Generate.Managed)
 	if prefix := gen.Options.Go.PackagePrefix; prefix != nil && *prefix != "" {
-		cfg.ManagedModeConfig.Enabled = true
+		cfg.ManagedModeConfig.GoPackageOnly = !cfg.ManagedModeConfig.Enabled
 		rule := core.ManagedOverrideRule{FileOption: "go_package_prefix", Value: *prefix}
 		if gen.InheritedGoPackagePrefix {
 			cfg.ManagedModeConfig.Override = append([]core.ManagedOverrideRule{rule}, cfg.ManagedModeConfig.Override...)

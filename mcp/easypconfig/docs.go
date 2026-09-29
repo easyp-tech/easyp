@@ -40,7 +40,7 @@ var descriptions = map[string]map[string]string{
 		"plugins[].opts":                           "Plugin options as a list or map of scalar values.",
 		"options":                                  "Language-specific generator options.",
 		"options.go":                               "Go generator options.",
-		"options.go.package_prefix":                "Go package prefix; may be inherited from an ancestor generator file.",
+		"options.go.package_prefix":                "Go package prefix; may be inherited. Changes only Go options unless generate.managed.enabled explicitly enables full managed mode.",
 		"generate.managed.enabled":                 "Enable managed descriptor options.",
 		"generate.managed.disable":                 "Rules that prevent managed mode from changing matching options.",
 		"generate.managed.override":                "Rules that set file or field options.",

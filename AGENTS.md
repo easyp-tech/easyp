@@ -26,7 +26,7 @@ Human-facing docs: [README.md](README.md) and https://easyp.tech.
 | `mcp/easypconfig` | MCP descriptions of v1 `easyp.yaml` and `easyp.gen.yaml` |
 | `internal/config/v1` | v1 parsing, validation, and JSON Schema source |
 | `schemas/` | Generated JSON Schema artifacts |
-| `docs/` | Documentation site (Vite) |
+| <code>easyp-tech/docs</code> (separate repository) | Documentation site and its publishing workflow |
 
 ## What is .spec/
 .spec/ is a project documentation directory optimized for AI agent (LLM) consumption. It contains:
