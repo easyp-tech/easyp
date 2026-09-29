@@ -27,7 +27,30 @@ type legacyDependencyGenerate struct {
 	Inputs []legacyDependencyInput `yaml:"inputs"`
 }
 
+// legacyDependencyList rejects null and non-string entries instead of letting
+// YAML decoding silently remove them from the dependency graph.
+type legacyDependencyList []string
+
+func (list *legacyDependencyList) UnmarshalYAML(node *yaml.Node) error {
+	if node.Kind != yaml.SequenceNode {
+		return fmt.Errorf("deps must be a list of module strings")
+	}
+	values := make([]string, 0, len(node.Content))
+	for i, entry := range node.Content {
+		if entry.Kind == yaml.AliasNode {
+			entry = entry.Alias
+		}
+		if entry == nil || entry.Kind != yaml.ScalarNode || entry.Tag != "!!str" {
+			return fmt.Errorf("deps[%d] must be a module string", i)
+		}
+		values = append(values, entry.Value)
+	}
+	*list = values
+	return nil
+}
+
 type legacyDependencyConfig struct {
+	Deps     legacyDependencyList     `yaml:"deps"`
 	Generate legacyDependencyGenerate `yaml:"generate"`
 }
 
@@ -43,16 +66,31 @@ func readLegacyEasyPRootsAndRequires(path string) ([]string, []v1.Requirement, e
 	}
 	var roots []string
 	var requires []v1.Requirement
-	for _, input := range old.Generate.Inputs {
+	seen := make(map[v1.Requirement]bool)
+	appendRequirement := func(raw string) error {
+		requirement, err := parseLegacyV1Requirement(raw)
+		if err != nil {
+			return err
+		}
+		if !seen[requirement] {
+			requires = append(requires, requirement)
+			seen[requirement] = true
+		}
+		return nil
+	}
+	for i, raw := range old.Deps {
+		if err := appendRequirement(raw); err != nil {
+			return nil, nil, fmt.Errorf("parseLegacyV1Requirement: %s deps[%d]: %w", path, i, err)
+		}
+	}
+	for i, input := range old.Generate.Inputs {
 		if input.Directory.Path != "" || input.Directory.Root != "" {
 			roots = append(roots, input.Directory.Root)
 		}
 		if input.GitRepo.URL != "" {
-			requirement, err := parseLegacyV1Requirement(input.GitRepo.URL)
-			if err != nil {
-				return nil, nil, err
+			if err := appendRequirement(input.GitRepo.URL); err != nil {
+				return nil, nil, fmt.Errorf("parseLegacyV1Requirement: %s generate.inputs[%d].git_repo.url: %w", path, i, err)
 			}
-			requires = append(requires, requirement)
 		}
 	}
 	return roots, requires, nil

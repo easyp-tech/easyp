@@ -121,7 +121,7 @@ func resolveV1GenerationModule(ctx context.Context, cache modules.Cache, repoRoo
 		if err != nil {
 			return v1GenerationModule{}, fmt.Errorf("EnsureSources: %w", err)
 		}
-		moduleDir = filepath.Clean(filepath.Join(consumerDir, replacement.Target))
+		moduleDir = modules.ResolveReplacementPath(consumerDir, replacement.Target)
 		module, err = moduleconfig.ReadGitDependency(moduleDir, selection.source)
 		if err != nil {
 			return v1GenerationModule{}, fmt.Errorf("ReadGitDependency: %w", err)

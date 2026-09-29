@@ -6,8 +6,10 @@ import (
 	"sync"
 
 	yamlvalidator "github.com/Yakwilik/go-yamlvalidator"
+	"gopkg.in/yaml.v3"
 
 	"github.com/easyp-tech/easyp/internal/config"
+	"github.com/easyp-tech/easyp/internal/rules"
 )
 
 var (
@@ -54,7 +56,9 @@ func validateV1YAML(raw []byte, loadSchema func() (*yamlvalidator.FieldSchema, e
 		StrictKeys:  true,
 		StrictTypes: true,
 	})
+	result.SortByPosition()
 	allIssues := result.Collector.All()
+	values := scalarValuesByPosition(expanded)
 	compositePaths := make(map[string]string)
 	for _, issue := range allIssues {
 		if issue.Code == "oneOf" || issue.Code == "anyOf" {
@@ -63,6 +67,22 @@ func validateV1YAML(raw []byte, loadSchema func() (*yamlvalidator.FieldSchema, e
 	}
 	issues := make([]config.ValidationIssue, 0, len(allIssues))
 	for _, issue := range allIssues {
+		if issue.Code == "group" {
+			// The schema engine can emit a summary together with precise child
+			// errors. Keep the actionable diagnostics, not the duplicate summary.
+			detailed := false
+			for _, child := range allIssues {
+				if child.Code != "group" && child.Level == issue.Level &&
+					(child.Path == issue.Path || strings.HasPrefix(child.Path, issue.Path+".") || strings.HasPrefix(child.Path, issue.Path+"[")) &&
+					strings.HasPrefix(child.SchemaPath, issue.SchemaPath+"/") {
+					detailed = true
+					break
+				}
+			}
+			if detailed {
+				continue
+			}
+		}
 		if parentPath, ok := compositePaths[issue.Path]; ok && strings.HasPrefix(issue.SchemaPath, parentPath+"/") {
 			continue
 		}
@@ -84,6 +104,13 @@ func validateV1YAML(raw []byte, loadSchema func() (*yamlvalidator.FieldSchema, e
 			severity = config.SeverityError
 		}
 		message := issue.Message
+		if issue.Code == "enum" && isLintRuleValuePath(issue.Path) {
+			if value, ok := values[[2]int{issue.Line, issue.Column}]; ok {
+				if err := rules.ValidateNames([]string{value}); err != nil {
+					message = err.Error()
+				}
+			}
+		}
 		if issue.Expected != "" {
 			message += fmt.Sprintf(" (expected %s)", issue.Expected)
 		}
@@ -99,4 +126,30 @@ func validateV1YAML(raw []byte, loadSchema func() (*yamlvalidator.FieldSchema, e
 		})
 	}
 	return issues
+}
+
+func isLintRuleValuePath(path string) bool {
+	return strings.HasPrefix(path, "linters.enable[") || strings.HasPrefix(path, "linters.disable[") ||
+		(strings.HasPrefix(path, "issues[\"exclude-rules\"][") && strings.Contains(path, "].linters["))
+}
+
+// scalarValuesByPosition supplements schema errors which omit the rejected
+// value. Syntax errors are already reported by the schema validator.
+func scalarValuesByPosition(raw []byte) map[[2]int]string {
+	values := make(map[[2]int]string)
+	var root yaml.Node
+	if err := yaml.Unmarshal(raw, &root); err != nil {
+		return values
+	}
+	var visit func(*yaml.Node)
+	visit = func(node *yaml.Node) {
+		if node.Kind == yaml.ScalarNode {
+			values[[2]int{node.Line, node.Column}] = node.Value
+		}
+		for _, child := range node.Content {
+			visit(child)
+		}
+	}
+	visit(&root)
+	return values
 }

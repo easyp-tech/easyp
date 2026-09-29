@@ -22,8 +22,8 @@ var (
 	flagAgainstBranchName = &cli.StringFlag{
 		Name:       "against",
 		Usage:      "set branch to compare with",
-		Required:   true,
-		HasBeenSet: true,
+		Required:   false,
+		HasBeenSet: false,
 		Value:      "master",
 	}
 

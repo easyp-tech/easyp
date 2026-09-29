@@ -76,11 +76,17 @@ func ParsePolicy(r io.Reader) (Policy, error) {
 	default:
 		return Policy{}, fmt.Errorf("unknown v1 linter preset %q", result.Linters.Default)
 	}
+	if err := result.validateLintSelections(); err != nil {
+		return Policy{}, fmt.Errorf("validateLintSelections: %w", err)
+	}
 	return result, nil
 }
 
 // LintConfig translates the policy into the lint engine configuration.
 func (p Policy) LintConfig() (config.LintConfig, error) {
+	if err := p.validateLintSelections(); err != nil {
+		return config.LintConfig{}, fmt.Errorf("validateLintSelections: %w", err)
+	}
 	if p.Linters.Extends != "" {
 		return config.LintConfig{}, fmt.Errorf("linters.extends policy loading is not implemented")
 	}

@@ -48,18 +48,20 @@ func AllRuleNames() []string {
 // group keys, grouped rule names, and uncategorized rule names.
 func AllLintUseValues() []string {
 	groups := AllGroups()
-	values := make([]string, 0, len(groups)+len(AllRuleNames())+1)
+	values := make([]string, 0, len(groups)+len(AllRuleNames()))
 	for _, group := range groups {
 		values = append(values, group.Key)
 	}
 	values = append(values, AllRuleNames()...)
-	values = append(values, core.GetRuleName(&PackageNoImportCycle{}))
 
-	return lo.FindUniques(values)
+	return lo.Uniq(values)
 }
 
 // New returns a map of rules and a map of ignore only rules by configuration.
 func New(cfg config.LintConfig) ([]core.Rule, map[string][]string, error) {
+	if err := validateConfigRuleNames(cfg); err != nil {
+		return nil, nil, fmt.Errorf("validateConfigRuleNames: %w", err)
+	}
 	allRules := []core.Rule{
 		//	minGroup
 		&DirectorySamePackage{},
@@ -114,8 +116,6 @@ func New(cfg config.LintConfig) ([]core.Rule, map[string][]string, error) {
 		//	unaryRPCGroup
 		&RPCNoClientStreaming{},
 		&RPCNoServerStreaming{},
-		//	UNCATEGORIZED
-		&PackageNoImportCycle{},
 	}
 
 	rules := make(map[string]core.Rule)
@@ -199,7 +199,7 @@ func unwrapLintGroups(use []string) []string {
 		}
 	}
 
-	return lo.FindUniques(res)
+	return lo.Uniq(res)
 }
 
 func removeExcept(except, use []string) []string {

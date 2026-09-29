@@ -5,6 +5,7 @@ import (
 	"io/fs"
 	"path/filepath"
 	"slices"
+	"strings"
 
 	"github.com/urfave/cli/v2"
 
@@ -44,9 +45,9 @@ func (b BreakingCheck) checkV1Policies(ctx *cli.Context, log logger.Logger, conf
 		if err != nil {
 			return nil, fmt.Errorf("resolveV1BreakingPolicy: %w", err)
 		}
-		breakingConfig, err := policy.BreakingConfig(ctx.String(flagAgainstBranchName.Name))
+		breakingConfig, err := resolveV1BreakingConfig(ctx, policy)
 		if err != nil {
-			return nil, fmt.Errorf("BreakingConfig: %w", err)
+			return nil, fmt.Errorf("resolveV1BreakingConfig: %w", err)
 		}
 		app, err := buildCore(log, config.Config{BreakingCheck: breakingConfig}, importRoots)
 		if err != nil {
@@ -113,4 +114,21 @@ func resolveV1BreakingPolicy(directory, projectRoot, configPath string) (v1.Poli
 		}
 	}
 	return v1.Policy{}, "", fmt.Errorf("no easyp.yaml policy for %s", directory)
+}
+
+// resolveV1BreakingConfig distinguishes an explicit flag from its default value.
+func resolveV1BreakingConfig(ctx *cli.Context, policy v1.Policy) (config.BreakingCheck, error) {
+	against := ctx.String(flagAgainstBranchName.Name)
+	explicit := ctx.IsSet(flagAgainstBranchName.Name)
+	if explicit && strings.TrimSpace(against) == "" {
+		return config.BreakingCheck{}, fmt.Errorf("--against must not be empty")
+	}
+	cfg, err := policy.BreakingConfig(against)
+	if err != nil {
+		return config.BreakingCheck{}, fmt.Errorf("BreakingConfig: %w", err)
+	}
+	if explicit {
+		cfg.AgainstGitRef = against
+	}
+	return cfg, nil
 }

@@ -251,3 +251,21 @@ func fieldPaths(fields []FieldDoc) []string {
 	}
 	return paths
 }
+
+func TestDescribeLintSelectionMatchesExecutableRules(t *testing.T) {
+	t.Parallel()
+	for _, path := range []string{"linters.enable", "linters.disable", "issues.exclude-rules[].linters"} {
+		t.Run(path, func(t *testing.T) {
+			t.Parallel()
+			got, err := Describe(DescribeInput{File: v1.PolicyFile, Path: path})
+			require.NoError(t, err)
+			items, ok := got.Schema["items"].(map[string]any)
+			require.True(t, ok)
+			values, ok := items["enum"].([]any)
+			require.True(t, ok)
+			assert.Contains(t, values, "ENUM_VALUE_PREFIX")
+			assert.Contains(t, values, "UNARY_RPC")
+			assert.NotContains(t, values, "PACKAGE_NO_IMPORT_CYCLE")
+		})
+	}
+}
