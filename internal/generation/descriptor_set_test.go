@@ -23,6 +23,7 @@ func TestRunDescriptorSetSkipsOptionsOnlyParentAcrossModules(t *testing.T) {
 		"proto/orders/protobuf.mod": "module example.com/orders\n",
 		"proto/orders/orders.proto": "syntax = \"proto3\"; package orders.v1; message Order {}\n",
 		"proto/users/protobuf.mod":  "module example.com/users\n",
+		"legacy/orphan.proto":       "syntax = \"proto3\"; package legacy; message Orphan {}\n",
 		"proto/users/users.proto":   "syntax = \"proto3\"; package users.v1; message User {}\n",
 	}
 	for path, content := range files {

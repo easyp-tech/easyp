@@ -17,10 +17,11 @@ import (
 
 // Request contains the inputs of one generation run.
 type Request struct {
-	WorkDir          string
-	Project          string
-	DescriptorSetOut string
-	IncludeImports   bool
+	WorkDir             string
+	Project             string
+	DescriptorSetOut    string
+	DescriptorSetOutDir string
+	IncludeImports      bool
 }
 
 type generationTarget struct {
@@ -32,6 +33,10 @@ type generationTarget struct {
 // Run discovers generator files, prepares selected modules, and executes each generation.
 // Missing locked dependencies are installed in the supplied cache.
 func Run(ctx context.Context, log logger.Logger, cache modules.Cache, request Request) error {
+	if request.DescriptorSetOut != "" && request.DescriptorSetOutDir != "" {
+		return fmt.Errorf("--descriptor_set_out and --descriptor_set_out_dir are mutually exclusive")
+	}
+	exportDescriptors := request.DescriptorSetOut != "" || request.DescriptorSetOutDir != ""
 	workDir, err := filepath.Abs(request.WorkDir)
 	if err != nil {
 		return fmt.Errorf("Abs: %w", err)
@@ -39,6 +44,9 @@ func Run(ctx context.Context, log logger.Logger, cache modules.Cache, request Re
 	request.WorkDir = workDir
 	if request.DescriptorSetOut != "" && !filepath.IsAbs(request.DescriptorSetOut) {
 		request.DescriptorSetOut = filepath.Join(workDir, request.DescriptorSetOut)
+	}
+	if request.DescriptorSetOutDir != "" && !filepath.IsAbs(request.DescriptorSetOutDir) {
+		request.DescriptorSetOutDir = filepath.Join(workDir, request.DescriptorSetOutDir)
 	}
 	configs, err := discoverV1GenerateConfigs(workDir, request.Project)
 	if err != nil {
@@ -57,7 +65,7 @@ func Run(ctx context.Context, log logger.Logger, cache modules.Cache, request Re
 		if err := inheritV1GenerateOptions(workDir, configPath, &gen); err != nil {
 			return fmt.Errorf("inheritV1GenerateOptions: %w", err)
 		}
-		if len(gen.Plugins) == 0 && request.DescriptorSetOut == "" {
+		if len(gen.Plugins) == 0 && !exportDescriptors {
 			continue
 		}
 		modules, err := selectV1Modules(workDir, filepath.Dir(configPath), gen.Generate.Modules)
@@ -68,7 +76,7 @@ func Run(ctx context.Context, log logger.Logger, cache modules.Cache, request Re
 			return fmt.Errorf("%s: generate.packages matching is not specified precisely enough for v1", configPath)
 		}
 		for _, module := range modules {
-			if request.DescriptorSetOut == "" {
+			if !exportDescriptors {
 				if err := generateSelectedV1Module(ctx, log, cache, request, configPath, workDir, module, gen); err != nil {
 					return fmt.Errorf("generateSelectedV1Module: %w", err)
 				}
@@ -77,14 +85,14 @@ func Run(ctx context.Context, log logger.Logger, cache modules.Cache, request Re
 			descriptorTargets = append(descriptorTargets, generationTarget{configPath: configPath, config: gen, module: module})
 		}
 	}
-	if request.DescriptorSetOut == "" {
+	if !exportDescriptors {
 		return nil
 	}
 	if request.Project == "" {
 		selected := descriptorTargets[:0]
 		for _, target := range descriptorTargets {
 			if len(target.config.Plugins) == 0 && len(target.config.Generate.Modules) == 0 {
-				inherited, err := isOptionsOnlyParent(target.configPath, configs)
+				inherited, err := isOptionsOnlyParent(target.configPath, target.config, configs)
 				if err != nil {
 					return fmt.Errorf("isOptionsOnlyParent: %w", err)
 				}
@@ -106,8 +114,9 @@ func Run(ctx context.Context, log logger.Logger, cache modules.Cache, request Re
 }
 
 // isOptionsOnlyParent reports whether a config has child generators but no
-// module or proto files of its own. Such a config only supplies inherited options.
-func isOptionsOnlyParent(configPath string, configs []string) (bool, error) {
+// declared module of its own. Explicit options-only ancestors do not acquire
+// ownership of incidental proto files elsewhere in the repository.
+func isOptionsOnlyParent(configPath string, gen v1.Generate, configs []string) (bool, error) {
 	dir := filepath.Dir(configPath)
 	childDirs := make(map[string]bool)
 	for _, other := range configs {
@@ -130,6 +139,13 @@ func isOptionsOnlyParent(configPath string, configs []string) (bool, error) {
 		return false, nil
 	} else if !os.IsNotExist(err) {
 		return false, err
+	}
+
+	// A thin options-only ancestor is not an implicit module. Unrelated proto
+	// files (for example a legacy tree) must not make it a generation target.
+	if gen.Options.Go.PackagePrefix != nil && !gen.InheritedGoPackagePrefix &&
+		!gen.Generate.Managed.Enabled && len(gen.Generate.Managed.Override) == 0 && len(gen.Generate.Managed.Disable) == 0 {
+		return true, nil
 	}
 
 	hasOwnProto := false

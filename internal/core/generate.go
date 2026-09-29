@@ -28,10 +28,37 @@ import (
 	"github.com/easyp-tech/easyp/internal/version"
 )
 
-// Generate generates code using source and import roots resolved by the module layer.
-func (c *Core) Generate(ctx context.Context, root, descriptorSetOut string, includeImports bool) error {
-	c.logger.Info(ctx, "starting code generation", slog.String("root", root))
+// GenerationPlan holds a compiled graph with managed options already applied.
+// Preparing a plan does not execute plugins or write generated output.
+type GenerationPlan struct {
+	core            *Core
+	root            string
+	files           []string
+	descriptors     []*descriptorpb.FileDescriptorProto
+	dependencyFiles []string
+}
 
+// Generate prepares a module, optionally exports its descriptors, and runs plugins.
+func (c *Core) Generate(ctx context.Context, root, descriptorSetOut string, includeImports bool) error {
+	plan, err := c.PrepareGeneration(ctx, root)
+	if err != nil {
+		return fmt.Errorf("PrepareGeneration: %w", err)
+	}
+	if descriptorSetOut != "" {
+		data, err := proto.MarshalOptions{Deterministic: true}.Marshal(plan.DescriptorSet(includeImports))
+		if err != nil {
+			return fmt.Errorf("Marshal: %w", err)
+		}
+		if err := os.WriteFile(descriptorSetOut, data, 0o644); err != nil {
+			return fmt.Errorf("WriteFile: %w", err)
+		}
+	}
+	return plan.Execute(ctx)
+}
+
+// PrepareGeneration compiles and transforms a module without invoking plugins.
+func (c *Core) PrepareGeneration(ctx context.Context, root string) (*GenerationPlan, error) {
+	c.logger.Info(ctx, "preparing code generation", slog.String("root", root))
 	imports := append([]string{}, c.importRoots...)
 	var files []string
 
@@ -62,14 +89,14 @@ func (c *Core) Generate(ctx context.Context, root, descriptorSetOut string, incl
 			return nil
 		})
 		if err != nil {
-			return fmt.Errorf("WalkDir: %w", err)
+			return nil, fmt.Errorf("WalkDir: %w", err)
 		}
 	}
 
 	c.logger.Debug(ctx, "resolved imports and files", slog.Any("imports", imports), slog.Any("files", files))
 
 	if len(files) == 0 {
-		return ErrEmptyInputFiles
+		return nil, ErrEmptyInputFiles
 	}
 
 	// Search local roots before dependency roots.
@@ -82,7 +109,7 @@ func (c *Core) Generate(ctx context.Context, root, descriptorSetOut string, incl
 
 	compiled, err := compiler.Compile(ctx, files...)
 	if err != nil {
-		return fmt.Errorf("Compile: %w", err)
+		return nil, fmt.Errorf("Compile: %w", err)
 	}
 
 	fileDescriptors, dependencyFiles := collectFileDescriptors(compiled)
@@ -97,39 +124,35 @@ func (c *Core) Generate(ctx context.Context, root, descriptorSetOut string, incl
 		c.logger.Debug(ctx, "applying managed mode to file descriptors")
 		fileToModule := c.buildFileToModuleMap(files)
 		if err := ApplyManagedMode(fileDescriptors, c.managedMode, fileToModule); err != nil {
-			return fmt.Errorf("ApplyManagedMode: %w", err)
+			return nil, fmt.Errorf("ApplyManagedMode: %w", err)
 		}
 	}
 
-	if descriptorSetOut != "" {
-		descriptorsToSave := fileDescriptors
-		if !includeImports {
-			descriptorsToSave = nil
-			targetFiles := make(map[string]bool)
-			for _, f := range files {
-				targetFiles[f] = true
-			}
-			for _, fd := range fileDescriptors {
-				if targetFiles[fd.GetName()] {
-					descriptorsToSave = append(descriptorsToSave, fd)
-				}
-			}
-		}
+	return &GenerationPlan{core: c, root: root, files: files,
+		descriptors: fileDescriptors, dependencyFiles: dependencyFiles}, nil
+}
 
-		descriptorSet := &descriptorpb.FileDescriptorSet{
-			File: descriptorsToSave,
-		}
-
-		data, err := proto.MarshalOptions{Deterministic: true}.Marshal(descriptorSet)
-		if err != nil {
-			return fmt.Errorf("Marshal: %w", err)
-		}
-
-		if err := os.WriteFile(descriptorSetOut, data, 0o644); err != nil {
-			return fmt.Errorf("WriteFile: %w", err)
+// DescriptorSet returns an independent copy of the prepared descriptors.
+func (p *GenerationPlan) DescriptorSet(includeImports bool) *descriptorpb.FileDescriptorSet {
+	set := &descriptorpb.FileDescriptorSet{}
+	targets := make(map[string]bool, len(p.files))
+	if !includeImports {
+		for _, file := range p.files {
+			targets[file] = true
 		}
 	}
+	for _, file := range p.descriptors {
+		if includeImports || targets[file.GetName()] {
+			set.File = append(set.File, proto.Clone(file).(*descriptorpb.FileDescriptorProto))
+		}
+	}
+	return set
+}
 
+// Execute invokes plugins using the prepared graph, without compiling it again.
+func (p *GenerationPlan) Execute(ctx context.Context) error {
+	c, root := p.core, p.root
+	files, fileDescriptors, dependencyFiles := p.files, p.descriptors, p.dependencyFiles
 	filesToWrite := NewGenerateBucket()
 
 	for _, plugin := range c.plugins {
@@ -144,6 +167,9 @@ func (c *Core) Generate(ctx context.Context, root, descriptorSetOut string, incl
 			ProtoFile:       fileDescriptors,
 			CompilerVersion: version.CompilerVersion(),
 		}
+
+		// Executors receive independent requests; prepared descriptors stay immutable.
+		req = proto.Clone(req).(*pluginpb.CodeGeneratorRequest)
 
 		executor := c.getExecutor(plugin)
 
@@ -190,7 +216,7 @@ func (c *Core) Generate(ctx context.Context, root, descriptorSetOut string, incl
 		}
 	}
 
-	err = filesToWrite.DumpToFs(ctx)
+	err := filesToWrite.DumpToFs(ctx)
 	if err != nil {
 		return fmt.Errorf("DumpToFs: %w", err)
 	}
