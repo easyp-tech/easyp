@@ -25,7 +25,7 @@ func localDependencySources(moduleDir string, module v1.Module, visiting map[str
 		if !ok {
 			continue
 		}
-		depDir := filepath.Clean(filepath.Join(moduleDir, target))
+		depDir := ResolveReplacementPath(moduleDir, target)
 		dep, err := moduleconfig.ReadGitDependency(depDir, requirement.Module)
 		if err != nil {
 			return nil, fmt.Errorf("local replacement %s: %w", target, err)
@@ -42,4 +42,13 @@ func localDependencySources(moduleDir string, module v1.Module, visiting map[str
 		roots = append(roots, transitive...)
 	}
 	return roots, nil
+}
+
+// ResolveReplacementPath resolves relative replacements from their owning manifest.
+// Absolute replacement paths are used directly.
+func ResolveReplacementPath(moduleDir, target string) string {
+	if filepath.IsAbs(target) {
+		return filepath.Clean(target)
+	}
+	return filepath.Clean(filepath.Join(moduleDir, target))
 }

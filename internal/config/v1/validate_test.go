@@ -131,7 +131,7 @@ func TestValidateFileReportsLocatedYAMLIssues(t *testing.T) {
   enable: INVALID
 issues:
   exclude-rules:
-    - linters: [GOOD]
+    - linters: [ENUM_VALUE_PREFIX]
       extra: true
 breaking:
   ignore: wrong

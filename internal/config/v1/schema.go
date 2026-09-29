@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"reflect"
 	"strings"
+
+	"github.com/easyp-tech/easyp/internal/rules"
 )
 
 type schema struct {
@@ -42,6 +44,10 @@ func SchemaJSON(name string) ([]byte, error) {
 func documents() map[string]*schema {
 	policy := fromType(reflect.TypeFor[Policy]())
 	policy.Properties["version"] = &schema{Type: "string", Const: "v1"}
+	for _, field := range []string{"enable", "disable"} {
+		policy.Properties["linters"].Properties[field].Items.Enum = rules.AllLintUseValues()
+	}
+	policy.Properties["issues"].Properties["exclude-rules"].Items.Properties["linters"].Items.Enum = rules.AllLintUseValues()
 	policy.Properties["linters"].Properties["default"] = &schema{Type: "string", Enum: []string{"MINIMAL", "BASIC", "STANDARD", "COMMENTS"}}
 	policy.Properties["linters-settings"] = &schema{
 		Type: "object",
