@@ -11,16 +11,27 @@ import (
 )
 
 func generateV1ModuleWithRoots(ctx context.Context, log logger.Logger, request Request, configPath, moduleDir string, gen v1.Generate, module v1.Module, importRoots modules.SourceRoots) error {
+	app, err := prepareV1ModuleCore(log, request, configPath, moduleDir, gen, module, importRoots)
+	if err != nil {
+		return fmt.Errorf("prepareV1ModuleCore: %w", err)
+	}
+	if err := app.Generate(ctx, moduleDir, request.DescriptorSetOut, request.IncludeImports); err != nil {
+		return fmt.Errorf("Generate: %w", err)
+	}
+	return nil
+}
+
+func prepareV1ModuleCore(log logger.Logger, request Request, configPath, moduleDir string, gen v1.Generate, module v1.Module, importRoots modules.SourceRoots) (*core.Core, error) {
 	sources, err := modules.ModuleSources(moduleDir, module)
 	if err != nil {
-		return fmt.Errorf("ModuleSources: %w", err)
+		return nil, fmt.Errorf("ModuleSources: %w", err)
 	}
 	if err := modules.CheckImportCollisions(moduleDir, module.Roots, importRoots.Paths()); err != nil {
-		return fmt.Errorf("CheckImportCollisions: %w", err)
+		return nil, fmt.Errorf("CheckImportCollisions: %w", err)
 	}
 	options, err := prepareV1GeneratorConfig(configPath, moduleDir, gen, module)
 	if err != nil {
-		return fmt.Errorf("prepareV1GeneratorConfig: %w", err)
+		return nil, fmt.Errorf("prepareV1GeneratorConfig: %w", err)
 	}
 	options.Logger = log
 	options.PluginWorkDir = request.WorkDir
@@ -30,12 +41,8 @@ func generateV1ModuleWithRoots(ctx context.Context, log logger.Logger, request R
 		roots = append(roots, sources...)
 		options.FileModules, err = roots.FileModules()
 		if err != nil {
-			return fmt.Errorf("FileModules: %w", err)
+			return nil, fmt.Errorf("FileModules: %w", err)
 		}
 	}
-	app := core.New(options)
-	if err := app.Generate(ctx, moduleDir, request.DescriptorSetOut, request.IncludeImports); err != nil {
-		return fmt.Errorf("Generate: %w", err)
-	}
-	return nil
+	return core.New(options), nil
 }

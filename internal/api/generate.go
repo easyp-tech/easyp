@@ -21,6 +21,11 @@ var (
 		Required: false,
 	}
 
+	flagGenerateDescriptorSetOutDir = &cli.StringFlag{
+		Name:  "descriptor_set_out_dir",
+		Usage: "output directory for one binary FileDescriptorSet per project and module (exclusive with descriptor_set_out)",
+	}
+
 	flagGenerateIncludeImports = &cli.BoolFlag{
 		Name:     "include_imports",
 		Usage:    "include all transitive dependencies in the FileDescriptorSet",
@@ -43,6 +48,7 @@ func (g Generate) Command() *cli.Command {
 		Action:      g.Action,
 		Flags: []cli.Flag{
 			flagGenerateDescriptorSetOut,
+			flagGenerateDescriptorSetOutDir,
 			flagGenerateIncludeImports,
 			flagGenerateProject,
 		},
@@ -52,6 +58,9 @@ func (g Generate) Command() *cli.Command {
 
 // Action implements Handler.
 func (g Generate) Action(ctx *cli.Context) error {
+	if ctx.String(flagGenerateDescriptorSetOut.Name) != "" && ctx.String(flagGenerateDescriptorSetOutDir.Name) != "" {
+		return fmt.Errorf("--descriptor_set_out and --descriptor_set_out_dir are mutually exclusive")
+	}
 	root, err := os.Getwd()
 	if err != nil {
 		return fmt.Errorf("Getwd: %w", err)
@@ -62,6 +71,7 @@ func (g Generate) Action(ctx *cli.Context) error {
 	}
 	return generation.Run(ctx.Context, getLogger(ctx), cache, generation.Request{
 		WorkDir: root, Project: ctx.String(flagGenerateProject.Name),
-		DescriptorSetOut: ctx.String(flagGenerateDescriptorSetOut.Name), IncludeImports: ctx.Bool(flagGenerateIncludeImports.Name),
+		DescriptorSetOut:    ctx.String(flagGenerateDescriptorSetOut.Name),
+		DescriptorSetOutDir: ctx.String(flagGenerateDescriptorSetOutDir.Name), IncludeImports: ctx.Bool(flagGenerateIncludeImports.Name),
 	})
 }

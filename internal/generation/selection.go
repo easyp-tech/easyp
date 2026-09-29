@@ -73,9 +73,10 @@ func generatorV1ModuleDir(repoRoot, configDir string) (string, error) {
 }
 
 type v1GenerationModule struct {
-	directory    string
-	module       v1.Module
-	dependencies modules.SourceRoots
+	resolutionDir string
+	directory     string
+	module        v1.Module
+	dependencies  modules.SourceRoots
 }
 
 func generateSelectedV1Module(ctx context.Context, log logger.Logger, cache modules.Cache, request Request, configPath, repoRoot string, selection v1ModuleSelection, gen v1.Generate) error {
@@ -161,7 +162,7 @@ func resolveV1GenerationModule(ctx context.Context, cache modules.Cache, repoRoo
 			otherRoots = append(otherRoots, root)
 		}
 	}
-	return v1GenerationModule{directory: moduleDir, module: module, dependencies: otherRoots}, nil
+	return v1GenerationModule{directory: moduleDir, resolutionDir: consumerDir, module: module, dependencies: otherRoots}, nil
 }
 
 func readV1GenerationModule(ctx context.Context, cache modules.Cache, directory string) (v1GenerationModule, error) {
@@ -173,7 +174,7 @@ func readV1GenerationModule(ctx context.Context, cache modules.Cache, directory 
 	if err != nil {
 		return v1GenerationModule{}, fmt.Errorf("EnsureSources: %w", err)
 	}
-	return v1GenerationModule{directory: directory, module: module, dependencies: dependencies}, nil
+	return v1GenerationModule{directory: directory, resolutionDir: directory, module: module, dependencies: dependencies}, nil
 }
 
 func findV1LocalModuleByName(repoRoot, name string) (string, error) {

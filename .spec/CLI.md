@@ -1,4 +1,7 @@
 <!-- generated: 2026-07-27, template: cli.md -->
+
+See [v1 descriptor exports](config/descriptor-export.md) for the single-file and per-project/module export contract.
+
 # EasyP CLI
 
 ## Overview
