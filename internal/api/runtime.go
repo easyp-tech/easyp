@@ -78,6 +78,7 @@ func buildCore(log logger.Logger, cfg config.Config, importRoots []string) (*cor
 			IgnoreDirs:     append(append([]string(nil), cfg.BreakingCheck.Ignore...), defaultVendorDir),
 			AgainstGitRef:  cfg.BreakingCheck.AgainstGitRef,
 			FilesCheck:     slices.Contains(cfg.BreakingCheck.Use, core.BreakingCheckFilesCheck),
+			Categories:     cfg.BreakingCheck.Categories,
 			IgnoreUnstable: cfg.BreakingCheck.IgnoreUnstable,
 		},
 	}), nil

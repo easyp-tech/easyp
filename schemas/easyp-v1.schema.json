@@ -12,12 +12,15 @@
           "pattern": "^(git:.+)?$"
         },
         "categories": {
-          "description": "FILE adds checks for declarations moved between files; existing compatibility checks remain enabled.",
+          "description": "Selects FILE, PACKAGE, WIRE_JSON, and/or WIRE compatibility profiles. Multiple profiles apply their union; omitted or empty retains legacy checks.",
           "type": "array",
           "items": {
             "type": "string",
             "enum": [
-              "FILE"
+              "FILE",
+              "PACKAGE",
+              "WIRE_JSON",
+              "WIRE"
             ]
           }
         },

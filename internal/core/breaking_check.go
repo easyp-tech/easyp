@@ -28,6 +28,8 @@ type BreakingCheckConfig struct {
 	IgnoreDirs []string
 
 	FilesCheck bool
+	// Categories selects descriptor-backed compatibility profiles. Empty keeps legacy behavior.
+	Categories []string
 	// IgnoreUnstable skips packages whose final component is an unstable version.
 	IgnoreUnstable bool
 }
@@ -51,6 +53,13 @@ func (c *Core) BreakingCheck(ctx context.Context, projectRoot, workingDir, path 
 // CompareBreaking compares explicitly scoped inputs with revision-specific imports.
 // Neither filesystem can fall back to the other revision's dependency roots.
 func (c *Core) CompareBreaking(ctx context.Context, current, against DirWalker, againstImportRoots []string) ([]IssueInfo, error) {
+	if len(c.breakingCheckConfig.Categories) > 0 {
+		profiles, err := selectedBreakingProfiles(c.breakingCheckConfig.Categories)
+		if err != nil {
+			return nil, err
+		}
+		return c.compareBreakingProfiles(ctx, current, against, againstImportRoots, profiles)
+	}
 	currentFiles, err := c.readProtoFiles(ctx, current)
 	if err != nil {
 		return nil, fmt.Errorf("readProtoFiles current: %w", err)

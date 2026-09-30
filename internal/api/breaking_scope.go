@@ -90,6 +90,7 @@ func discoverBreakingScopes(root, scanRelative string) (map[string]breakingScope
 // let import lookup accidentally read another module from the repository root.
 type scopedBreakingWalker struct {
 	core.FS
+	root    string
 	files   []string
 	allowed map[string]bool
 }
@@ -99,8 +100,10 @@ func newBreakingWalker(root string, files []string) *scopedBreakingWalker {
 	for _, file := range files {
 		allowed[filepath.ToSlash(file)] = true
 	}
-	return &scopedBreakingWalker{FS: disk.NewFSWalker(root, "."), files: files, allowed: allowed}
+	return &scopedBreakingWalker{FS: disk.NewFSWalker(root, "."), root: root, files: files, allowed: allowed}
 }
+
+func (w *scopedBreakingWalker) RootPath() string { return w.root }
 func (w *scopedBreakingWalker) Open(name string) (io.ReadCloser, error) {
 	if !w.allowed[filepath.ToSlash(name)] {
 		return nil, &os.PathError{Op: "open", Path: name, Err: os.ErrNotExist}

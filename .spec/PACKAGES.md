@@ -42,7 +42,7 @@
 
 Generated JSON Schemas are <code>schemas/easyp-v1.schema.json</code>, <code>schemas/easyp.schema.json</code>, <code>schemas/easyp.gen-v1.schema.json</code>, <code>schemas/easyp.gen.schema.json</code>, <code>schemas/protobuf.lock-v1.schema.json</code>, and <code>schemas/protobuf.lock.schema.json</code>. Regenerate with <code>task schema:generate</code>, then run <code>task schema:check</code>. Native <code>protobuf.mod</code> is parsed directly and has no JSON Schema.
 
-Section-scoped <code>extends</code> is implemented in <code>internal/policy</code>, backed by the verified consumer graph. Generation <code>packages</code> is an exact-name selector; breaking categories other than <code>FILE</code> remain unsupported. These struct/schema fields are not proof of runtime support. See [domain model](DOMAIN.md) and [dependency management](config/dependency.md) for current limits, including local overlays, explicit frozen validation and intentionally excluded unknown-import discovery.
+Section-scoped <code>extends</code> is implemented in <code>internal/policy</code>, backed by the verified consumer graph. Generation <code>packages</code> is an exact-name selector; FILE/PACKAGE/WIRE_JSON/WIRE breaking profiles are implemented in the core descriptor comparator. These struct/schema fields are not proof of runtime support. See [domain model](DOMAIN.md) and [dependency management](config/dependency.md) for current limits, including local overlays, explicit frozen validation and intentionally excluded unknown-import discovery.
 
 ## Infrastructure
 

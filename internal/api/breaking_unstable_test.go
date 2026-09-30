@@ -62,9 +62,28 @@ func TestBreakingIgnoreUnstableConfigReachesCore(t *testing.T) {
 			require.NoError(t, err)
 			issues, err := app.CompareBreaking(t.Context(), fs.NewFSWalker(current, "."), fs.NewFSWalker(baseline, "."), nil)
 			require.NoError(t, err)
-			assert.Len(t, issues, tt.wantCount)
+			expected := tt.wantCount
+			if !tt.legacy {
+				expected *= 2
+			}
+			assert.Len(t, issues, expected)
+			moved, deleted := 0, 0
 			for _, issue := range issues {
-				assert.Contains(t, issue.Message, "was moved")
+				if strings.Contains(issue.Message, "was moved") {
+					moved++
+				} else {
+					assert.Equal(t, "FILE_NO_DELETE", issue.RuleName)
+					deleted++
+				}
+				if tt.ignore {
+					assert.NotContains(t, issue.Path, "unstable")
+				}
+			}
+			assert.Equal(t, tt.wantCount, moved)
+			if !tt.legacy {
+				assert.Equal(t, tt.wantCount, deleted)
+			} else {
+				assert.Zero(t, deleted)
 			}
 		})
 	}

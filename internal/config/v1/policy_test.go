@@ -74,7 +74,7 @@ func TestBreakingConfigUsesV1Baseline(t *testing.T) {
 	if legacy.AgainstGitRef != "main" || len(legacy.Ignore) != 1 || legacy.Ignore[0] != "generated" {
 		t.Fatalf("unexpected breaking config: %#v", legacy)
 	}
-	policy.Breaking.Categories = []string{"WIRE"}
+	policy.Breaking.Categories = []string{"UNKNOWN"}
 	if _, err := policy.BreakingConfig("master"); err == nil {
 		t.Fatal("category selection was silently accepted")
 	}

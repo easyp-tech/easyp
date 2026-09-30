@@ -139,7 +139,7 @@ easyp --format json breaking --against HEAD~1
 
 Without an explicit <code>--against</code>, the effective policy's <code>breaking.baseline</code> wins, with its required <code>git:</code> prefix removed; only an empty baseline falls back to <code>master</code>. Nonempty policy baselines must use <code>git:&lt;ref&gt;</code>, while the CLI flag accepts the raw ref. The v0 <code>breaking_check.against_git_ref</code> YAML key is obsolete. Findings use lint's text/JSON formats.
 
-Current and baseline sources use their own module manifests and locks. Descendant policies and <code>breaking.ignore</code> are evaluated with policy ownership; ignore paths are relative to the policy file. <code>FILE</code> adds declaration-move checks; <code>breaking.ignore_unstable</code> is supported. Other breaking categories remain unsupported. Section-scoped <code>extends</code> uses bounded local policies or verified consumer dependencies. See [internal/api/breaking_v1.go](../internal/api/breaking_v1.go), [breaking_scope.go](../internal/api/breaking_scope.go), and [breaking_ignore.go](../internal/api/breaking_ignore.go).
+Current and baseline sources use their own module manifests and locks. Descendant policies and <code>breaking.ignore</code> are evaluated with policy ownership; ignore paths are relative to the policy file. Explicit FILE/PACKAGE/WIRE_JSON/WIRE profiles compare linked descriptors; omitted or empty categories retain the legacy checker. See [breaking-profiles.md](config/breaking-profiles.md). <code>breaking.ignore_unstable</code> is supported. Section-scoped <code>extends</code> uses bounded local policies or verified consumer dependencies. See [internal/api/breaking_v1.go](../internal/api/breaking_v1.go), [breaking_scope.go](../internal/api/breaking_scope.go), and [breaking_ignore.go](../internal/api/breaking_ignore.go).
 
 ### <code>easyp get &lt;module&gt;[@version|@commit]</code>
 
@@ -305,7 +305,7 @@ Explicit config selection follows flag, then <code>EASYP_CFG</code>; relative va
 
 The cache path is resolved to an absolute path by [internal/api/runtime.go](../internal/api/runtime.go). Import consumers may install missing locked sources in that cache. Native dependency declarations belong in <code>protobuf.mod</code>, not the removed generation input configuration.
 
-Current feature boundaries remain explicit: <code>generate.packages</code> selects exact protobuf names; only <code>FILE</code> is accepted as an additional breaking category. Unknown-import-to-Git-module discovery is intentionally excluded. Local replacement overlays apply in normal mode; explicit <code>--frozen</code> rejects them. Current parsing, execution, and schemas must all be consulted before documenting further support; see [policy.go](../internal/config/v1/policy.go), [generate.go](../internal/config/v1/generate.go), and [schema.go](../internal/config/v1/schema.go).
+Current feature boundaries remain explicit: <code>generate.packages</code> selects exact protobuf names; FILE/PACKAGE/WIRE_JSON/WIRE are selectable breaking profiles. Unknown-import-to-Git-module discovery is intentionally excluded. Local replacement overlays apply in normal mode; explicit <code>--frozen</code> rejects them. Current parsing, execution, and schemas must all be consulted before documenting further support; see [policy.go](../internal/config/v1/policy.go), [generate.go](../internal/config/v1/generate.go), and [schema.go](../internal/config/v1/schema.go).
 
 ## Exit Codes and Error Flow
 
