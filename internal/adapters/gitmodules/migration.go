@@ -14,6 +14,7 @@ import (
 	"golang.org/x/mod/semver"
 	"golang.org/x/mod/sumdb/dirhash"
 
+	moduleconfig "github.com/easyp-tech/easyp/internal/adapters/module_config"
 	v1 "github.com/easyp-tech/easyp/internal/config/v1"
 	"github.com/easyp-tech/easyp/internal/modules"
 )
@@ -37,6 +38,9 @@ func (c *Cache) FetchMigration(ctx context.Context, source, version, legacyHash 
 			err = errors.Join(err, fmt.Errorf("RemoveAll: %w", removeErr))
 		}
 	}()
+	if err := moduleconfig.ValidateLegacyMajor(checkout.dir, source, version); err != nil {
+		return modules.Fetched{}, fmt.Errorf("ValidateLegacyMajor: %w", err)
+	}
 	files, err := migrationTrackedFiles(ctx, checkout.dir)
 	if err != nil {
 		return modules.Fetched{}, fmt.Errorf("migrationTrackedFiles: %w", err)

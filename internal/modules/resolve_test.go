@@ -131,5 +131,8 @@ func (s *fakeSource) Fetch(_ context.Context, module, version string) (Fetched, 
 	if !ok {
 		return Fetched{}, fmt.Errorf("unexpected module revision %s", key)
 	}
+	if revision.Module.Name == "" {
+		revision.Module.Name = module
+	}
 	return revision, nil
 }

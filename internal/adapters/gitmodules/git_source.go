@@ -31,6 +31,14 @@ func (candidate v1GitModuleCandidate) tag(version string) string {
 // parent Git URL with the removed suffix as its module directory. The module
 // manifest at that suffix confirms the candidate for untagged requirements.
 func v1GitModuleCandidates(source string) ([]v1GitModuleCandidate, error) {
+	major, err := v1.ModulePathMajor(source)
+	if err != nil {
+		return nil, fmt.Errorf("ModulePathMajor: %w", err)
+	}
+	// A slash major suffix identifies the module, not the repository or tag prefix.
+	if strings.HasPrefix(major, "/") && !strings.Contains(source, "://") {
+		source = strings.TrimSuffix(source, major)
+	}
 	if filepath.IsAbs(source) {
 		return localV1GitModuleCandidates(source), nil
 	}
@@ -38,6 +46,9 @@ func v1GitModuleCandidates(source string) ([]v1GitModuleCandidate, error) {
 		parsed, err := url.Parse(source)
 		if err != nil || parsed.Host == "" || parsed.RawQuery != "" || parsed.Fragment != "" {
 			return nil, fmt.Errorf("invalid Git module URL %q", source)
+		}
+		if strings.HasPrefix(major, "/") {
+			parsed.Path = strings.TrimSuffix(parsed.Path, major)
 		}
 		parts := strings.Split(strings.Trim(parsed.Path, "/"), "/")
 		if !validV1GitModuleParts(parts) {
@@ -114,7 +125,7 @@ func findV1GitModuleTag(ctx context.Context, source, version string) (v1GitModul
 			continue
 		}
 		foundRepository = true
-		if slices.Contains(versions, version) {
+		if slices.Contains(versions, strings.TrimSuffix(version, "+incompatible")) {
 			return candidate, nil
 		}
 	}
@@ -143,6 +154,20 @@ func listV1ModuleTags(ctx context.Context, source string) ([]string, error) {
 			continue
 		}
 		foundRepository = true
+		pathMajor, err := v1.ModulePathMajor(source)
+		if err != nil {
+			return nil, fmt.Errorf("ModulePathMajor: %w", err)
+		}
+		for i, version := range versions {
+			if pathMajor == "" && semver.Major(version) != "v0" && semver.Major(version) != "v1" && semver.Build(version) == "" {
+				// Enumeration is provisional. Fetch verifies pre-native metadata
+				// before this compatibility marker can enter a published lock.
+				versions[i] = version + "+incompatible"
+			}
+		}
+		versions = slices.DeleteFunc(versions, func(version string) bool {
+			return v1.ValidateModuleVersion(source, version) != nil
+		})
 		if len(versions) > 0 {
 			return versions, nil
 		}
@@ -172,7 +197,7 @@ func listV1CandidateTags(ctx context.Context, candidate v1GitModuleCandidate) ([
 			}
 			tag = strings.TrimPrefix(tag, prefix)
 		}
-		if semver.IsValid(tag) {
+		if semver.IsValid(tag) && semver.Build(tag) != "+incompatible" {
 			seen[tag] = struct{}{}
 		}
 	}

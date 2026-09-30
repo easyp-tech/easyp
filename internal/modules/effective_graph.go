@@ -43,7 +43,7 @@ func ensureEffectiveGraph(ctx context.Context, root string, module v1.Module, ca
 	}
 	locals := newLocalReplacements(root, module, localPath)
 	remote := &effectiveRemoteSource{cache: cache, pins: pins, refresh: refresh, historical: localPath != nil, modules: make(map[v1.LockedModule]EffectiveModule)}
-	loader := revisionLoader{source: remote, fetched: make(map[string]Fetched), pins: pins, local: locals.lookup}
+	loader := revisionLoader{source: remote, fetched: make(map[string]Fetched), pins: pins, local: locals.lookupRequirement}
 	if refresh {
 		loader.pins = nil
 	}

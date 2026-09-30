@@ -145,7 +145,7 @@ Current and baseline sources use their own module manifests and locks. Descendan
 
 Adds a new direct requirement or promotes an existing indirect requirement, then resolves its transitive dependencies and writes <code>protobuf.mod</code> and <code>protobuf.lock</code>. Exactly one positional module argument is required; the shared <code>--frozen</code> flag is registered in [internal/api/get_v1.go](../internal/api/get_v1.go).
 
-An explicit suffix must be a semantic version or a full Git commit. A new requirement without a suffix resolves Git HEAD. Repeating an existing requirement without a suffix preserves its specified version. Module lookup starts at the working directory and searches upward within the workspace.
+An explicit version must be a semantic version or a full Git commit. Module identities use Go major suffixes: v0/v1 are unsuffixed, v2+ uses matching <code>/vN</code>; <code>+incompatible</code> is allowed only for verified pre-native unsuffixed v2+ revisions; it cannot bypass a native manifest. See [major versions and Git mapping](config/dependency.md#major-versions-and-git-mapping). A new requirement without a suffix resolves Git HEAD. Repeating an existing requirement without a suffix preserves its specified version. Module lookup starts at the working directory and searches upward within the workspace.
 
 ~~~bash
 easyp get github.com/googleapis/googleapis

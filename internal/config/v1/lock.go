@@ -60,6 +60,9 @@ func (lock Lock) Validate() error {
 			return fmt.Errorf("duplicate locked module %s", entry.Source)
 		}
 		seen[entry.Source] = struct{}{}
+		if err := ValidateModuleVersion(entry.Source, entry.Version); err != nil {
+			return fmt.Errorf("ValidateModuleVersion: %w", err)
+		}
 		if !semver.IsValid(entry.Version) && !IsCommitRef(entry.Version) {
 			return fmt.Errorf("%s: invalid locked version %q", entry.Source, entry.Version)
 		}

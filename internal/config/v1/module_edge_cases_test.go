@@ -75,7 +75,7 @@ func TestParseModuleEdgeCases(t *testing.T) {
 			raw: "module example.com/app\nrequire example.com/unversioned\nrequire(\n" +
 				" example.com/sha1 0123456789abcdef0123456789abcdef01234567\n" +
 				" example.com/sha256 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef\n" +
-				" example.com/v2 v1.2.0\n example.com/plain v2.3.4\n)\n",
+				" example.com/repo/v2 v2.2.0\n example.com/plain v1.3.4\n)\n",
 			want: Module{
 				Name:  "example.com/app",
 				Roots: []string{"."},
@@ -83,8 +83,8 @@ func TestParseModuleEdgeCases(t *testing.T) {
 					{Module: "example.com/unversioned"},
 					{Module: "example.com/sha1", Version: "0123456789abcdef0123456789abcdef01234567"},
 					{Module: "example.com/sha256", Version: "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"},
-					{Module: "example.com/v2", Version: "v1.2.0"},
-					{Module: "example.com/plain", Version: "v2.3.4"},
+					{Module: "example.com/repo/v2", Version: "v2.2.0"},
+					{Module: "example.com/plain", Version: "v1.3.4"},
 				},
 			},
 		},

@@ -34,7 +34,7 @@ type revisionLoader struct {
 	fetched  map[string]Fetched
 	failures map[string]error
 	pins     map[string]v1.LockedModule
-	local    func(string) (v1.Module, bool, error)
+	local    func(string, string) (v1.Module, bool, error)
 }
 
 func (l *revisionLoader) fetch(ctx context.Context, source, version string) (Fetched, error) {
@@ -65,6 +65,12 @@ func (l *revisionLoader) fetch(ctx context.Context, source, version string) (Fet
 		}
 		l.failures[key] = err
 		return Fetched{}, err
+	}
+	if result.Module.Name != source || result.Lock.Source != source {
+		return Fetched{}, fmt.Errorf("fetched module identity differs from requested %s (manifest %s, lock %s)", source, result.Module.Name, result.Lock.Source)
+	}
+	if err := v1.ValidateModuleVersion(source, result.Lock.Version); err != nil {
+		return Fetched{}, fmt.Errorf("ValidateModuleVersion: %w", err)
 	}
 	l.fetched[key] = result
 	return result, nil
@@ -157,17 +163,24 @@ func (l *revisionLoader) resolvePass(ctx context.Context, root v1.Module, hints 
 			}
 			requirement := queue[0]
 			queue = queue[1:]
+			if err := v1.ValidateModuleVersion(requirement.Module, requirement.Version); err != nil {
+				pass.deferError(fmt.Errorf("ValidateModuleVersion: %w", err))
+				continue
+			}
 			if l.local != nil {
 				// The main module and replaced nodes have no remote revision.
-				if requirement.Module == root.Name || localVisited[requirement.Module] {
+				if requirement.Module == root.Name {
 					continue
 				}
-				module, local, err := l.local(requirement.Module)
+				module, local, err := l.local(requirement.Module, requirement.Version)
 				if err != nil {
 					pass.deferError(err)
 					continue
 				}
 				if local {
+					if localVisited[requirement.Module] {
+						continue
+					}
 					localVisited[requirement.Module] = true
 					pass.locals = append(pass.locals, requirement.Module)
 					queue = append(queue, module.Requires...)

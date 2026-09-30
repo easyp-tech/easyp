@@ -27,6 +27,16 @@ func newLocalReplacements(directory string, module v1.Module, localPath func(str
 	return &localReplacements{directory: directory, targets: targets, modules: make(map[string]EffectiveModule), paths: make(map[string]string), localPath: localPath}
 }
 
+func (l *localReplacements) lookupRequirement(name, version string) (v1.Module, bool, error) {
+	if err := v1.ValidateModuleVersion(name, version); err != nil {
+		return v1.Module{}, false, fmt.Errorf("ValidateModuleVersion: %w", err)
+	}
+	// A local replacement has no published version. Go allows a native local
+	// module to replace a legacy +incompatible requirement; provenance checks
+	// belong to published Fetch/Install/Cached and the overlay never writes lock.
+	return l.lookup(name)
+}
+
 func (l *localReplacements) lookup(name string) (v1.Module, bool, error) {
 	target, ok := l.targets[name]
 	if !ok {
@@ -105,7 +115,7 @@ func localDependencySources(moduleDir string, module v1.Module) (SourceRoots, er
 			continue
 		}
 		visited[requirement.Module] = true
-		dep, local, err := locals.lookup(requirement.Module)
+		dep, local, err := locals.lookupRequirement(requirement.Module, requirement.Version)
 		if err != nil {
 			return nil, err
 		}
