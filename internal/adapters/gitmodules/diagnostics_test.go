@@ -82,7 +82,7 @@ func TestPinnedFailureDiagnostics(t *testing.T) {
 func TestTagAccessErrorIsNotMissingVersion(t *testing.T) {
 	t.Parallel()
 	remote, _ := diagnosticRepository(t)
-	_, err := New(t.TempDir()).Fetch(t.Context(), remote, "v8.0.0")
+	_, err := New(t.TempDir()).Fetch(t.Context(), remote, "v1.8.0")
 	require.ErrorContains(t, err, "was not found")
 	require.NoError(t, os.Rename(remote, remote+"-offline"))
 	_, err = New(t.TempDir()).Fetch(t.Context(), remote, "v1.0.0")

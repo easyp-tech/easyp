@@ -10,6 +10,7 @@ import (
 
 	"golang.org/x/mod/sumdb/dirhash"
 
+	moduleconfig "github.com/easyp-tech/easyp/internal/adapters/module_config"
 	v1 "github.com/easyp-tech/easyp/internal/config/v1"
 	disk "github.com/easyp-tech/easyp/internal/fs/fs"
 )
@@ -47,6 +48,9 @@ func (c *Cache) Install(ctx context.Context, lock v1.Lock) error {
 		if actual != entry.Hash {
 			return fmt.Errorf("cached %s@%s hash mismatch: got %s, want %s; inspect or quarantine only cache directory %q, then rerun easyp mod download; keep protobuf.lock unchanged", entry.Source, entry.Commit, actual, entry.Hash, installed)
 		}
+		if err := moduleconfig.ValidateLegacyMajor(installed, entry.Source, entry.Version); err != nil {
+			return fmt.Errorf("ValidateLegacyMajor: %w", err)
+		}
 	}
 	return nil
 }
@@ -77,6 +81,9 @@ func fetchPinnedV1Module(ctx context.Context, entry v1.LockedModule, cacheRoot, 
 	}
 	if actual != entry.Hash {
 		return fmt.Errorf("%s@%s hash mismatch: got %s, want %s; downloaded contents do not match the pinned hash; investigate repository integrity and keep protobuf.lock unchanged", entry.Source, entry.Commit, actual, entry.Hash)
+	}
+	if err := moduleconfig.ValidateLegacyMajor(checkout, entry.Source, entry.Version); err != nil {
+		return fmt.Errorf("ValidateLegacyMajor: %w", err)
 	}
 	parent := filepath.Dir(installed)
 	if err := os.MkdirAll(parent, 0o755); err != nil {

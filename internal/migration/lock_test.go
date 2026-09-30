@@ -60,9 +60,9 @@ func TestMigrateLockTaggedHistoricalPins(t *testing.T) {
 	}{
 		{name: "sha_direct", legacyVersion: testCommit, directVersion: "v1.2.3", wantVersion: "v1.2.3"},
 		{name: "pseudo_direct", legacyVersion: "v0.0.0-20260101123456-" + testCommit, directVersion: "v1.2.3", wantVersion: "v1.2.3"},
-		{name: "transitive_higher", legacyVersion: testCommit, directVersion: "v1.0.0", transitiveVersion: "v2.0.0", wantVersion: "v2.0.0"},
-		{name: "direct_higher", legacyVersion: testCommit, directVersion: "v2.0.0", transitiveVersion: "v1.0.0", wantVersion: "v2.0.0"},
-		{name: "tag_pin_retained", legacyVersion: "v3.0.0", directVersion: "v1.0.0", wantVersion: "v3.0.0"},
+		{name: "transitive_higher", legacyVersion: testCommit, directVersion: "v1.0.0", transitiveVersion: "v1.2.0", wantVersion: "v1.2.0"},
+		{name: "direct_higher", legacyVersion: testCommit, directVersion: "v1.2.0", transitiveVersion: "v1.0.0", wantVersion: "v1.2.0"},
+		{name: "tag_pin_retained", legacyVersion: "v1.3.0", directVersion: "v1.0.0", wantVersion: "v1.3.0"},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
@@ -114,7 +114,7 @@ func TestMigrateLockDoesNotInventTagLabels(t *testing.T) {
 	}{
 		{name: "tag_moved", tagCommit: otherCommit, returnedVersion: "v1.0.0", tagHash: testNewHash, wantError: "incompatible"},
 		{name: "tag_missing", missingTag: true, wantError: "unexpected integrity request"},
-		{name: "tag_label_differs", tagCommit: testCommit, returnedVersion: "v2.0.0", tagHash: testNewHash, wantError: "resolved version"},
+		{name: "tag_label_differs", tagCommit: testCommit, returnedVersion: "v1.2.0", tagHash: testNewHash, wantError: "resolved version"},
 		{name: "tag_hash_differs", tagCommit: testCommit, returnedVersion: "v1.0.0", tagHash: testHash, wantError: "content hash"},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
@@ -198,7 +198,7 @@ func TestMigrateLockChecksEveryRequiredTagBeforeLabeling(t *testing.T) {
 	t.Parallel()
 	const dependency = "example.com/acme/dep"
 	const consumer = "example.com/acme/consumer"
-	module := v1.Module{Name: "example.com/acme/local", Requires: []v1.Requirement{{Module: dependency, Version: "v2.0.0"}, {Module: consumer}}}
+	module := v1.Module{Name: "example.com/acme/local", Requires: []v1.Requirement{{Module: dependency, Version: "v1.2.0"}, {Module: consumer}}}
 	pins := map[string]legacyPin{
 		dependency: {source: dependency, version: testCommit, hash: testHash},
 		consumer:   {source: consumer, version: testCommit, hash: testHash},
@@ -207,13 +207,13 @@ func TestMigrateLockChecksEveryRequiredTagBeforeLabeling(t *testing.T) {
 		fetched: map[string]modules.Fetched{
 			dependency + "@" + testCommit: migrationFetched(dependency, testCommit, testCommit),
 			consumer + "@" + testCommit:   migrationFetched(consumer, testCommit, testCommit, v1.Requirement{Module: dependency, Version: "v1.0.0"}),
-			dependency + "@v2.0.0":        migrationFetched(dependency, "v2.0.0", testCommit),
+			dependency + "@v1.2.0":        migrationFetched(dependency, "v1.2.0", testCommit),
 			dependency + "@v1.0.0":        migrationFetched(dependency, "v1.0.0", strings.Repeat("a", 40)),
 		},
 		wantOldHashes: map[string]string{
 			dependency + "@" + testCommit: testHash,
 			consumer + "@" + testCommit:   testHash,
-			dependency + "@v2.0.0":        "",
+			dependency + "@v1.2.0":        "",
 			dependency + "@v1.0.0":        "",
 		},
 	}
@@ -317,7 +317,7 @@ func TestUnsafeLockMigration(t *testing.T) {
 		{name: "short_pseudo", old: "v0.0.0-20260101123456-0123456", errorText: "full Git commit"},
 		{name: "hash_mismatch", old: testCommit, mismatch: true, errorText: "legacy hash mismatch"},
 		{name: "transitive_missing", old: "v1.0.0", requirement: "other", errorText: "missing"},
-		{name: "transitive_incompatible", old: "v1.0.0", requirement: "v2.0.0", errorText: "incompatible"},
+		{name: "transitive_incompatible", old: "v1.0.0", requirement: "v1.2.0", errorText: "incompatible"},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
@@ -351,10 +351,10 @@ func TestUnsafeLockMigration(t *testing.T) {
 func TestLegacyManifest(t *testing.T) {
 	t.Parallel()
 	for _, tt := range []struct{ name, manifest, wantError string }{
-		{name: "blocks_and_inline", manifest: "direct (\nexample.com/acme/a@v1.2.3\n)\nindirect (\nexample.com/acme/b@" + testCommit + "\n)\nexample.com/acme/c@v2.0.0\n"},
+		{name: "blocks_and_inline", manifest: "direct (\nexample.com/acme/a@v1.2.3\n)\nindirect (\nexample.com/acme/b@" + testCommit + "\n)\nexample.com/acme/c@v1.2.0\n"},
 		{name: "local_replacement", manifest: "direct (\nexample.com/acme/a@v1.2.3\n)\nreplace example.com/acme/a@v1.2.3 => ../a\n"},
-		{name: "ambiguous_replace", manifest: "direct example.com/acme/a@v1.2.3\nreplace example.com/acme/a@v1.2.3 => ../a\nreplace example.com/acme/a@v2.0.0 => ../b\n", wantError: "ambiguous"},
-		{name: "wrong_replace", manifest: "direct example.com/acme/a@v1.2.3\nreplace example.com/acme/a@v2.0.0 => ../a\n", wantError: "version-specific"},
+		{name: "ambiguous_replace", manifest: "direct example.com/acme/a@v1.2.3\nreplace example.com/acme/a@v1.2.3 => ../a\nreplace example.com/acme/a@v1.2.0 => ../b\n", wantError: "ambiguous"},
+		{name: "wrong_replace", manifest: "direct example.com/acme/a@v1.2.3\nreplace example.com/acme/a@v1.2.0 => ../a\n", wantError: "version-specific"},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()

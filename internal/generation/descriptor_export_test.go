@@ -76,7 +76,7 @@ func TestDescriptorDirectoryIsolatesDependenciesAndConsumers(t *testing.T) {
 				writeV1GenerateFixture(t, root, project+"/easyp.gen.yaml", "version: v1\ngenerate:\n  modules: [proto/user, proto/order]\noptions:\n  go:\n    package_prefix: example.com/"+project+"/gen\n"+descriptorMarkerConfig)
 			}
 			for i, module := range []string{"user", "order"} {
-				version := fmt.Sprintf("v%d.0.0", i+1)
+				version := fmt.Sprintf("v1.%d.0", i)
 				writeV1GenerateFixture(t, root, "proto/"+module+"/protobuf.mod", "module example.com/"+module+"\nrequire example.com/common "+version+"\nreplace example.com/common => ../../common-"+version+"\n")
 				writeV1GenerateFixture(t, root, "proto/"+module+"/"+module+".proto", "syntax = \"proto3\"; package "+module+"; import \"money.proto\"; message Item { common.Money money = 1; }")
 				writeV1GenerateFixture(t, root, "common-"+version+"/protobuf.mod", "module example.com/common\n")

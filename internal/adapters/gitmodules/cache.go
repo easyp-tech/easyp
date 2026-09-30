@@ -21,10 +21,16 @@ func New(storageDir string) *Cache {
 // Cached reads installed metadata without downloading or changing files.
 // Call Install first to verify contents against the lock.
 func (c *Cache) Cached(entry v1.LockedModule) (string, v1.Module, error) {
+	if err := v1.ValidateModuleVersion(entry.Source, entry.Version); err != nil {
+		return "", v1.Module{}, fmt.Errorf("ValidateModuleVersion: %w", err)
+	}
 	directory := v1ModuleCachePath(c.root, entry)
-	module, err := moduleconfig.ReadGitDependency(directory, entry.Source)
+	module, err := readCachedV1Module(directory, entry.Source)
 	if err != nil {
-		return "", v1.Module{}, fmt.Errorf("ReadGitDependency: %w", err)
+		return "", v1.Module{}, fmt.Errorf("readCachedV1Module: %w", err)
+	}
+	if err := moduleconfig.ValidateLegacyMajor(directory, entry.Source, entry.Version); err != nil {
+		return "", v1.Module{}, fmt.Errorf("ValidateLegacyMajor: %w", err)
 	}
 	return directory, module, nil
 }
@@ -38,4 +44,31 @@ func (c *Cache) Versions(ctx context.Context, source string) ([]string, error) {
 func ValidateSource(source string) error {
 	_, err := v1GitModuleCandidates(source)
 	return err
+}
+
+// readCachedV1Module reuses the verified major-layout rules without requesting
+// network metadata or letting an unrelated native module poison cache lookup.
+func readCachedV1Module(directory, source string) (v1.Module, error) {
+	major, err := v1.ModulePathMajor(source)
+	if err != nil {
+		return v1.Module{}, fmt.Errorf("ModulePathMajor: %w", err)
+	}
+	if major == "" {
+		return moduleconfig.ReadGitDependency(directory, source)
+	}
+	candidates, err := v1GitModuleCandidates(source)
+	if err != nil {
+		return v1.Module{}, fmt.Errorf("v1GitModuleCandidates: %w", err)
+	}
+	var firstErr error
+	for _, candidate := range candidates {
+		module, err := moduleconfig.ReadGitDependencyAt(directory, source, candidate.subdir)
+		if err == nil {
+			return module, nil
+		}
+		if firstErr == nil {
+			firstErr = err
+		}
+	}
+	return v1.Module{}, fmt.Errorf("ReadGitDependencyAt: %w", firstErr)
 }

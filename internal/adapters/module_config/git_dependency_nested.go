@@ -22,7 +22,11 @@ type nestedGitDependency struct {
 // resolver and the verified module cache.
 func readNestedGitDependencyModule(dir, source string) (nestedGitDependency, error) {
 	var result nestedGitDependency
-	err := filepath.WalkDir(dir, func(path string, entry fs.DirEntry, walkErr error) error {
+	major, err := v1.ModulePathMajor(source)
+	if err != nil {
+		return result, fmt.Errorf("ModulePathMajor: %w", err)
+	}
+	err = filepath.WalkDir(dir, func(path string, entry fs.DirEntry, walkErr error) error {
 		if walkErr != nil {
 			return fmt.Errorf("WalkDir: %w", walkErr)
 		}
@@ -43,6 +47,21 @@ func readNestedGitDependencyModule(dir, source string) (nestedGitDependency, err
 			return nil
 		}
 		result.hasManifests = true
+		location, err := filepath.Rel(dir, filepath.Dir(path))
+		if err != nil {
+			return fmt.Errorf("Rel: %w", err)
+		}
+		if strings.HasPrefix(major, "/") {
+			// Installed snapshots need the same physical suffix check as fresh
+			// Git candidates. Never accept an arbitrary nested declaration.
+			suffix := "/" + filepath.ToSlash(location)
+			if !strings.HasSuffix(source, suffix) && !strings.HasSuffix(strings.TrimSuffix(source, major), suffix) {
+				return nil
+			}
+		}
+		if name := nativeDependencyName(raw); name != "" && name != source {
+			return nil
+		}
 		module, err := v1.ParseModule(bytes.NewReader(raw))
 		if err != nil {
 			return fmt.Errorf("ParseModule: %s: %w", path, err)
@@ -52,10 +71,6 @@ func readNestedGitDependencyModule(dir, source string) (nestedGitDependency, err
 		}
 		if result.found {
 			return fmt.Errorf("module %s is declared more than once in %s", source, dir)
-		}
-		location, err := filepath.Rel(dir, filepath.Dir(path))
-		if err != nil {
-			return fmt.Errorf("Rel: %w", err)
 		}
 		for i, root := range module.Roots {
 			module.Roots[i] = filepath.Join(location, root)

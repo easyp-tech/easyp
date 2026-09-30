@@ -121,12 +121,18 @@ func cachedSources(lock v1.Lock, replaced map[string]bool, repository Cache) (So
 func ValidateRequirements(requirements []v1.Requirement, lock v1.Lock) error {
 	locked := make(map[string]v1.LockedModule, len(lock.Modules))
 	for _, entry := range lock.Modules {
+		if err := v1.ValidateModuleVersion(entry.Source, entry.Version); err != nil {
+			return fmt.Errorf("ValidateModuleVersion: %w", err)
+		}
 		if _, duplicate := locked[entry.Source]; duplicate {
 			return fmt.Errorf("duplicate locked module %s", entry.Source)
 		}
 		locked[entry.Source] = entry
 	}
 	for _, requirement := range requirements {
+		if err := v1.ValidateModuleVersion(requirement.Module, requirement.Version); err != nil {
+			return fmt.Errorf("ValidateModuleVersion: %w", err)
+		}
 		entry, ok := locked[requirement.Module]
 		if !ok || !v1RequirementSatisfied(requirement.Version, entry) {
 			return fmt.Errorf("protobuf.lock does not satisfy %s %s; run easyp mod tidy", requirement.Module, requirement.Version)

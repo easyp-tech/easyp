@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"strings"
 
 	"github.com/easyp-tech/easyp/internal/adapters/modfile"
 	v1 "github.com/easyp-tech/easyp/internal/config/v1"
@@ -27,6 +28,10 @@ const (
 // the roots and requirements needed by the v1 resolver. Its identity is the
 // source named by the requiring module for pre-v1 repositories.
 func ReadGitDependency(dir, source string) (v1.Module, error) {
+	major, err := v1.ModulePathMajor(source)
+	if err != nil {
+		return v1.Module{}, fmt.Errorf("ModulePathMajor: %w", err)
+	}
 	modes, err := detectGitDependencyModes(dir)
 	if err != nil {
 		return v1.Module{}, fmt.Errorf("detectGitDependencyModes: %w", err)
@@ -39,6 +44,9 @@ func ReadGitDependency(dir, source string) (v1.Module, error) {
 			return v1.Module{}, fmt.Errorf("readGitDependencyManifest: %w", err)
 		}
 		if rootIsV1 && rootManifest.Name == source {
+			if strings.HasPrefix(major, "/") {
+				return ReadGitDependencyAt(dir, source, "")
+			}
 			return rootManifest, nil
 		}
 	}
@@ -51,6 +59,9 @@ func ReadGitDependency(dir, source string) (v1.Module, error) {
 	}
 	if nested.hasManifests && len(modes) == 0 {
 		return v1.Module{}, fmt.Errorf("dependency %s is not declared by a nested protobuf.mod in %s", source, dir)
+	}
+	if major != "" {
+		return v1.Module{}, fmt.Errorf("module %s requires a native protobuf.mod declaring its exact identity at an allowed module directory", source)
 	}
 	module := v1.Module{Name: source}
 	var bufRoots, legacyRoots []string
@@ -134,6 +145,9 @@ func readGitDependencyManifest(path, source string) (v1.Module, bool, error) {
 		return v1.Module{}, false, fmt.Errorf("ReadFile: %w", err)
 	}
 	if v1.IsModuleManifest(manifest) {
+		if name := nativeDependencyName(manifest); name != "" && name != source {
+			return v1.Module{Name: name}, true, nil
+		}
 		parsed, err := v1.ParseModule(bytes.NewReader(manifest))
 		if err != nil {
 			return v1.Module{}, false, fmt.Errorf("ParseModule: %w", err)
@@ -156,23 +170,69 @@ func readGitDependencyManifest(path, source string) (v1.Module, bool, error) {
 
 // ReadGitDependencyAt verifies the candidate module directory before adapting repository-relative roots.
 func ReadGitDependencyAt(checkout, source, subdir string) (v1.Module, error) {
-	if subdir != "" {
-		manifestPath := filepath.Join(checkout, subdir, v1.ModuleFile)
+	major, err := v1.ModulePathMajor(source)
+	if err != nil {
+		return v1.Module{}, fmt.Errorf("ModulePathMajor: %w", err)
+	}
+	locations := []string{subdir}
+	if strings.HasPrefix(major, "/") {
+		locations = append(locations, filepath.Join(subdir, strings.TrimPrefix(major, "/")))
+	}
+	var selected *v1.Module
+	var identityErr error
+	for _, location := range locations {
+		manifestPath := filepath.Join(checkout, location, v1.ModuleFile)
 		raw, err := os.ReadFile(manifestPath)
-		if err != nil {
-			return v1.Module{}, fmt.Errorf("ReadFile: %s: %w", manifestPath, err)
+		if errors.Is(err, os.ErrNotExist) {
+			continue
 		}
-		module, err := v1.ParseModule(bytes.NewReader(raw))
+		if err != nil {
+			return v1.Module{}, fmt.Errorf("ReadFile: %w", err)
+		}
+		if !v1.IsModuleManifest(raw) {
+			continue
+		}
+		if name := nativeDependencyName(raw); name != "" && name != source {
+			identityErr = fmt.Errorf("%s declares module %s, want %s", manifestPath, name, source)
+			continue
+		}
+		parsed, err := v1.ParseModule(bytes.NewReader(raw))
 		if err != nil {
 			return v1.Module{}, fmt.Errorf("ParseModule: %s: %w", manifestPath, err)
 		}
-		if module.Name != source {
-			return v1.Module{}, fmt.Errorf("%s declares module %s, want %s", manifestPath, module.Name, source)
+		if parsed.Name != source {
+			identityErr = fmt.Errorf("%s declares module %s, want %s", manifestPath, parsed.Name, source)
+			continue
+		}
+		if selected != nil {
+			return v1.Module{}, fmt.Errorf("module %s is declared more than once in %s", source, checkout)
+		}
+		for i, root := range parsed.Roots {
+			parsed.Roots[i] = filepath.Join(location, root)
+		}
+		selected = &parsed
+	}
+	if selected != nil {
+		return *selected, nil
+	}
+	if identityErr != nil {
+		return v1.Module{}, identityErr
+	}
+	// Pre-native metadata is supported only at an unsuffixed repository root.
+	if subdir == "" && major == "" {
+		return ReadGitDependency(checkout, source)
+	}
+	return v1.Module{}, fmt.Errorf("module %s requires a protobuf.mod declaring its exact identity in %v", source, locations)
+}
+
+// nativeDependencyName only selects metadata. The chosen manifest must still
+// pass ParseModule; unrelated modules have independent requirements and policy.
+func nativeDependencyName(raw []byte) string {
+	for _, line := range strings.Split(strings.TrimPrefix(string(raw), "\ufeff"), "\n") {
+		fields := strings.Fields(line)
+		if len(fields) >= 2 && fields[0] == "module" {
+			return fields[1]
 		}
 	}
-	module, err := ReadGitDependency(checkout, source)
-	if err != nil {
-		return v1.Module{}, fmt.Errorf("ReadGitDependency: %w", err)
-	}
-	return module, nil
+	return ""
 }

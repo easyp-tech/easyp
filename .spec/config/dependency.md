@@ -28,6 +28,31 @@ require (
 
 Nested modules get separate lock entries even when their commits match. The Git adapter tries repository candidates and the metadata reader confirms the requested module name at the candidate directory. A root manifest does not hide named nested modules.
 
+## Major versions and Git mapping
+
+EasyP uses Go-style semantic import versioning for module identities. Native <code>module</code>, <code>require</code>, <code>replace</code> source identities, fetched metadata and lock entries are checked; changing only the consumer manifest cannot bypass the check.
+
+- v0 and v1 share the unsuffixed identity. From v2 onward, the final path component is <code>vN</code>, where N is a decimal integer of at least 2 without leading zeros, and the SemVer major must equal N.
+- <code>/v0</code>, <code>/v1</code>, <code>/v01</code> and numeric dotted suffixes such as <code>/v2.0</code> are invalid module suffixes. Ordinary components such as <code>/2024</code> or <code>/v2beta</code> are not major suffixes. The check concerns module identities, not directories or protobuf import paths inside a module.
+- <code>golang.org/x/mod/module.SplitPathVersion</code> and <code>CheckPathMajor</code> implement the suffix rules (including Go's <code>gopkg.in/name.vN</code> spelling). Absolute local Git fixture paths and explicit transport URLs remain supported; the URL host/path is checked without treating credentials or a port as a module suffix. Transport spelling remains part of identity and is not silently normalized.
+- Omitting a version or using a full commit does not waive exact native manifest identity checks. These refs provide no semantic major to infer; a valid declared identity is still required.
+
+| Requested identity | Allowed physical manifest directory | Release tag |
+|---|---|---|
+| <code>repo</code> at <code>v1.2.0</code> | repository root | <code>v1.2.0</code> |
+| <code>repo/v2</code> at <code>v2.0.0</code> | root or <code>v2/</code> | <code>v2.0.0</code> |
+| <code>repo/sub/v2</code> at <code>v2.0.0</code> | <code>sub/</code> or <code>sub/v2/</code> | <code>sub/v2.0.0</code> |
+
+The final slash major suffix is logical: it is excluded from the repository candidate and the tag prefix. A tag alone does not establish module identity; the manifest at an allowed location must declare the exact requested source. Lightweight and annotated tags resolve to commits. A <code>v2/v2.0.0</code> tag does not release <code>repo/v2</code>.
+
+<code>repo</code> and <code>repo/v2</code> are separate MVS, lock, cache and replacement identities. They may coexist when their protobuf import paths are distinct. EasyP never rewrites protobuf packages or imports; duplicate import paths still fail, even for identical content. Same-identity maximum-minimum selection, exact SHA/tag agreement, immutable tags, local overlays and explicit frozen checks remain in force.
+
+The Go pre-module <code>+incompatible</code> exception is supported only for an explicitly marked, unsuffixed v2+ requirement whose exact Git revision has no native root <code>protobuf.mod</code> and no matching nested native manifest. For example, <code>repo v2.0.0+incompatible</code> resolves the root tag <code>v2.0.0</code>, never a tag literally ending in <code>+incompatible</code>. Fetch, migration, cold installation and warm cache reads verify this metadata boundary. Update preserves the marker for eligible legacy releases and rejects a selected revision that has become native. Markers on v0/v1 or on suffixed identities are rejected. An unmarked unsuffixed v2+ requirement remains invalid.
+
+Migration does not invent a namespace, add a compatibility marker, or change a source/version. For an old unsuffixed native v2+ dependency, select a published <code>/vN</code> identity and matching version, or explicitly choose an unsuffixed v0/v1 release, then retry. A published native manifest can never qualify for the legacy exception. As in Go, an unversioned local replacement may contain a native manifest with the same unsuffixed identity even when replacing an explicit legacy <code>+incompatible</code> requirement. This overlay does not certify a published revision and cannot change the shared lock; frozen mode rejects replacements. Requirements read from older metadata are checked again when used at the actual source boundary.
+
+See [Go major version suffixes](https://go.dev/ref/mod#major-version-suffixes) and [mapping versions to commits](https://go.dev/ref/mod#vcs-version).
+
 ## Lock and cache
 
 <code>protobuf.lock</code> is YAML with integer <code>version: 1</code> and a <code>modules</code> sequence. Each entry has <code>source</code>, <code>version</code>, <code>commit</code> and <code>hash</code>; the resolver sorts by source. Commits must be full 40- or 64-character hexadecimal hashes; <code>hash</code> is <code>h1:</code> plus a base64 SHA-256 digest. A commit-valued version must equal the commit. Duplicate sources, unknown fields and multiple YAML documents are rejected. The hash covers tracked regular-file content using Go's directory-hash algorithm. Symlinks/non-regular tracked entries are rejected by installation.

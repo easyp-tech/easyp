@@ -19,6 +19,9 @@ func (c *Cache) Fetch(ctx context.Context, source, version string) (modules.Fetc
 		return modules.Fetched{}, fmt.Errorf("checkoutV1Module: %w", err)
 	}
 	defer func() { _ = os.RemoveAll(checkout.dir) }()
+	if err := moduleconfig.ValidateLegacyMajor(checkout.dir, source, version); err != nil {
+		return modules.Fetched{}, fmt.Errorf("ValidateLegacyMajor: %w", err)
+	}
 	files, err := trackedV1Files(ctx, checkout.dir)
 	if err != nil {
 		return modules.Fetched{}, fmt.Errorf("trackedV1Files: %w", err)
@@ -44,6 +47,9 @@ type v1ModuleCheckout struct {
 // checkoutV1Module selects a repository revision. The caller owns the returned
 // directory and removes it after reading its metadata and tracked contents.
 func checkoutV1Module(ctx context.Context, source, version, cacheRoot string) (checkout v1ModuleCheckout, err error) {
+	if err := v1.ValidateModuleVersion(source, version); err != nil {
+		return v1ModuleCheckout{}, fmt.Errorf("ValidateModuleVersion: %w", err)
+	}
 	if err := os.MkdirAll(cacheRoot, 0o755); err != nil {
 		return v1ModuleCheckout{}, fmt.Errorf("MkdirAll: %w", err)
 	}
@@ -71,9 +77,9 @@ func checkoutV1Module(ctx context.Context, source, version, cacheRoot string) (c
 		if err != nil {
 			return v1ModuleCheckout{}, fmt.Errorf("gitV1: %w", err)
 		}
-		module, err := moduleconfig.ReadGitDependency(dir, source)
+		module, err := readCachedV1Module(dir, source)
 		if err != nil {
-			return v1ModuleCheckout{}, fmt.Errorf("ReadGitDependency: %w", err)
+			return v1ModuleCheckout{}, fmt.Errorf("readCachedV1Module: %w", err)
 		}
 		return v1ModuleCheckout{dir: dir, module: module, commit: strings.TrimSpace(commit)}, nil
 	}
@@ -86,7 +92,7 @@ func checkoutV1Module(ctx context.Context, source, version, cacheRoot string) (c
 	if err != nil {
 		return v1ModuleCheckout{}, fmt.Errorf("MkdirTemp: %w", err)
 	}
-	tag := candidate.tag(version)
+	tag := candidate.tag(strings.TrimSuffix(version, "+incompatible"))
 	if _, err := gitV1(ctx, "", "clone", "--quiet", "--depth=1", "--branch", tag, "--no-checkout", "--", candidate.remote, dir); err != nil {
 		return v1ModuleCheckout{}, fmt.Errorf("gitV1: %w", err)
 	}

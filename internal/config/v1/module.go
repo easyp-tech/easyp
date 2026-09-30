@@ -114,6 +114,9 @@ func ParseModule(r io.Reader) (Module, error) {
 			if result.Name != "" || len(fields) != 1 {
 				return Module{}, fmt.Errorf("protobuf.mod:%d: expected one module identity", line)
 			}
+			if err := ValidateModuleVersion(fields[0], ""); err != nil {
+				return Module{}, fmt.Errorf("protobuf.mod:%d: %w", line, err)
+			}
 			result.Name = fields[0]
 		case "roots":
 			if len(fields) == 0 {
@@ -140,6 +143,9 @@ func ParseModule(r io.Reader) (Module, error) {
 			if len(fields) == 2 {
 				requirement.Version = fields[1]
 			}
+			if err := ValidateModuleVersion(requirement.Module, requirement.Version); err != nil {
+				return Module{}, fmt.Errorf("protobuf.mod:%d: %w", line, err)
+			}
 			result.Requires = append(result.Requires, requirement)
 		case "replace":
 			if len(fields) != 3 || fields[1] != "=>" {
@@ -147,6 +153,9 @@ func ParseModule(r io.Reader) (Module, error) {
 			}
 			if firstLine, ok := replaces[fields[0]]; ok {
 				return Module{}, fmt.Errorf("protobuf.mod:%d: duplicate replace source %q (first declared at line %d)", line, fields[0], firstLine)
+			}
+			if err := ValidateModuleVersion(fields[0], ""); err != nil {
+				return Module{}, fmt.Errorf("protobuf.mod:%d: %w", line, err)
 			}
 			replaces[fields[0]] = line
 			result.Replaces = append(result.Replaces, Replacement{Module: fields[0], Target: fields[2]})
