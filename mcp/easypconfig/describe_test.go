@@ -88,10 +88,10 @@ func TestDescribeNotesForReservedFields(t *testing.T) {
 		path string
 		want string
 	}{
-		{name: "package filter", file: v1.GenerateFile, path: "generate.packages", want: "generation fails"},
+		{name: "package filter", file: v1.GenerateFile, path: "generate.packages", want: "nonempty values are rejected"},
 		{name: "linter inheritance", file: v1.PolicyFile, path: "linters.extends", want: "not implemented"},
-		{name: "issue path matching", file: v1.PolicyFile, path: "issues.exclude-rules[0].path", want: "not implemented"},
-		{name: "breaking unstable", file: v1.PolicyFile, path: "breaking.ignore_unstable", want: "not supported"},
+		{name: "issue path matching", file: v1.PolicyFile, path: "issues.exclude-rules[0].path", want: "relative to the easyp.yaml"},
+		{name: "breaking unstable", file: v1.PolicyFile, path: "breaking.ignore_unstable", want: "both comparison revisions"},
 		{name: "breaking inheritance", file: v1.PolicyFile, path: "breaking.extends", want: "not implemented"},
 	}
 

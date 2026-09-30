@@ -28,6 +28,8 @@ type BreakingCheckConfig struct {
 	IgnoreDirs []string
 
 	FilesCheck bool
+	// IgnoreUnstable skips packages whose final component is an unstable version.
+	IgnoreUnstable bool
 }
 
 func (c *Core) BreakingCheck(ctx context.Context, projectRoot, workingDir, path string) ([]IssueInfo, error) {
@@ -66,6 +68,10 @@ func (c *Core) CompareBreaking(ctx context.Context, current, against DirWalker, 
 	againstData, err := collect(againstFiles)
 	if err != nil {
 		return nil, fmt.Errorf("collect: %w", err)
+	}
+	if c.breakingCheckConfig.IgnoreUnstable {
+		excludeUnstablePackages(currentData)
+		excludeUnstablePackages(againstData)
 	}
 	checker := &BreakingChecker{against: againstData, current: currentData, filesCheck: c.breakingCheckConfig.FilesCheck}
 	return checker.Check()

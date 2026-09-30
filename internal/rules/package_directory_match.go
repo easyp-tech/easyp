@@ -23,7 +23,11 @@ func (d *PackageDirectoryMatch) Message() string {
 func (d *PackageDirectoryMatch) Validate(protoInfo core.ProtoInfo) ([]core.Issue, error) {
 	var res []core.Issue
 
-	preparePath := filepath.Dir(strings.TrimPrefix(protoInfo.Path, d.Root))
+	name := strings.TrimPrefix(protoInfo.Path, d.Root)
+	if protoInfo.ImportPath != "" {
+		name = protoInfo.ImportPath
+	}
+	preparePath := filepath.Dir(name)
 	preparePath = filepath.ToSlash(preparePath)
 	expectedPackage := strings.ReplaceAll(preparePath, "/", ".")
 

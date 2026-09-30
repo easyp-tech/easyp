@@ -25,6 +25,7 @@ type schema struct {
 	Const                any                `json:"const,omitempty"`
 	Pattern              string             `json:"pattern,omitempty"`
 	MinLength            int                `json:"minLength,omitempty"`
+	MaxItems             *int               `json:"maxItems,omitempty"`
 }
 
 // SchemaJSON returns the JSON Schema used to validate a v1 YAML file.
@@ -61,8 +62,19 @@ func documents() map[string]*schema {
 	policy.Properties["breaking"].Properties["categories"].Items.Enum = []string{breakingCategoryFile}
 	policy.Properties["breaking"].Properties["categories"].Description = "FILE adds checks for declarations moved between files; existing compatibility checks remain enabled."
 
+	for _, section := range []string{"linters", "breaking"} {
+		reserved := policy.Properties[section].Properties["extends"]
+		reserved.Const = ""
+		reserved.Description = "Reserved for a future policy-loading contract. Only an omitted or empty value is accepted."
+	}
+	policy.Properties["issues"].Properties["exclude-rules"].Items.Properties["path"].Description = "Relative to the policy providing this issues section. Supports *, ?, character classes and ** directory segments; a literal directory includes its subtree."
+	policy.Properties["breaking"].Properties["ignore_unstable"].Description = "Ignore declarations in packages with unstable version suffixes; stable package checks remain enabled."
+
 	generate := fromType(reflect.TypeFor[Generate]())
 	generate.Properties["version"] = &schema{Type: "string", Const: "v1"}
+	zero := 0
+	generate.Properties["generate"].Properties["packages"].MaxItems = &zero
+	generate.Properties["generate"].Properties["packages"].Description = "Reserved package selector. Select complete modules; only an omitted or empty list is accepted."
 	generate.Properties["options"].Properties["go"].Properties["package_prefix"].Description = "Sets go_package without enabling managed defaults for other languages; full managed mode requires generate.managed.enabled."
 	plugin := generate.Properties["plugins"].Items
 	plugin.Required = []string{"out"}

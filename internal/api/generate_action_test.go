@@ -18,5 +18,5 @@ func TestGenerateRequiresV1Config(t *testing.T) {
 	ctx := cli.NewContext(&cli.App{Metadata: map[string]any{}}, flag.NewFlagSet("test", flag.ContinueOnError), nil)
 	ctx.Context = t.Context()
 	err := (Generate{}).Action(ctx)
-	require.ErrorContains(t, err, "easyp.gen.yaml")
+	require.ErrorContains(t, err, "easyp migrate")
 }

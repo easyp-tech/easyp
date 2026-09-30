@@ -186,3 +186,17 @@ EasyP is released under the [Apache License 2.0](LICENSE).
 ---
 
 *Built with ❤️ for the Protocol Buffers community*
+
+
+### Working with the v1 pilot
+
+The repository's native configuration has a runnable local example. Run
+<code>task proto:check</code> to validate it, lint it and verify repeatable
+generation without altering the source checkout. User configuration is split
+between <code>easyp.yaml</code>, <code>easyp.gen.yaml</code> and
+<code>protobuf.mod</code>/<code>protobuf.lock</code>.
+
+For a v0 project, <code>easyp migrate --module github.com/acme/contracts</code>
+previews conversion; it does not write or execute plugins. See the
+[documented migration contract](.spec/config/review-migration-and-polish.md)
+before applying it with <code>--write</code>.

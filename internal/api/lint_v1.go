@@ -6,6 +6,7 @@ import (
 	iofs "io/fs"
 	"os"
 	"path/filepath"
+	"slices"
 
 	"github.com/urfave/cli/v2"
 
@@ -16,6 +17,7 @@ import (
 	"github.com/easyp-tech/easyp/internal/fs/fs"
 	"github.com/easyp-tech/easyp/internal/logger"
 	"github.com/easyp-tech/easyp/internal/modules"
+	"github.com/easyp-tech/easyp/internal/rules"
 )
 
 func (l Lint) actionV1(ctx *cli.Context, log logger.Logger, configPath, projectRoot, lintRoot string) error {
@@ -56,7 +58,18 @@ func (l Lint) actionV1(ctx *cli.Context, log logger.Logger, configPath, projectR
 		if err != nil {
 			return fmt.Errorf("resolveV1LintPolicy: %w", err)
 		}
-		if policy.ExcludesAllIssues() {
+		var issuePath string
+		if policyKey.issues != "" {
+			issuePath, err = filepath.Rel(filepath.Dir(policyKey.issues), file)
+			if err != nil {
+				return fmt.Errorf("Rel: %w", err)
+			}
+		}
+		excludedLinters, excludeFile, err := policy.Issues.ExclusionsForPath(filepath.ToSlash(issuePath))
+		if err != nil {
+			return fmt.Errorf("ExclusionsForPath: %w", err)
+		}
+		if excludeFile {
 			continue
 		}
 		moduleDir, err := findV1PolicyModuleDir(projectRoot, filepath.Dir(file))
@@ -102,7 +115,11 @@ func (l Lint) actionV1(ctx *cli.Context, log logger.Logger, configPath, projectR
 		if err != nil {
 			return fmt.Errorf("Lint: %w", err)
 		}
-		issues = append(issues, fileIssues...)
+		for _, issue := range fileIssues {
+			if !v1IssueRuleExcluded(issue.RuleName, excludedLinters) {
+				issues = append(issues, issue)
+			}
+		}
 	}
 	if len(issues) == 0 {
 		return nil
@@ -122,6 +139,21 @@ type v1LintPolicySources struct {
 type v1LintAppKey struct {
 	policy    v1LintPolicySources
 	moduleDir string
+}
+
+func v1IssueRuleExcluded(name string, selections []string) bool {
+	if len(selections) == 0 {
+		return false
+	}
+	if slices.Contains(selections, name) {
+		return true
+	}
+	for _, group := range rules.AllGroups() {
+		if slices.Contains(selections, group.Key) && slices.Contains(group.Rules, name) {
+			return true
+		}
+	}
+	return false
 }
 
 func resolveV1LintPolicy(directory, projectRoot, configPath string) (v1.Policy, v1LintPolicySources, error) {

@@ -36,6 +36,7 @@ func (c *Core) protoInfoRead(ctx context.Context, fs FS, path string) (ProtoInfo
 		Info:                 protoFile,
 		ProtoFilesFromImport: protoFilesFromImport,
 	}
+	protoInfo.ImportPath = c.sourceImportPath(fs, path)
 	return protoInfo, nil
 }
 
@@ -120,4 +121,24 @@ func (c *Core) openImportFile(disk FS, importName string) (io.ReadCloser, error)
 		return nil, fmt.Errorf("Open: %w", err)
 	}
 	return f, nil
+}
+
+// sourceImportPath separates the import identity from the user-facing scan path.
+func (c *Core) sourceImportPath(disk FS, name string) string {
+	rooted, ok := disk.(interface{ RootPath() string })
+	if !ok {
+		return ""
+	}
+	full := filepath.Join(rooted.RootPath(), filepath.FromSlash(name))
+	var best string
+	for _, root := range c.importRoots {
+		relative, err := filepath.Rel(root, full)
+		if err != nil || !filepath.IsLocal(relative) {
+			continue
+		}
+		if best == "" || len(relative) < len(best) {
+			best = relative
+		}
+	}
+	return filepath.ToSlash(best)
 }

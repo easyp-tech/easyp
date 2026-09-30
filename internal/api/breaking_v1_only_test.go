@@ -20,6 +20,7 @@ func TestBreakingRejectsLegacyConfig(t *testing.T) {
 	require.NoError(t, os.WriteFile(configPath, []byte("breaking_check:\n  against_git_ref: main\n"), 0o644))
 	set := flag.NewFlagSet("test", flag.ContinueOnError)
 	set.String(flags.Config.Name, configPath, "")
+	require.NoError(t, set.Set(flags.Config.Name, configPath))
 	ctx := cli.NewContext(&cli.App{Metadata: map[string]any{}}, set, nil)
 	ctx.Context = t.Context()
 	err := (BreakingCheck{}).action(ctx, logger.NewNop())

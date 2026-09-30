@@ -48,6 +48,7 @@ func main() {
 			api.Get{},
 			api.Completion{},
 			api.Init{},
+			api.Migrate{},
 			api.Generate{},
 			api.LsFiles{},
 			api.SchemaGen{},

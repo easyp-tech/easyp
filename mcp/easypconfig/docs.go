@@ -16,14 +16,14 @@ var descriptions = map[string]map[string]string{
 		"linters-settings.SERVICE_SUFFIX":         "Suffix for service names.",
 		"issues":                                  "Rules for suppressing lint findings.",
 		"issues.exclude-rules":                    "Suppress lint findings matching a rule.",
-		"issues.exclude-rules[].path":             "Reserved path matcher for excluded findings.",
+		"issues.exclude-rules[].path":             "Policy-source-relative path or glob; literal directories include descendants, ** matches directory segments.",
 		"issues.exclude-rules[].linters":          "Implemented lint rules or groups suppressed by this exclusion; unknown or unimplemented names are rejected.",
 		"breaking":                                "Compatibility checks against a Git baseline.",
 		"breaking.baseline":                       "Configured Git baseline; an explicit --against overrides it, while the CLI default does not.",
 		"breaking.ignore":                         "Paths ignored by breaking checks.",
 		"breaking.categories":                     "Optional compatibility checks; FILE also detects declarations moved between files.",
 		"breaking.extends":                        "Reserved reference to another breaking policy.",
-		"breaking.ignore_unstable":                "Reserved flag for ignoring unstable declarations.",
+		"breaking.ignore_unstable":                "Ignore only declarations in packages with unstable version suffixes; stable package checks remain active.",
 	},
 	v1.GenerateFile: {
 		"version":                                  "Configuration version; v1 is the only supported value.",
@@ -108,15 +108,15 @@ func selectExamples(file, path string, limit int) []Example {
 func notesFor(file, path string) []string {
 	switch {
 	case file == v1.GenerateFile && within("generate.packages", path):
-		return []string{"generate.packages is reserved and generation fails when it is set."}
+		return []string{"generate.packages is reserved; nonempty values are rejected by schema and CLI. Use generate.modules for complete module selection."}
 	case file == v1.PolicyFile && path == "linters.extends":
 		return []string{"linters.extends is not implemented; lint fails when it is set."}
 	case file == v1.PolicyFile && path == "issues.exclude-rules[].path":
-		return []string{"issues.exclude-rules.path matching is not implemented; lint fails when it is set."}
+		return []string{"Paths are relative to the easyp.yaml providing the effective issues section, not the invocation directory. Supports *, ?, character classes and whole-segment **. A matching exclusion without linters suppresses every rule for that file."}
 	case file == v1.PolicyFile && path == "breaking.categories":
 		return []string{"FILE is the only supported category and adds declaration-move checks. Existing compatibility checks remain enabled; other categories are not supported."}
 	case file == v1.PolicyFile && path == "breaking.ignore_unstable":
-		return []string{"breaking.ignore_unstable is not supported by the current checker."}
+		return []string{"Filters unstable version-suffixed packages in both comparison revisions. Stable package declarations, imports and references remain checked."}
 	case file == v1.PolicyFile && path == "breaking.extends":
 		return []string{"breaking.extends is not implemented; breaking checks fail when it is set."}
 	default:

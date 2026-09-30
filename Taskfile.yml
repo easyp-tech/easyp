@@ -36,6 +36,11 @@ tasks:
     cmds:
       - "go build -o easyp ./cmd/easyp"
 
+  proto:check:
+    desc: Validate the native v1 example and verify deterministic generation
+    cmds:
+      - sh scripts/check-proto-example.sh
+
   schema:generate:
     desc: Generate v1 JSON Schemas from the configuration models
     cmds:

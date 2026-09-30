@@ -2,6 +2,7 @@ package modules
 
 import (
 	"strings"
+	"unicode"
 
 	v1 "github.com/easyp-tech/easyp/internal/config/v1"
 )
@@ -9,12 +10,13 @@ import (
 // v1RequirementLine keeps the source spelling so edits preserve comments and
 // whitespace outside the version or indirect marker being changed.
 type v1RequirementLine struct {
-	index      int
-	body       string
-	comment    string
-	hasComment bool
-	module     string
-	version    string
+	index         int
+	body          string
+	comment       string
+	commentPrefix string
+	hasComment    bool
+	module        string
+	version       string
 }
 
 func parseV1RequirementLines(lines []string) []v1RequirementLine {
@@ -22,7 +24,11 @@ func parseV1RequirementLines(lines []string) []v1RequirementLine {
 	block := ""
 	for i, line := range lines {
 		body, comment, hasComment := splitV1ManifestComment(line)
-		trimmed := strings.TrimSpace(body)
+		parseBody := body
+		if i == 0 {
+			parseBody = strings.TrimPrefix(parseBody, "\ufeff")
+		}
+		trimmed := strings.TrimSpace(parseBody)
 		if strings.HasSuffix(trimmed, "(") {
 			block = strings.TrimSpace(strings.TrimSuffix(trimmed, "("))
 			continue
@@ -34,7 +40,7 @@ func parseV1RequirementLines(lines []string) []v1RequirementLine {
 		if block != "" && block != "require" {
 			continue
 		}
-		fields := strings.Fields(body)
+		fields := strings.Fields(parseBody)
 		if block == "" {
 			if len(fields) == 0 || fields[0] != "require" {
 				continue
@@ -45,6 +51,9 @@ func parseV1RequirementLines(lines []string) []v1RequirementLine {
 			continue
 		}
 		entry := v1RequirementLine{index: i, body: body, comment: comment, hasComment: hasComment, module: fields[0]}
+		if hasComment && strings.HasPrefix(line[len(body):], "#") {
+			entry.commentPrefix = "#"
+		}
 		if len(fields) == 2 {
 			entry.version = fields[1]
 		}
@@ -73,7 +82,7 @@ func (line v1RequirementLine) withVersion(version string) v1RequirementLine {
 
 func (line v1RequirementLine) indirect() bool {
 	words := strings.Fields(line.comment)
-	return line.hasComment && len(words) > 0 && words[0] == "indirect"
+	return line.hasComment && line.commentPrefix != "#" && len(words) > 0 && words[0] == "indirect"
 }
 
 func (line v1RequirementLine) direct() v1RequirementLine {
@@ -105,7 +114,11 @@ func directV1Module(original []byte, module v1.Module) v1.Module {
 
 func (line v1RequirementLine) String() string {
 	if line.hasComment {
-		return line.body + "//" + line.comment
+		prefix := line.commentPrefix
+		if prefix == "" {
+			prefix = "//"
+		}
+		return line.body + prefix + line.comment
 	}
 	return line.body
 }
@@ -137,10 +150,15 @@ func appendV1Requirements(original []byte, requirements []v1ManifestRequirement)
 }
 
 func splitV1ManifestComment(line string) (string, string, bool) {
-	for i := 0; i+1 < len(line); i++ {
-		if line[i] == '/' && line[i+1] == '/' && (i == 0 || line[i-1] == ' ' || line[i-1] == '\t') {
+	tokenStart := true
+	for i, char := range line {
+		if tokenStart && char == '#' {
+			return line[:i], line[i+1:], true
+		}
+		if tokenStart && strings.HasPrefix(line[i:], "//") {
 			return line[:i], line[i+2:], true
 		}
+		tokenStart = unicode.IsSpace(char)
 	}
 	return line, "", false
 }

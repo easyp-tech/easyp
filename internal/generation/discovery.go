@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"slices"
 
+	v1 "github.com/easyp-tech/easyp/internal/config/v1"
 	"github.com/easyp-tech/easyp/internal/workspace"
 )
 
@@ -43,6 +44,19 @@ func selectGenerateConfigs(request Request) ([]string, error) {
 		return nil, err
 	}
 	if path == "" {
+		legacy, lookupErr := workspace.FindUp(request.WorkDir, request.WorkspaceRoot, v1.PolicyFile)
+		if lookupErr != nil {
+			return nil, lookupErr
+		}
+		if legacy != "" {
+			raw, readErr := os.ReadFile(legacy)
+			if readErr != nil {
+				return nil, readErr
+			}
+			if v1.LegacyPolicy(raw) {
+				return nil, v1.ErrLegacyConfiguration
+			}
+		}
 		return nil, fmt.Errorf("no selected easyp.gen.yaml; choose --project <directory> (repeatable), or --all for recursive generation")
 	}
 	info, err := os.Lstat(path)

@@ -1,0 +1,27 @@
+syntax = "proto3";
+
+package hello.v1;
+
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/easyp-tech/easyp/examples/generated/go/hello/v1;hellov1";
+
+// HelloRequest selects the person to greet.
+message HelloRequest {
+  // Name identifies the person.
+  string name = 1;
+}
+
+// HelloResponse returns a greeting and its creation time.
+message HelloResponse {
+  // Greeting contains the response text.
+  string greeting = 1;
+  // CreatedAt records the creation time.
+  google.protobuf.Timestamp created_at = 2;
+}
+
+// HelloAPI provides a simple unary greeting example.
+service HelloAPI {
+  // Hello returns a greeting for one person.
+  rpc Hello(HelloRequest) returns (HelloResponse);
+}
