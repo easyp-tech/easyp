@@ -266,3 +266,7 @@ The CLI migration wizard in <code>internal/api/migrate_interactive.go</code> fir
 ## Business Errors
 
 See [ERRORS.md](./ERRORS.md) for error ownership, wrapping, command mappings and retry guidance. Current examples include <code>core.ErrInvalidRule</code>, <code>core.ErrRepositoryDoesNotExist</code>, <code>core.ErrEmptyInputFiles</code>, <code>modules.ErrLockedVersionChanged</code>, and <code>v1.ErrLegacyConfiguration</code>; typed core errors include <code>OpenImportFileError</code> and <code>GitRefNotFoundError</code>. Dependency failures also use contextual wrapped errors from module, manifest and cache operations. The removed dependency-model package is not an error source.
+
+## MCP configuration reference
+
+<code>easyp_config_describe</code> covers all four v1 formats. <code>protobuf.mod</code> returns text grammar and examples; YAML files, including <code>protobuf.lock</code>, return their actual JSON Schemas. The reference never reads project files or resolves dependencies. See [MCP reference contract](config/mcp-module-reference.md).

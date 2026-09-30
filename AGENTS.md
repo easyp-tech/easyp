@@ -27,7 +27,7 @@ Human-facing docs: [README.md](README.md) and https://easyp.tech.
 | <code>internal/config</code> | Shared engine configuration and validation issue types |
 | <code>internal/adapters</code> | Git module cache, dependency metadata, legacy modfile reader, plugins, console and prompts |
 | <code>internal/adapters/gitmodules</code> | Verified Git checkouts and installed modules under the v1 cache |
-| <code>mcp/easypconfig</code> | MCP descriptions of v1 <code>easyp.yaml</code> and <code>easyp.gen.yaml</code> |
+| <code>mcp/easypconfig</code> | MCP reference for policy/generation YAML, <code>protobuf.lock</code> JSON Schema and <code>protobuf.mod</code> text grammar |
 | <code>internal/config/v1</code> | v1 parsing, validation, and JSON Schema source |
 | <code>internal/schemagen</code> | Writes the six versioned/latest v1 JSON Schema artifacts |
 | <code>schemas/</code> | Generated policy, generation and lock JSON Schemas |

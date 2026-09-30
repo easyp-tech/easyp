@@ -10,7 +10,8 @@ import (
 func RegisterTool(server *mcp.Server) {
 	mcp.AddTool(server, &mcp.Tool{
 		Name:        ToolName,
-		Description: "Describe EasyP v1 configuration files, fields, JSON Schemas, and examples.",
+		Description: "Describe four EasyP v1 formats: policy/generation YAML, protobuf.lock JSON Schema, and protobuf.mod text grammar. This reference never reads project files, downloads dependencies, or executes plugins.",
+		InputSchema: describeInputSchema(),
 	}, func(_ context.Context, _ *mcp.CallToolRequest, input DescribeInput) (*mcp.CallToolResult, DescribeOutput, error) {
 		output, err := Describe(input)
 		if err != nil {

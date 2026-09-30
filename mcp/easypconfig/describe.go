@@ -5,6 +5,8 @@ import (
 	"regexp"
 	"sort"
 	"strings"
+
+	v1 "github.com/easyp-tech/easyp/internal/config/v1"
 )
 
 const (
@@ -18,9 +20,9 @@ var arrayIndex = regexp.MustCompile(`\[(?:\d+|\*)\]`)
 
 // DescribeInput selects a v1 configuration file and a dot path within it.
 type DescribeInput struct {
-	File            string `json:"file,omitempty" jsonschema:"Config filename: easyp.yaml or easyp.gen.yaml. Defaults to easyp.yaml."`
+	File            string `json:"file,omitempty" jsonschema:"Format selector: easyp.yaml, easyp.gen.yaml, protobuf.mod, or protobuf.lock; never a filesystem path. Defaults to easyp.yaml."`
 	Path            string `json:"path,omitempty" jsonschema:"Dot path to a section or field. Empty means the full file."`
-	IncludeSchema   *bool  `json:"include_schema,omitempty" jsonschema:"Include the JSON Schema fragment. Default true."`
+	IncludeSchema   *bool  `json:"include_schema,omitempty" jsonschema:"Include JSON Schema for YAML or textual grammar for protobuf.mod. Default true."`
 	IncludeFields   *bool  `json:"include_fields,omitempty" jsonschema:"Include field documentation. Default true."`
 	IncludeExamples *bool  `json:"include_examples,omitempty" jsonschema:"Include valid v1 examples. Default true."`
 	IncludeChildren *bool  `json:"include_children,omitempty" jsonschema:"Include descendants of the selected path. Default true."`
@@ -43,26 +45,36 @@ type FieldDoc struct {
 type Example struct {
 	Title       string   `json:"title"`
 	Description string   `json:"description,omitempty"`
-	YAML        string   `json:"yaml"`
+	YAML        string   `json:"yaml,omitempty"`
+	Format      string   `json:"format,omitempty"`
+	Text        string   `json:"text,omitempty"`
 	Paths       []string `json:"paths,omitempty"`
 }
 
 // DescribeOutput contains the selected schema, field details, and examples.
 type DescribeOutput struct {
-	SchemaVersion string         `json:"schema_version"`
-	File          string         `json:"file"`
-	SelectedPath  string         `json:"selected_path"`
-	Schema        map[string]any `json:"schema,omitempty"`
-	Fields        []FieldDoc     `json:"fields,omitempty"`
-	Examples      []Example      `json:"examples,omitempty"`
-	Notes         []string       `json:"notes,omitempty"`
+	SchemaVersion string            `json:"schema_version"`
+	File          string            `json:"file"`
+	SelectedPath  string            `json:"selected_path"`
+	Format        string            `json:"format"`
+	Grammar       *GrammarReference `json:"grammar,omitempty"`
+	Schema        map[string]any    `json:"schema,omitempty"`
+	Fields        []FieldDoc        `json:"fields,omitempty"`
+	Examples      []Example         `json:"examples,omitempty"`
+	Notes         []string          `json:"notes,omitempty"`
 }
 
 // Describe explains a v1 config path using the same JSON Schema as schema-gen.
 func Describe(input DescribeInput) (DescribeOutput, error) {
+	if input.ExamplesLimit != nil && (*input.ExamplesLimit < 1 || *input.ExamplesLimit > 50) {
+		return DescribeOutput{}, fmt.Errorf("examples_limit must be from 1 to 50")
+	}
 	file, _, err := configFile(input.File)
 	if err != nil {
 		return DescribeOutput{}, err
+	}
+	if file == v1.ModuleFile {
+		return describeModule(input)
 	}
 	index, err := SchemaByPathFor(file)
 	if err != nil {
@@ -74,7 +86,7 @@ func Describe(input DescribeInput) (DescribeOutput, error) {
 		return DescribeOutput{}, fmt.Errorf("unknown path %q in %s", input.Path, file)
 	}
 
-	out := DescribeOutput{SchemaVersion: SchemaVersion, File: file, SelectedPath: path}
+	out := DescribeOutput{SchemaVersion: SchemaVersion, File: file, SelectedPath: path, Format: "yaml"}
 	if enabled(input.IncludeSchema) {
 		out.Schema = schema
 	}
@@ -107,12 +119,6 @@ func enabled(value *bool) bool {
 func exampleLimit(value *int) int {
 	if value == nil {
 		return 10
-	}
-	if *value < 1 {
-		return 1
-	}
-	if *value > 50 {
-		return 50
 	}
 	return *value
 }

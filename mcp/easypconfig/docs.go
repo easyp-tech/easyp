@@ -3,6 +3,14 @@ package easypconfig
 import v1 "github.com/easyp-tech/easyp/internal/config/v1"
 
 var descriptions = map[string]map[string]string{
+	v1.LockFile: {
+		"version":           "Lock format version: integer 1, not the YAML configuration string v1.",
+		"modules":           "Published dependency graph, with one verified revision per module identity. An empty list is valid for a dependency-free module.",
+		"modules[].source":  "Exact module identity; separate v2+ lines use their matching /vN suffix.",
+		"modules[].version": "Selected semantic version or a full commit. A commit-valued version must equal commit; major suffix and legacy +incompatible provenance are checked.",
+		"modules[].commit":  "Full 40- or 64-character hexadecimal Git commit. Tags and short SHAs are not commit pins.",
+		"modules[].hash":    "h1: followed by standard base64 encoding of a 32-byte SHA-256 content digest. Fetch/install verify tracked contents; a sample hash is not proof of a real repository.",
+	},
 	v1.PolicyFile: {
 		"version":                       "Configuration version; v1 is the only supported value.",
 		"linters":                       "Lint rule selection for this module.",
@@ -64,6 +72,10 @@ var descriptions = map[string]map[string]string{
 
 func examplesFor(file string) []Example {
 	switch file {
+	case v1.ModuleFile:
+		return moduleExamples()
+	case v1.LockFile:
+		return lockExamples()
 	case v1.PolicyFile:
 		return []Example{
 			{Title: "shared_lint", Description: "Create .policies/lint.yaml with a linters section in this workspace before execution.", YAML: "version: v1\nlinters:\n  extends: ./.policies/lint.yaml\n  disable: [PACKAGE_VERSION_SUFFIX]\n", Paths: []string{"linters.extends"}},
@@ -109,6 +121,8 @@ func selectExamples(file, path string, limit int) []Example {
 
 func notesFor(file, path string) []string {
 	switch {
+	case file == v1.LockFile:
+		return []string{"Schema comes directly from v1.SchemaJSON. ParseLock adds semantic checks for duplicate sources, matching module majors and commit-valued versions. Examples contain synthetic commits/hashes, not fetched data.", "Local replace never rewrites the published lock. --frozen requires a valid complete manifest/lock graph and rejects replacements; it may download exact pinned contents but never resolves a new version. Preserve the lock when investigating a cache mismatch."}
 	case file == v1.GenerateFile && within("generate.packages", path):
 		return []string{"Names match exact protobuf packages, not prefixes or file paths. Matching is across the selected modules of each project. Unknown names fail before plugins. with_imports is independent per plugin; descriptor include_imports controls exported dependencies."}
 	case file == v1.PolicyFile && path == "linters.extends":

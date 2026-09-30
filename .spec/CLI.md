@@ -356,3 +356,7 @@ For additional reviewed behavior, see [context and generation](config/review-con
 ### Shared policy references
 
 <code>linters.extends</code> and <code>breaking.extends</code> resolve independently after nearest-section cascading. See [policy-extends](config/policy-extends.md) for the file/module grammar, precedence, consumer-relative baseline/ignore behavior and non-networked validation.
+
+## MCP configuration reference
+
+<code>easyp_config_describe</code> covers all four v1 formats. <code>protobuf.mod</code> returns text grammar and examples; YAML files, including <code>protobuf.lock</code>, return their actual JSON Schemas. The reference never reads project files or resolves dependencies. See [MCP reference contract](config/mcp-module-reference.md).
