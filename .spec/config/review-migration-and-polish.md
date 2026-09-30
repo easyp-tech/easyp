@@ -13,7 +13,7 @@ Intentional negative fixtures under testdata remain unchanged.
 
 ## Explicit v0 migration (X-1, X-6, X-11)
 
-The migrate command previews real output content by default. Writing requires
+The migrate command in flag-only mode previews real output content by default. Writing requires
 --write; optional dependency resolution/cache access requires --resolve-lock.
 The module identity is explicit. Migrating does not execute plugins or save
 expanded environment secrets. Effective lint selection, legacy comment opt-in,
@@ -96,3 +96,24 @@ task proto:check
 The external v1 easyp-test suite has CLI regression tests for migration,
 historical hash/commit preservation, preview/no-write failures and policy/path
 corrections. EASYP_BIN and EASYP_SOURCE must both point at the tested build.
+
+## Interactive migration
+
+A terminal invocation without --module starts the line-based wizard. Explicit
+--interactive requests it even with supplied flags; --interactive=false disables
+it. Both application input and output must be terminals. No /dev/tty fallback
+is used to reinterpret piped data as consent. Existing --module invocations
+remain noninteractive unless the wizard is explicitly requested.
+
+Missing directory and identity values are prompted and validated. Native module
+metadata or local Git origin may supply a credential-free identity suggestion;
+it is never accepted without user input. The initial preview requires no
+repository access. Deferred dependency verification has its own default-no
+confirmation, followed by a fresh complete preview and a separate default-no
+write confirmation. Prefilled --write/--resolve-lock do not bypass these gates.
+EOF, malformed input and unavailable output never imply consent. Already-v1
+projects terminate without resolution or write questions. The reviewed plan is
+applied without rebuilding it after consent; its input snapshots are rechecked.
+Before and after authorized resolution, the original input state is also checked.
+Cancellation after authorized resolution may retain cache entries, not project
+changes. Existing application crash/concurrent-writer limits remain unchanged.
