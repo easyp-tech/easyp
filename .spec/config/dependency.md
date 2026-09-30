@@ -73,7 +73,7 @@ While the main manifest contains any replacements, every operation preserves exi
 - Generate (including selected dependencies and both descriptor modes), lint, ls-files and breaking use the same overlay. In-repository baseline replacements are mapped into the Git snapshot; external baseline replacements remain errors. A versionless remote dependency introduced by a historical fork requires a historical lock pin; current HEAD cannot stand in for the baseline.
 - <code>mod vendor</code> snapshots the effective local and remote dependency sources into <code>easyp_vendor</code> without writing the shared lock. It is a local artifact, not proof of a reproducible published graph. Remove replacements and run <code>mod tidy</code> before publishing the manifest/lock.
 
-A pure-local graph works unpublished and offline without a lock. New remote requirements can require network access; matching published revisions and versionless pins use verified cache when available. Remote plugins retain their own network requirements. There is no new frozen flag or CI-only replacement rule in this change.
+A pure-local graph works unpublished and offline without a lock. New remote requirements can require network access; matching published revisions and versionless pins use verified cache when available. Remote plugins retain their own network requirements. These overlay rules apply outside explicit frozen mode; <code>CI=true</code> alone does not change them.
 
 Import checking parses root sources and their reachable dependency/embedded
 imports, validates portable relative import paths, and reports the importing file.
@@ -85,6 +85,21 @@ HEAD. See <code>internal/modules/immutable_versions.go</code> and [ERRORS.md](..
 for the distinction between such errors and CLI exit classification.
 
 The resolver accepts <code>Source.Fetch</code>, independent of Git/cache. It selects the highest required semantic version, treats versionless requirements as weak constraints, and rejects incompatible exact commits (including tag/commit disagreement). It caches revision fetches within a resolution, rebuilds provisional HEAD edges when stronger requirements appear, and sorts resulting entries. <code>Update</code> additionally needs version enumeration; vendor and published download only need the cache contract; local-overlay download additionally uses Source when a new remote requirement needs resolution.
+
+## Frozen graph validation
+
+Explicit <code>--frozen</code> requires <code>protobuf.mod</code> and <code>protobuf.lock</code> for each selected native dependency graph, even for a module with no dependencies. An empty graph must have an empty lock. A plain source tree without a manifest fails with a missing-manifest diagnostic. Frozen mode is never inferred from CI environment variables. See [CLI flag placement](../CLI.md#frozen-dependency-mode).
+
+All root replacement directives are forbidden, even when unused. Validation rejects them before opening replacement directories or accessing dependency caches/remotes. Dependency manifests still supply transitive requirements; dependency-local replacements remain ignored. The locked closure must satisfy direct and transitive requirements with no missing or stale entries. Malformed locks, incompatible versions/commits and unexpected graph entries fail instead of triggering resolution.
+
+The frozen path does not call the version resolver, query HEAD or tags, or create/rewrite manifests and locks. Exact locked commits may be downloaded when absent from cache; installed sources are hash-verified on cold and warm paths. This permits reproducible dependency selection with a cold cache and does not imply offline execution. Existing Git credentials, transport configuration, and plugin network requirements still apply.
+
+- <code>mod download</code> validates and installs the locked graph; <code>mod vendor</code> validates it before replacing vendor output.
+- <code>mod tidy</code>, <code>get</code>, <code>mod update</code>, and <code>init</code> refuse frozen operation. <code>migrate</code>, including preview and interactive mode, is also rejected.
+- Generation preflights every selected graph before any plugin runs. Explicit workspace-relative module paths use the selected module's manifest and lock; a generator-only directory needs no separate pair. Dependency identity selectors require the consumer manifest and lock, without requiring lock files inside downloaded dependencies. Unrelated projects are ignored and existing explicit/recursive selection rules remain unchanged.
+- Lint retains effective policy/module grouping. Breaking uses the historical manifest and lock for its baseline, independently from the current module. Local-only <code>ls-files</code> output still requires frozen graph validation.
+
+Run normal <code>mod tidy</code> after removing local replacements to prepare the shared lock, then commit the manifest and lock. Frozen success never certifies unpublished local overlays, and normal replacement/vendor semantics above remain unchanged.
 
 ## Metadata and imports
 

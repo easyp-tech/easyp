@@ -10,6 +10,7 @@ import (
 
 	"github.com/easyp-tech/easyp/internal/adapters/gitmodules"
 	v1 "github.com/easyp-tech/easyp/internal/config/v1"
+	"github.com/easyp-tech/easyp/internal/flags"
 	"github.com/easyp-tech/easyp/internal/modules"
 )
 
@@ -21,6 +22,7 @@ var _ Handler = Get{}
 func (g Get) Command() *cli.Command {
 	return &cli.Command{
 		Name:      "get",
+		Flags:     []cli.Flag{flags.Frozen()},
 		Usage:     "add a Git module and its transitive dependencies",
 		ArgsUsage: "<module>[@version|@commit]",
 		Action:    g.Action,
@@ -28,6 +30,9 @@ func (g Get) Command() *cli.Command {
 }
 
 func (g Get) Action(ctx *cli.Context) error {
+	if flags.IsFrozen(ctx) {
+		return fmt.Errorf("get is not allowed in frozen mode")
+	}
 	if ctx.NArg() != 1 {
 		return errors.New("get expects one module: easyp get <module>[@version|@commit]")
 	}

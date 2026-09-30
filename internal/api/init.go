@@ -8,6 +8,7 @@ import (
 	"github.com/urfave/cli/v2"
 
 	"github.com/easyp-tech/easyp/internal/adapters/prompter"
+	"github.com/easyp-tech/easyp/internal/flags"
 )
 
 var _ Handler = (*Init)(nil)
@@ -39,6 +40,7 @@ func (i Init) Command() *cli.Command {
 		Description: "initialize configuration",
 		Action:      i.Action,
 		Flags: []cli.Flag{
+			flags.Frozen(),
 			flagInitDirectoryPath,
 			flagInitModule,
 		},
@@ -47,6 +49,9 @@ func (i Init) Command() *cli.Command {
 
 // Action implements Handler.
 func (i Init) Action(ctx *cli.Context) error {
+	if flags.IsFrozen(ctx) {
+		return fmt.Errorf("init is not allowed in frozen mode")
+	}
 	rootAbs, err := filepath.Abs(ctx.String(flagInitDirectoryPath.Name))
 	if err != nil {
 		return fmt.Errorf("Abs: %w", err)

@@ -50,6 +50,25 @@ func (l Lint) actionV1(ctx *cli.Context, log logger.Logger, configPath, projectR
 		return fmt.Errorf("WalkDir: %w", err)
 	}
 	var cache modules.Cache
+	if flags.IsFrozen(ctx) {
+		relative, err := filepath.Rel(projectRoot, searchDir)
+		if err != nil {
+			return fmt.Errorf("Rel: %w", err)
+		}
+		selected, err := selectedPolicyScopes(projectRoot, relative, true)
+		if err != nil {
+			return fmt.Errorf("selectedPolicyScopes: %w", err)
+		}
+		cache, err = moduleCache(ctx)
+		if err != nil {
+			return fmt.Errorf("moduleCache: %w", err)
+		}
+		for directory := range selected {
+			if _, err := modules.EnsureFrozenSources(ctx.Context, filepath.Join(projectRoot, directory), cache); err != nil {
+				return err
+			}
+		}
+	}
 	apps := map[v1LintAppKey]*core.Core{}
 	batchFiles := make(map[v1LintAppKey][]string)
 	var batchOrder []v1LintAppKey
@@ -79,6 +98,9 @@ func (l Lint) actionV1(ctx *cli.Context, log logger.Logger, configPath, projectR
 		if err != nil {
 			return fmt.Errorf("findV1PolicyModuleDir: %w", err)
 		}
+		if flags.IsFrozen(ctx) && moduleDir == "" {
+			return fmt.Errorf("frozen lint requires protobuf.mod for %s", file)
+		}
 		appKey := v1LintAppKey{policy: policyKey, moduleDir: moduleDir}
 		if _, ok := apps[appKey]; !ok {
 			lintConfig, err := policy.LintConfig()
@@ -95,7 +117,7 @@ func (l Lint) actionV1(ctx *cli.Context, log logger.Logger, configPath, projectR
 							return fmt.Errorf("moduleCache: %w", err)
 						}
 					}
-					roots, err = ensureV1PolicyImportRoots(ctx.Context, cache, moduleDir)
+					roots, err = policyImportRoots(ctx.Context, cache, moduleDir, flags.IsFrozen(ctx))
 					if err != nil {
 						return fmt.Errorf("ensureV1PolicyImportRoots: %w", err)
 					}

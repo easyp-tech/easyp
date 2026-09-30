@@ -15,6 +15,7 @@ import (
 	"github.com/easyp-tech/easyp/internal/config"
 	v1 "github.com/easyp-tech/easyp/internal/config/v1"
 	"github.com/easyp-tech/easyp/internal/core"
+	"github.com/easyp-tech/easyp/internal/flags"
 	"github.com/easyp-tech/easyp/internal/logger"
 )
 
@@ -65,11 +66,11 @@ func (b BreakingCheck) checkV1Policies(ctx *cli.Context, log logger.Logger, conf
 		if err != nil || !filepath.IsLocal(relative) {
 			return nil, fmt.Errorf("%w: %s", core.ErrRootOutsideProject, scanPath)
 		}
-		current, err := discoverBreakingScopes(repositoryRoot, relative)
+		current, err := selectedPolicyScopes(repositoryRoot, relative, flags.IsFrozen(ctx))
 		if err != nil {
 			return nil, fmt.Errorf("discoverBreakingScopes current: %w", err)
 		}
-		baseline, err := discoverBreakingScopes(snapshot.Root, relative)
+		baseline, err := selectedPolicyScopes(snapshot.Root, relative, flags.IsFrozen(ctx))
 		if err != nil {
 			return nil, fmt.Errorf("discoverBreakingScopes baseline: %w", err)
 		}
@@ -89,14 +90,21 @@ func (b BreakingCheck) checkV1Policies(ctx *cli.Context, log logger.Logger, conf
 			if err != nil {
 				return nil, err
 			}
+			if flags.IsFrozen(ctx) && len(ownFiles) == 0 {
+				_, owner, err := resolveV1BreakingPolicy(filepath.Join(repositoryRoot, module), projectRoot, configPath)
+				if err != nil {
+					return nil, fmt.Errorf("resolveV1BreakingPolicy: %w", err)
+				}
+				relevant = owner == source
+			}
 			if !relevant {
 				continue
 			}
-			currentImports, err := breakingImportRoots(ctx.Context, cache, repositoryRoot, module, currentFiles, nil)
+			currentImports, err := breakingImportRootsMode(ctx.Context, cache, repositoryRoot, module, currentFiles, nil, flags.IsFrozen(ctx))
 			if err != nil {
 				return nil, fmt.Errorf("current module %s: %w", module, err)
 			}
-			baselineImports, err := breakingImportRoots(ctx.Context, cache, snapshot.Root, module, baselineFiles, snapshot)
+			baselineImports, err := breakingImportRootsMode(ctx.Context, cache, snapshot.Root, module, baselineFiles, snapshot, flags.IsFrozen(ctx))
 			if err != nil {
 				return nil, fmt.Errorf("baseline %s module %s: %w", cfg.AgainstGitRef, module, err)
 			}

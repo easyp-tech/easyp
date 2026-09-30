@@ -56,6 +56,7 @@ func main() {
 			api.BreakingCheck{},
 		),
 		Flags: []cli.Flag{
+			flags.Frozen(),
 			flags.Config,
 			flags.DebugMode,
 			flags.Format,

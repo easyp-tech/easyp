@@ -59,9 +59,14 @@ func prepareDescriptorTargets(ctx context.Context, log logger.Logger, cache modu
 		if err := ctx.Err(); err != nil {
 			return nil, err
 		}
-		selected, err := resolveV1GenerationModule(ctx, cache, request.WorkspaceRoot, filepath.Dir(target.configPath), target.module)
+		selected, err := resolveV1GenerationModule(ctx, cache, request.WorkspaceRoot, filepath.Dir(target.configPath), target.module, request.Frozen)
 		if err != nil {
 			return nil, fmt.Errorf("resolveV1GenerationModule for %s: %w", target.configPath, err)
+		}
+		// Options-only selections still validate their graph in frozen mode, but
+		// have no generation work unless descriptor export was requested.
+		if len(target.config.Plugins) == 0 && request.DescriptorSetOut == "" && request.DescriptorSetOutDir == "" {
+			continue
 		}
 		key := filepath.Clean(target.configPath) + "\x00" + filepath.Clean(selected.directory)
 		if seen[key] {

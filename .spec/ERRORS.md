@@ -107,9 +107,11 @@ Local overlays are implemented without changing the published lock:
   Tidy/download never write project files in local mode; get/update may edit
   explicit requirements but preserve the lock. Vendor snapshots the effective graph.
   Historical versionless remote edges require a historical pin rather than HEAD.
-- <code>internal/api/mod.go</code> registers no <code>--frozen</code> flag. Exact
-  locked downloads and hash checks are implemented, but do not imply an
-  implemented frozen-mode command contract.
+- Explicit <code>--frozen</code> validates native manifests and their existing
+  locks, including every reachable transitive requirement and exact cached hash.
+  It rejects main-module replacements and mutating commands. Missing snapshots
+  may be downloaded only at locked commits; dependency versions are not resolved.
+  Missing/stale locks fail without project writes. See [CLI.md](CLI.md).
 - Unknown import paths are checked against known roots. There is no implemented
   automatic mapping from an arbitrary missing import to its owning Git module.
   <code>resolveV1Lock</code> returns <code>cannot resolve imports</code> rather

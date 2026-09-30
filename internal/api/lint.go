@@ -61,6 +61,7 @@ func (l Lint) Command() *cli.Command {
 		OnUsageError: nil,
 		Subcommands:  nil,
 		Flags: []cli.Flag{
+			flags.Frozen(),
 			flagLintDirectoryPath,
 			flagLintRoot,
 		},

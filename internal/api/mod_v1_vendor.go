@@ -5,6 +5,7 @@ import (
 
 	"github.com/urfave/cli/v2"
 
+	"github.com/easyp-tech/easyp/internal/flags"
 	"github.com/easyp-tech/easyp/internal/modules"
 )
 
@@ -17,6 +18,11 @@ func (m Mod) Vendor(ctx *cli.Context) error {
 	cache, err := moduleCache(ctx)
 	if err != nil {
 		return fmt.Errorf("moduleCache: %w", err)
+	}
+	if flags.IsFrozen(ctx) {
+		if _, err := modules.EnsureFrozenSources(ctx.Context, root, cache); err != nil {
+			return err
+		}
 	}
 	return modules.Vendor(ctx.Context, root, cache)
 }

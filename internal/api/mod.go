@@ -1,6 +1,9 @@
 package api
 
-import "github.com/urfave/cli/v2"
+import (
+	"github.com/easyp-tech/easyp/internal/flags"
+	"github.com/urfave/cli/v2"
+)
 
 var _ Handler = (*Mod)(nil)
 
@@ -9,6 +12,7 @@ type Mod struct{}
 
 func (m Mod) Command() *cli.Command {
 	downloadCmd := &cli.Command{
+		Flags:       []cli.Flag{flags.Frozen()},
 		Name:        "download",
 		Usage:       "download modules to local cache",
 		UsageText:   "download modules to local cache",
@@ -16,6 +20,7 @@ func (m Mod) Command() *cli.Command {
 		Action:      m.Download,
 	}
 	updateCmd := &cli.Command{
+		Flags:       []cli.Flag{flags.Frozen()},
 		Name:        "update",
 		Usage:       "refresh requirements within their current major versions and rewrite protobuf.mod/protobuf.lock",
 		UsageText:   "refresh requirements within their current major versions and rewrite protobuf.mod/protobuf.lock",
@@ -23,11 +28,13 @@ func (m Mod) Command() *cli.Command {
 		Action:      m.Update,
 	}
 	tidyCmd := &cli.Command{
+		Flags:  []cli.Flag{flags.Frozen()},
 		Name:   "tidy",
 		Usage:  "resolve protobuf.mod and write protobuf.lock",
 		Action: m.Tidy,
 	}
 	vendorCmd := &cli.Command{
+		Flags:  []cli.Flag{flags.Frozen()},
 		Name:   "vendor",
 		Usage:  "copy locked protobuf imports into easyp_vendor",
 		Action: m.Vendor,
@@ -46,7 +53,7 @@ func (m Mod) Command() *cli.Command {
 		Action:                 nil,
 		OnUsageError:           nil,
 		Subcommands:            []*cli.Command{downloadCmd, updateCmd, tidyCmd, vendorCmd},
-		Flags:                  []cli.Flag{},
+		Flags:                  []cli.Flag{flags.Frozen()},
 		SkipFlagParsing:        false,
 		HideHelp:               false,
 		HideHelpCommand:        false,

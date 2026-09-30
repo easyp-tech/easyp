@@ -63,7 +63,7 @@ func (l LsFiles) Command() *cli.Command {
 		Aliases: []string{"ls"},
 		Usage:   "list v1 module proto files and reachable imports",
 		Action:  l.Action,
-		Flags:   []cli.Flag{flagLsFilesIncludeImports, flags.Format},
+		Flags:   []cli.Flag{flags.Frozen(), flagLsFilesIncludeImports, flags.Format},
 	}
 }
 
@@ -79,10 +79,15 @@ func (l LsFiles) Action(ctx *cli.Context) error {
 	}
 	includeImports := ctx.Bool(flagLsFilesIncludeImports.Name)
 	var cache modules.Cache
-	if includeImports && (len(modules.RemoteRequirements(module)) > 0 || len(module.Replaces) > 0) {
+	if flags.IsFrozen(ctx) || includeImports && (len(modules.RemoteRequirements(module)) > 0 || len(module.Replaces) > 0) {
 		cache, err = moduleCache(ctx)
 		if err != nil {
 			return fmt.Errorf("moduleCache: %w", err)
+		}
+	}
+	if flags.IsFrozen(ctx) {
+		if _, err := modules.EnsureFrozenSources(ctx.Context, root, cache); err != nil {
+			return err
 		}
 	}
 	listed, err := listV1Files(ctx.Context, root, module, includeImports, cache)

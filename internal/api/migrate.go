@@ -9,6 +9,7 @@ import (
 	"github.com/urfave/cli/v2"
 
 	"github.com/easyp-tech/easyp/internal/adapters/gitmodules"
+	"github.com/easyp-tech/easyp/internal/flags"
 	"github.com/easyp-tech/easyp/internal/migration"
 )
 
@@ -24,6 +25,7 @@ func (m Migrate) Command() *cli.Command {
 		Usage:       "migrate EasyP v0 to v1 with a terminal wizard or explicit flags",
 		Description: "Prepares actual v1 files without executing plugins. Flag-only dependency verification requires --resolve-lock; the wizard asks for permission instead. Legacy easyp.lock is retained. Existing native outputs are never overwritten. Without --module, a terminal starts the wizard; --module preserves the noninteractive preview. Use --interactive to request the wizard explicitly or --interactive=false to disable it.",
 		Flags: []cli.Flag{
+			flags.Frozen(),
 			&cli.StringFlag{Name: "dir", Value: ".", Usage: "directory containing legacy easyp.yaml"},
 			&cli.StringFlag{Name: "module", Usage: "canonical identity for the local protobuf module"},
 			&cli.BoolFlag{Name: "interactive", DefaultText: "automatic on a terminal without --module", Usage: "use the terminal wizard; --interactive=false disables automatic prompting"},
@@ -36,6 +38,9 @@ func (m Migrate) Command() *cli.Command {
 
 // Action previews the entire plan before any explicitly requested application.
 func (Migrate) Action(ctx *cli.Context) error {
+	if flags.IsFrozen(ctx) {
+		return fmt.Errorf("migrate is not allowed in frozen mode")
+	}
 	if ctx.NArg() != 0 {
 		return fmt.Errorf("migrate accepts flags only: --dir <root> --module <identity> [--interactive] [--resolve-lock] [--write]")
 	}
