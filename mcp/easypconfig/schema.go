@@ -28,6 +28,9 @@ func SchemaByPathFor(file string) (map[string]map[string]any, error) {
 	if err != nil {
 		return nil, err
 	}
+	if schemaName == "" {
+		return nil, fmt.Errorf("%s is a text manifest, not a JSON Schema document; use Describe for its grammar", file)
+	}
 	raw, err := v1.SchemaJSON(schemaName)
 	if err != nil {
 		return nil, fmt.Errorf("SchemaJSON: %w", err)
@@ -47,6 +50,10 @@ func configFile(file string) (string, string, error) {
 		return v1.PolicyFile, "easyp", nil
 	case v1.GenerateFile:
 		return v1.GenerateFile, "easyp.gen", nil
+	case v1.LockFile:
+		return v1.LockFile, "protobuf.lock", nil
+	case v1.ModuleFile:
+		return v1.ModuleFile, "", nil
 	default:
 		return "", "", fmt.Errorf("unknown config file %q", file)
 	}

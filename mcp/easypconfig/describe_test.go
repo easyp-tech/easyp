@@ -61,8 +61,8 @@ func TestDescribeRejectsUnknownSelection(t *testing.T) {
 		want  string
 	}{
 		{name: "unknown file", input: DescribeInput{File: "buf.yaml"}, want: "unknown config file"},
-		{name: "module manifest is outside MCP", input: DescribeInput{File: v1.ModuleFile}, want: "unknown config file"},
-		{name: "lock file is outside MCP", input: DescribeInput{File: v1.LockFile}, want: "unknown config file"},
+		{name: "filesystem paths are not formats", input: DescribeInput{File: "/tmp/protobuf.mod"}, want: "unknown config file"},
+		{name: "legacy lock is not a current format", input: DescribeInput{File: "easyp.lock"}, want: "unknown config file"},
 		{name: "removed v0 path", input: DescribeInput{File: v1.GenerateFile, Path: "generate.inputs"}, want: "unknown path"},
 		{name: "unknown policy field", input: DescribeInput{Path: "lint.use"}, want: "unknown path"},
 	}

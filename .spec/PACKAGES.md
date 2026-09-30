@@ -62,3 +62,7 @@ Section-scoped <code>extends</code> is implemented in <code>internal/policy</cod
 Normal Git dependency reads use <code>module_config</code>. The Git adapter also has a dedicated historical YAML reader in <code>internal/adapters/gitmodules/migration_config.go</code> to reproduce legacy roots for integrity verification. Filesystem helpers do not interpret manifests, locks or module identities.
 
 See [architecture](ARCHITECTURE.md) for direction of dependencies, ownership, and persistence guarantees.
+
+## MCP configuration reference
+
+<code>easyp_config_describe</code> covers all four v1 formats. <code>protobuf.mod</code> returns text grammar and examples; YAML files, including <code>protobuf.lock</code>, return their actual JSON Schemas. The reference never reads project files or resolves dependencies. See [MCP reference contract](config/mcp-module-reference.md).
