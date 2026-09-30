@@ -50,6 +50,76 @@ func TestTidyPreservesFilesOnDependencyFailure(t *testing.T) {
 	}
 }
 
+func TestTidyPreservesFilesOnReachableImportFailure(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name       string
+		dependency string
+		wantError  string
+	}{
+		{name: "missing_transitive", dependency: `syntax = "proto3"; import "missing.proto";`, wantError: "missing.proto"},
+		{name: "fake_wellknown", dependency: `syntax = "proto3"; import "google/protobuf/not_real.proto";`, wantError: "google/protobuf/not_real.proto"},
+		{name: "invalid_syntax", dependency: `syntax = "proto3"; message Broken {`, wantError: "Parse"},
+		{name: "traversing_import", dependency: `syntax = "proto3"; import "../outside.proto";`, wantError: "invalid import"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			for _, existingLock := range []bool{false, true} {
+				root, dependency := t.TempDir(), t.TempDir()
+				original := "module example.com/app\nrequire example.com/dep v1.0.0 // keep\n"
+				lock := "# keep existing lock\nversion: 1\nmodules: []\n"
+				writeV1GenerateFixture(t, root, v1.ModuleFile, original)
+				if existingLock {
+					writeV1GenerateFixture(t, root, v1.LockFile, lock)
+				}
+				writeV1GenerateFixture(t, root, "root.proto", `syntax = "proto3"; import "dep.proto";`)
+				writeV1GenerateFixture(t, dependency, "dep.proto", tt.dependency)
+				repository := &fakeRepository{directory: dependency, module: v1.Module{Name: "example.com/dep", Roots: []string{"."}}}
+
+				err := Tidy(t.Context(), root, repository)
+
+				assert.ErrorContains(t, err, tt.wantError)
+				assert.ErrorContains(t, err, filepath.Join(dependency, "dep.proto"))
+				manifestAfter, err := os.ReadFile(filepath.Join(root, v1.ModuleFile))
+				require.NoError(t, err)
+				assert.Equal(t, original, string(manifestAfter))
+				lockAfter, err := os.ReadFile(filepath.Join(root, v1.LockFile))
+				if existingLock {
+					require.NoError(t, err)
+					assert.Equal(t, lock, string(lockAfter))
+				} else {
+					assert.ErrorIs(t, err, os.ErrNotExist)
+				}
+			}
+		})
+	}
+}
+
+func TestTidyPromotesIndirectWithoutChangingLock(t *testing.T) {
+	t.Parallel()
+	root, dependency := t.TempDir(), t.TempDir()
+	original := "module example.com/app\nrequire ( // keep block\n\texample.com/dep\t v1.0.0  // indirect needed by clients\n)\n"
+	writeV1GenerateFixture(t, root, v1.ModuleFile, original)
+	writeV1GenerateFixture(t, root, "root.proto", `syntax = "proto3";`)
+	writeV1GenerateFixture(t, dependency, "dep.proto", `syntax = "proto3";`)
+	repository := &fakeRepository{directory: dependency, module: v1.Module{Name: "example.com/dep", Roots: []string{"."}}}
+	require.NoError(t, Tidy(t.Context(), root, repository))
+	lockBefore, err := os.ReadFile(filepath.Join(root, v1.LockFile))
+	require.NoError(t, err)
+	writeV1GenerateFixture(t, root, "root.proto", `syntax = "proto3"; import "dep.proto";`)
+
+	err = Tidy(t.Context(), root, repository)
+
+	require.NoError(t, err)
+	manifestAfter, err := os.ReadFile(filepath.Join(root, v1.ModuleFile))
+	require.NoError(t, err)
+	assert.Equal(t, "module example.com/app\nrequire ( // keep block\n\texample.com/dep\t v1.0.0  // needed by clients\n)\n", string(manifestAfter))
+	lockAfter, err := os.ReadFile(filepath.Join(root, v1.LockFile))
+	require.NoError(t, err)
+	assert.Equal(t, lockBefore, lockAfter)
+}
+
 func TestAugmentManifestClassifiesTransitiveImports(t *testing.T) {
 	t.Parallel()
 	tests := []struct {

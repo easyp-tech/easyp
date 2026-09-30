@@ -10,10 +10,14 @@ import (
 	"strings"
 
 	"github.com/easyp-tech/easyp/internal/adapters/gitmodules"
-	"github.com/easyp-tech/easyp/internal/adapters/prompter"
 	v1 "github.com/easyp-tech/easyp/internal/config/v1"
 	disk "github.com/easyp-tech/easyp/internal/fs/fs"
 )
+
+type initializationPrompter interface {
+	Input(context.Context, string, string) (string, error)
+	Confirm(context.Context, string, bool) (bool, error)
+}
 
 type initialConfigFile struct {
 	name     string
@@ -22,13 +26,16 @@ type initialConfigFile struct {
 
 // initializeV1 writes the three independent v1 files. All overwrite choices
 // are collected before changing any file, so declining one cannot truncate it.
-func initializeV1(ctx context.Context, root, identity string, prompt prompter.Prompter) error {
+func initializeV1(ctx context.Context, root, identity string, prompt initializationPrompter) error {
 	if err := checkV1Initialization(root); err != nil {
 		return fmt.Errorf("checkV1Initialization: %w", err)
 	}
 	identity, err := initialModuleIdentity(ctx, root, identity, prompt)
 	if err != nil {
 		return fmt.Errorf("initialModuleIdentity: %w", err)
+	}
+	if len(strings.Fields(identity)) != 1 || strings.ContainsAny(identity, "\r\n") {
+		return fmt.Errorf("expected one module identity, without whitespace or newlines")
 	}
 	manifest := []byte("module " + identity + "\n")
 	if _, err := v1.ParseModule(bytes.NewReader(manifest)); err != nil {
@@ -65,7 +72,7 @@ func checkV1Initialization(root string) error {
 	return nil
 }
 
-func initialModuleIdentity(ctx context.Context, root, identity string, prompt prompter.Prompter) (string, error) {
+func initialModuleIdentity(ctx context.Context, root, identity string, prompt initializationPrompter) (string, error) {
 	if identity != "" {
 		return identity, nil
 	}
@@ -90,7 +97,7 @@ func initialModuleIdentity(ctx context.Context, root, identity string, prompt pr
 	return strings.TrimSpace(value), nil
 }
 
-func confirmInitialConfigFiles(ctx context.Context, root string, files []initialConfigFile, prompt prompter.Prompter) ([]initialConfigFile, error) {
+func confirmInitialConfigFiles(ctx context.Context, root string, files []initialConfigFile, prompt initializationPrompter) ([]initialConfigFile, error) {
 	var selected []initialConfigFile
 	for _, file := range files {
 		path := filepath.Join(root, file.name)

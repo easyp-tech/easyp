@@ -19,7 +19,7 @@ var descriptions = map[string]map[string]string{
 		"issues.exclude-rules[].path":             "Policy-source-relative path or glob; literal directories include descendants, ** matches directory segments.",
 		"issues.exclude-rules[].linters":          "Implemented lint rules or groups suppressed by this exclusion; unknown or unimplemented names are rejected.",
 		"breaking":                                "Compatibility checks against a Git baseline.",
-		"breaking.baseline":                       "Configured Git baseline; an explicit --against overrides it, while the CLI default does not.",
+		"breaking.baseline":                       "Empty or git:<ref> baseline; an explicit --against overrides it, while the CLI default does not. Runtime and config validation enforce the same syntax.",
 		"breaking.ignore":                         "Paths ignored by breaking checks.",
 		"breaking.categories":                     "Optional compatibility checks; FILE also detects declarations moved between files.",
 		"breaking.extends":                        "Reserved reference to another breaking policy.",
@@ -55,10 +55,10 @@ var descriptions = map[string]map[string]string{
 		"generate.managed.override[].module":       "Limit the override to a module.",
 		"generate.managed.override[].package":      "Limit the override to a protobuf package.",
 		"generate.managed.override[].path":         "Limit the override to a file or directory path.",
-		"generate.managed.override[].file_option":  "File option to set.",
-		"generate.managed.override[].field_option": "Field option to set.",
+		"generate.managed.override[].file_option":  "Supported managed file option to set; unknown names are rejected before generation.",
+		"generate.managed.override[].field_option": "Supported managed field option to set; currently jstype.",
 		"generate.managed.override[].field":        "Fully qualified field selected with field_option.",
-		"generate.managed.override[].value":        "Value assigned to the selected option.",
+		"generate.managed.override[].value":        "Typed value for the selected option: a string, boolean, or supported enum name. Wrong types and enum values are rejected.",
 	},
 }
 

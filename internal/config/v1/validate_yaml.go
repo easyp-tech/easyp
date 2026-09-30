@@ -48,6 +48,12 @@ func validateV1YAML(raw []byte, loadSchema func() (*yamlvalidator.FieldSchema, e
 	if err != nil {
 		return []config.ValidationIssue{{Code: "v1_validation", Message: err.Error(), Severity: config.SeverityError}}
 	}
+	return validateExpandedV1YAML(expanded, loadSchema)
+}
+
+// validateExpandedV1YAML also serves parsing, which has already substituted the
+// environment. Expanding again here would interpret escaped $$ expressions.
+func validateExpandedV1YAML(expanded []byte, loadSchema func() (*yamlvalidator.FieldSchema, error)) []config.ValidationIssue {
 	schema, err := loadSchema()
 	if err != nil {
 		return []config.ValidationIssue{{Code: "v1_validation", Message: err.Error(), Severity: config.SeverityError}}
@@ -67,7 +73,7 @@ func validateV1YAML(raw []byte, loadSchema func() (*yamlvalidator.FieldSchema, e
 	}
 	issues := make([]config.ValidationIssue, 0, len(allIssues))
 	for _, issue := range allIssues {
-		if issue.Code == "group" {
+		if issue.Code == "group" || issue.Code == "allOf" {
 			// The schema engine can emit a summary together with precise child
 			// errors. Keep the actionable diagnostics, not the duplicate summary.
 			detailed := false

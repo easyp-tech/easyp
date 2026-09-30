@@ -35,8 +35,7 @@ func augmentV1ManifestRequirements(original []byte, root string, module v1.Modul
 	}
 	var additions []v1ManifestRequirement
 	for _, entry := range lock.Modules {
-		if existing[entry.Source] {
-			delete(indirect, entry.Source)
+		if _, derived := indirect[entry.Source]; existing[entry.Source] && !derived {
 			continue
 		}
 		installDir, dependency, err := repository.Cached(entry)
@@ -67,7 +66,9 @@ func augmentV1ManifestRequirements(original []byte, root string, module v1.Modul
 			}
 		}
 		if line, ok := indirect[entry.Source]; ok {
-			line = line.withVersion(versions[entry.Source])
+			if !existing[entry.Source] {
+				line = line.withVersion(versions[entry.Source])
+			}
 			if direct {
 				line = line.direct()
 			}
