@@ -88,10 +88,10 @@ func (InteractivePrompter) Confirm(_ context.Context, message string, defaultVal
 // --- Select ---
 
 type selectModel struct {
-	question string
-	options  []string
-	cursor   int
-	done     bool
+	question  string
+	options   []string
+	cursor    int
+	done      bool
 	cancelled bool
 }
 
@@ -130,7 +130,8 @@ func (m selectModel) View() string {
 		if i == m.cursor {
 			cursor = cursorStyle.Render("> ")
 		}
-		b.WriteString(fmt.Sprintf("%s%s\n", cursor, opt))
+		// Formatting strings into strings.Builder cannot fail.
+		_, _ = fmt.Fprintf(&b, "%s%s\n", cursor, opt)
 	}
 	b.WriteString(helpStyle.Render("↑/↓ navigate • enter select • q quit"))
 	return b.String()
@@ -218,7 +219,8 @@ func (m multiSelectModel) View() string {
 		if m.selected[i] {
 			check = checkedStyle.Render("[x] ")
 		}
-		b.WriteString(fmt.Sprintf("%s%s%s\n", cursor, check, opt))
+		// Formatting strings into strings.Builder cannot fail.
+		_, _ = fmt.Fprintf(&b, "%s%s%s\n", cursor, check, opt)
 	}
 	b.WriteString(helpStyle.Render("↑/↓ navigate • space toggle • a all • enter confirm • q quit"))
 	return b.String()

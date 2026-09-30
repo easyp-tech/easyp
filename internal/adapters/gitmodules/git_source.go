@@ -119,9 +119,9 @@ func findV1GitModuleTag(ctx context.Context, source, version string) (v1GitModul
 		}
 	}
 	if !foundRepository && firstErr != nil {
-		return v1GitModuleCandidate{}, fmt.Errorf("Git tag %s@%s was not found: %w", source, version, firstErr)
+		return v1GitModuleCandidate{}, fmt.Errorf("could not query Git tags for %s@%s; check repository access and credentials: %w", source, version, firstErr)
 	}
-	return v1GitModuleCandidate{}, fmt.Errorf("Git tag %s@%s was not found", source, version)
+	return v1GitModuleCandidate{}, fmt.Errorf("git tag %s@%s was not found", source, version)
 }
 
 func listV1ModuleTags(ctx context.Context, source string) ([]string, error) {
@@ -148,7 +148,7 @@ func listV1ModuleTags(ctx context.Context, source string) ([]string, error) {
 		}
 	}
 	if !foundRepository && firstErr != nil {
-		return nil, fmt.Errorf("Git tags for %s: %w", source, firstErr)
+		return nil, fmt.Errorf("git tags for %s: %w", source, firstErr)
 	}
 	return nil, nil
 }
@@ -219,7 +219,7 @@ func cloneHeadV1GitModule(ctx context.Context, source, cacheRoot string) (string
 		return "", v1.Module{}, "", fmt.Errorf("module %s was not found at a Git repository HEAD: %w", source, moduleErr)
 	}
 	if firstErr != nil {
-		return "", v1.Module{}, "", fmt.Errorf("Git repository for %s was not found: %w", source, firstErr)
+		return "", v1.Module{}, "", fmt.Errorf("git repository for %s was not found: %w", source, firstErr)
 	}
 	return "", v1.Module{}, "", fmt.Errorf("no Git repository candidate for %s", source)
 }
@@ -281,7 +281,7 @@ func clonePinnedV1GitModule(ctx context.Context, entry v1.LockedModule, cacheRoo
 	if firstErr == nil {
 		return "", fmt.Errorf("%s: no Git repository candidate", entry.Source)
 	}
-	return "", fmt.Errorf("%s: locked commit %s is unavailable: %w", entry.Source, entry.Commit, firstErr)
+	return "", fmt.Errorf("%s: could not fetch locked commit %s; check repository access before changing the lock: %w", entry.Source, entry.Commit, firstErr)
 }
 
 func checkoutPinnedV1GitModuleCandidate(ctx context.Context, checkout string, entry v1.LockedModule, candidate v1GitModuleCandidate) (bool, error) {

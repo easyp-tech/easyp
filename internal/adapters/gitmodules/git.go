@@ -15,6 +15,11 @@ func gitV1(ctx context.Context, dir string, args ...string) (string, error) {
 	cmd.Env = append(os.Environ(), "GIT_TERMINAL_PROMPT=0")
 	out, err := cmd.CombinedOutput()
 	if err != nil {
+		// CommandContext may return a killed-process error instead of the
+		// cancellation cause. Keep cancellation detectable by callers.
+		if contextErr := ctx.Err(); contextErr != nil {
+			return "", fmt.Errorf("git %s: %w", args[0], contextErr)
+		}
 		return "", fmt.Errorf("git %s: %w: %s", args[0], err, strings.TrimSpace(string(out)))
 	}
 	return string(out), nil

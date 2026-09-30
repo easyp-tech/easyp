@@ -80,8 +80,7 @@ func (l Lint) actionV1(ctx *cli.Context, log logger.Logger, configPath, projectR
 			return fmt.Errorf("findV1PolicyModuleDir: %w", err)
 		}
 		appKey := v1LintAppKey{policy: policyKey, moduleDir: moduleDir}
-		app, ok := apps[appKey]
-		if !ok {
+		if _, ok := apps[appKey]; !ok {
 			lintConfig, err := policy.LintConfig()
 			if err != nil {
 				return fmt.Errorf("LintConfig: %w", err)
@@ -104,7 +103,7 @@ func (l Lint) actionV1(ctx *cli.Context, log logger.Logger, configPath, projectR
 				}
 				importRoots = roots
 			}
-			app, err = buildCore(log, config.Config{Lint: lintConfig}, importRoots)
+			app, err := buildCore(log, config.Config{Lint: lintConfig}, importRoots)
 			if err != nil {
 				return fmt.Errorf("buildCore: %w", err)
 			}

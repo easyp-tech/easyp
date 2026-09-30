@@ -97,9 +97,10 @@ func yamlCommentStart(line []byte, quote *byte) int {
 				}
 			}
 		case '"':
-			if line[i] == '\\' {
+			switch line[i] {
+			case '\\':
 				i++
-			} else if line[i] == '"' {
+			case '"':
 				*quote = 0
 			}
 		default:

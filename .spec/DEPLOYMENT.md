@@ -34,22 +34,18 @@ configuration.
 
 ## Docker
 
-The checked-in <code>Taskfile.yml</code> includes container targets for <code>easyp/base</code> and
-<code>easyp/lint</code>:
+The checked-in <code>Taskfile.yml</code> builds the current root <code>Dockerfile</code> locally:
 
 ~~~sh
-task docker_base
-task docker_lint
-task docker_push
 task docker
+task docker:build DOCKER_IMAGE=easyp:local
 ~~~
 
-<code>task docker</code> obtains <code>GIT_TAG</code> from the latest Git tag, builds both images,
-tags them as <code>latest</code> and with that tag, then pushes them.
-
-The helper targets still expect missing <code>Docker/base/Dockerfile</code> and
-<code>Docker/lint/Dockerfile</code>; their preconditions fail in this checkout. This is
-an unresolved Taskfile reference, not the production release build path.
+<code>task docker</code> aliases <code>task docker:build</code>. Both build locally with an
+overridable <code>DOCKER_IMAGE</code> tag, defaulting to <code>easyp:local</code>, and never push.
+The obsolete <code>docker_base</code>, <code>docker_lint</code> and <code>docker_push</code> targets
+have been removed. Image publishing remains in the existing release workflow.
+<code>task lint:docker</code> checks root <code>Dockerfile</code> with the pinned Hadolint image.
 
 The existing root <code>Dockerfile</code> builds with <code>golang:1.26-alpine</code>,
 <code>CGO_ENABLED=0</code>, <code>-trimpath</code>, and target OS/architecture build arguments. It
@@ -69,8 +65,9 @@ mounts, and network configuration are therefore N/A.
   run <code>task init</code>, <code>task test</code>, then <code>task proto:check</code>.
 - **Secrets required:** <code>GITHUB_TOKEN</code>, supplied to the Task setup action.
 
-<code>task init</code> installs the local Go development tools and resolves Go
-dependencies. <code>task test</code> runs the test suite through <code>gotestsum</code> with race
+<code>task init</code> installs pinned development tools into repository-local <code>bin/</code>
+and fetches Go dependencies with <code>go mod download</code>, without a dependency
+upgrade step. <code>task test</code> runs the test suite through <code>gotestsum</code> with race
 detection and writes <code>coverage.out</code>.
 
 ### <code>.github/workflows/release.yml</code>
@@ -156,3 +153,5 @@ N/A for runtime monitoring because EasyP has no deployed service in this
 repository. GitHub Actions workflow results are the available build and release
 execution record. The Relator workflow provides issue and pull-request
 notifications, but no monitoring dashboard or alert policy is configured.
+
+The runtime Dockerfile pins its APK packages through overridable build arguments. Update and verify them alongside the Alpine release; local helper builds do not publish images.

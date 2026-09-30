@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/rand"
+	"errors"
 	"fmt"
 	"io"
 	"log/slog"
@@ -92,7 +93,7 @@ func (e *BuiltinPluginExecutor) Execute(ctx context.Context, plugin Info, reques
 }
 
 // runWasmPlugin runs WASM module with custom stdin/stdout
-func (e *BuiltinPluginExecutor) runWasmPlugin(ctx context.Context, pluginName string, stdin io.Reader) ([]byte, error) {
+func (e *BuiltinPluginExecutor) runWasmPlugin(ctx context.Context, pluginName string, stdin io.Reader) (output []byte, runErr error) {
 	// Get WASM module and arguments for the plugin
 	wasmBin, args, err := getWasmModule(pluginName)
 	if err != nil {
@@ -105,8 +106,13 @@ func (e *BuiltinPluginExecutor) runWasmPlugin(ctx context.Context, pluginName st
 	// Create wazero runtime
 	rt := wazero.NewRuntimeWithConfig(ctx, wazero.NewRuntimeConfig().WithCoreFeatures(api.CoreFeaturesV2|experimental.CoreFeaturesThreads))
 
-	// Close runtime at the end
-	defer rt.Close(ctx)
+	// A failed runtime close must not turn into successful generated output.
+	defer func() {
+		if err := rt.Close(ctx); err != nil {
+			output = nil
+			runErr = errors.Join(runErr, fmt.Errorf("Close: %w", err))
+		}
+	}()
 
 	// Instantiate WASI
 	wasi_snapshot_preview1.MustInstantiate(ctx, rt)

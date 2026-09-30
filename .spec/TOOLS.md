@@ -14,9 +14,11 @@ the test and release workflows use <code>go-version-file: go.mod</code>. CI inst
 | Git | Required by EasyP module operations and releases | Work with Git-backed proto dependencies |
 
 <code>Taskfile.yml</code> installs project-local helpers into <code>bin/</code>:
-<code>golangci-lint</code> 2.1.6, <code>gotestsum</code> 1.13.0, and <code>mockery</code> 2.53.7.
+<code>golangci-lint</code> 2.14.0, <code>gotestsum</code> 1.13.0, and <code>mockery</code> 2.53.7.
 Hadolint v2.12.1-beta is pulled as a Docker image instead of installed
-locally.
+locally. <code>LOCAL_BIN</code> is anchored to the root Taskfile directory, so tools
+install and run from the same location when Task is invoked in a subdirectory.
+Paths are shell-quoted, including repository paths containing spaces.
 
 ### First Run
 
@@ -25,7 +27,7 @@ locally.
 3. Ensure Docker is available if you will run <code>task lint</code>, Docker image
    tasks, or release snapshots.
 4. Run <code>task init</code>. It installs the local Go tools into <code>bin/</code> and runs
-   <code>go get -v ./...</code>.
+   <code>go mod download</code> to fetch existing dependencies without an upgrade step.
 5. Run <code>task test</code> to verify the checkout.
 6. Run <code>task build</code> to create the root-level <code>easyp</code> executable.
 
@@ -46,13 +48,17 @@ project.
 | Build the CLI | <code>task build</code> |
 | Run the full test suite | <code>task test</code> |
 | Run lint checks | <code>task lint</code> |
+| Run Go lint without Docker | <code>task lint:go</code> |
+| Lint root Dockerfile | <code>task lint:docker</code> |
 | Run tests and lint | <code>task quality</code> |
 | Open HTML coverage | <code>task coverage</code> |
 | Install the CLI into <code>GOBIN</code> | <code>task install</code> |
 | Remove local build/tool artifacts | <code>task clean</code> |
 | Regenerate config schemas | <code>task schema:generate</code> |
 | Check config schema drift | <code>task schema:check</code> |
-| Regenerate configured mocks (currently partially stale) | <code>task mocks</code> |
+| Generate optional core and console mocks | <code>task mocks</code> |
+| Check Task dispatch offline | <code>task dev-tools:check</code> |
+| Build the current Docker image locally | <code>task docker:build</code> |
 | Validate/generate the native v1 example | <code>task proto:check</code> |
 
 ## Build and Install
@@ -103,17 +109,17 @@ task lint
 task quality
 ~~~
 
-<code>task lint</code> first depends on <code>task build</code>. Its Hadolint steps still reference
-missing <code>Docker/base/Dockerfile</code> and <code>Docker/lint/Dockerfile</code>; this unresolved
-Taskfile issue prevents the target reaching <code>bin/golangci-lint run ./...</code>.
-The existing production Docker build is root <code>Dockerfile</code>. The checked-in
-<code>.golangci.yml</code> enables <code>staticcheck</code>; the installed linter version is pinned
-by the Taskfile. When the local tool is available, its Go-only invocation is
-<code>bin/golangci-lint run ./...</code>.
+<code>task lint</code> attempts both <code>lint:go</code> and <code>lint:docker</code>, then returns
+a failure if either fails. No binary build is required. <code>task lint:go</code> invokes
+<code>bin/golangci-lint run ./...</code>; the checked-in <code>.golangci.yml</code> enables
+<code>staticcheck</code>. <code>task lint:docker</code> feeds root <code>Dockerfile</code> to the pinned
+Hadolint image and requires Docker with a running daemon. Run either check
+independently to diagnose failures. Missing local tools report their install
+task; lint findings and Docker failures are not suppressed.
 
 <code>task quality</code> depends on both <code>task test</code> and <code>task lint</code>. It is the closest
 local approximation of the test and lint checks. CI's <code>tests.yml</code> workflow
-performs <code>task init</code>, <code>task test</code> and <code>task proto:check</code>; it does not invoke
+performs <code>task init</code>, <code>task test</code>, <code>task proto:check</code> and <code>task dev-tools:check</code>; it does not invoke
 the lint target in that workflow.
 
 ## Generated Artifacts
@@ -146,29 +152,40 @@ Do not hand-edit those generated JSON files.
 task mocks
 ~~~
 
-<code>task mocks</code> configures Mockery for <code>Rule</code>, <code>Console</code> and
-<code>CurrentProjectGitWalker</code>, all with <code>--dir ./internal/core</code> and output to
-that package's generated mocks directory. Only <code>Rule</code> and
-<code>CurrentProjectGitWalker</code> still belong there: <code>Console</code> is defined in
-<code>internal/adapters/console/new.go</code>. This stale Taskfile target is unresolved;
-do not assume the aggregate command succeeds. There are no checked-in
-Mockery outputs or <code>go:generate</code> directives in the current source. Module
-ports use hand-written test doubles; see [TESTING.md](TESTING.md).
+<code>task mocks</code> is an optional Mockery helper for <code>Rule</code> and
+<code>CurrentProjectGitWalker</code> in <code>internal/core</code>, and <code>Console</code> in
+<code>internal/adapters/console</code>. Outputs go into each owning package's
+<code>mocks/</code> subdirectory. The individual helper accepts <code>task mock NAME=Rule
+DIR=./internal/core</code>. Neither build nor test depends on these outputs.
+Existing tests use handwritten doubles, with no checked-in Mockery outputs
+or <code>go:generate</code> directives. Compile generated mocks before using them;
+do not commit unused outputs. See [TESTING.md](TESTING.md).
+
+### Taskfile Smoke Test
+
+<code>task dev-tools:check</code> runs <code>scripts/check-dev-tools.sh</code> using installed
+Task and standard shell utilities. It copies the Taskfile and fixture inputs
+to a temporary directory, replaces tools with trace executables, and invokes
+Task from a nested path containing spaces and quotes. It verifies dispatch,
+mock owners, missing-tool messages, installer and lint failure propagation,
+local-only Docker builds, and unchanged module manifests. It is deterministic
+and offline; actual tool compatibility and source lint still need real tools.
 
 ## Docker and Release Checks
 
 ~~~bash
-task docker_base GIT_TAG=v0.0.0
-task docker_lint GIT_TAG=v0.0.0
+task docker
+task docker:build DOCKER_IMAGE=easyp:local
 task goreleaser:check
 task goreleaser:test
 task goreleaser:test-docker
 ~~~
 
-<code>docker_base</code> and <code>docker_lint</code> are configured to build and tag the base and
-lint images, but their missing Dockerfiles make their preconditions fail.
-<code>task docker</code> obtains the current Git tag, builds both images, and pushes
-them, so it is a publishing command rather than a local smoke test.
+<code>task docker</code> aliases <code>docker:build</code>, which builds root <code>Dockerfile</code>
+locally with the overridable <code>DOCKER_IMAGE</code> tag (default <code>easyp:local</code>).
+Neither target publishes an image. The obsolete <code>docker_base</code>,
+<code>docker_lint</code> and <code>docker_push</code> targets have been removed. Publishing
+remains in the existing release workflow.
 
 <code>task goreleaser:check</code> validates GoReleaser configuration. The snapshot
 tasks create or select a <code>multiarch</code> Docker Buildx builder and run
@@ -211,6 +228,13 @@ isolated in a temporary directory. It runs in the test workflow.
 | Mockery | <code>task init</code> installs it into <code>./bin</code> |
 | Hadolint | <code>task lint</code> pulls <code>ghcr.io/hadolint/hadolint:v2.12.1-beta</code> |
 | GoReleaser | Provide <code>goreleaser</code> on <code>PATH</code> for its Task targets |
+
+The GolangCI-Lint installer is downloaded from its fixed release tag before
+execution; a failed download or installer fails the task. Go helpers use
+versioned <code>go install</code> commands with repository-local <code>GOBIN</code>.
+Mockery remains on v2.53.7; if its build or package loader reports an older
+<code>golang.org/x/tools</code> compatibility error, capture that failure without
+changing the root module's dependencies to accommodate the development tool.
 
 <code>task clean</code> removes <code>bin/</code> and <code>coverage.out</code>, then clears the Go build
 cache. It does not remove module caches, EasyP's dependency cache, schemas,

@@ -38,14 +38,14 @@ func (c *Cache) Install(ctx context.Context, lock v1.Lock) error {
 			return err
 		}
 		if !info.IsDir() {
-			return fmt.Errorf("%s: cached path is not a directory", entry.Source)
+			return fmt.Errorf("%s: cached path %q is not a directory; inspect this path and keep protobuf.lock unchanged", entry.Source, installed)
 		}
 		actual, err := dirhash.HashDir(installed, "", dirhash.Hash1)
 		if err != nil {
-			return fmt.Errorf("verify cached %s: %w", entry.Source, err)
+			return fmt.Errorf("verify cached %s at %q: %w", entry.Source, installed, err)
 		}
 		if actual != entry.Hash {
-			return fmt.Errorf("cached %s@%s hash mismatch: got %s, want %s", entry.Source, entry.Commit, actual, entry.Hash)
+			return fmt.Errorf("cached %s@%s hash mismatch: got %s, want %s; inspect or quarantine only cache directory %q, then rerun easyp mod download; keep protobuf.lock unchanged", entry.Source, entry.Commit, actual, entry.Hash, installed)
 		}
 	}
 	return nil
@@ -76,7 +76,7 @@ func fetchPinnedV1Module(ctx context.Context, entry v1.LockedModule, cacheRoot, 
 		return fmt.Errorf("hashV1Files: %w", err)
 	}
 	if actual != entry.Hash {
-		return fmt.Errorf("%s@%s hash mismatch: got %s, want %s", entry.Source, entry.Commit, actual, entry.Hash)
+		return fmt.Errorf("%s@%s hash mismatch: got %s, want %s; downloaded contents do not match the pinned hash; investigate repository integrity and keep protobuf.lock unchanged", entry.Source, entry.Commit, actual, entry.Hash)
 	}
 	parent := filepath.Dir(installed)
 	if err := os.MkdirAll(parent, 0o755); err != nil {
