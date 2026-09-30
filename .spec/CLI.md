@@ -139,7 +139,7 @@ easyp --format json breaking --against HEAD~1
 
 Without an explicit <code>--against</code>, the effective policy's <code>breaking.baseline</code> wins, with its required <code>git:</code> prefix removed; only an empty baseline falls back to <code>master</code>. Nonempty policy baselines must use <code>git:&lt;ref&gt;</code>, while the CLI flag accepts the raw ref. The v0 <code>breaking_check.against_git_ref</code> YAML key is obsolete. Findings use lint's text/JSON formats.
 
-Current and baseline sources use their own module manifests and locks. Descendant policies and <code>breaking.ignore</code> are evaluated with policy ownership; ignore paths are relative to the policy file. <code>FILE</code> adds declaration-move checks; <code>breaking.ignore_unstable</code> is supported. Other breaking categories and policy <code>extends</code> remain unsupported. See [internal/api/breaking_v1.go](../internal/api/breaking_v1.go), [breaking_scope.go](../internal/api/breaking_scope.go), and [breaking_ignore.go](../internal/api/breaking_ignore.go).
+Current and baseline sources use their own module manifests and locks. Descendant policies and <code>breaking.ignore</code> are evaluated with policy ownership; ignore paths are relative to the policy file. <code>FILE</code> adds declaration-move checks; <code>breaking.ignore_unstable</code> is supported. Other breaking categories remain unsupported. Section-scoped <code>extends</code> uses bounded local policies or verified consumer dependencies. See [internal/api/breaking_v1.go](../internal/api/breaking_v1.go), [breaking_scope.go](../internal/api/breaking_scope.go), and [breaking_ignore.go](../internal/api/breaking_ignore.go).
 
 ### <code>easyp get &lt;module&gt;[@version|@commit]</code>
 
@@ -305,7 +305,7 @@ Explicit config selection follows flag, then <code>EASYP_CFG</code>; relative va
 
 The cache path is resolved to an absolute path by [internal/api/runtime.go](../internal/api/runtime.go). Import consumers may install missing locked sources in that cache. Native dependency declarations belong in <code>protobuf.mod</code>, not the removed generation input configuration.
 
-Reserved features remain explicit: nonempty <code>linters.extends</code>/<code>breaking.extends</code> do not load shared policies; nonempty <code>generate.packages</code> is unsupported; only <code>FILE</code> is accepted as an additional breaking category. Unknown-import-to-Git-module discovery is intentionally excluded. Local replacement overlays apply in normal mode; explicit <code>--frozen</code> rejects them. Current parsing, execution, and schemas must all be consulted before documenting further support; see [policy.go](../internal/config/v1/policy.go), [generate.go](../internal/config/v1/generate.go), and [schema.go](../internal/config/v1/schema.go).
+Reserved features remain explicit: nonempty <code>generate.packages</code> is unsupported; only <code>FILE</code> is accepted as an additional breaking category. Unknown-import-to-Git-module discovery is intentionally excluded. Local replacement overlays apply in normal mode; explicit <code>--frozen</code> rejects them. Current parsing, execution, and schemas must all be consulted before documenting further support; see [policy.go](../internal/config/v1/policy.go), [generate.go](../internal/config/v1/generate.go), and [schema.go](../internal/config/v1/schema.go).
 
 ## Exit Codes and Error Flow
 
@@ -352,3 +352,7 @@ go build -o easyp ./cmd/easyp
 To add a command, implement <code>api.Handler.Command() *cli.Command</code>, define only its actual command flags, and register the handler in <code>buildCommand</code> in [cmd/easyp/main.go](../cmd/easyp/main.go). Shared flags and output precedence live in [internal/flags](../internal/flags). Keep command help, discovery, error behavior, and this reference aligned with the implementation.
 
 For additional reviewed behavior, see [context and generation](config/review-context-and-generation.md), [generation and baselines](config/review-generation-and-baselines.md), and [migration and reserved contracts](config/review-migration-and-polish.md). Those are retained review records; current source remains authoritative.
+
+### Shared policy references
+
+<code>linters.extends</code> and <code>breaking.extends</code> resolve independently after nearest-section cascading. See [policy-extends](config/policy-extends.md) for the file/module grammar, precedence, consumer-relative baseline/ignore behavior and non-networked validation.

@@ -41,7 +41,7 @@ Mandatory rules for AI agents. Prefer these over generic Go guides when they con
 - Use <code>easyp mod download</code> (lock-first) vs <code>easyp mod update</code> (refresh from <code>protobuf.mod</code>); commit <code>protobuf.lock</code> for CI reproducibility.
 - No remotes/mirrors/auth fields in <code>easyp.yaml</code> — auth via system git.
 - Regenerate schemas via <code>task schema:generate</code>: <code>schemas/easyp-v1.schema.json</code>, <code>schemas/easyp.schema.json</code>, <code>schemas/easyp.gen-v1.schema.json</code>, <code>schemas/easyp.gen.schema.json</code>, <code>schemas/protobuf.lock-v1.schema.json</code>, <code>schemas/protobuf.lock.schema.json</code>. Never hand-edit these outputs.
-- Treat <code>linters.extends</code>, <code>breaking.extends</code>, <code>generate.packages</code> and non-<code>FILE</code> breaking categories as reserved/unsupported; use [CLI.md](./CLI.md) for current v1 behavior and the migration wizard.
+- Treat <code>generate.packages</code> and non-<code>FILE</code> breaking categories as reserved/unsupported; use [CLI.md](./CLI.md) for current v1 behavior and the migration wizard.
 
 ## Formatting
 
@@ -54,3 +54,5 @@ Mandatory rules for AI agents. Prefer these over generic Go guides when they con
 - [ ] Error wrap = callee name only; no bare <code>defer Close()</code>
 - [ ] Tests: named cases, <code>t.Parallel</code>, no shared mutable mocks
 - [ ] Schema JSON regenerated, not hand-edited; vendor = <code>easyp_vendor</code>
+
+Shared producer policies use section-scoped <code>extends</code> from bounded local files or already declared/locked modules. See [.spec/config/policy-extends.md](config/policy-extends.md). No standalone policy versions or unpinned reference downloads are allowed.

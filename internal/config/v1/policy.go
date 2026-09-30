@@ -86,6 +86,9 @@ func ParsePolicy(r io.Reader) (Policy, error) {
 
 // LintConfig translates the policy into the lint engine configuration.
 func (p Policy) LintConfig() (config.LintConfig, error) {
+	if p.Linters.Extends != "" {
+		return config.LintConfig{}, fmt.Errorf("linters.extends %q was not resolved", p.Linters.Extends)
+	}
 	if err := p.validateSemantics(); err != nil {
 		return config.LintConfig{}, err
 	}
@@ -133,6 +136,9 @@ func (p Policy) ExcludesAllIssues() bool {
 // BreakingConfig maps the v1 baseline and supported categories onto the checker.
 // FILE adds declaration-move checks without disabling the existing checks.
 func (p Policy) BreakingConfig(fallbackRef string) (config.BreakingCheck, error) {
+	if p.Breaking.Extends != "" {
+		return config.BreakingCheck{}, fmt.Errorf("breaking.extends %q was not resolved", p.Breaking.Extends)
+	}
 	if err := p.validateSemantics(); err != nil {
 		return config.BreakingCheck{}, err
 	}

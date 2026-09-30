@@ -2,6 +2,7 @@ package api
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	iofs "io/fs"
 	"os"
@@ -17,7 +18,9 @@ import (
 	"github.com/easyp-tech/easyp/internal/flags"
 	"github.com/easyp-tech/easyp/internal/logger"
 	"github.com/easyp-tech/easyp/internal/modules"
+	policyresolver "github.com/easyp-tech/easyp/internal/policy"
 	"github.com/easyp-tech/easyp/internal/rules"
+	"github.com/easyp-tech/easyp/internal/workspace"
 )
 
 func (l Lint) actionV1(ctx *cli.Context, log logger.Logger, configPath, projectRoot, lintRoot string) error {
@@ -74,9 +77,23 @@ func (l Lint) actionV1(ctx *cli.Context, log logger.Logger, configPath, projectR
 	var batchOrder []v1LintAppKey
 	excludedByPath := make(map[string][]string)
 	moduleRoots := map[string][]string{}
+	policyBoundary, err := workspace.Boundary(projectRoot)
+	if err != nil {
+		return fmt.Errorf("Boundary: %w", err)
+	}
+	resolver := policyresolver.NewResolver(policyBoundary, func(graphCtx context.Context, moduleDir string) (modules.PolicyGraph, error) {
+		if cache == nil {
+			var cacheErr error
+			cache, cacheErr = moduleCache(ctx)
+			if cacheErr != nil {
+				return nil, fmt.Errorf("moduleCache: %w", cacheErr)
+			}
+		}
+		return modules.ResolvePolicyGraph(graphCtx, moduleDir, cache, flags.IsFrozen(ctx))
+	})
 	var issues []core.IssueInfo
 	for _, file := range files {
-		policy, policyKey, err := resolveV1LintPolicy(filepath.Dir(file), projectRoot, configPath)
+		policy, policyKey, lintersPresence, settingsPresence, err := resolveV1LintPolicyDetailed(filepath.Dir(file), projectRoot, configPath)
 		if err != nil {
 			return fmt.Errorf("resolveV1LintPolicy: %w", err)
 		}
@@ -103,7 +120,19 @@ func (l Lint) actionV1(ctx *cli.Context, log logger.Logger, configPath, projectR
 		}
 		appKey := v1LintAppKey{policy: policyKey, moduleDir: moduleDir}
 		if _, ok := apps[appKey]; !ok {
-			lintConfig, err := policy.LintConfig()
+			resolved, err := resolver.ResolveLint(ctx.Context, policyresolver.LintInput{
+				PolicyPath:     policyKey.linters,
+				Policy:         policy,
+				Presence:       lintersPresence,
+				SettingsPath:   policyKey.settings,
+				Settings:       policy.LinterSettings,
+				SettingsSource: settingsPresence,
+				ModuleDir:      moduleDir,
+			})
+			if err != nil {
+				return fmt.Errorf("resolve policy for consuming file %s: %w", file, err)
+			}
+			lintConfig, err := resolved.Policy.LintConfig()
 			if err != nil {
 				return fmt.Errorf("LintConfig: %w", err)
 			}
@@ -193,14 +222,21 @@ func v1IssueRuleExcluded(name string, selections []string) bool {
 }
 
 func resolveV1LintPolicy(directory, projectRoot, configPath string) (v1.Policy, v1LintPolicySources, error) {
+	policy, sources, _, _, err := resolveV1LintPolicyDetailed(directory, projectRoot, configPath)
+	return policy, sources, err
+}
+
+func resolveV1LintPolicyDetailed(directory, projectRoot, configPath string) (v1.Policy, v1LintPolicySources, v1.PolicyPresence, v1.PolicyPresence, error) {
 	var result v1.Policy
 	var sources v1LintPolicySources
+	lintersPresence := v1.NewPolicyPresence()
+	settingsPresence := v1.NewPolicyPresence()
 	var foundFile bool
 	for _, dir := range ancestorDirs(directory, projectRoot) {
 		path := v1PolicyPath(dir, projectRoot, configPath)
 		file, found, err := readV1PolicyFile(path)
 		if err != nil {
-			return v1.Policy{}, v1LintPolicySources{}, fmt.Errorf("readV1PolicyFile: %w", err)
+			return v1.Policy{}, v1LintPolicySources{}, v1.PolicyPresence{}, v1.PolicyPresence{}, fmt.Errorf("readV1PolicyFile: %w", err)
 		}
 		if !found {
 			continue
@@ -209,10 +245,12 @@ func resolveV1LintPolicy(directory, projectRoot, configPath string) (v1.Policy, 
 		if file.has("linters") && sources.linters == "" {
 			result.Linters = file.policy.Linters
 			sources.linters = path
+			lintersPresence = file.presence
 		}
 		if file.has("linters-settings") && sources.settings == "" {
 			result.LinterSettings = file.policy.LinterSettings
 			sources.settings = path
+			settingsPresence = file.presence
 		}
 		if file.has("issues") && sources.issues == "" {
 			result.Issues = file.policy.Issues
@@ -220,10 +258,10 @@ func resolveV1LintPolicy(directory, projectRoot, configPath string) (v1.Policy, 
 		}
 	}
 	if !foundFile {
-		return v1.Policy{}, v1LintPolicySources{}, fmt.Errorf("no easyp.yaml policy for %s", directory)
+		return v1.Policy{}, v1LintPolicySources{}, v1.PolicyPresence{}, v1.PolicyPresence{}, fmt.Errorf("no easyp.yaml policy for %s", directory)
 	}
 	if result.Linters.Default == "" {
 		result.Linters.Default = "STANDARD"
 	}
-	return result, sources, nil
+	return result, sources, lintersPresence, settingsPresence, nil
 }

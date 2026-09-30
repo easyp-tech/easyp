@@ -14,6 +14,7 @@ import (
 type v1PolicyFile struct {
 	policy   v1.Policy
 	sections map[string]yaml.Node
+	presence v1.PolicyPresence
 }
 
 func readV1PolicyFile(path string) (v1PolicyFile, bool, error) {
@@ -32,7 +33,11 @@ func readV1PolicyFile(path string) (v1PolicyFile, bool, error) {
 	if err := yaml.Unmarshal(raw, &sections); err != nil {
 		return v1PolicyFile{}, true, fmt.Errorf("Unmarshal: %w", err)
 	}
-	return v1PolicyFile{policy: policy, sections: sections}, true, nil
+	presence, err := v1.ParsePolicyPresence(raw)
+	if err != nil {
+		return v1PolicyFile{}, true, fmt.Errorf("ParsePolicyPresence: %w", err)
+	}
+	return v1PolicyFile{policy: policy, sections: sections, presence: presence}, true, nil
 }
 
 func (file v1PolicyFile) has(section string) bool {

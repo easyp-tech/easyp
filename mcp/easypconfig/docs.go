@@ -10,7 +10,7 @@ var descriptions = map[string]map[string]string{
 		"linters.enable":                "Implemented lint rules or groups to enable; repeated selections are idempotent.",
 		"linters.disable":               "Implemented lint rules or groups to disable; disabling takes precedence over enabling.",
 		"linters.allow_comment_ignores": "Allow scoped comment suppressions (default true). easyp:disable RULE annotates a declaration or a block; paired easyp:enable ends an explicit region. Legacy nolint:RULE and buf:lint:ignore RULE are also recognized.",
-		"linters.extends":               "Reserved reference to another lint policy.",
+		"linters.extends":               "Base lint policy from a workspace-relative file or a declared, locked module; local adjustments override it.",
 		"linters-settings":              "Settings for supported lint rules.",
 		"linters-settings.ENUM_ZERO_VALUE_SUFFIX": "Suffix for zero enum values.",
 		"linters-settings.SERVICE_SUFFIX":         "Suffix for service names.",
@@ -22,7 +22,7 @@ var descriptions = map[string]map[string]string{
 		"breaking.baseline":                       "Empty or git:<ref> baseline; an explicit --against overrides it, while the CLI default does not. Runtime and config validation enforce the same syntax.",
 		"breaking.ignore":                         "Paths ignored by breaking checks.",
 		"breaking.categories":                     "Optional compatibility checks; FILE also detects declarations moved between files.",
-		"breaking.extends":                        "Reserved reference to another breaking policy.",
+		"breaking.extends":                        "Base breaking policy from a local file or declared, locked module; evaluated separately for every checked module.",
 		"breaking.ignore_unstable":                "Ignore only declarations in packages with unstable version suffixes; stable package checks remain active.",
 	},
 	v1.GenerateFile: {
@@ -66,6 +66,7 @@ func examplesFor(file string) []Example {
 	switch file {
 	case v1.PolicyFile:
 		return []Example{
+			{Title: "shared_lint", Description: "Create .policies/lint.yaml with a linters section in this workspace before execution.", YAML: "version: v1\nlinters:\n  extends: ./.policies/lint.yaml\n  disable: [PACKAGE_VERSION_SUFFIX]\n", Paths: []string{"linters.extends"}},
 			{Title: "lint_policy", YAML: "version: v1\nlinters:\n  default: STANDARD\n  enable: [FILE_LOWER_SNAKE_CASE]\n", Paths: []string{"linters", "linters.default", "linters.enable"}},
 			{Title: "breaking_policy", YAML: "version: v1\nbreaking:\n  baseline: git:main\n  categories: [FILE]\n", Paths: []string{"breaking", "breaking.baseline", "breaking.categories"}},
 		}
@@ -110,7 +111,7 @@ func notesFor(file, path string) []string {
 	case file == v1.GenerateFile && within("generate.packages", path):
 		return []string{"generate.packages is reserved; nonempty values are rejected by schema and CLI. Use generate.modules for complete module selection."}
 	case file == v1.PolicyFile && path == "linters.extends":
-		return []string{"linters.extends is not implemented; lint fails when it is set."}
+		return []string{"Use ./ or ../ for local files, or declared-module#policy-path. Versions belong only in protobuf.mod/protobuf.lock. Local adjustments override the base; issues are not inherited. validate-config requires verified cached content and never downloads it."}
 	case file == v1.PolicyFile && path == "issues.exclude-rules[].path":
 		return []string{"Paths are relative to the easyp.yaml providing the effective issues section, not the invocation directory. Supports *, ?, character classes and whole-segment **. A matching exclusion without linters suppresses every rule for that file."}
 	case file == v1.PolicyFile && path == "breaking.categories":
@@ -118,7 +119,7 @@ func notesFor(file, path string) []string {
 	case file == v1.PolicyFile && path == "breaking.ignore_unstable":
 		return []string{"Filters unstable version-suffixed packages in both comparison revisions. Stable package declarations, imports and references remain checked."}
 	case file == v1.PolicyFile && path == "breaking.extends":
-		return []string{"breaking.extends is not implemented; breaking checks fail when it is set."}
+		return []string{"Use ./ or ../ for local files, or declared-module#policy-path. Baseline and ignore paths apply at the consuming policy. Explicit false and empty lists override the base. Frozen mode uses verified pins and rejects local replacements."}
 	default:
 		return nil
 	}

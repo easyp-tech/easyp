@@ -23,6 +23,23 @@ type Snapshot struct {
 	RepositoryRoot string
 }
 
+// RepositoryRoot returns the current worktree root without resolving a
+// baseline revision or modifying the checkout.
+func RepositoryRoot(directory string) (string, error) {
+	repository, err := gogit.PlainOpenWithOptions(directory, &gogit.PlainOpenOptions{DetectDotGit: true, EnableDotGitCommonDir: true})
+	if errors.Is(err, gogit.ErrRepositoryNotExists) {
+		return "", core.ErrRepositoryDoesNotExist
+	}
+	if err != nil {
+		return "", fmt.Errorf("PlainOpenWithOptions: %w", err)
+	}
+	worktree, err := repository.Worktree()
+	if err != nil {
+		return "", fmt.Errorf("Worktree: %w", err)
+	}
+	return worktree.Filesystem.Root(), nil
+}
+
 // Close removes the temporary snapshot.
 func (s *Snapshot) Close() error { return os.RemoveAll(s.Root) }
 
@@ -70,6 +87,12 @@ func SnapshotRevision(ctx context.Context, directory, ref string) (_ *Snapshot, 
 			return fmt.Errorf("invalid snapshot path %q", file.Name)
 		}
 		if file.Mode != filemode.Regular && file.Mode != filemode.Executable && file.Mode != filemode.Deprecated {
+			// Additional policy candidates are copied only when regular. An unused
+			// YAML symlink must not break an otherwise unrelated baseline check. If
+			// referenced as a policy, its absence is reported without following it.
+			if snapshotAdditionalPolicy(file.Name) {
+				return nil
+			}
 			return fmt.Errorf("baseline input %q is not a regular file", file.Name)
 		}
 		reader, err := file.Reader()
@@ -100,7 +123,7 @@ func SnapshotRevision(ctx context.Context, directory, ref string) (_ *Snapshot, 
 }
 
 func snapshotInput(name string) bool {
-	if path.Ext(name) == ".proto" {
+	if extension := path.Ext(name); extension == ".proto" || extension == ".yaml" || extension == ".yml" {
 		return true
 	}
 	switch path.Base(name) {
@@ -109,4 +132,15 @@ func snapshotInput(name string) bool {
 	default:
 		return false
 	}
+}
+
+func snapshotAdditionalPolicy(name string) bool {
+	if path.Ext(name) != ".yaml" && path.Ext(name) != ".yml" {
+		return false
+	}
+	switch path.Base(name) {
+	case "easyp.yaml", "buf.yaml", "buf.yml", "buf.work.yaml":
+		return false
+	}
+	return true
 }

@@ -276,7 +276,7 @@ func TestValidateFileReportsSemanticIssues(t *testing.T) {
 			expectedMessage: "missing module directive",
 		},
 		{
-			name:            "unsupported linter inheritance",
+			name:            "invalid linter inheritance reference",
 			filename:        PolicyFile,
 			contents:        "linters:\n  extends: shared.yaml\n",
 			expectedMessage: "linters.extends",
@@ -301,7 +301,7 @@ func TestValidateFileReportsSemanticIssues(t *testing.T) {
 
 			require.NoError(t, err)
 			require.Len(t, issues, 1)
-			if tt.name == "unsupported linter inheritance" {
+			if tt.name == "invalid linter inheritance reference" {
 				assert.Equal(t, "yaml_validation", issues[0].Code)
 				assert.Positive(t, issues[0].Line)
 			} else {
