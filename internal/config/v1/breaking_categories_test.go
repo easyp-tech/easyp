@@ -24,8 +24,10 @@ func TestBreakingCategoriesValidation(t *testing.T) {
 		{name: "empty", categories: "  categories: []\n"},
 		{name: "FILE", categories: "  categories: [FILE]\n", wantUse: []string{"FILE"}},
 		{name: "duplicate FILE", categories: "  categories: [FILE, FILE]\n", wantUse: []string{"FILE", "FILE"}},
-		{name: "WIRE is not implemented", categories: "  categories: [WIRE]\n", wantError: true},
-		{name: "mixed supported and unsupported", categories: "  categories: [FILE, WIRE]\n", wantError: true},
+		{name: "PACKAGE", categories: "  categories: [PACKAGE]\n", wantUse: []string{"PACKAGE"}},
+		{name: "WIRE_JSON", categories: "  categories: [WIRE_JSON]\n", wantUse: []string{"WIRE_JSON"}},
+		{name: "WIRE", categories: "  categories: [WIRE]\n", wantUse: []string{"WIRE"}},
+		{name: "mixed profiles", categories: "  categories: [WIRE, WIRE_JSON, PACKAGE, FILE]\n", wantUse: []string{"WIRE", "WIRE_JSON", "PACKAGE", "FILE"}},
 		{name: "unknown", categories: "  categories: [UNKNOWN]\n", wantError: true},
 	}
 	for _, tt := range tests {
@@ -51,7 +53,7 @@ func TestBreakingCategoriesValidation(t *testing.T) {
 			assert.Equal(t, "main", cfg.AgainstGitRef)
 			if len(cfg.Use) > 0 {
 				cfg.Use[0] = "changed"
-				assert.Equal(t, "FILE", policy.Breaking.Categories[0])
+				assert.Equal(t, tt.wantUse[0], policy.Breaking.Categories[0])
 			}
 		})
 	}

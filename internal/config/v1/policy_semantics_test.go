@@ -25,7 +25,7 @@ func TestPolicySemanticValidationParity(t *testing.T) {
 		{name: "multiline_ref", raw: "breaking:\n  baseline: \"git:main\\nrelease\"\n", path: "breaking.baseline"},
 		{name: "carriage_return_ref", raw: "breaking:\n  baseline: \"git:main\\r\"\n", path: "breaking.baseline"},
 		{name: "unsupported_baseline", raw: "breaking:\n  baseline: image:baseline.bin\n", path: "breaking.baseline"},
-		{name: "unsupported_breaking_category", raw: "breaking:\n  categories: [WIRE]\n", path: "breaking.categories"},
+		{name: "unknown_breaking_category", raw: "breaking:\n  categories: [UNKNOWN]\n", path: "breaking.categories"},
 		{name: "linter_extends", raw: "linters:\n  extends: policy.yaml\n", path: "linters.extends"},
 		{name: "breaking_extends", raw: "breaking:\n  extends: policy.yaml\n", path: "breaking.extends"},
 		{name: "unsupported_setting_rule", raw: "linters-settings:\n  UNKNOWN:\n    suffix: Foo\n", path: `["linters-settings"].UNKNOWN`},
@@ -91,7 +91,7 @@ func TestPolicyConsumersValidateUnrelatedSections(t *testing.T) {
 		{name: "baseline", policy: Policy{Breaking: BreakingPolicy{Baseline: "main"}}, want: "breaking.baseline"},
 		{name: "invalid_breaking_extends", policy: Policy{Breaking: BreakingPolicy{Extends: "parent.yaml"}}, want: "breaking.extends"},
 		{name: "invalid_linter_extends", policy: Policy{Linters: LinterPolicy{Extends: "parent.yaml"}}, want: "linters.extends"},
-		{name: "category", policy: Policy{Breaking: BreakingPolicy{Categories: []string{"WIRE"}}}, want: "breaking.categories: unsupported category"},
+		{name: "category", policy: Policy{Breaking: BreakingPolicy{Categories: []string{"UNKNOWN"}}}, want: "breaking.categories: unknown profile"},
 		{name: "setting_rule", policy: Policy{LinterSettings: map[string]map[string]string{"UNKNOWN": {"suffix": "Foo"}}}, want: "unsupported linters-settings rule"},
 		{name: "setting_field", policy: Policy{LinterSettings: map[string]map[string]string{"SERVICE_SUFFIX": {"bogus": "Foo"}}}, want: "bogus"},
 	}

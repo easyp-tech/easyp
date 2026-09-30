@@ -21,7 +21,7 @@ var descriptions = map[string]map[string]string{
 		"breaking":                                "Compatibility checks against a Git baseline.",
 		"breaking.baseline":                       "Empty or git:<ref> baseline; an explicit --against overrides it, while the CLI default does not. Runtime and config validation enforce the same syntax.",
 		"breaking.ignore":                         "Paths ignored by breaking checks.",
-		"breaking.categories":                     "Optional compatibility checks; FILE also detects declarations moved between files.",
+		"breaking.categories":                     "Compatibility profiles: FILE, PACKAGE, WIRE_JSON and WIRE. Omitted or empty retains the legacy checker; nonempty profiles use compiled descriptors.",
 		"breaking.extends":                        "Base breaking policy from a local file or declared, locked module; evaluated separately for every checked module.",
 		"breaking.ignore_unstable":                "Ignore only declarations in packages with unstable version suffixes; stable package checks remain active.",
 	},
@@ -116,7 +116,7 @@ func notesFor(file, path string) []string {
 	case file == v1.PolicyFile && path == "issues.exclude-rules[].path":
 		return []string{"Paths are relative to the easyp.yaml providing the effective issues section, not the invocation directory. Supports *, ?, character classes and whole-segment **. A matching exclusion without linters suppresses every rule for that file."}
 	case file == v1.PolicyFile && path == "breaking.categories":
-		return []string{"FILE is the only supported category and adds declaration-move checks. Existing compatibility checks remain enabled; other categories are not supported."}
+		return []string{"FILE checks generated-source and file identity; PACKAGE permits moves within a package; WIRE_JSON protects binary and JSON; WIRE protects binary encoding. Multiple profiles select their union without duplicate findings. Omitted or empty categories preserve legacy checks. Profile catalog and limits are documented in .spec/config/breaking-profiles.md."}
 	case file == v1.PolicyFile && path == "breaking.ignore_unstable":
 		return []string{"Filters unstable version-suffixed packages in both comparison revisions. Stable package declarations, imports and references remain checked."}
 	case file == v1.PolicyFile && path == "breaking.extends":

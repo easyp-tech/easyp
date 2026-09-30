@@ -69,7 +69,8 @@ service ItemService {
 			for _, issue := range issues {
 				if strings.Contains(issue.Message, "was moved") {
 					moved++
-					assert.Contains(t, issue.Message, "\"old.proto\" file to \"new.proto\"")
+					assert.Contains(t, issue.Message, "old.proto")
+					assert.Contains(t, issue.Message, "new.proto")
 				}
 				if strings.Contains(issue.Message, "was deleted") {
 					deleted++

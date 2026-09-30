@@ -40,8 +40,6 @@ type IssueExcludeRule struct {
 	Linters []string `yaml:"linters"`
 }
 
-const breakingCategoryFile = "FILE"
-
 // BreakingPolicy selects a baseline and compatibility checks.
 type BreakingPolicy struct {
 	Baseline       string   `yaml:"baseline"`
@@ -133,8 +131,7 @@ func (p Policy) ExcludesAllIssues() bool {
 	return false
 }
 
-// BreakingConfig maps the v1 baseline and supported categories onto the checker.
-// FILE adds declaration-move checks without disabling the existing checks.
+// BreakingConfig maps the v1 baseline and selected compatibility profiles onto the checker.
 func (p Policy) BreakingConfig(fallbackRef string) (config.BreakingCheck, error) {
 	if p.Breaking.Extends != "" {
 		return config.BreakingCheck{}, fmt.Errorf("breaking.extends %q was not resolved", p.Breaking.Extends)
@@ -150,6 +147,7 @@ func (p Policy) BreakingConfig(fallbackRef string) (config.BreakingCheck, error)
 		AgainstGitRef:  baseline,
 		Ignore:         p.Breaking.Ignore,
 		Use:            append([]string(nil), p.Breaking.Categories...),
+		Categories:     append([]string(nil), p.Breaking.Categories...),
 		IgnoreUnstable: p.Breaking.IgnoreUnstable,
 	}, nil
 }

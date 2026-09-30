@@ -6,6 +6,7 @@ import (
 	"reflect"
 	"strings"
 
+	"github.com/easyp-tech/easyp/internal/config"
 	"github.com/easyp-tech/easyp/internal/core"
 	"github.com/easyp-tech/easyp/internal/rules"
 )
@@ -81,8 +82,8 @@ func documents() map[string]*schema {
 		AdditionalProperties: false,
 	}
 	policy.Properties["breaking"].Properties["baseline"].Pattern = "^(git:.+)?$"
-	policy.Properties["breaking"].Properties["categories"].Items.Enum = []string{breakingCategoryFile}
-	policy.Properties["breaking"].Properties["categories"].Description = "FILE adds checks for declarations moved between files; existing compatibility checks remain enabled."
+	policy.Properties["breaking"].Properties["categories"].Items.Enum = config.BreakingProfileNames()
+	policy.Properties["breaking"].Properties["categories"].Description = "Selects FILE, PACKAGE, WIRE_JSON, and/or WIRE compatibility profiles. Multiple profiles apply their union; omitted or empty retains legacy checks."
 
 	for _, section := range []string{"linters", "breaking"} {
 		extends := policy.Properties[section].Properties["extends"]

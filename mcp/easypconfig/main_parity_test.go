@@ -16,11 +16,11 @@ func TestDescribeFileBreakingCategory(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, got.Fields, 1)
 	assert.Contains(t, got.Fields[0].Description, "FILE")
-	assert.Contains(t, strings.Join(got.Notes, " "), "Existing compatibility checks remain enabled")
+	assert.Contains(t, strings.Join(got.Notes, " "), "Omitted or empty categories preserve legacy checks")
 	assert.Equal(t, "array", got.Schema["type"])
 	items, ok := got.Schema["items"].(map[string]any)
 	require.True(t, ok)
-	assert.Equal(t, []any{"FILE"}, items["enum"])
+	assert.Equal(t, []any{"FILE", "PACKAGE", "WIRE_JSON", "WIRE"}, items["enum"])
 	require.NotEmpty(t, got.Examples)
 	for _, example := range got.Examples {
 		policy, err := v1.ParsePolicy(strings.NewReader(example.YAML))

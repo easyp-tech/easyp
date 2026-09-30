@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"slices"
 	"strings"
+
+	"github.com/easyp-tech/easyp/internal/config"
 )
 
 // validateSemantics checks the entire policy even when the caller only uses
@@ -29,10 +31,8 @@ func (p Policy) validateSemantics() error {
 	if _, err := ParsePolicyReference(p.Breaking.Extends); err != nil {
 		return fmt.Errorf("breaking.extends: %w", err)
 	}
-	for _, category := range p.Breaking.Categories {
-		if category != breakingCategoryFile {
-			return fmt.Errorf("breaking.categories: unsupported category %q; supported: FILE", category)
-		}
+	if err := config.ValidateBreakingCategories(p.Breaking.Categories); err != nil {
+		return err
 	}
 	baseline := p.Breaking.Baseline
 	if baseline != "" && (!strings.HasPrefix(baseline, "git:") || len(baseline) == len("git:") || strings.ContainsAny(baseline, "\r\n")) {

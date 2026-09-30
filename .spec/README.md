@@ -111,4 +111,4 @@ N/A — EasyP is a CLI tool, not a long-running server. Remote plugin execution 
 3. **CLI command** — wire in <code>internal/api</code>, register from <code>cmd/easyp</code>; follow existing handler patterns.
 4. **Interfaces** — update consumer interfaces and their test doubles; consult [TESTING.md](./TESTING.md) before generating optional Mockery test doubles. Add/adjust tests with <code>-race</code>.
 5. Before finishing behavior changes: run tests for touched packages; for schema changes run <code>task schema:check</code>.
-6. Reserved extensions/package selectors/non-<code>FILE</code> breaking categories and unresolved X20 mappings are recorded in [CLI.md](./CLI.md) and [ERRORS.md](./ERRORS.md); do not infer support from a declared field alone.
+6. Implemented policy inheritance, exact package selection and breaking profiles are described in [CLI.md](./CLI.md) and [ERRORS.md](./ERRORS.md); do not infer support from a declared field alone.

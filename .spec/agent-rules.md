@@ -41,7 +41,7 @@ Mandatory rules for AI agents. Prefer these over generic Go guides when they con
 - Use <code>easyp mod download</code> (lock-first) vs <code>easyp mod update</code> (refresh from <code>protobuf.mod</code>); commit <code>protobuf.lock</code> for CI reproducibility.
 - No remotes/mirrors/auth fields in <code>easyp.yaml</code> — auth via system git.
 - Regenerate schemas via <code>task schema:generate</code>: <code>schemas/easyp-v1.schema.json</code>, <code>schemas/easyp.schema.json</code>, <code>schemas/easyp.gen-v1.schema.json</code>, <code>schemas/easyp.gen.schema.json</code>, <code>schemas/protobuf.lock-v1.schema.json</code>, <code>schemas/protobuf.lock.schema.json</code>. Never hand-edit these outputs.
-- Treat non-<code>FILE</code> breaking categories as reserved/unsupported; use [CLI.md](./CLI.md) for current v1 behavior and the migration wizard.
+- Use the implemented descriptor-based FILE/PACKAGE/WIRE_JSON/WIRE catalog; omitted categories retain legacy checks; use [CLI.md](./CLI.md) for current v1 behavior and the migration wizard.
 
 ## Formatting
 
