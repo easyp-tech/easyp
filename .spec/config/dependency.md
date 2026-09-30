@@ -135,7 +135,7 @@ Run normal <code>mod tidy</code> after removing local replacements to prepare th
 - Buf v1 workspace/module configs and Buf v2 module roots.
 - No config: the repository directory is the default root.
 
-Root config detection checks existence; parsing belongs to format-specific readers. Missing optional files are normal. Invalid files and filesystem errors are returned. Buf roots take precedence over legacy EasyP roots when both formats occur; legacy requirements are still extracted. Buf registry dependencies are not automatically converted to Git identities.
+Root config detection checks existence; parsing belongs to format-specific readers. Missing optional files are normal. Invalid files and filesystem errors are returned. Buf roots take precedence over legacy EasyP roots when both formats occur; legacy requirements are still extracted. Buf v1/v1beta1/v2 <code>deps</code> are read as BSR references, including <code>buf.yaml</code> files selected by a v1 <code>buf.work.yaml</code>. A nonempty BSR dependency list is never ignored: dependency adaptation returns <code>UnsupportedBufRegistryDependenciesError</code> with the declaring config and references. Automatic BSR-to-Git mapping is intentionally not implemented yet; provide native <code>protobuf.mod</code> metadata for that Git dependency when using it with EasyP.
 
 A nested module root <code>proto</code> becomes <code>&lt;checkout&gt;/&lt;module-directory&gt;/proto</code>. A file below that root is imported without either physical prefix. <code>modules.SourceRoots</code> preserves module identity for managed selectors. Common import paths in different physical roots are rejected rather than silently selecting one.
 

@@ -65,6 +65,7 @@ func ReadGitDependency(dir, source string) (v1.Module, error) {
 	}
 	module := v1.Module{Name: source}
 	var bufRoots, legacyRoots []string
+	var bufRegistryDependencies []BufRegistryDependency
 	foundBuf := false
 	for _, mode := range modes {
 		path := filepath.Join(dir, string(mode))
@@ -75,19 +76,23 @@ func ReadGitDependency(dir, source string) (v1.Module, error) {
 			}
 			module.Requires = append(module.Requires, rootManifest.Requires...)
 		case gitDependencyBufWorkspace:
-			bufRoots, err = readBufDependencyWorkspace(path)
+			metadata, err := readBufDependencyWorkspace(path)
 			if err != nil {
 				return v1.Module{}, fmt.Errorf("readBufDependencyWorkspace: %w", err)
 			}
+			bufRoots = metadata.Roots
+			bufRegistryDependencies = append(bufRegistryDependencies, metadata.RegistryDependencies...)
 			foundBuf = true
 		case gitDependencyBufModule:
 			if foundBuf {
 				continue
 			}
-			bufRoots, err = readBufDependencyModule(path)
+			metadata, err := readBufDependencyModule(path)
 			if err != nil {
 				return v1.Module{}, fmt.Errorf("readBufDependencyModule: %w", err)
 			}
+			bufRoots = metadata.Roots
+			bufRegistryDependencies = append(bufRegistryDependencies, metadata.RegistryDependencies...)
 			foundBuf = true
 		case gitDependencyLegacyEasyP:
 			roots, requires, err := readLegacyEasyPRootsAndRequires(path)
@@ -99,6 +104,9 @@ func ReadGitDependency(dir, source string) (v1.Module, error) {
 		default:
 			return v1.Module{}, fmt.Errorf("unsupported dependency config mode %q", mode)
 		}
+	}
+	if len(bufRegistryDependencies) > 0 {
+		return v1.Module{}, UnsupportedBufRegistryDependenciesError{Dependencies: bufRegistryDependencies}
 	}
 	if foundBuf {
 		module.Roots = bufRoots

@@ -253,3 +253,109 @@ func TestParseLegacyV1RequirementByCommit(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, v1.Requirement{Module: "github.com/acme/common", Version: commit}, got)
 }
+
+func TestReadGitDependencyRejectsBufRegistryDependencies(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name  string
+		files map[string]string
+		refs  []string
+	}{
+		{
+			name: "buf v2",
+			files: map[string]string{
+				"buf.yaml": "version: v2\nmodules:\n  - path: proto\ndeps:\n  - buf.build/googleapis/googleapis\n",
+			},
+			refs: []string{"buf.build/googleapis/googleapis"},
+		},
+		{
+			name: "buf v1",
+			files: map[string]string{
+				"buf.yaml": "version: v1\ndeps:\n  - buf.build/acme/payments:deadbeef\n",
+			},
+			refs: []string{"buf.build/acme/payments:deadbeef"},
+		},
+		{
+			name: "buf v1beta1",
+			files: map[string]string{
+				"buf.yaml": "version: v1beta1\nbuild:\n  roots: [proto]\ndeps:\n  - buf.build/acme/common:v1.2.3\n",
+			},
+			refs: []string{"buf.build/acme/common:v1.2.3"},
+		},
+		{
+			name: "buf v1 workspace aggregates nested module deps",
+			files: map[string]string{
+				"buf.work.yaml":    "version: v1\ndirectories: [proto/a, proto/b]\n",
+				"proto/a/buf.yaml": "version: v1\ndeps: [buf.build/acme/a-dep]\n",
+				"proto/b/buf.yaml": "version: v1\ndeps: [buf.build/acme/b-dep:v1.0.0]\n",
+			},
+			refs: []string{"buf.build/acme/a-dep", "buf.build/acme/b-dep:v1.0.0"},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			dir := t.TempDir()
+			for name, body := range tt.files {
+				path := filepath.Join(dir, name)
+				require.NoError(t, os.MkdirAll(filepath.Dir(path), 0o755))
+				require.NoError(t, os.WriteFile(path, []byte(body), 0o644))
+			}
+
+			_, err := ReadGitDependency(dir, "example.com/dependency")
+
+			var registryErr UnsupportedBufRegistryDependenciesError
+			require.ErrorAs(t, err, &registryErr)
+			require.Len(t, registryErr.Dependencies, len(tt.refs))
+			for i, ref := range tt.refs {
+				require.Equal(t, ref, registryErr.Dependencies[i].Reference)
+				require.Contains(t, registryErr.Dependencies[i].Config, bufModuleConfigFile)
+			}
+			require.ErrorContains(t, err, "BSR-to-Git mapping")
+			require.ErrorContains(t, err, "protobuf.mod")
+		})
+	}
+}
+
+func TestReadGitDependencyBufWorkspaceIgnoresUnselectedRootBufMetadata(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	files := map[string]string{
+		"buf.work.yaml":    "version: v1\ndirectories: [proto/a]\n",
+		"buf.yaml":         "version: v1\ndeps: [buf.build/acme/not-in-workspace]\n",
+		"proto/a/buf.yaml": "version: v1\n",
+		"proto/a/a.proto":  "syntax = \"proto3\";\n",
+	}
+	for name, body := range files {
+		path := filepath.Join(dir, name)
+		require.NoError(t, os.MkdirAll(filepath.Dir(path), 0o755))
+		require.NoError(t, os.WriteFile(path, []byte(body), 0o644))
+	}
+
+	module, err := ReadGitDependency(dir, "example.com/dependency")
+
+	require.NoError(t, err)
+	require.Equal(t, []string{"proto/a"}, module.Roots)
+}
+
+func TestReadGitDependencyBufWorkspaceRejectsEscapingDirectoryBeforeMetadataRead(t *testing.T) {
+	t.Parallel()
+
+	root := t.TempDir()
+	outside := filepath.Join(filepath.Dir(root), "outside")
+	require.NoError(t, os.MkdirAll(outside, 0o755))
+	require.NoError(t, os.WriteFile(filepath.Join(outside, bufModuleConfigFile), []byte(
+		"version: v1\ndeps: [buf.build/acme/outside]\n",
+	), 0o644))
+	require.NoError(t, os.WriteFile(filepath.Join(root, bufWorkConfigFile), []byte(
+		"version: v1\ndirectories: [../outside]\n",
+	), 0o644))
+
+	_, err := ReadGitDependency(root, "example.com/dependency")
+
+	require.ErrorContains(t, err, "leaves the repository")
+	require.NotContains(t, err.Error(), "buf.build/acme/outside")
+}
