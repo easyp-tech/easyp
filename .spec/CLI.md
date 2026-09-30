@@ -147,7 +147,7 @@ easyp mod update
 easyp mod vendor
 ~~~
 
-Current <code>get</code>, <code>tidy</code>, <code>update</code>, and <code>vendor</code> reject local replacements when producing a reproducible lock/vendor result. An explicit frozen mode and a lock contract for local replacements remain unresolved X-20 work. Unknown imports are reported; no command automatically maps arbitrary import paths to Git modules. See [Dependency Management](config/dependency.md) for the implemented replacement, resolution, cache, and lock behavior.
+With local replacements, <code>tidy</code> validates the ephemeral effective graph without writing manifest or lock. <code>get</code>/<code>update</code> may edit explicit requirements, but all operations preserve an existing lock byte-for-byte and do not create a local-graph lock. <code>vendor</code> copies the effective graph without changing the lock. Frozen mode is a separate pending step. Unknown imports are reported; automatic import-to-Git discovery is intentionally excluded. See [Dependency Management](config/dependency.md).
 
 ### <code>easyp init [flags]</code>
 
@@ -314,7 +314,7 @@ easyp validate-config --format json > validation.json
 | <code>no selected easyp.gen.yaml</code> | Select a consumer directory with <code>--project</code>, or intentionally opt into recursive generation with <code>--all</code>. |
 | <code>multiple independent policies found</code> | Select the intended policy with global <code>--cfg</code>. |
 | Missing <code>protobuf.lock</code> during download | Resolve the manifest explicitly with <code>mod tidy</code> before downloading its pinned graph. |
-| <code>remove local replacements</code> during lock/vendor operations | Current reproducible lock operations reject those replacements; X-20's broader contract remains unresolved. |
+| <code>remove local replacements</code> during lock/vendor operations | Local-mode tidy/get/update/vendor preserve the shared lock; remove replacements and run tidy before publishing it. |
 | Legacy configuration rejection | Use <code>migrate</code> to inspect a concrete v1 conversion; generation does not silently convert v0 inputs. |
 | <code>--interactive requires terminal input and output</code> | Run the wizard in a terminal or use explicit module/write/resolve flags for scripted migration. |
 | Conflicting descriptor in a combined export | Select a compatible project set or use <code>--descriptor_set_out_dir</code> to retain separate graphs. |

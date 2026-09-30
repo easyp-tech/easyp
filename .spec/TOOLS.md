@@ -203,7 +203,8 @@ EasyP module dependencies are Git repositories, cached under <code>EASYPPATH</co
 ~~~
 
 It verifies the v1 lock, then copies <code>.proto</code> files from locked dependency
-roots to <code>easyp_vendor</code> by import path. It rejects local replacements and
+roots to <code>easyp_vendor</code> by import path. Local replacements use the
+effective graph without writing the published lock. It rejects
 duplicate import paths. This is a materialized dependency tree, separate from
 the module cache and Go's usual <code>vendor/</code> directory. See
 [config/dependency.md](config/dependency.md) for the authoritative dependency

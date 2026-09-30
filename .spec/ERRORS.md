@@ -98,17 +98,15 @@ The source files below own their respective failure paths.
 | Obtain pinned Git objects | <code>internal/adapters/gitmodules/object_cache.go</code> | Verify the requested commit after fetching. Unavailable pins do not silently become HEAD. Cancellation and Git failures propagate. |
 | Persist manifest/lock | <code>internal/modules/project_files.go</code> | If lock writing fails after a manifest edit, restore the original manifest; join a restoration failure with the original error. |
 
-### Unresolved X20 Contract
+### Local Overlay and Remaining X20 Boundaries
 
-The combined local-replace/frozen/unknown-import-to-module mapping contract
-remains unresolved. Current behavior must not be advertised as implementation
-of that broader contract:
+Local overlays are implemented without changing the published lock:
 
-- <code>modules.EnsureSources</code> supports local replacements for source
-  consumers, but <code>Tidy</code>/<code>Get</code> lock resolution,
-  <code>Update</code> and <code>Vendor</code> reject replacements for reproducible
-  writes. <code>Download</code> follows its existing lock; this is not a general
-  reproducible lock solution for local replacements.
+- <code>modules.EnsureEffectiveGraph</code> applies only main-module replacements,
+  validates used local identities and resolves needed remote requirements.
+  Tidy/download never write project files in local mode; get/update may edit
+  explicit requirements but preserve the lock. Vendor snapshots the effective graph.
+  Historical versionless remote edges require a historical pin rather than HEAD.
 - <code>internal/api/mod.go</code> registers no <code>--frozen</code> flag. Exact
   locked downloads and hash checks are implemented, but do not imply an
   implemented frozen-mode command contract.

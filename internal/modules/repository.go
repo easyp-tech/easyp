@@ -28,21 +28,21 @@ type VersionedRepository interface {
 // VendorDir is the import root used for vendored dependencies.
 const VendorDir = "easyp_vendor"
 
-// EnsureSources resolves local replacements and installs missing locked contents.
+// EnsureSources resolves the effective overlay or installs published locked contents.
 // Local sources precede locked sources, preserving import and managed-selector order.
 func EnsureSources(ctx context.Context, moduleDir string, module v1.Module, cache Cache) (SourceRoots, error) {
-	roots, err := LocalSources(moduleDir, module)
-	if err != nil {
-		return nil, fmt.Errorf("LocalSources: %w", err)
+	if len(module.Replaces) > 0 {
+		graph, err := EnsureEffectiveGraph(ctx, moduleDir, module, cache, nil)
+		if err != nil {
+			return nil, fmt.Errorf("EnsureEffectiveGraph: %w", err)
+		}
+		return graph.Sources, nil
 	}
-	locked, err := EnsureLockedSources(ctx, moduleDir, module, cache)
-	if err != nil {
-		return nil, fmt.Errorf("EnsureLockedSources: %w", err)
-	}
-	return append(roots, locked...), nil
+	return EnsureLockedSources(ctx, moduleDir, module, cache)
 }
 
-// LocalSources reads local replacement roots without downloading dependencies.
+// LocalSources reads only the local-to-local portion of the main replacement
+// graph. Consumers needing remote edges must use EnsureSources instead.
 func LocalSources(moduleDir string, module v1.Module) (SourceRoots, error) {
-	return localDependencySources(moduleDir, module, map[string]bool{})
+	return localDependencySources(moduleDir, module)
 }

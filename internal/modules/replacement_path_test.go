@@ -38,7 +38,7 @@ func TestLocalDependencySourcesUseAbsoluteReplacement(t *testing.T) {
 	manifest := "module example.com/app\nrequire example.com/dep\nreplace example.com/dep => " + dep + "\n"
 	module, err := v1.ParseModule(strings.NewReader(manifest))
 	require.NoError(t, err)
-	roots, err := localDependencySources(owner, module, map[string]bool{})
+	roots, err := localDependencySources(owner, module)
 	require.NoError(t, err)
 	require.Len(t, roots, 1)
 	assert.Equal(t, dep, roots[0].Path)

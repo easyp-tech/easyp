@@ -34,6 +34,7 @@ type revisionLoader struct {
 	fetched  map[string]Fetched
 	failures map[string]error
 	pins     map[string]v1.LockedModule
+	local    func(string) (v1.Module, bool, error)
 }
 
 func (l *revisionLoader) fetch(ctx context.Context, source, version string) (Fetched, error) {
@@ -80,15 +81,20 @@ func (l *revisionLoader) head(ctx context.Context, source string) (Fetched, erro
 // Provisional HEAD edges are rebuilt if stronger requirements supersede them.
 func Resolve(ctx context.Context, root v1.Module, source Source, pins map[string]v1.LockedModule) (v1.Lock, error) {
 	loader := revisionLoader{source: source, fetched: make(map[string]Fetched), pins: pins}
+	pass, err := loader.resolve(ctx, root)
+	return pass.lock, err
+}
+
+func (loader *revisionLoader) resolve(ctx context.Context, root v1.Module) (resolutionPass, error) {
 	hints := make(map[string]string)
 	states := make(map[string]bool)
 	for {
 		if err := ctx.Err(); err != nil {
-			return v1.Lock{}, err
+			return resolutionPass{}, err
 		}
 		pass := loader.resolvePass(ctx, root, hints)
 		if err := ctx.Err(); err != nil {
-			return v1.Lock{}, err
+			return resolutionPass{}, err
 		}
 		stable := true
 		for name, used := range pass.provisional {
@@ -99,9 +105,9 @@ func Resolve(ctx context.Context, root v1.Module, source Source, pins map[string
 		}
 		if stable {
 			if pass.err != nil {
-				return v1.Lock{}, pass.err
+				return resolutionPass{}, pass.err
 			}
-			return pass.lock, nil
+			return pass, nil
 		}
 		names := make([]string, 0, len(pass.selected))
 		for name := range pass.selected {
@@ -114,7 +120,7 @@ func Resolve(ctx context.Context, root v1.Module, source Source, pins map[string
 		}
 		state := signature.String()
 		if states[state] {
-			return v1.Lock{}, fmt.Errorf("unstable versionless dependency constraints; declare explicit compatible versions")
+			return resolutionPass{}, fmt.Errorf("unstable versionless dependency constraints; declare explicit compatible versions")
 		}
 		states[state] = true
 		hints = pass.selected
@@ -123,6 +129,7 @@ func Resolve(ctx context.Context, root v1.Module, source Source, pins map[string
 
 type resolutionPass struct {
 	lock        v1.Lock
+	locals      []string
 	provisional map[string]string
 	selected    map[string]string
 	err         error
@@ -140,6 +147,7 @@ func (l *revisionLoader) resolvePass(ctx context.Context, root v1.Module, hints 
 	pass := resolutionPass{lock: v1.Lock{Version: 1, Modules: []v1.LockedModule{}}, provisional: make(map[string]string), selected: make(map[string]string)}
 	requirements := make(map[string]*versionRequirements)
 	visited := make(map[string]bool)
+	localVisited := make(map[string]bool)
 	queue := slices.Clone(root.Requires)
 	for {
 		for len(queue) > 0 {
@@ -149,6 +157,23 @@ func (l *revisionLoader) resolvePass(ctx context.Context, root v1.Module, hints 
 			}
 			requirement := queue[0]
 			queue = queue[1:]
+			if l.local != nil {
+				// The main module and replaced nodes have no remote revision.
+				if requirement.Module == root.Name || localVisited[requirement.Module] {
+					continue
+				}
+				module, local, err := l.local(requirement.Module)
+				if err != nil {
+					pass.deferError(err)
+					continue
+				}
+				if local {
+					localVisited[requirement.Module] = true
+					pass.locals = append(pass.locals, requirement.Module)
+					queue = append(queue, module.Requires...)
+					continue
+				}
+			}
 			version := requirement.Version
 			if version != "" && !v1.IsCommitRef(version) && !semver.IsValid(version) {
 				pass.deferError(fmt.Errorf("require %s: expected semantic version or full Git commit, got %q", requirement.Module, version))

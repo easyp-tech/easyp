@@ -59,13 +59,21 @@ in <code>internal/modules/operations_test.go</code>.
 Sources: <code>internal/modules/get.go</code>, <code>internal/modules/update.go</code>,
 <code>internal/modules/operations.go</code>, <code>internal/modules/manifest_requirements.go</code>.
 
-Tidy/get/update reject local replacements before writing a remote lock; vendor
-also rejects them. Generation and policy import loading can use local replacement
-roots through <code>EnsureSources</code>. <code>Download</code> instead validates <code>RemoteRequirements</code>
-and installs the supplied lock; it does not enforce a blanket replace-in-CI
-prohibition. There is no registered frozen flag or CI-only replacement check.
-The X20 local-replace/frozen/unknown-import-to-module mapping remains unresolved;
-these are observed operation boundaries, not a completed frozen-mode contract.
+### Local effective graph
+
+Only replacements in the main (consuming) module apply, including to required transitive modules. Dependency manifests contribute their requirements, but their replacements are ignored. A replacement alone never introduces a dependency; unused replacements are not read or downloaded. All relative replacement paths are based on the main manifest directory, even at transitive depths. Absolute paths work directly. A native replacement manifest must declare the replaced identity; missing directories and identity mismatches are contextual errors. Legacy metadata uses the existing roots/requirements adapter without executing dependency plugins or loading dependency generation policy.
+
+<code>EnsureEffectiveGraph</code> reuses the existing version resolver with local metadata lookup. Local modules have no synthetic version, commit, hash or lock entry. Ordinary dependency cycles are deduplicated; contradictory local directory identities fail. Needed unreplaced modules reuse matching published revisions (or versionless pins) after <code>Cache.Install</code> verification. New fork requirements resolve through the real <code>Source.Fetch</code> interface and immutable-version guard, then install verified snapshots. Selection and roots remain in memory.
+
+While the main manifest contains any replacements, every operation preserves existing <code>protobuf.lock</code> bytes and does not create a missing lock. No local source information or fork-only transitive graph is persisted there. This is an explicit EasyP lock invariant: <code>protobuf.lock</code> is not Go's <code>go.sum</code>, and this does not claim that Go never changes <code>go.sum</code> with replacements.
+
+- <code>mod tidy</code> validates the effective graph/imports and installs needed remote snapshots without changing the manifest or lock.
+- <code>get</code> can add/promote/change the explicitly requested requirement; <code>mod update</code> refreshes unreplaced direct requirements with the existing version rules. Replaced requirements need no remote fetch or version lookup. Neither command promotes fork-only transitives or writes a lock.
+- <code>mod download</code> resolves and verifies only needed unreplaced snapshots, including new fork dependencies, without downloading replaced roots or unused published-lock entries.
+- Generate (including selected dependencies and both descriptor modes), lint, ls-files and breaking use the same overlay. In-repository baseline replacements are mapped into the Git snapshot; external baseline replacements remain errors. A versionless remote dependency introduced by a historical fork requires a historical lock pin; current HEAD cannot stand in for the baseline.
+- <code>mod vendor</code> snapshots the effective local and remote dependency sources into <code>easyp_vendor</code> without writing the shared lock. It is a local artifact, not proof of a reproducible published graph. Remove replacements and run <code>mod tidy</code> before publishing the manifest/lock.
+
+A pure-local graph works unpublished and offline without a lock. New remote requirements can require network access; matching published revisions and versionless pins use verified cache when available. Remote plugins retain their own network requirements. There is no new frozen flag or CI-only replacement rule in this change.
 
 Import checking parses root sources and their reachable dependency/embedded
 imports, validates portable relative import paths, and reports the importing file.
@@ -76,7 +84,7 @@ from silently changing commit/hash; explicit versionless updates still refresh
 HEAD. See <code>internal/modules/immutable_versions.go</code> and [ERRORS.md](../ERRORS.md)
 for the distinction between such errors and CLI exit classification.
 
-The resolver accepts <code>Source.Fetch</code>, independent of Git/cache. It selects the highest required semantic version, treats versionless requirements as weak constraints, and rejects incompatible exact commits (including tag/commit disagreement). It caches revision fetches within a resolution, rebuilds provisional HEAD edges when stronger requirements appear, and sorts resulting entries. <code>Update</code> additionally needs version enumeration; download/vendor only need the cache contract.
+The resolver accepts <code>Source.Fetch</code>, independent of Git/cache. It selects the highest required semantic version, treats versionless requirements as weak constraints, and rejects incompatible exact commits (including tag/commit disagreement). It caches revision fetches within a resolution, rebuilds provisional HEAD edges when stronger requirements appear, and sorts resulting entries. <code>Update</code> additionally needs version enumeration; vendor and published download only need the cache contract; local-overlay download additionally uses Source when a new remote requirement needs resolution.
 
 ## Metadata and imports
 

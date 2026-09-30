@@ -10,12 +10,15 @@ import (
 	v1 "github.com/easyp-tech/easyp/internal/config/v1"
 )
 
-// Tidy resolves v1 requirements and records exact Git commits and content
-// hashes in protobuf.lock.
+// Tidy resolves v1 requirements and records published commits and hashes.
+// With local replacements it only validates/installs the ephemeral graph.
 func Tidy(ctx context.Context, root string, repository Repository) error {
 	original, module, err := ReadManifest(root)
 	if err != nil {
 		return fmt.Errorf("ReadManifest: %w", err)
+	}
+	if len(module.Replaces) > 0 {
+		return validateLocalOverlay(ctx, root, module, repository, false)
 	}
 	existing, err := ReadLock(filepath.Join(root, v1.LockFile))
 	if err != nil && !errors.Is(err, os.ErrNotExist) {
@@ -72,11 +75,15 @@ func resolveV1Lock(ctx context.Context, root string, module v1.Module, existing 
 	return lock, nil
 }
 
-// Download installs the exact v1 dependencies recorded in protobuf.lock.
+// Download installs published pins, or needed unreplaced snapshots in local
+// overlay mode. It never changes the shared manifest or lock.
 func Download(ctx context.Context, root string, repository Cache) error {
 	_, module, err := ReadManifest(root)
 	if err != nil {
 		return fmt.Errorf("ReadManifest: %w", err)
+	}
+	if len(module.Replaces) > 0 {
+		return validateLocalOverlay(ctx, root, module, repository, false)
 	}
 	lock, err := ReadLock(filepath.Join(root, v1.LockFile))
 	if err != nil {
