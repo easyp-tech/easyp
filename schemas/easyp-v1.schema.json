@@ -22,9 +22,9 @@
           }
         },
         "extends": {
-          "description": "Reserved for a future policy-loading contract. Only an omitted or empty value is accepted.",
+          "description": "Base policy for this section only, applied before local adjustments. Use ./ or ../ for a policy file or directory relative to this file, or a module identity already declared in protobuf.mod and locked in protobuf.lock, optionally with #\u003cpolicy-file-or-directory\u003e. A module reference without # loads that module's easyp.yaml. Versions are not repeated here and no new module or revision is acquired. Remote policies are read from the verified module contents of the consuming module; a base's own relative references stay inside its module. Only the referenced section and linters-settings are inherited: issues.exclude-rules, generation settings and the other section are not. Base breaking.ignore paths and the baseline are applied at this file's location, not in the module cache.",
           "type": "string",
-          "const": ""
+          "pattern": "^(|\\.\\.?|\\.\\.?/[^\\r\\n\\\\@]+|[^\\s@#]+/[^\\s@#]*(#[^\\s@#]*)?)$"
         },
         "ignore": {
           "type": "array",
@@ -237,9 +237,9 @@
           }
         },
         "extends": {
-          "description": "Reserved for a future policy-loading contract. Only an omitted or empty value is accepted.",
+          "description": "Base policy for this section only, applied before local adjustments. Use ./ or ../ for a policy file or directory relative to this file, or a module identity already declared in protobuf.mod and locked in protobuf.lock, optionally with #\u003cpolicy-file-or-directory\u003e. A module reference without # loads that module's easyp.yaml. Versions are not repeated here and no new module or revision is acquired. Remote policies are read from the verified module contents of the consuming module; a base's own relative references stay inside its module. Only the referenced section and linters-settings are inherited: issues.exclude-rules, generation settings and the other section are not. Base breaking.ignore paths and the baseline are applied at this file's location, not in the module cache.",
           "type": "string",
-          "const": ""
+          "pattern": "^(|\\.\\.?|\\.\\.?/[^\\r\\n\\\\@]+|[^\\s@#]+/[^\\s@#]*(#[^\\s@#]*)?)$"
         }
       },
       "additionalProperties": false

@@ -22,14 +22,30 @@ func v1ModuleCachePath(cacheRoot string, entry v1.LockedModule) string {
 // Install installs each locked Git commit, verifying its content hash
 // before accepting a downloaded or already cached module.
 func (c *Cache) Install(ctx context.Context, lock v1.Lock) error {
+	return c.install(ctx, lock, true)
+}
+
+// VerifyCached verifies already installed entries without downloading or writing.
+// Missing content must be acquired by an explicit mod download first.
+func (c *Cache) VerifyCached(ctx context.Context, lock v1.Lock) error {
+	return c.install(ctx, lock, false)
+}
+
+func (c *Cache) install(ctx context.Context, lock v1.Lock, acquire bool) error {
 	cacheRoot := c.root
 	if err := lock.Validate(); err != nil {
 		return fmt.Errorf("Validate: %w", err)
 	}
 	for _, entry := range lock.Modules {
+		if err := ctx.Err(); err != nil {
+			return fmt.Errorf("Err: %w", err)
+		}
 		installed := v1ModuleCachePath(cacheRoot, entry)
 		info, err := os.Lstat(installed)
 		if errors.Is(err, os.ErrNotExist) {
+			if !acquire {
+				return fmt.Errorf("policy module %s@%s is not cached; run easyp mod download before validate-config: %w", entry.Source, entry.Commit, err)
+			}
 			if err := fetchPinnedV1Module(ctx, entry, cacheRoot, installed); err != nil {
 				return err
 			}

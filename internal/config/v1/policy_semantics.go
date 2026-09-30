@@ -23,11 +23,11 @@ func (p Policy) validateSemantics() error {
 	if err := p.Issues.validatePaths(); err != nil {
 		return fmt.Errorf("validatePaths: %w", err)
 	}
-	if p.Linters.Extends != "" {
-		return fmt.Errorf("linters.extends policy loading is not implemented")
+	if _, err := ParsePolicyReference(p.Linters.Extends); err != nil {
+		return fmt.Errorf("linters.extends: %w", err)
 	}
-	if p.Breaking.Extends != "" {
-		return fmt.Errorf("breaking.extends policy loading is not implemented")
+	if _, err := ParsePolicyReference(p.Breaking.Extends); err != nil {
+		return fmt.Errorf("breaking.extends: %w", err)
 	}
 	for _, category := range p.Breaking.Categories {
 		if category != breakingCategoryFile {

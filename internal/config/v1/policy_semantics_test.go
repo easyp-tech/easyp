@@ -89,8 +89,8 @@ func TestPolicyConsumersValidateUnrelatedSections(t *testing.T) {
 		want   string
 	}{
 		{name: "baseline", policy: Policy{Breaking: BreakingPolicy{Baseline: "main"}}, want: "breaking.baseline"},
-		{name: "breaking_extends", policy: Policy{Breaking: BreakingPolicy{Extends: "parent.yaml"}}, want: "breaking.extends policy loading is not implemented"},
-		{name: "linter_extends", policy: Policy{Linters: LinterPolicy{Extends: "parent.yaml"}}, want: "linters.extends policy loading is not implemented"},
+		{name: "invalid_breaking_extends", policy: Policy{Breaking: BreakingPolicy{Extends: "parent.yaml"}}, want: "breaking.extends"},
+		{name: "invalid_linter_extends", policy: Policy{Linters: LinterPolicy{Extends: "parent.yaml"}}, want: "linters.extends"},
 		{name: "category", policy: Policy{Breaking: BreakingPolicy{Categories: []string{"WIRE"}}}, want: "breaking.categories: unsupported category"},
 		{name: "setting_rule", policy: Policy{LinterSettings: map[string]map[string]string{"UNKNOWN": {"suffix": "Foo"}}}, want: "unsupported linters-settings rule"},
 		{name: "setting_field", policy: Policy{LinterSettings: map[string]map[string]string{"SERVICE_SUFFIX": {"bogus": "Foo"}}}, want: "bogus"},
@@ -104,4 +104,37 @@ func TestPolicyConsumersValidateUnrelatedSections(t *testing.T) {
 			require.ErrorContains(t, err, tt.want)
 		})
 	}
+}
+
+func TestPolicyConsumersRequireOwnExtendsResolution(t *testing.T) {
+	t.Parallel()
+
+	lintPolicy := Policy{Linters: LinterPolicy{Extends: "../base.yaml"}}
+	_, err := lintPolicy.LintConfig()
+	require.ErrorContains(t, err, "was not resolved")
+	_, err = lintPolicy.BreakingConfig("fallback")
+	require.NoError(t, err)
+
+	breakingPolicy := Policy{Breaking: BreakingPolicy{Extends: "../base.yaml"}}
+	_, err = breakingPolicy.BreakingConfig("fallback")
+	require.ErrorContains(t, err, "was not resolved")
+	_, err = breakingPolicy.LintConfig()
+	require.NoError(t, err)
+}
+
+func TestPolicyValidationAcceptsPinnedExtendsWithoutNetwork(t *testing.T) {
+	t.Parallel()
+
+	raw := "version: v1\nlinters:\n  extends: github.com/acme/policies#lint/base.yaml\nbreaking:\n  extends: ../base.yaml\n"
+	assert.Empty(t, ValidatePolicyYAML([]byte(raw)))
+	policy, err := ParsePolicy(strings.NewReader(raw))
+	require.NoError(t, err)
+	require.Equal(t, "github.com/acme/policies#lint/base.yaml", policy.Linters.Extends)
+	require.Equal(t, "../base.yaml", policy.Breaking.Extends)
+
+	path := filepath.Join(t.TempDir(), PolicyFile)
+	require.NoError(t, os.WriteFile(path, []byte(raw), 0o600))
+	issues, err := ValidateFile(path)
+	require.NoError(t, err)
+	assert.Empty(t, issues)
 }

@@ -51,7 +51,7 @@ func (v Validate) Action(ctx *cli.Context) error {
 		configPath = filepath.Join(wd, configPath)
 	}
 
-	issues, err := v1.ValidatePath(configPath)
+	issues, err := v1.ValidatePathWith(configPath, policyReferenceValidator(ctx))
 	if err != nil {
 		return fmt.Errorf("ValidatePath: %w", err)
 	}

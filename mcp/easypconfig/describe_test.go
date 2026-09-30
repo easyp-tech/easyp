@@ -89,10 +89,10 @@ func TestDescribeNotesForReservedFields(t *testing.T) {
 		want string
 	}{
 		{name: "package filter", file: v1.GenerateFile, path: "generate.packages", want: "nonempty values are rejected"},
-		{name: "linter inheritance", file: v1.PolicyFile, path: "linters.extends", want: "not implemented"},
+		{name: "linter inheritance", file: v1.PolicyFile, path: "linters.extends", want: "declared-module#policy-path"},
 		{name: "issue path matching", file: v1.PolicyFile, path: "issues.exclude-rules[0].path", want: "relative to the easyp.yaml"},
 		{name: "breaking unstable", file: v1.PolicyFile, path: "breaking.ignore_unstable", want: "both comparison revisions"},
-		{name: "breaking inheritance", file: v1.PolicyFile, path: "breaking.extends", want: "not implemented"},
+		{name: "breaking inheritance", file: v1.PolicyFile, path: "breaking.extends", want: "declared-module#policy-path"},
 	}
 
 	for _, tt := range tests {

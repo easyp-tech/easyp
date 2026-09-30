@@ -161,8 +161,8 @@ Field presence in a Go struct is not a promise of implemented runtime behavior:
 
 | Field | Verified boundary |
 |---|---|
-| <code>linters.extends</code> | Reserved for policy loading; nonempty values fail shared policy semantics in <code>internal/config/v1/policy_semantics.go</code>, used by parsing and both policy conversions. |
-| <code>breaking.extends</code> | Reserved for policy loading; nonempty values fail the same shared policy semantics. |
+| <code>linters.extends</code> | Invalid reference syntax fails parsing; missing bases, cycles and boundary violations fail context-aware resolution. Direct engine conversion rejects an unresolved base. CLI validation never downloads dependencies. |
+| <code>breaking.extends</code> | Resolves independently in the checked module context. Invalid or unresolved bases fail explicitly; baseline and ignore paths belong to the consumer. |
 | <code>generate.packages</code> | Reserved; nonempty values fail <code>ParseGenerate</code> in <code>internal/config/v1/generate.go</code>. Select complete modules with <code>generate.modules</code>. |
 | <code>breaking.categories</code> | <code>FILE</code> is implemented and adds declaration-move checks. Other categories are unsupported/reserved and rejected by shared policy semantics; do not claim arbitrary category selection is implemented. |
 

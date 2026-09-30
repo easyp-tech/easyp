@@ -60,11 +60,15 @@ func validatePolicy(raw []byte, name string) []config.ValidationIssue {
 	if err != nil {
 		return append(issues, validationError(name, err))
 	}
-	if _, err := policy.LintConfig(); err != nil {
-		return append(issues, validationError(name, err))
+	if policy.Linters.Extends == "" {
+		if _, err := policy.LintConfig(); err != nil {
+			return append(issues, validationError(name, err))
+		}
 	}
-	if _, err := policy.BreakingConfig(""); err != nil {
-		return append(issues, validationError(name, err))
+	if policy.Breaking.Extends == "" {
+		if _, err := policy.BreakingConfig(""); err != nil {
+			return append(issues, validationError(name, err))
+		}
 	}
 	return issues
 }

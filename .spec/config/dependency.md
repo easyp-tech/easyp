@@ -150,3 +150,7 @@ Vendor output is built in a temporary directory before replacing the current out
 ## Tests
 
 Pure resolver tests cover semver selection, commits, versionless pins, repeated visits, cancellation and source errors. Filesystem tests cover manifest preservation, stale-lock rejection before installation, and vendor staging. Local-Git integration tests retain nested-module, hash, tag/HEAD and command coverage. Generation tests use explicit directories/cache values instead of process-wide cwd/env changes.
+
+## Producer-policy dependencies
+
+Shared policies use the same declared identities and exact locked snapshots. <code>extends</code> never infers a Git repository or duplicates a dependency version. See [policy-extends](policy-extends.md). Validation only inspects already cached, verified contents; execution can install an existing locked commit.

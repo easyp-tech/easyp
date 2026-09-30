@@ -32,6 +32,24 @@ type schema struct {
 	MaxItems             *int               `json:"maxItems,omitempty"`
 }
 
+// policyExtendsPattern accepts a local ./ or ../ policy path, an exact declared
+// module identity with an optional # policy fragment, and the RFC form that
+// appends a relative policy path to a declared module identity. Whitespace, a
+// repeated version and repeated fragments are rejected structurally; the CLI
+// additionally resolves the identity against the consumer module graph.
+const policyExtendsPattern = `^(|\.\.?|\.\.?/[^\r\n\\@]+|[^\s@#]+/[^\s@#]*(#[^\s@#]*)?)$`
+
+// policyExtendsDescription documents the delivery contract shared by both
+// sections. Only linters and linters-settings inherit from a lint base, and only
+// the breaking section inherits from a breaking base; issues.exclude-rules is
+// never inherited.
+const policyExtendsDescription = "Base policy for this section only, applied before local adjustments. " +
+	"Use ./ or ../ for a policy file or directory relative to this file, or a module identity already declared in protobuf.mod and locked in protobuf.lock, optionally with #<policy-file-or-directory>. " +
+	"A module reference without # loads that module's easyp.yaml. Versions are not repeated here and no new module or revision is acquired. " +
+	"Remote policies are read from the verified module contents of the consuming module; a base's own relative references stay inside its module. " +
+	"Only the referenced section and linters-settings are inherited: issues.exclude-rules, generation settings and the other section are not. " +
+	"Base breaking.ignore paths and the baseline are applied at this file's location, not in the module cache."
+
 // SchemaJSON returns the JSON Schema used to validate a v1 YAML file.
 // schema-gen writes these same bytes to disk.
 func SchemaJSON(name string) ([]byte, error) {
@@ -67,9 +85,10 @@ func documents() map[string]*schema {
 	policy.Properties["breaking"].Properties["categories"].Description = "FILE adds checks for declarations moved between files; existing compatibility checks remain enabled."
 
 	for _, section := range []string{"linters", "breaking"} {
-		reserved := policy.Properties[section].Properties["extends"]
-		reserved.Const = ""
-		reserved.Description = "Reserved for a future policy-loading contract. Only an omitted or empty value is accepted."
+		extends := policy.Properties[section].Properties["extends"]
+		extends.Const = nil
+		extends.Pattern = policyExtendsPattern
+		extends.Description = policyExtendsDescription
 	}
 	policy.Properties["issues"].Properties["exclude-rules"].Items.Properties["path"].Description = "Relative to the policy providing this issues section. Supports *, ?, character classes and ** directory segments; a literal directory includes its subtree."
 	policy.Properties["breaking"].Properties["ignore_unstable"].Description = "Ignore declarations in packages with unstable version suffixes; stable package checks remain enabled."
