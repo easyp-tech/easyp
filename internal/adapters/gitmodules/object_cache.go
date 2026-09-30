@@ -59,7 +59,7 @@ func checkoutCachedCommit(ctx context.Context, checkout string, entry v1.LockedM
 	}
 	resolved, err := gitV1(ctx, repository, "rev-parse", "--verify", commit+"^{commit}")
 	if err != nil {
-		return true, fmt.Errorf("locked commit %s is unavailable: %w", commit, err)
+		return true, fmt.Errorf("locked commit %s is unavailable in the fetched repository history; restore access to the pinned revision rather than replacing it with HEAD: %w", commit, err)
 	}
 	if strings.TrimSpace(resolved) != commit {
 		return true, fmt.Errorf("resolved commit does not match %s", commit)

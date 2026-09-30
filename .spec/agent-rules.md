@@ -1,7 +1,7 @@
 <!-- generated: 2026-09-30, template: bootstrap.md -->
 # Agent Rules — EasyP
 
-Mandatory rules for AI agents. Prefer these over generic Go guides when they conflict. Expanded skills: [go-code-style](../.agents/skills/go-code-style/SKILL.md), [go-testing](../.agents/skills/go-testing/SKILL.md). Dependency details: [config/dependency.md](./config/dependency.md). Skill examples still containing service-specific paths or gRPC error mapping are stale; the current repository ownership and CLI flow below take precedence.
+Mandatory rules for AI agents. Prefer these over generic Go guides when they conflict. Expanded skills: [go-code-style](../.agents/skills/go-code-style/SKILL.md), [go-testing](../.agents/skills/go-testing/SKILL.md). Dependency details: [config/dependency.md](./config/dependency.md). The bundled skills describe this CLI; the legacy epctl-commands skill name is retained for compatibility, not as an instruction to use the separate service CLI.
 
 ## Code Style
 
@@ -22,7 +22,7 @@ Mandatory rules for AI agents. Prefer these over generic Go guides when they con
 
 ## Error Handling
 
-- Wrap at every call site with <code>%w</code>; use <code>errors.Is</code> / <code>errors.As</code> for sentinels.
+- Wrap at every call site with <code>%w</code>; use <code>errors.Is</code> / <code>errors.As</code> for sentinels. The lint configuration exempts identifier-style exported callee labels from ST1005, not capitalized prose errors.
 - Reuse existing errors in their owning packages: core parsing/breaking types, <code>modules.ErrLockedVersionChanged</code>, <code>v1.ErrLegacyConfiguration</code>, and contextual migration errors. See [ERRORS.md](./ERRORS.md); do not invent duplicate sentinels.
 - CLI: inspect the actual handler and process entrypoint before assigning exit codes. X20 local-replace/frozen/unknown-import-to-module mapping is unresolved; there is no universal package-manager sentinel-to-exit mapper.
 
@@ -32,7 +32,7 @@ Mandatory rules for AI agents. Prefer these over generic Go guides when they con
 - New slice-based table tests require a <code>name</code> field. Use <code>t.Parallel()</code> at top level and in isolated subtests; tests that change process cwd/environment must stay sequential. Existing rule tests also use named map keys.
 - No shared mutable mocks/state across parallel sub-tests — construct deps per case.
 - Prefer <code>require.ErrorIs</code> for expected errors; run with <code>-race</code> (<code>task test</code>).
-- Update test doubles when consumer interfaces change. <code>task mocks</code> currently includes a stale <code>core.Console</code> target; use the actual interface owner and see [TESTING.md](./TESTING.md).
+- Update test doubles when consumer interfaces change. Optional <code>task mocks</code> uses <code>internal/core</code> for <code>Rule</code>/<code>CurrentProjectGitWalker</code> and <code>internal/adapters/console</code> for <code>Console</code>. Preserve handwritten doubles and compile any generated mocks before using them; see [TESTING.md](./TESTING.md).
 
 ## Dependencies
 
@@ -45,7 +45,7 @@ Mandatory rules for AI agents. Prefer these over generic Go guides when they con
 
 ## Formatting
 
-- Format with <code>gofmt</code> / project tooling; lint with <code>task lint</code> (golangci-lint + hadolint where applicable).
+- Format with <code>gofmt</code> / project tooling; <code>task lint</code> attempts <code>lint:go</code> and <code>lint:docker</code> and reports either failure. Hadolint checks root <code>Dockerfile</code> and requires Docker; <code>task lint:go</code> runs independently.
 - Do not commit secrets, generated dependency directories, <code>coverage.out</code>, or the local <code>easyp</code> binary in the repo root. The docs site is maintained in a separate repository.
 - After behavior changes, run tests for touched packages; after schema changes, run <code>task schema:check</code>.
 

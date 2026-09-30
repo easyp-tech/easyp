@@ -227,13 +227,29 @@ installs it into <code>bin/</code> through <code>task init</code>.
 task mocks
 ~~~
 
-The Taskfile configures <code>Rule</code>, <code>Console</code> and <code>CurrentProjectGitWalker</code> in
-<code>internal/core</code>, writing to a generated mocks directory. <code>Rule</code> and
-<code>CurrentProjectGitWalker</code> still exist there; <code>Console</code> moved to
-<code>internal/adapters/console/new.go</code>. The aggregate target therefore contains
-an unresolved stale interface path. There are no checked-in generated mocks
-or <code>go:generate</code> directives in the current source. Do not recreate removed
-storage/lockfile interfaces to satisfy an old command.
+The optional Taskfile helper generates <code>Rule</code> and <code>CurrentProjectGitWalker</code>
+from <code>internal/core</code> into <code>internal/core/mocks</code>, and <code>Console</code> from
+<code>internal/adapters/console</code> into <code>internal/adapters/console/mocks</code>.
+There are no checked-in Mockery outputs or <code>go:generate</code> directives in the
+current source. Neither build nor test depends on generation. Do not commit
+unused outputs or recreate removed interfaces to satisfy an old command.
+Generated mocks import <code>testify/mock</code>, whose <code>objx</code> dependency is not
+needed by the handwritten doubles. To check optional outputs without changing
+the root <code>go.mod</code>/<code>go.sum</code>, resolve those dependencies in a temporary modfile:
+
+~~~sh
+(
+    set -eu
+    mock_check_dir=$(mktemp -d)
+    trap 'rm -rf "$mock_check_dir"' EXIT
+    cp go.mod go.sum "$mock_check_dir/"
+    go test -mod=mod -modfile="$mock_check_dir/go.mod" ./internal/core/mocks ./internal/adapters/console/mocks
+)
+~~~
+
+Keep Mockery's tool dependencies separate from the root module. If a tool
+build or package-loading error mentions an older <code>golang.org/x/tools</code>,
+record that error rather than changing application dependencies to fix the tool.
 
 <code>internal/modules/resolve_test.go</code> and <code>internal/modules/operations_test.go</code>
 use small hand-written implementations of the <code>Source</code>/repository contracts.
@@ -276,8 +292,11 @@ go test -race -count=1 ./internal/rules -run 'TestFileLowerSnakeCase_Validate'
 # Open the coverage profile produced by task test
 task coverage
 
-# Configured Mockery targets (Console target currently needs repair)
+# Optional Mockery targets for core and console
 task mocks
+
+# Offline Taskfile dispatch and failure checks (requires only Task and shell tools)
+task dev-tools:check
 
 # Validate the native v1 example in a temporary workspace
 task proto:check

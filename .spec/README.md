@@ -74,7 +74,8 @@ task lint              # golangci-lint (+ hadolint where applicable)
 task quality           # test + lint
 task schema:generate   # regenerate schemas/*.json
 task schema:check      # fail if schemas drift
-task mocks             # configured mocks; currently has a stale Console target
+task mocks             # optional mocks for actual core and console interfaces
+task dev-tools:check   # isolated offline Taskfile regression
 ~~~
 
 Without Task:
@@ -85,7 +86,7 @@ go test -race -count=1 ./...
 go run ./cmd/easyp schema-gen
 ~~~
 
-<code>task lint</code> also references two missing Docker helper files. See [TOOLS.md](./TOOLS.md) for exact Taskfile limitations; root <code>Dockerfile</code> is present. No install, network, or publish step is implied by this command reference.
+<code>task lint</code> runs the local Go linter and Hadolint against root <code>Dockerfile</code>. See [TOOLS.md](./TOOLS.md) for pinned tool prerequisites and <code>task dev-tools:check</code>. Docker build helpers build locally and never publish.
 
 ## Ports
 
@@ -108,6 +109,6 @@ N/A — EasyP is a CLI tool, not a long-running server. Remote plugin execution 
 1. **Lint rule** — add <code>internal/rules/&lt;rule&gt;.go</code> + <code>&lt;file&gt;_test.go</code>; register via existing rule builder; mirror neighboring rules.
 2. **v1 schema** — change <code>internal/config/v1</code>, then <code>task schema:generate</code>; update MCP descriptions when semantics change. Never hand-edit <code>schemas/*.json</code>.
 3. **CLI command** — wire in <code>internal/api</code>, register from <code>cmd/easyp</code>; follow existing handler patterns.
-4. **Interfaces** — update consumer interfaces and their test doubles; consult [TESTING.md](./TESTING.md) before running the partially stale Mockery target. Add/adjust tests with <code>-race</code>.
+4. **Interfaces** — update consumer interfaces and their test doubles; consult [TESTING.md](./TESTING.md) before generating optional Mockery test doubles. Add/adjust tests with <code>-race</code>.
 5. Before finishing behavior changes: run tests for touched packages; for schema changes run <code>task schema:check</code>.
 6. Reserved extensions/package selectors/non-<code>FILE</code> breaking categories and unresolved X20 mappings are recorded in [CLI.md](./CLI.md) and [ERRORS.md](./ERRORS.md); do not infer support from a declared field alone.

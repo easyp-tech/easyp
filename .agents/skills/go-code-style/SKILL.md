@@ -1,216 +1,108 @@
 ---
 name: go-code-style
-description: "Project-specific Go code style enforcer. Use when: writing Go code, reviewing Go code, refactoring, creating new packages. Covers error wrapping, defer patterns, variable assignment, naming, imports, and other project conventions."
+description: "Use when writing, reviewing, or refactoring Go code or creating packages in the github.com/easyp-tech/easyp CLI repository."
 argument-hint: "Describe the Go code you are writing or reviewing"
 ---
 
-# Go Code Style — EasyP Service
+# Go Code Style — EasyP CLI
 
-You enforce project-specific Go coding conventions for the EasyP Service codebase. These rules are mandatory and take precedence over general Go style guides.
+Apply these conventions to <code>github.com/easyp-tech/easyp</code>, the Protocol Buffers CLI toolkit. Start with [AGENTS.md](../../../AGENTS.md), [.spec/README.md](../../../.spec/README.md), and the mandatory [agent rules](../../../.spec/agent-rules.md). Verify relevant source before changing behavior; older code may not follow every current convention.
 
-## When to Use
+## Errors and Resource Cleanup
 
-- Writing any Go code in this project
-- Reviewing or refactoring existing Go code
-- Creating new packages, types, or functions
-- Generating code from templates
+- Wrap propagated call failures with <code>fmt.Errorf("&lt;callee&gt;: %w", err)</code>. Use only the called function or method name, without a package or receiver prefix.
+- For <code>os.Open</code>, use <code>"Open: %w"</code>; for <code>source.Fetch</code>, use <code>"Fetch: %w"</code>; for <code>c.protoInfoRead</code>, use <code>"protoInfoRead: %w"</code>.
+- Use <code>errors.Is</code> for sentinel identity and <code>errors.As</code> for typed error details. Reuse errors in their owning packages rather than inventing duplicates.
+- Never use a bare <code>defer resource.Close()</code> or discard the close error. Wrap the deferred call and log or handle its error. Propagate finalization failures when they affect successful output.
+- Log a failure where it is handled or terminates an operation; lower layers normally wrap and return it.
 
-Every Go code change MUST comply with these rules. Apply them automatically — do not ask the user for permission.
+Error ownership follows actual source:
 
-## Anti-Patterns (NEVER DO)
+| Owner | Examples |
+|-------|----------|
+| [internal/core/core.go](../../../internal/core/core.go) | <code>ErrInvalidRule</code>, <code>ErrRepositoryDoesNotExist</code>, <code>ErrEmptyInputFiles</code> |
+| [internal/core/dom.go](../../../internal/core/dom.go) | <code>OpenImportFileError</code>, <code>GitRefNotFoundError</code> |
+| [internal/modules/immutable_versions.go](../../../internal/modules/immutable_versions.go) | <code>ErrLockedVersionChanged</code> |
+| [internal/config/v1/legacy_detection.go](../../../internal/config/v1/legacy_detection.go) | <code>ErrLegacyConfiguration</code> |
+| [internal/migration](../../../internal/migration) | Contextual planning and apply errors |
 
-These are the most common mistakes. Memorize and never repeat them.
+See [.spec/ERRORS.md](../../../.spec/ERRORS.md) and the relevant CLI handler for reporting and exit behavior. There is no central domain-to-gRPC-status mapper. Follow [cmd/easyp/main.go](../../../cmd/easyp/main.go) and the handler's actual return/exit path instead of assigning a universal exit code to a sentinel.
 
-### 1. Error wrapping with package prefix
+This complete, generic standalone example illustrates wrapping and cleanup; it is not an existing EasyP helper:
 
-```go
-// ❌ WRONG — never add package name prefix
-return fmt.Errorf("goosemigrate: sql.Open: %w", err)
-return fmt.Errorf("registry: c.db.Query: %w", err)
+~~~go
+package example
 
-// ✅ CORRECT — only the called function/method name
-return fmt.Errorf("sql.Open: %w", err)
-return fmt.Errorf("c.db.Query: %w", err)
-```
-
-### 2. Assignment inside `if` condition
-
-```go
-// ❌ WRONG — never assign and check in the same line
-if err = db.PingContext(ctx); err != nil {
-    return fmt.Errorf("db.PingContext: %w", err)
-}
-
-if _, err = provider.Up(ctx); err != nil {
-    return fmt.Errorf("provider.Up: %w", err)
-}
-
-// ✅ CORRECT — assignment and check on separate lines
-err = db.PingContext(ctx)
-if err != nil {
-    return fmt.Errorf("db.PingContext: %w", err)
-}
-
-_, err = provider.Up(ctx)
-if err != nil {
-    return fmt.Errorf("provider.Up: %w", err)
-}
-```
-
-**Exception:** short variable declaration with `:=` IS allowed in `if` when the variable is scoped to the block:
-
-```go
-// ✅ OK — new variable scoped to the if block
-if info, err := c.registry.Get(ctx, name); err != nil {
-    ...
-}
-```
-
-### 3. Bare `defer Close()`
-
-```go
-// ❌ WRONG — silently ignores close errors
-defer db.Close()
-defer file.Close()
-defer rows.Close()
-
-// ✅ CORRECT — always log close errors
-defer func() {
-    if err := db.Close(); err != nil {
-        slog.Error("db.Close", "error", err)
-    }
-}()
-```
-
-This applies to ALL resources that return an error from Close: `*sql.DB`, `*os.File`, `*sql.Rows`, `io.Closer`, etc.
-
-### 4. Inline comments on control flow
-
-```go
-// ❌ WRONG — no inline comments on if/for/return
-if err != nil { // check error
-    return err // propagate
-}
-
-// ✅ CORRECT — comment above if needed, or omit entirely
-// Validate connection before proceeding.
-if err != nil {
-    return err
-}
-```
-
-## Error Handling Rules
-
-1. **Wrap at every call site** with `fmt.Errorf("<called_function>: %w", err)`
-2. **Format:** only the function/method name, no package prefix
-3. **Domain errors** are sentinel vars in `core/domain.go`: `core.ErrNotFound`, `core.ErrInvalidPluginName`, etc.
-4. **Never create domain errors** outside `internal/core/domain.go`
-5. **API error mapping:** `ErrorToStatus()` maps domain errors → gRPC status codes
-
-```go
-// Error chain example:
-// adapter → core → api
-return fmt.Errorf("c.registry.Create: %w", err)        // in core
-return fmt.Errorf("c.db.QueryRowContext: %w", err)      // in adapter
-// api layer uses ErrorToStatus() to map, does not wrap
-```
-
-## Import Ordering
-
-Three groups, separated by blank lines. Enforced by `gci`:
-
-```go
 import (
-    // 1. Standard library
-    "context"
-    "fmt"
-    "log/slog"
-
-    // 2. Third-party
-    "github.com/pressly/goose/v3"
-    "google.golang.org/grpc"
-
-    // 3. Project packages
-    "github.com/easyp-tech/service/internal/core"
+	"fmt"
+	"io"
+	"log/slog"
+	"os"
 )
-```
 
-## Naming Conventions
+// ReadText reads a file and reports any close failure to the logger.
+func ReadText(path string) (string, error) {
+	file, err := os.Open(path)
+	if err != nil {
+		return "", fmt.Errorf("Open: %w", err)
+	}
+	defer func() {
+		err := file.Close()
+		if err != nil {
+			slog.Error("Close", "error", err)
+		}
+	}()
 
-### Files
+	data, err := io.ReadAll(file)
+	if err != nil {
+		return "", fmt.Errorf("ReadAll: %w", err)
+	}
+	return string(data), nil
+}
+~~~
 
-| Layer | Pattern | Example |
-|-------|---------|---------|
-| Domain | `domain.go`, `core.go` | `internal/core/domain.go` |
-| Adapters | `<name>.go` | `internal/adapters/registry/registry.go` |
-| API | `api.go`, `mcp.go` | `internal/api/api.go` |
-| Tracing | `tracing_<target>.go` | `internal/telemetry/tracing_core.go` |
-| Tests | `<file>_test.go` | `internal/core/crud_test.go` |
+## Assignments, Imports, and Comments
 
-### Types
+- Assign existing variables and check errors on separate lines. A block-scoped short declaration with <code>:=</code> in an <code>if</code> initializer is allowed.
+- Put comments above control flow, never inline on <code>if</code>, <code>for</code>, or <code>return</code> lines.
+- Group imports as standard library, third-party, then project packages, separated by blank lines. Project imports start with <code>github.com/easyp-tech/easyp</code>.
+- Use English comments and godoc. Every exported symbol needs a comment starting with its name. Put a package comment in one file per package.
+- Format Go code with <code>gofmt</code>. Import grouping and tag spellings are repository conventions: [.golangci.yml](../../../.golangci.yml) explicitly enables <code>staticcheck</code>, not <code>gci</code> or <code>tagliatelle</code>. Do not infer enabled linters from these conventions.
 
-| Category | Exported? | Example |
-|----------|-----------|---------|
-| Domain entities | Yes | `PluginInfo`, `AuditEntry` |
-| Domain interfaces | Yes | `Registry`, `Plugin`, `FeatureGate` |
-| Config structs | No | `config`, `server`, `ports` |
-| Adapter implementations | Yes | `Store`, `Registry`, `Worker` |
+## Naming and Package Boundaries
 
-### Enums
+| Responsibility | Source to follow |
+|----------------|------------------|
+| CLI handlers | [internal/api](../../../internal/api), implementing <code>Handler.Command() *cli.Command</code> |
+| Process entry and command registration | [cmd/easyp/main.go](../../../cmd/easyp/main.go) |
+| Lint/breaking engines and low-level plugin execution | [internal/core](../../../internal/core) |
+| Dependency resolution and repositories | [internal/modules](../../../internal/modules) |
+| Generation orchestration | [internal/generation](../../../internal/generation) |
+| v1 configuration and schema source | [internal/config/v1](../../../internal/config/v1) |
+| Lint rules and tests | [internal/rules](../../../internal/rules), colocated <code>&lt;rule&gt;.go</code> and <code>&lt;rule&gt;_test.go</code> |
 
-```go
-type Feature int
+Use exported domain types and adapter implementations where required by their consumers; keep local configuration structs unexported. Existing public models such as <code>core.Options</code> and <code>v1.Policy</code> stay exported. Follow neighboring filenames and colocate tests as <code>&lt;file&gt;_test.go</code>.
 
-const (
-    _ Feature = iota
-    FeatureCodeGeneration
-    FeaturePluginListing
-)
-```
+Reserve zero for new enum types with <code>_ = iota</code> so an unset value is not silently valid. Preserve established public configuration spellings and formats when extending existing types.
 
-**Rule:** zero value (`0`) is always reserved with `_` so that uninitialized enum variables are never silently valid.
+## Interfaces and Context
 
-## Interface Rules
-
-1. **Context first:** `func (r *Registry) Get(ctx context.Context, ...) (Plugin, error)`
-2. **Error always last**
-3. **No `I` prefix:** `Registry`, not `IRegistry`
-4. **Single-method interfaces preferred**
-5. **Interface in consumer package**
-
-## Comments
-
-- **Language:** English only
-- **Godoc:** every exported symbol has a comment starting with its name
-- **No inline comments** on `if`, `for`, `return` lines unless genuinely non-obvious
-- **Package comment:** `// Package <name> provides ...` in one file per package
+- Put <code>context.Context</code> first in methods that need it, and <code>error</code> last in results. Preserve existing contracts that do not take a context.
+- Define small interfaces in the consuming package; prefer one method when sufficient. Do not prefix interface names with <code>I</code>.
+- Actual contracts include <code>core.Rule</code> and <code>core.CurrentProjectGitWalker</code> in [dom.go](../../../internal/core/dom.go), <code>modules.Source</code> in [resolve.go](../../../internal/modules/resolve.go), and repository/cache interfaces in [repository.go](../../../internal/modules/repository.go).
+- <code>Console</code> belongs to [internal/adapters/console/new.go](../../../internal/adapters/console/new.go). Use the current owner when implementing or mocking it.
+- CLI actions receive <code>*cli.Context</code> from urfave/cli v2; pass <code>ctx.Context</code> to context-aware operations. Keep cancellation and mutable state scoped to the operation. Choose concurrency from the actual engine/adapter contract.
 
 ## Struct Tags
 
-| Layer | Tags | Case |
-|-------|------|------|
-| Domain (`core/`) | None | — |
-| Config (`cmd/`) | `env:""` + `yaml:""` | `snake_case` |
-| Proto (generated) | Don't modify | — |
-
-Tag case: always `snake_case` — enforced by `tagliatelle` linter.
-
-## Concurrency Patterns
-
-- `errgroup` for parallel server startup
-- `WorkerPool` for bounded plugin execution
-- `signal.NotifyContext` + `forceShutdown` goroutine
-- Audit worker: single goroutine, buffered channel
+Follow the existing model's tags. v1 configuration types live in <code>internal/config/v1</code>, shared engine configuration in <code>internal/config</code>. Use the established YAML/JSON keys, usually <code>snake_case</code>, and retain hyphenated public keys such as <code>linters-settings</code> and <code>exclude-rules</code>. Avoid adding serialization tags to internal-only types without a consumer. Never hand-edit generated protobuf code or schema JSON.
 
 ## Quick Checklist
 
-Before submitting any Go code, verify:
-
-- [ ] Error wrapping uses only function name, no package prefix
-- [ ] No assignment inside `if` conditions (except `:=` for new scoped vars)
-- [ ] All `defer Close()` wrapped with error logging
-- [ ] Imports ordered: stdlib → third-party → project
-- [ ] All exported symbols have godoc comments in English
-- [ ] No inline comments on control flow lines
-- [ ] Domain errors defined only in `core/domain.go`
-- [ ] Enum types use `_ = iota` to reserve zero value
+- [ ] Error wraps contain the callee name only, with <code>%w</code> and no package/receiver prefix.
+- [ ] Existing-variable assignment and error checking are separate; deferred close errors are handled.
+- [ ] Imports use the repository module path and the three conventional groups.
+- [ ] Exported symbols have English godoc; control-flow comments are on separate lines.
+- [ ] Errors and interfaces stay with their actual owners; new enums reserve zero.
+- [ ] Public tag spellings are preserved; lint claims match the current configuration.
+- [ ] Tests follow [go-testing](../go-testing/SKILL.md); CLI changes follow the legacy-named [epctl-commands](../epctl-commands/SKILL.md).

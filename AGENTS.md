@@ -51,11 +51,15 @@ Prefer Task targets from [<code>Taskfile.yml</code>](Taskfile.yml):
 task init              # install local tools (golangci-lint, gotestsum, mockery)
 task build             # go build -o easyp ./cmd/easyp
 task test              # gotestsum with -race and coverage
-task lint              # golangci-lint (+ hadolint where applicable)
+task lint              # Go lint + hadolint on root Dockerfile
+task lint:go           # Go lint without Docker
+task lint:docker       # hadolint on root Dockerfile
 task quality           # test + lint
 task schema:generate   # regenerate schemas/*.json
 task schema:check      # generate and fail if schemas drift
-task mocks             # configured core mocks; see limitations below
+task mocks             # optional core and console mocks
+task dev-tools:check   # offline Taskfile dispatch smoke test
+task docker:build      # local root Dockerfile build; no publish
 ~~~
 
 Equivalents without Task:
@@ -68,13 +72,13 @@ go run ./cmd/easyp schema-gen
 
 After behavior changes, run the relevant tests (at least the packages you touched). For config schema changes, run <code>task schema:check</code> before finishing.
 
-The current <code>task lint</code> and Docker helper targets reference missing <code>Docker/base/Dockerfile</code> and <code>Docker/lint/Dockerfile</code>; the existing production build uses root <code>Dockerfile</code>. See [.spec/TOOLS.md](.spec/TOOLS.md) for these unresolved tooling references.
+<code>task init</code> installs pinned helpers into the repository's <code>bin/</code>, including when invoked from a nested directory, and fetches dependencies with <code>go mod download</code>. <code>task lint</code> attempts both checks and fails if either fails; Docker must be available for Hadolint. <code>task docker</code> aliases the local <code>docker:build</code> target, with an overridable <code>DOCKER_IMAGE</code> tag (default <code>easyp:local</code>). Release publishing stays in the release workflow. See [.spec/TOOLS.md](.spec/TOOLS.md).
 
 ## Conventions
 
 - **New lint rules**: add <code>internal/rules/&lt;rule&gt;.go</code> + <code>&lt;file&gt;_test.go</code>, register via the existing rule builder; mirror patterns in neighboring rules.
 - **v1 YAML schemas**: change types and schema rules in <code>internal/config/v1</code>, then regenerate <code>schemas/</code> with <code>task schema:generate</code>. The MCP tool reads the same schema through <code>v1.SchemaJSON</code>; update its field descriptions when behavior changes. Do not hand-edit generated schema JSON.
-- **Tests**: use <code>testify</code>; update test doubles when interfaces change. <code>task mocks</code> targets <code>core.Rule</code>, <code>core.Console</code> and <code>core.CurrentProjectGitWalker</code>, but <code>Console</code> now lives in <code>internal/adapters/console</code>; the Taskfile target needs repair before it can regenerate all mocks.
+- **Tests**: use <code>testify</code>; update test doubles when interfaces change. Optional <code>task mocks</code> targets <code>core.Rule</code>, <code>core.CurrentProjectGitWalker</code> and <code>console.Console</code> in <code>internal/adapters/console</code>. Existing tests use handwritten doubles; mock generation is not a build/test prerequisite. Compile generated outputs before using them and do not commit unused mocks.
 - **v1 files**: policy is <code>easyp.yaml</code>; generation is <code>easyp.gen.yaml</code>; native <code>protobuf.mod</code> declares dependencies; <code>protobuf.lock</code> records verified revisions. Use <code>easyp migrate</code> for a legacy migration preview, <code>easyp migrate --interactive</code> for the wizard, and <code>--write</code> for explicit apply; see [.spec/CLI.md](.spec/CLI.md).
 - **Implementation boundaries**: do not treat reserved <code>linters.extends</code>, <code>breaking.extends</code>, <code>generate.packages</code>, or non-<code>FILE</code> breaking categories as implemented. X20 local-replace/frozen/unknown-import-to-module mapping remains unresolved; [.spec/ERRORS.md](.spec/ERRORS.md) separates those gaps from actual CLI exit behavior.
 - Prefer pointing agents/humans at README and docs over copying long usage text into this file.
