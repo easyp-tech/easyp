@@ -83,7 +83,7 @@ func TestDescriptorDirectoryIsolatesDependenciesAndConsumers(t *testing.T) {
 				writeV1GenerateFixture(t, root, "common-"+version+"/money.proto", "syntax = \"proto3\"; package common; import \"google/protobuf/timestamp.proto\"; message Money { google.protobuf.Timestamp time = 1; string currency"+fmt.Sprint(i)+" = 2; }")
 			}
 			outDir := filepath.Join(root, "descriptors")
-			request := Request{WorkDir: root, DescriptorSetOutDir: "descriptors", IncludeImports: tt.include}
+			request := Request{AllProjects: true, WorkDir: root, DescriptorSetOutDir: "descriptors", IncludeImports: tt.include}
 
 			require.NoError(t, Run(t.Context(), logger.NewNop(), nil, request))
 
@@ -136,7 +136,7 @@ func TestDescriptorConflictExplainsConsumerOptions(t *testing.T) {
 	for _, project := range []string{"backend", "frontend"} {
 		writeV1GenerateFixture(t, root, project+"/easyp.gen.yaml", "version: v1\ngenerate:\n  modules: [proto]\noptions:\n  go:\n    package_prefix: example.com/"+project+"\n"+descriptorMarkerConfig)
 	}
-	err := Run(t.Context(), logger.NewNop(), nil, Request{WorkDir: root, DescriptorSetOut: "all.pb"})
+	err := Run(t.Context(), logger.NewNop(), nil, Request{AllProjects: true, WorkDir: root, DescriptorSetOut: "all.pb"})
 	for _, want := range []string{"conflicting descriptor", "item.proto", "backend", "frontend", "example.com/item", "options.go_package", "descriptor_set_out_dir"} {
 		require.ErrorContains(t, err, want)
 	}

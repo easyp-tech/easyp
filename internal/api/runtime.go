@@ -59,7 +59,6 @@ func getEasypPath(log logger.Logger) (string, error) {
 }
 
 func buildCore(log logger.Logger, cfg config.Config, importRoots []string) (*core.Core, error) {
-	core.SetAllowCommentIgnores(cfg.Lint.AllowCommentIgnores)
 
 	lintRules, ignoreOnly, err := rules.New(cfg.Lint)
 	if err != nil {
@@ -70,6 +69,8 @@ func buildCore(log logger.Logger, cfg config.Config, importRoots []string) (*cor
 		Rules:                   lintRules,
 		Ignore:                  append(append([]string(nil), cfg.Lint.Ignore...), defaultVendorDir),
 		IgnoreOnly:              ignoreOnly,
+		AllowCommentIgnores:     cfg.Lint.AllowCommentIgnores,
+		KnownLintRules:          rules.AllRuleNames(),
 		Logger:                  log,
 		ImportRoots:             importRoots,
 		CurrentProjectGitWalker: go_git.New(),

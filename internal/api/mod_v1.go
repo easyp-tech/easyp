@@ -2,7 +2,6 @@ package api
 
 import (
 	"fmt"
-	"os"
 
 	"github.com/urfave/cli/v2"
 
@@ -11,9 +10,9 @@ import (
 
 // Tidy executes the v1 module operation from the current directory.
 func (m Mod) Tidy(ctx *cli.Context) error {
-	root, err := os.Getwd()
+	root, err := moduleWorkingDir()
 	if err != nil {
-		return fmt.Errorf("Getwd: %w", err)
+		return fmt.Errorf("moduleWorkingDir: %w", err)
 	}
 	cache, err := moduleCache(ctx)
 	if err != nil {
@@ -24,9 +23,9 @@ func (m Mod) Tidy(ctx *cli.Context) error {
 
 // Download executes the v1 module operation from the current directory.
 func (m Mod) Download(ctx *cli.Context) error {
-	root, err := os.Getwd()
+	root, err := moduleWorkingDir()
 	if err != nil {
-		return fmt.Errorf("Getwd: %w", err)
+		return fmt.Errorf("moduleWorkingDir: %w", err)
 	}
 	cache, err := moduleCache(ctx)
 	if err != nil {

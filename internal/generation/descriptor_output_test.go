@@ -24,7 +24,7 @@ func TestDescriptorOutputRejectsDirectoryAliases(t *testing.T) {
 	require.NoError(t, os.MkdirAll(filepath.Join(out, "backend"), 0o755))
 	require.NoError(t, os.Symlink("backend", filepath.Join(out, "frontend")))
 
-	err := Run(t.Context(), logger.NewNop(), nil, Request{WorkDir: root, DescriptorSetOutDir: out})
+	err := Run(t.Context(), logger.NewNop(), nil, Request{AllProjects: true, WorkDir: root, DescriptorSetOutDir: out})
 
 	require.ErrorContains(t, err, "output collision")
 	assert.NoFileExists(t, filepath.Join(root, "plugin-ran.txt"))

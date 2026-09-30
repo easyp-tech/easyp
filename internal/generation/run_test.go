@@ -132,7 +132,7 @@ func TestRunWithoutManifest(t *testing.T) {
 			writeV1GenerateFixture(t, root, filepath.Join(tt.configDir, "proto/item.proto"), "syntax = \"proto3\"; package item.v1; message Item {}\n")
 			output := filepath.Join(root, "descriptor.pb")
 
-			err := Run(t.Context(), logger.NewNop(), nil, Request{WorkDir: root, DescriptorSetOut: output})
+			err := Run(t.Context(), logger.NewNop(), nil, Request{AllProjects: true, WorkDir: root, DescriptorSetOut: output})
 
 			require.NoError(t, err)
 			raw, err := os.ReadFile(output)
@@ -189,7 +189,7 @@ func TestRunCombinesMultipleDescriptorTargets(t *testing.T) {
 			output := filepath.Join(root, "all.pb")
 			require.NoError(t, os.WriteFile(output, []byte("existing descriptor"), 0o644))
 
-			err := Run(t.Context(), logger.NewNop(), nil, Request{WorkDir: root, DescriptorSetOut: output})
+			err := Run(t.Context(), logger.NewNop(), nil, Request{AllProjects: true, WorkDir: root, DescriptorSetOut: output})
 
 			require.NoError(t, err)
 			contents, readErr := os.ReadFile(output)
@@ -244,7 +244,7 @@ func TestRunWritesDescriptorWithoutPlugins(t *testing.T) {
 			}
 			output := filepath.Join(root, "all.pb")
 
-			err := Run(t.Context(), logger.NewNop(), nil, Request{WorkDir: root, DescriptorSetOut: output})
+			err := Run(t.Context(), logger.NewNop(), nil, Request{AllProjects: true, WorkDir: root, DescriptorSetOut: output})
 
 			require.NoError(t, err)
 			contents, err := os.ReadFile(output)

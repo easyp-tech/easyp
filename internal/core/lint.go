@@ -36,6 +36,10 @@ func (c *Core) Lint(ctx context.Context, fsWalker DirWalker) ([]IssueInfo, error
 			return fmt.Errorf("c.protoInfoRead: %w", err)
 		}
 
+		suppressions, err := c.commentSuppressions(protoInfo)
+		if err != nil {
+			return fmt.Errorf("commentSuppressions: %w", err)
+		}
 		for i := range c.rules {
 			if ctx.Err() != nil {
 				return ctx.Err()
@@ -51,6 +55,9 @@ func (c *Core) Lint(ctx context.Context, fsWalker DirWalker) ([]IssueInfo, error
 			}
 
 			for _, result := range results {
+				if c.allowCommentIgnores && suppressions.contains(result.RuleName, result.Position.Line) {
+					continue
+				}
 				res = append(res, IssueInfo{
 					Issue: result,
 					Path:  path,
@@ -97,40 +104,21 @@ func (c *Core) close(ctx context.Context, f io.Closer, path string) {
 	}
 }
 
-const (
-	// for backward compatibility with buf
-	bufLintIgnorePrefix = "buf:lint:ignore "
-	lintIgnorePrefix    = "nolint:"
-)
-
-// NOTE: Try to not use global var
-var allowCommentIgnores = true
-
-// CheckIsIgnored check if passed breakingCheckRuleName has to be ignored due to ignore command in comments
+// CheckIsIgnored recognizes exact rule tokens in declaration comments.
+// Per-policy enablement and block scopes belong to commentSuppressions.
 func CheckIsIgnored(comments []*parser.Comment, ruleName string) bool {
-	if !allowCommentIgnores {
-		return false
-	}
-
-	if len(comments) == 0 {
-		return false
-	}
-
-	bufIgnore := bufLintIgnorePrefix + ruleName
-	easypIgnore := lintIgnorePrefix + ruleName
-
 	for _, comment := range comments {
-		if strings.Contains(comment.Raw, bufIgnore) {
-			return true
-		}
-		if strings.Contains(comment.Raw, easypIgnore) {
-			return true
+		for _, line := range comment.Lines() {
+			action, rest, ok := parseDirectivePrefix(strings.TrimSpace(line))
+			if !ok || action == "enable" {
+				continue
+			}
+			for _, name := range strings.FieldsFunc(rest, func(r rune) bool { return r == ',' || r == ' ' || r == '\t' }) {
+				if name == ruleName {
+					return true
+				}
+			}
 		}
 	}
-
 	return false
-}
-
-func SetAllowCommentIgnores(val bool) {
-	allowCommentIgnores = val
 }

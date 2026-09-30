@@ -285,17 +285,5 @@ func clonePinnedV1GitModule(ctx context.Context, entry v1.LockedModule, cacheRoo
 }
 
 func checkoutPinnedV1GitModuleCandidate(ctx context.Context, checkout string, entry v1.LockedModule, candidate v1GitModuleCandidate) (bool, error) {
-	if _, err := gitV1(ctx, "", "clone", "--quiet", "--no-checkout", "--", candidate.remote, checkout); err != nil {
-		return false, err
-	}
-	if _, err := gitV1(ctx, checkout, "rev-parse", "--verify", entry.Commit+"^{commit}"); err != nil {
-		return true, err
-	}
-	if _, err := gitV1(ctx, checkout, "checkout", "--quiet", "--detach", entry.Commit); err != nil {
-		return true, err
-	}
-	if _, err := moduleconfig.ReadGitDependencyAt(checkout, entry.Source, candidate.subdir); err != nil {
-		return true, err
-	}
-	return true, nil
+	return checkoutCachedCommit(ctx, checkout, entry, candidate)
 }

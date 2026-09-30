@@ -3,7 +3,6 @@ package api
 import (
 	"errors"
 	"fmt"
-	"os"
 	"strings"
 
 	"github.com/urfave/cli/v2"
@@ -36,9 +35,9 @@ func (g Get) Action(ctx *cli.Context) error {
 	if err != nil {
 		return fmt.Errorf("parseV1GetRequirement: %w", err)
 	}
-	root, err := os.Getwd()
+	root, err := moduleWorkingDir()
 	if err != nil {
-		return fmt.Errorf("Getwd: %w", err)
+		return fmt.Errorf("moduleWorkingDir: %w", err)
 	}
 	cache, err := moduleCache(ctx)
 	if err != nil {

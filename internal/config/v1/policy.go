@@ -22,10 +22,11 @@ type Policy struct {
 
 // LinterPolicy selects the default preset and individual linter rules.
 type LinterPolicy struct {
-	Default string   `yaml:"default"`
-	Enable  []string `yaml:"enable"`
-	Disable []string `yaml:"disable"`
-	Extends string   `yaml:"extends"`
+	Default             string   `yaml:"default"`
+	Enable              []string `yaml:"enable"`
+	Disable             []string `yaml:"disable"`
+	Extends             string   `yaml:"extends"`
+	AllowCommentIgnores *bool    `yaml:"allow_comment_ignores"`
 }
 
 // IssuePolicy controls suppression of lint findings.
@@ -100,7 +101,10 @@ func (p Policy) LintConfig() (config.LintConfig, error) {
 		use = append(use, "BASIC", "DEFAULT", "COMMENTS")
 	}
 	use = append(use, p.Linters.Enable...)
-	cfg := config.LintConfig{Use: use, Except: p.Linters.Disable}
+	cfg := config.LintConfig{Use: use, Except: p.Linters.Disable, AllowCommentIgnores: true}
+	if p.Linters.AllowCommentIgnores != nil {
+		cfg.AllowCommentIgnores = *p.Linters.AllowCommentIgnores
+	}
 	for _, rule := range p.Issues.ExcludeRules {
 		if rule.Path != "" {
 			return config.LintConfig{}, fmt.Errorf("issues.exclude-rules.path glob matching is not implemented")

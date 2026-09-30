@@ -222,6 +222,10 @@
           },
           "version": {
             "type": "string"
+          },
+          "with_imports": {
+            "description": "Generate code for transitive imports with this plugin only; defaults to false. Independent from descriptor --include_imports.",
+            "type": "boolean"
           }
         },
         "additionalProperties": false,

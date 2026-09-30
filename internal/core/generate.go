@@ -151,15 +151,27 @@ func (p *GenerationPlan) DescriptorSet(includeImports bool) *descriptorpb.FileDe
 
 // Execute invokes plugins using the prepared graph, without compiling it again.
 func (p *GenerationPlan) Execute(ctx context.Context) error {
+	bucket := NewGenerateBucket()
+	if err := p.ExecuteInto(ctx, bucket); err != nil {
+		return err
+	}
+	return bucket.DumpToFs(ctx)
+}
+
+// ExecuteInto stages plugin results in a shared bucket, rejecting conflicting outputs.
+func (p *GenerationPlan) ExecuteInto(ctx context.Context, filesToWrite *GenerateBucket) error {
 	c, root := p.core, p.root
 	files, fileDescriptors, dependencyFiles := p.files, p.descriptors, p.dependencyFiles
-	filesToWrite := NewGenerateBucket()
 
 	for _, plugin := range c.plugins {
-		filesToGenerate := files
+		filesToGenerate := slices.Clone(files)
 
 		if plugin.WithImports {
-			filesToGenerate = append(filesToGenerate, dependencyFiles...)
+			for _, dependency := range dependencyFiles {
+				if !slices.Contains(filesToGenerate, dependency) {
+					filesToGenerate = append(filesToGenerate, dependency)
+				}
+			}
 		}
 
 		req := &pluginpb.CodeGeneratorRequest{
@@ -201,6 +213,9 @@ func (p *GenerationPlan) Execute(ctx context.Context) error {
 			outputDir = filepath.Join(root, plugin.Out)
 		}
 		for _, file := range resp.File {
+			if !filepath.IsLocal(filepath.FromSlash(file.GetName())) {
+				return fmt.Errorf("plugin returned invalid output path %q", file.GetName())
+			}
 			path := filepath.Join(outputDir, file.GetName())
 
 			c.logger.Debug(ctx, "generated file",
@@ -214,11 +229,6 @@ func (p *GenerationPlan) Execute(ctx context.Context) error {
 				return fmt.Errorf("addFileWithInsertionPoint: %w", err)
 			}
 		}
-	}
-
-	err := filesToWrite.DumpToFs(ctx)
-	if err != nil {
-		return fmt.Errorf("DumpToFs: %w", err)
 	}
 
 	c.logger.Info(ctx, "code generation completed")
@@ -290,6 +300,9 @@ func addFileWithInsertionPoint(
 		return nil
 	}
 
+	if previous, ok := bucket.GetFile(ctx, filePath); ok && !bytes.Equal(previous.Data(), fileContent) {
+		return fmt.Errorf("conflicting generated output %q; choose distinct plugin out paths and matching go_package values", filePath)
+	}
 	bucket.PutFile(ctx, filePath, fileContent)
 	return nil
 }

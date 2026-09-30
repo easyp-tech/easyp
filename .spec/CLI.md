@@ -4,6 +4,9 @@ See [v1 descriptor exports](config/descriptor-export.md) for the single-file and
 
 # EasyP CLI
 
+See [context and generation contracts](config/review-context-and-generation.md) for bounded discovery, explicit project selection, plugin imports, mixed versions and comment suppressions.
+
+
 See [generation and baseline review fixes](config/review-generation-and-baselines.md) for current Go option, breaking and lock integrity semantics.
 
 ## Overview

@@ -128,17 +128,17 @@ func TestSelectV1ModulesPrefersGeneratorSiblingThenRepositoryRoot(t *testing.T) 
 			wantDirectory: "projects/app",
 		},
 		{
-			name: "root_manifest_skips_intermediate",
+			name: "nearest_intermediate_manifest",
 			manifests: map[string]string{
 				"protobuf.mod":          "module example.com/root\n",
 				"projects/protobuf.mod": "module example.com/intermediate\n",
 			},
-			wantDirectory: ".",
+			wantDirectory: "projects",
 		},
 		{
-			name:          "generator_without_manifest",
+			name:          "intermediate_without_root_manifest",
 			manifests:     map[string]string{"projects/protobuf.mod": "module example.com/intermediate\n"},
-			wantDirectory: "projects/app",
+			wantDirectory: "projects",
 		},
 	}
 	for _, tt := range tests {

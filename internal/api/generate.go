@@ -26,14 +26,16 @@ var (
 		Usage: "output directory for one binary FileDescriptorSet per project and module (exclusive with descriptor_set_out)",
 	}
 
+	flagGenerateAll            = &cli.BoolFlag{Name: "all", Usage: "explicitly select all generation projects below the working directory"}
+	flagGenerateWorkspace      = &cli.StringFlag{Name: "workspace", Usage: "explicit workspace root for repository-relative module paths"}
 	flagGenerateIncludeImports = &cli.BoolFlag{
 		Name:     "include_imports",
 		Usage:    "include all transitive dependencies in the FileDescriptorSet",
 		Required: false,
 	}
-	flagGenerateProject = &cli.StringFlag{
+	flagGenerateProject = &cli.StringSliceFlag{
 		Name:  "project",
-		Usage: "generate only the consumer project in this directory",
+		Usage: "select a consumer project directory (repeatable)",
 	}
 )
 
@@ -51,6 +53,8 @@ func (g Generate) Command() *cli.Command {
 			flagGenerateDescriptorSetOutDir,
 			flagGenerateIncludeImports,
 			flagGenerateProject,
+			flagGenerateAll,
+			flagGenerateWorkspace,
 		},
 		HelpName: "help",
 	}
@@ -70,7 +74,7 @@ func (g Generate) Action(ctx *cli.Context) error {
 		return fmt.Errorf("moduleCache: %w", err)
 	}
 	return generation.Run(ctx.Context, getLogger(ctx), cache, generation.Request{
-		WorkDir: root, Project: ctx.String(flagGenerateProject.Name),
+		WorkDir: root, Projects: ctx.StringSlice(flagGenerateProject.Name), AllProjects: ctx.Bool(flagGenerateAll.Name), WorkspaceRoot: ctx.String(flagGenerateWorkspace.Name),
 		DescriptorSetOut:    ctx.String(flagGenerateDescriptorSetOut.Name),
 		DescriptorSetOutDir: ctx.String(flagGenerateDescriptorSetOutDir.Name), IncludeImports: ctx.Bool(flagGenerateIncludeImports.Name),
 	})

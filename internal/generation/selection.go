@@ -8,12 +8,12 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
-	"strings"
 
 	moduleconfig "github.com/easyp-tech/easyp/internal/adapters/module_config"
 	v1 "github.com/easyp-tech/easyp/internal/config/v1"
 	"github.com/easyp-tech/easyp/internal/logger"
 	"github.com/easyp-tech/easyp/internal/modules"
+	"github.com/easyp-tech/easyp/internal/workspace"
 )
 
 // v1ModuleSelection distinguishes workspace directories from module identities.
@@ -59,15 +59,20 @@ func selectV1Modules(repoRoot, configDir string, names []string) ([]v1ModuleSele
 }
 
 func generatorV1ModuleDir(repoRoot, configDir string) (string, error) {
-	for _, dir := range []string{configDir, repoRoot} {
-		_, err := os.Stat(filepath.Join(dir, v1.ModuleFile))
-		if errors.Is(err, os.ErrNotExist) {
-			continue
-		}
-		if err != nil {
-			return "", fmt.Errorf("Stat: %w", err)
-		}
-		return dir, nil
+	// Explicit projects outside the workspace keep their own local context.
+	relative, err := filepath.Rel(repoRoot, configDir)
+	if err != nil {
+		return "", err
+	}
+	if !filepath.IsLocal(relative) {
+		return configDir, nil
+	}
+	path, err := workspace.FindUp(configDir, repoRoot, v1.ModuleFile)
+	if err != nil {
+		return "", err
+	}
+	if path != "" {
+		return filepath.Dir(path), nil
 	}
 	return configDir, nil
 }
@@ -184,7 +189,7 @@ func findV1LocalModuleByName(repoRoot, name string) (string, error) {
 			return walkErr
 		}
 		if entry.IsDir() {
-			if path != repoRoot && (strings.HasPrefix(entry.Name(), ".") || entry.Name() == modules.VendorDir) {
+			if workspace.SkipDirectory(repoRoot, path) {
 				return filepath.SkipDir
 			}
 			return nil

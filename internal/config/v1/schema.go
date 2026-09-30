@@ -66,6 +66,8 @@ func documents() map[string]*schema {
 	generate.Properties["options"].Properties["go"].Properties["package_prefix"].Description = "Sets go_package without enabling managed defaults for other languages; full managed mode requires generate.managed.enabled."
 	plugin := generate.Properties["plugins"].Items
 	plugin.Required = []string{"out"}
+	plugin.Properties["with_imports"].Description = "Generate code for transitive imports with this plugin only; defaults to false. Independent from descriptor --include_imports."
+	policy.Properties["linters"].Properties["allow_comment_ignores"].Description = "Enable scoped easyp:disable, nolint and buf:lint:ignore comments; defaults to true. State is local to each effective lint policy."
 	plugin.OneOf = []*schema{
 		{Required: []string{"name"}},
 		{Required: []string{"path"}},

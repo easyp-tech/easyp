@@ -31,7 +31,7 @@ func TestRunDescriptorSetSkipsOptionsOnlyParentAcrossModules(t *testing.T) {
 	}
 	out := filepath.Join(root, "all.pb")
 
-	require.NoError(t, Run(t.Context(), logger.NewNop(), nil, Request{WorkDir: root, DescriptorSetOut: out}))
+	require.NoError(t, Run(t.Context(), logger.NewNop(), nil, Request{AllProjects: true, WorkDir: root, DescriptorSetOut: out}))
 
 	set := readDescriptorSet(t, out)
 	require.ElementsMatch(t, []string{"orders.proto", "users.proto"}, descriptorNames(set))
