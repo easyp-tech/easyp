@@ -15,6 +15,7 @@ package migration
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"maps"
 	"os"
@@ -72,6 +73,31 @@ func (p *Plan) Warnings() []string { return slices.Clone(p.warnings) }
 
 // AlreadyV1 reports a validated native project for which migration is a no-op.
 func (p *Plan) AlreadyV1() bool { return p.alreadyV1 }
+
+// NeedsLockResolution reports whether dependency verification must be explicitly
+// authorized before this preview can be applied. It never performs resolution.
+func (p *Plan) NeedsLockResolution() bool { return p.blocked != "" }
+
+// ValidateModuleIdentity checks a proposed local identity without reading or
+// writing project files. Interactive callers can correct input before planning.
+func ValidateModuleIdentity(identity string) error { return validIdentity(identity) }
+
+// CheckUnchanged verifies that a preview still describes the observed project.
+// It performs no writes or dependency access and does not replace Apply's checks.
+func (p *Plan) CheckUnchanged() (resultErr error) {
+	if err := p.verifySourceSelection(); err != nil {
+		return fmt.Errorf("verifySourceSelection: %w", err)
+	}
+	root, err := p.tx.openRoot()
+	if err != nil {
+		return fmt.Errorf("openRoot: %w", err)
+	}
+	defer func() { resultErr = errors.Join(resultErr, closeRoot(root)) }()
+	if err := p.tx.verify(root); err != nil {
+		return fmt.Errorf("verify: %w", err)
+	}
+	return nil
+}
 
 // Apply writes the prepared candidates after checking all application gates and
 // source state again. It never resolves or refreshes dependencies.

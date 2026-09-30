@@ -200,3 +200,9 @@ For a v0 project, <code>easyp migrate --module github.com/acme/contracts</code>
 previews conversion; it does not write or execute plugins. See the
 [documented migration contract](.spec/config/review-migration-and-polish.md)
 before applying it with <code>--write</code>.
+
+Run <code>easyp migrate</code> in a terminal for a guided migration, or add
+<code>--interactive</code> to use the wizard with prefilled flags. Dependency
+access and applying files require separate confirmations, both defaulting to no.
+Explicit <code>--module</code> without the wizard keeps the preview-first script
+interface; <code>--interactive=false</code> disables automatic prompting.

@@ -263,6 +263,13 @@ New commands are added by implementing `api.Handler`, returning a `*cli.Command`
 
 ## Explicit v0 migration
 
+<code>easyp migrate</code> starts a terminal wizard when module identity is not
+provided and both stdin and stdout are terminals. <code>--interactive</code>
+explicitly enables the wizard, while <code>--interactive=false</code> disables it.
+The wizard separately confirms dependency/cache access and file application;
+Enter defaults to no, and prefilled write/resolve flags never skip confirmation.
+Explicit module selection without the wizard preserves flag-only behavior.
+
 <code>easyp migrate --dir . --module github.com/acme/contracts</code> previews actual
 candidate files without writing. Add <code>--resolve-lock</code> to authorize
 historical dependency integrity checks and cache access; add <code>--write</code>
