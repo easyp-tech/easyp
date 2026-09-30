@@ -84,15 +84,15 @@ func Run(ctx context.Context, log logger.Logger, cache modules.Cache, request Re
 		if err := inheritV1GenerateOptions(request.WorkspaceRoot, configPath, &gen); err != nil {
 			return fmt.Errorf("inheritV1GenerateOptions: %w", err)
 		}
-		if len(gen.Plugins) == 0 && !exportDescriptors && !request.Frozen {
+		if len(gen.Plugins) == 0 && len(gen.Generate.Packages) == 0 && !exportDescriptors && !request.Frozen {
 			continue
 		}
 		modules, err := selectV1Modules(request.WorkspaceRoot, filepath.Dir(configPath), gen.Generate.Modules)
 		if err != nil {
 			return fmt.Errorf("%s: %w", configPath, err)
 		}
-		if len(gen.Generate.Packages) > 0 {
-			return fmt.Errorf("%s: generate.packages matching is not specified precisely enough for v1", configPath)
+		if err := v1.ValidatePackageSelectors(gen.Generate.Packages); err != nil {
+			return fmt.Errorf("%s: %w", configPath, err)
 		}
 		for _, module := range modules {
 			descriptorTargets = append(descriptorTargets, generationTarget{configPath: configPath, config: gen, module: module})

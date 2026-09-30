@@ -58,9 +58,28 @@ func (c *Core) Generate(ctx context.Context, root, descriptorSetOut string, incl
 
 // PrepareGeneration compiles and transforms a module without invoking plugins.
 func (c *Core) PrepareGeneration(ctx context.Context, root string) (*GenerationPlan, error) {
+	return c.prepareGeneration(ctx, root, nil)
+}
+
+// PrepareGenerationFiles compiles only explicitly selected module source files
+// and their complete import closure. Names are relative to module import roots.
+// An empty selection is not the same as an implicit all-files selection.
+func (c *Core) PrepareGenerationFiles(ctx context.Context, root string, files []string) (*GenerationPlan, error) {
+	if len(files) == 0 {
+		return nil, ErrEmptyInputFiles
+	}
+	return c.prepareGeneration(ctx, root, files)
+}
+
+func (c *Core) prepareGeneration(ctx context.Context, root string, selected []string) (*GenerationPlan, error) {
 	c.logger.Info(ctx, "preparing code generation", slog.String("root", root))
 	imports := append([]string{}, c.importRoots...)
 	var files []string
+	selection := make(map[string]bool, len(selected))
+	for _, name := range selected {
+		selection[name] = true
+	}
+	found := make(map[string]bool)
 
 	for _, inputFilesDir := range c.inputs.InputFilesDir {
 		searchPath := filepath.Join(inputFilesDir.Root, inputFilesDir.Path)
@@ -84,7 +103,13 @@ func (c *Core) PrepareGeneration(ctx context.Context, root string) (*GenerationP
 
 			// Convert to relative path matching proto import format
 			addedFile := stripPrefix(walkPath, inputFilesDir.Root)
-			files = append(files, addedFile)
+			if selected != nil && !selection[addedFile] {
+				return nil
+			}
+			if !found[addedFile] {
+				files = append(files, addedFile)
+				found[addedFile] = true
+			}
 
 			return nil
 		})
@@ -93,6 +118,11 @@ func (c *Core) PrepareGeneration(ctx context.Context, root string) (*GenerationP
 		}
 	}
 
+	for _, name := range selected {
+		if !found[name] {
+			return nil, fmt.Errorf("selected source %q is outside the module inputs", name)
+		}
+	}
 	c.logger.Debug(ctx, "resolved imports and files", slog.Any("imports", imports), slog.Any("files", files))
 
 	if len(files) == 0 {

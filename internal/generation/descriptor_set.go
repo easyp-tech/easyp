@@ -4,7 +4,9 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"maps"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"google.golang.org/protobuf/proto"
@@ -55,6 +57,14 @@ func generateV1DescriptorSet(ctx context.Context, log logger.Logger, cache modul
 func prepareDescriptorTargets(ctx context.Context, log logger.Logger, cache modules.Cache, request Request, targets []generationTarget) ([]preparedDescriptorTarget, error) {
 	prepared := make([]preparedDescriptorTarget, 0, len(targets))
 	seen := make(map[string]bool)
+	requested := make(map[string][]string)
+	matched := make(map[string]map[string]bool)
+	for _, target := range targets {
+		if len(target.config.Generate.Packages) > 0 {
+			requested[target.configPath] = target.config.Generate.Packages
+			matched[target.configPath] = make(map[string]bool)
+		}
+	}
 	for _, target := range targets {
 		if err := ctx.Err(); err != nil {
 			return nil, err
@@ -65,7 +75,7 @@ func prepareDescriptorTargets(ctx context.Context, log logger.Logger, cache modu
 		}
 		// Options-only selections still validate their graph in frozen mode, but
 		// have no generation work unless descriptor export was requested.
-		if len(target.config.Plugins) == 0 && request.DescriptorSetOut == "" && request.DescriptorSetOutDir == "" {
+		if len(target.config.Plugins) == 0 && len(target.config.Generate.Packages) == 0 && request.DescriptorSetOut == "" && request.DescriptorSetOutDir == "" {
 			continue
 		}
 		key := filepath.Clean(target.configPath) + "\x00" + filepath.Clean(selected.directory)
@@ -73,12 +83,29 @@ func prepareDescriptorTargets(ctx context.Context, log logger.Logger, cache modu
 			continue
 		}
 		seen[key] = true
+		var files []string
+		if len(target.config.Generate.Packages) > 0 {
+			var matches map[string]bool
+			files, matches, err = selectedPackageFiles(ctx, selected, target.config.Generate.Packages)
+			if err != nil {
+				return nil, fmt.Errorf("package selection in %s: %w", target.configPath, err)
+			}
+			maps.Copy(matched[target.configPath], matches)
+			if len(files) == 0 {
+				continue
+			}
+		}
 		label := fmt.Sprintf("project %q, module %q (%s)", relativeDescriptorPath(request.WorkDir, filepath.Dir(target.configPath)), selected.module.Name, relativeDescriptorPath(request.WorkDir, selected.directory))
 		app, err := prepareV1ModuleCore(log, request, target.configPath, selected.directory, target.config, selected.module, selected.dependencies)
 		if err != nil {
 			return nil, fmt.Errorf("prepareV1ModuleCore for %s: %w", label, err)
 		}
-		plan, err := app.PrepareGeneration(ctx, selected.directory)
+		var plan *core.GenerationPlan
+		if files != nil {
+			plan, err = app.PrepareGenerationFiles(ctx, selected.directory, files)
+		} else {
+			plan, err = app.PrepareGeneration(ctx, selected.directory)
+		}
 		if err != nil {
 			return nil, fmt.Errorf("PrepareGeneration for %s: %w", label, err)
 		}
@@ -97,6 +124,17 @@ func prepareDescriptorTargets(ctx context.Context, log logger.Logger, cache modu
 		}
 		versions := descriptorVersions(request, selected)
 		prepared = append(prepared, preparedDescriptorTarget{target: target, selected: selected, plan: plan, full: full, owners: owners, versions: versions, label: label})
+	}
+	for _, path := range slices.Sorted(maps.Keys(requested)) {
+		var unknown []string
+		for _, name := range requested[path] {
+			if !matched[path][name] && !slices.Contains(unknown, name) {
+				unknown = append(unknown, name)
+			}
+		}
+		if len(unknown) > 0 {
+			return nil, fmt.Errorf("%s: generate.packages did not match any selected module source files: %s", path, strings.Join(unknown, ", "))
+		}
 	}
 	return prepared, nil
 }
