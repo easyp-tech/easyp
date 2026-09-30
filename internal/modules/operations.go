@@ -62,9 +62,9 @@ func resolveV1Lock(ctx context.Context, root string, module v1.Module, existing 
 	if err := CheckImportCollisions(root, module.Roots, dependencyRoots); err != nil {
 		return v1.Lock{}, fmt.Errorf("module %s: %w", module.Name, err)
 	}
-	unresolved, err := unresolvedV1ImportsWithRoots(root, module.Roots, dependencyRoots)
+	unresolved, err := findUnresolvedV1Imports(root, module.Roots, dependencyRoots)
 	if err != nil {
-		return v1.Lock{}, err
+		return v1.Lock{}, fmt.Errorf("findUnresolvedV1Imports: %w", err)
 	}
 	if len(unresolved) > 0 {
 		return v1.Lock{}, fmt.Errorf("module %s: cannot resolve imports %v", module.Name, unresolved)

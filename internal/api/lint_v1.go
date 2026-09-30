@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"strings"
 
 	"github.com/urfave/cli/v2"
 
@@ -14,7 +15,6 @@ import (
 	v1 "github.com/easyp-tech/easyp/internal/config/v1"
 	"github.com/easyp-tech/easyp/internal/core"
 	"github.com/easyp-tech/easyp/internal/flags"
-	"github.com/easyp-tech/easyp/internal/fs/fs"
 	"github.com/easyp-tech/easyp/internal/logger"
 	"github.com/easyp-tech/easyp/internal/modules"
 	"github.com/easyp-tech/easyp/internal/rules"
@@ -51,6 +51,9 @@ func (l Lint) actionV1(ctx *cli.Context, log logger.Logger, configPath, projectR
 	}
 	var cache modules.Cache
 	apps := map[v1LintAppKey]*core.Core{}
+	batchFiles := make(map[v1LintAppKey][]string)
+	var batchOrder []v1LintAppKey
+	excludedByPath := make(map[string][]string)
 	moduleRoots := map[string][]string{}
 	var issues []core.IssueInfo
 	for _, file := range files {
@@ -106,21 +109,33 @@ func (l Lint) actionV1(ctx *cli.Context, log logger.Logger, configPath, projectR
 				return fmt.Errorf("buildCore: %w", err)
 			}
 			apps[appKey] = app
+			batchOrder = append(batchOrder, appKey)
 		}
 		rel, err := filepath.Rel(lintRoot, file)
 		if err != nil {
 			return fmt.Errorf("Rel: %w", err)
 		}
-		fileIssues, err := app.Lint(ctx.Context, fs.NewFSWalker(lintRoot, rel))
+		rel = filepath.ToSlash(rel)
+		batchFiles[appKey] = append(batchFiles[appKey], rel)
+		excludedByPath[rel] = excludedLinters
+	}
+	// Keep stateful rules within one effective policy/module, but avoid starting
+	// a separate lint run for every file. Named path exclusions remain per file.
+	for _, key := range batchOrder {
+		fileIssues, err := apps[key].Lint(ctx.Context, newSelectedLintWalker(lintRoot, batchFiles[key]))
 		if err != nil {
 			return fmt.Errorf("Lint: %w", err)
 		}
 		for _, issue := range fileIssues {
-			if !v1IssueRuleExcluded(issue.RuleName, excludedLinters) {
+			if !v1IssueRuleExcluded(issue.RuleName, excludedByPath[filepath.ToSlash(issue.Path)]) {
 				issues = append(issues, issue)
 			}
 		}
 	}
+	// Grouping must not reorder user-facing diagnostics between policy subtrees.
+	slices.SortStableFunc(issues, func(a, b core.IssueInfo) int {
+		return strings.Compare(filepath.ToSlash(a.Path), filepath.ToSlash(b.Path))
+	})
 	if len(issues) == 0 {
 		return nil
 	}

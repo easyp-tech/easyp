@@ -6,6 +6,7 @@ import (
 	"reflect"
 	"strings"
 
+	"github.com/easyp-tech/easyp/internal/core"
 	"github.com/easyp-tech/easyp/internal/rules"
 )
 
@@ -19,6 +20,9 @@ type schema struct {
 	Items                *schema            `json:"items,omitempty"`
 	OneOf                []*schema          `json:"oneOf,omitempty"`
 	AnyOf                []*schema          `json:"anyOf,omitempty"`
+	AllOf                []*schema          `json:"allOf,omitempty"`
+	If                   *schema            `json:"if,omitempty"`
+	Then                 *schema            `json:"then,omitempty"`
 	Not                  *schema            `json:"not,omitempty"`
 	Required             []string           `json:"required,omitempty"`
 	Enum                 []string           `json:"enum,omitempty"`
@@ -58,7 +62,7 @@ func documents() map[string]*schema {
 		},
 		AdditionalProperties: false,
 	}
-	policy.Properties["breaking"].Properties["baseline"].Pattern = "^git:.+$"
+	policy.Properties["breaking"].Properties["baseline"].Pattern = "^(git:.+)?$"
 	policy.Properties["breaking"].Properties["categories"].Items.Enum = []string{breakingCategoryFile}
 	policy.Properties["breaking"].Properties["categories"].Description = "FILE adds checks for declarations moved between files; existing compatibility checks remain enabled."
 
@@ -96,10 +100,39 @@ func documents() map[string]*schema {
 	managed := generate.Properties["generate"].Properties["managed"]
 	disable := managed.Properties["disable"].Items
 	disable.AnyOf = requiredAnyOf("module", "package", "path", "file_option", "field_option", "field")
+	for _, selector := range disable.AnyOf {
+		selector.Properties = map[string]*schema{selector.Required[0]: {MinLength: 1}}
+	}
 	disable.Not = &schema{Required: []string{"file_option", "field_option"}}
 	override := managed.Properties["override"].Items
 	override.OneOf = requiredAnyOf("file_option", "field_option")
 	override.Required = []string{"value"}
+	for _, rule := range []*schema{disable, override} {
+		rule.AllOf = append(rule.AllOf, &schema{
+			If:   &schema{Required: []string{"field"}, Properties: map[string]*schema{"field": {MinLength: 1}}},
+			Then: &schema{Required: []string{"field_option"}},
+		})
+	}
+	for _, options := range []struct {
+		field    string
+		metadata []core.ManagedOptionMetadata
+	}{
+		{field: "file_option", metadata: core.ManagedFileOptionMetadata()},
+		{field: "field_option", metadata: core.ManagedFieldOptionMetadata()},
+	} {
+		for _, option := range options.metadata {
+			disable.Properties[options.field].Enum = append(disable.Properties[options.field].Enum, option.Name)
+			override.Properties[options.field].Enum = append(override.Properties[options.field].Enum, option.Name)
+			override.AllOf = append(override.AllOf, &schema{
+				If: &schema{Required: []string{options.field}, Properties: map[string]*schema{
+					options.field: {Const: option.Name},
+				}},
+				Then: &schema{Properties: map[string]*schema{
+					"value": {Type: option.ValueType, Enum: option.Enum},
+				}},
+			})
+		}
+	}
 
 	lock := fromType(reflect.TypeFor[Lock]())
 	lock.Required = []string{"version"}

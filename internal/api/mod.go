@@ -17,9 +17,9 @@ func (m Mod) Command() *cli.Command {
 	}
 	updateCmd := &cli.Command{
 		Name:        "update",
-		Usage:       "update modules version using version from config",
-		UsageText:   "update modules version using version from config",
-		Description: "update modules version using version from config",
+		Usage:       "refresh requirements within their current major versions and rewrite protobuf.mod/protobuf.lock",
+		UsageText:   "refresh requirements within their current major versions and rewrite protobuf.mod/protobuf.lock",
+		Description: "refresh requirements within their current major versions and rewrite protobuf.mod/protobuf.lock",
 		Action:      m.Update,
 	}
 	tidyCmd := &cli.Command{

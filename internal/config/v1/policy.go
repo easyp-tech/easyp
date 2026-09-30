@@ -72,36 +72,22 @@ func ParsePolicy(r io.Reader) (Policy, error) {
 	if result.Version == "" {
 		result.Version = "v1"
 	}
-	if result.Version != "v1" {
-		return Policy{}, fmt.Errorf("easyp.yaml version must be v1")
-	}
 	if result.Linters.Default == "" {
 		result.Linters.Default = "STANDARD"
 	}
-	switch result.Linters.Default {
-	case "MINIMAL", "BASIC", "STANDARD", "COMMENTS":
-	default:
-		return Policy{}, fmt.Errorf("unknown v1 linter preset %q", result.Linters.Default)
+	if err := result.validateSemantics(); err != nil {
+		return Policy{}, err
 	}
-	if err := result.validateLintSelections(); err != nil {
-		return Policy{}, fmt.Errorf("validateLintSelections: %w", err)
-	}
-	if err := result.Issues.validatePaths(); err != nil {
-		return Policy{}, fmt.Errorf("validatePaths: %w", err)
+	if err := yamlValidationError(PolicyFile, validateExpandedV1YAML(raw, policySchema)); err != nil {
+		return Policy{}, err
 	}
 	return result, nil
 }
 
 // LintConfig translates the policy into the lint engine configuration.
 func (p Policy) LintConfig() (config.LintConfig, error) {
-	if err := p.validateLintSelections(); err != nil {
-		return config.LintConfig{}, fmt.Errorf("validateLintSelections: %w", err)
-	}
-	if err := p.Issues.validatePaths(); err != nil {
-		return config.LintConfig{}, fmt.Errorf("validatePaths: %w", err)
-	}
-	if p.Linters.Extends != "" {
-		return config.LintConfig{}, fmt.Errorf("linters.extends policy loading is not implemented")
+	if err := p.validateSemantics(); err != nil {
+		return config.LintConfig{}, err
 	}
 	use := []string{"MINIMAL"}
 	switch p.Linters.Default {
@@ -128,8 +114,6 @@ func (p Policy) LintConfig() (config.LintConfig, error) {
 			cfg.EnumZeroValueSuffix = settings["suffix"]
 		case "SERVICE_SUFFIX":
 			cfg.ServiceSuffix = settings["suffix"]
-		default:
-			return config.LintConfig{}, fmt.Errorf("unsupported linters-settings rule %q", rule)
 		}
 	}
 	return cfg, nil
@@ -149,13 +133,8 @@ func (p Policy) ExcludesAllIssues() bool {
 // BreakingConfig maps the v1 baseline and supported categories onto the checker.
 // FILE adds declaration-move checks without disabling the existing checks.
 func (p Policy) BreakingConfig(fallbackRef string) (config.BreakingCheck, error) {
-	if p.Breaking.Extends != "" {
-		return config.BreakingCheck{}, fmt.Errorf("breaking.extends policy loading is not implemented")
-	}
-	for _, category := range p.Breaking.Categories {
-		if category != breakingCategoryFile {
-			return config.BreakingCheck{}, fmt.Errorf("breaking.categories: unsupported category %q; supported: FILE", category)
-		}
+	if err := p.validateSemantics(); err != nil {
+		return config.BreakingCheck{}, err
 	}
 	baseline := strings.TrimPrefix(p.Breaking.Baseline, "git:")
 	if baseline == "" {

@@ -2,6 +2,7 @@ package v1
 
 import (
 	"errors"
+	"fmt"
 	"strings"
 
 	"golang.org/x/mod/semver"
@@ -52,12 +53,13 @@ func (p Plugin) Validate() error {
 		}
 		return nil
 	}
+	lastSegment := p.Remote[strings.LastIndex(p.Remote, "/")+1:]
+	if colon := strings.LastIndexByte(lastSegment, ':'); colon >= 0 {
+		name, embedded := p.Remote[:strings.LastIndexByte(p.Remote, ':')], lastSegment[colon+1:]
+		return fmt.Errorf("specify the remote plugin version only in version: split remote into remote: %q and version: %q", name, embedded)
+	}
 	if !semver.IsValid(p.Version) {
 		return errors.New("remote plugin requires a pinned semantic version")
-	}
-	lastSegment := p.Remote[strings.LastIndex(p.Remote, "/")+1:]
-	if strings.Contains(lastSegment, ":") {
-		return errors.New("specify the remote plugin version only in version")
 	}
 	return nil
 }

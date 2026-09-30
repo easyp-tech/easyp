@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"slices"
@@ -89,16 +90,32 @@ func (l LsFiles) Action(ctx *cli.Context) error {
 		return fmt.Errorf("listV1Files: %w", err)
 	}
 	format := flags.GetFormat(ctx, flags.JSONFormat)
+	output := ctx.App.Writer
+	if output == nil {
+		output = os.Stdout
+	}
 	switch format {
 	case flags.JSONFormat:
-		encoder := json.NewEncoder(os.Stdout)
+		encoder := json.NewEncoder(output)
 		encoder.SetIndent("", "  ")
-		return encoder.Encode(listed)
+		if err := encoder.Encode(listed); err != nil {
+			return fmt.Errorf("Encode: %w", err)
+		}
 	case flags.TextFormat:
-		return printV1ListedFiles(listed)
+		diagnostics := ctx.App.ErrWriter
+		if diagnostics == nil {
+			diagnostics = os.Stderr
+		}
+		if err := printV1ListedFiles(output, diagnostics, listed); err != nil {
+			return fmt.Errorf("printV1ListedFiles: %w", err)
+		}
 	default:
 		return fmt.Errorf("unsupported format: %s", format)
 	}
+	if len(listed.Errors) > 0 {
+		return cli.Exit(fmt.Sprintf("ls-files found %d errors", len(listed.Errors)), 1)
+	}
+	return nil
 }
 
 func listV1Files(ctx context.Context, moduleDir string, module v1.Module, includeImports bool, cache modules.Cache) (v1ListResult, error) {
@@ -163,12 +180,12 @@ func collectV1ListedImports(index map[string]v1ListedFile, result *v1ListResult)
 			continue
 		}
 		for _, importPath := range imports {
-			if seen[importPath] {
-				continue
-			}
 			resolved, issue := resolveV1ListedImport(file.ImportPath, importPath, index)
 			if issue != nil {
 				result.Errors = append(result.Errors, *issue)
+				continue
+			}
+			if seen[importPath] {
 				continue
 			}
 			seen[importPath] = true
@@ -179,18 +196,18 @@ func collectV1ListedImports(index map[string]v1ListedFile, result *v1ListResult)
 }
 
 func resolveV1ListedImport(owner, importPath string, index map[string]v1ListedFile) (v1ListedFile, *v1ListError) {
+	if !modules.ValidProtoImportPath(importPath) {
+		return v1ListedFile{}, &v1ListError{Code: "invalid_import", Message: fmt.Sprintf("%s imports %q", owner, importPath)}
+	}
 	if file, found := index[importPath]; found {
 		return file, nil
-	}
-	if !filepath.IsLocal(importPath) {
-		return v1ListedFile{}, &v1ListError{Code: "invalid_import", Message: fmt.Sprintf("%s imports %q", owner, importPath)}
 	}
 	_, err := wellknownimports.Content.ReadFile(importPath)
 	if errors.Is(err, os.ErrNotExist) {
 		return v1ListedFile{}, &v1ListError{Code: "import_not_found", Message: fmt.Sprintf("%s imports %q", owner, importPath)}
 	}
 	if err != nil {
-		return v1ListedFile{}, &v1ListError{Code: "open_error", Message: fmt.Sprintf("%s: %v", importPath, err)}
+		return v1ListedFile{}, &v1ListError{Code: "open_error", Message: fmt.Sprintf("%s imports %q: %v", owner, importPath, err)}
 	}
 	file := v1ListedFile{AbsPath: wellKnownV1Root + "/" + importPath, ImportPath: importPath, Source: "wellknown", Root: wellKnownV1Root}
 	index[importPath] = file
@@ -208,14 +225,14 @@ func readV1ListedImports(file v1ListedFile) ([]string, error) {
 	return modules.ParseProtoImports(file.ImportPath, raw)
 }
 
-func printV1ListedFiles(result v1ListResult) error {
+func printV1ListedFiles(output, diagnostics io.Writer, result v1ListResult) error {
 	for _, file := range result.Files {
-		if _, err := fmt.Fprintf(os.Stdout, "%s\t%s\t%s\n", file.ImportPath, file.Source, file.AbsPath); err != nil {
+		if _, err := fmt.Fprintf(output, "%s\t%s\t%s\n", file.ImportPath, file.Source, file.AbsPath); err != nil {
 			return fmt.Errorf("Fprintf: %w", err)
 		}
 	}
 	for _, issue := range result.Errors {
-		if _, err := fmt.Fprintf(os.Stderr, "%s: %s\n", issue.Code, issue.Message); err != nil {
+		if _, err := fmt.Fprintf(diagnostics, "%s: %s\n", issue.Code, issue.Message); err != nil {
 			return fmt.Errorf("Fprintf: %w", err)
 		}
 	}

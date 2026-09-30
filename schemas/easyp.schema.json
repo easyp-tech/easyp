@@ -9,7 +9,7 @@
       "properties": {
         "baseline": {
           "type": "string",
-          "pattern": "^git:.+$"
+          "pattern": "^(git:.+)?$"
         },
         "categories": {
           "description": "FILE adds checks for declarations moved between files; existing compatibility checks remain enabled.",

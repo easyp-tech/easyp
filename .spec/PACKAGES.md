@@ -1,52 +1,64 @@
+<!-- generated: 2026-09-30, template: core.md -->
 # EasyP Package Reference
 
 ## Application packages
 
 | Package | Main files | Responsibility |
 |---------|------------|----------------|
-| `cmd/easyp` | `main.go` | CLI entry point, logger and global flags |
-| `internal/api` | `get_v1.go`, `mod_v1*.go`, `generate.go` | Parse command inputs and call module/generation operations |
-| `internal/api` | `lint_v1.go`, `breaking_v1.go`, `policy_v1.go`, `policy_imports.go`, `runtime.go` | Policy selection, import-root preparation, lint/breaking engine composition and output |
-| `internal/api` | `validate.go`, `schema_gen.go`, `ls_files_v1.go`, `init_v1.go` | Validation presentation, schema generation, file listing and project initialization |
-| `internal/modules` | `resolve.go` | Select revisions through the small `Source` contract |
-| `internal/modules` | `operations.go`, `get.go`, `update.go`, `vendor.go`, `repository.go` | Independent application operations and their required source/cache contracts |
-| `internal/modules` | `sources.go`, `local_sources.go`, `locked_sources.go`, `collisions.go`, `walk.go`, `imports.go` | Roots, ownership, replacements, lock validation, source walking and imports |
-| `internal/modules` | `manifest_edit.go`, `manifest_requirements.go`, `project_files.go` | Preserve manifest text, classify direct/indirect requirements and coordinate persistence |
-| `internal/generation` | `generate.go`, `inherit.go`, `selection.go` | Discover configs, inherit options and select modules |
-| `internal/generation` | `config.go`, `module.go` | Translate config and construct a fully configured generation engine |
-| `internal/core` | `core.go`, `dom.go`, `proto_info_read.go`, `lint.go` | Engine options, proto representations and lint execution |
-| `internal/core` | `generate.go`, `managed_mode.go`, `generate_bucket.go`, `generate_insertion_point.go` | Descriptor compilation, managed mode, plugins and output |
-| `internal/core` | `breaking_check.go`, `breaking_checker.go` | Read and compare current/historical proto models |
-| `internal/rules` | `builder.go` and individual rules | Named lint groups and implementations of `core.Rule` |
+| <code>cmd/easyp</code> | <code>main.go</code> | Registered CLI commands, logger and global flags |
+| <code>cmd/easyp-mcp</code> | <code>main.go</code> | Separate MCP server entry point |
+| <code>internal/api</code> | <code>get_v1.go</code>, <code>mod_v1*.go</code>, <code>generate.go</code> | Parse command inputs and call module/generation operations |
+| <code>internal/api</code> | <code>lint_v1.go</code>, <code>breaking_v1.go</code>, <code>policy_v1.go</code>, <code>policy_imports.go</code>, <code>runtime.go</code> | Policy selection, import-root preparation, lint/breaking engine composition and output |
+| <code>internal/api</code> | <code>validate.go</code>, <code>schema_gen.go</code>, <code>ls_files_v1.go</code>, <code>init_v1.go</code> | Validation presentation, schema generation, file listing and project initialization |
+| <code>internal/api</code> | <code>migrate.go</code>, <code>migrate_interactive.go</code>, <code>migrate_prompt.go</code> | Flag-only migration and terminal wizard, preview and authorization prompts |
+| <code>internal/modules</code> | <code>resolve.go</code> | Select revisions through the small <code>Source</code> contract |
+| <code>internal/modules</code> | <code>operations.go</code>, <code>get.go</code>, <code>update.go</code>, <code>vendor.go</code>, <code>repository.go</code> | Independent application operations and their required source/cache contracts |
+| <code>internal/modules</code> | <code>sources.go</code>, <code>local_sources.go</code>, <code>locked_sources.go</code>, <code>collisions.go</code>, <code>walk.go</code>, <code>imports.go</code> | Roots, ownership, replacements, lock validation, source walking and imports |
+| <code>internal/modules</code> | <code>manifest_edit.go</code>, <code>manifest_requirements.go</code>, <code>project_files.go</code> | Preserve manifest text, classify direct/indirect requirements and coordinate persistence |
+| <code>internal/generation</code> | <code>generate.go</code>, <code>discovery.go</code>, <code>inherit.go</code>, <code>selection.go</code> | Discover configs, inherit options and select modules |
+| <code>internal/generation</code> | <code>config.go</code>, <code>module.go</code> | Translate config and construct a fully configured generation engine |
+| <code>internal/generation</code> | <code>descriptor_set.go</code>, <code>descriptor_output.go</code>, <code>descriptor_conflict.go</code> | Prepare target graphs, validate export destinations and descriptor compatibility, execute shared output bucket |
+| <code>internal/migration</code> | <code>migration.go</code>, <code>legacy.go</code>, <code>convert.go</code>, <code>manifest.go</code>, <code>lock.go</code>, <code>roots.go</code>, <code>apply.go</code>, <code>validate.go</code> | Build validated migration candidates, verify historical dependency pins, preserve backups, apply with rechecks/rollback |
+| <code>internal/workspace</code> | <code>discovery.go</code> | Repository boundary, ancestor config/module selection, recursive discovery exclusions |
+| <code>internal/core</code> | <code>core.go</code>, <code>dom.go</code>, <code>proto_info_read.go</code>, <code>lint.go</code> | Engine options, proto representations and lint execution |
+| <code>internal/core</code> | <code>generate.go</code>, <code>managed_mode.go</code>, <code>generate_bucket.go</code>, <code>generate_insertion_point.go</code> | Descriptor compilation, managed mode, plugins and output |
+| <code>internal/core</code> | <code>comment_suppressions.go</code>, <code>instruction_parser.go</code>, <code>unstable_package_matcher.go</code> | Per-engine lint directives, protobuf instruction names and unstable package matching |
+| <code>internal/core/path_helpers</code> | <code>is_target_path.go</code>, <code>v1_source.go</code> | Target path matching and v1 source exclusions |
+| <code>internal/core</code> | <code>breaking_check.go</code>, <code>breaking_checker.go</code> | Read and compare current/historical proto models |
+| <code>internal/rules</code> | <code>builder.go</code> and individual rules | Named lint groups and implementations of <code>core.Rule</code> |
 
-`modules` and `generation` are callable with `context.Context` and explicit inputs. Core no longer owns dependency downloads or lock updates. CLI code does not know the physical Git cache layout.
+<code>modules</code> and <code>generation</code> are callable with <code>context.Context</code> and explicit inputs. Core no longer owns dependency downloads or lock updates. CLI code does not know the physical Git cache layout.
 
 ## Configuration and metadata
 
 | Package | Responsibility |
 |---------|----------------|
-| `internal/config/v1` | `protobuf.mod`, `protobuf.lock`, producer policy, generation config, recursive validation and YAML issues |
-| `internal/config` | Shared lint/breaking/managed types and legacy EasyP parsing used for dependency metadata |
-| `internal/adapters/module_config` | Select supported dependency metadata modes and adapt nested module, Buf and legacy EasyP roots/requirements |
-| `internal/adapters/modfile` | Legacy `direct`/`replace` manifest parsing for dependency compatibility |
-| `mcp/easypconfig` | Schema metadata/generation and the MCP config-description tool |
+| <code>internal/config/v1</code> | Native directive parser in <code>module.go</code>; lock/policy/generator YAML in <code>lock.go</code>, <code>policy.go</code>, <code>generate.go</code>; <code>schema.go</code>, <code>policy_semantics.go</code>, <code>semantic_validation.go</code>, recursive validation and YAML issues |
+| <code>internal/config</code> | Shared engine/legacy lint, breaking, plugin and managed types; legacy dependency readers live in <code>internal/adapters/module_config</code> |
+| <code>internal/adapters/module_config</code> | Select supported dependency metadata modes and adapt nested module, Buf and legacy EasyP roots/requirements |
+| <code>internal/adapters/modfile</code> | Legacy <code>direct</code>/<code>replace</code> manifest parsing for dependency compatibility |
+| <code>internal/schemagen</code> | <code>schemagen.go</code> writes versioned schema artifacts and latest aliases from <code>v1.SchemaJSON</code> |
+| <code>mcp/easypconfig</code> | MCP config-description tool and schema exposure backed by <code>internal/config/v1</code> |
 
-Generated JSON Schemas belong in `schemas/`; regenerate with `task schema:generate`, then run `task schema:check`.
+Generated JSON Schemas are <code>schemas/easyp-v1.schema.json</code>, <code>schemas/easyp.schema.json</code>, <code>schemas/easyp.gen-v1.schema.json</code>, <code>schemas/easyp.gen.schema.json</code>, <code>schemas/protobuf.lock-v1.schema.json</code>, and <code>schemas/protobuf.lock.schema.json</code>. Regenerate with <code>task schema:generate</code>, then run <code>task schema:check</code>. Native <code>protobuf.mod</code> is parsed directly and has no JSON Schema.
+
+Reserved features remain unsupported: external policy <code>extends</code>, generation <code>packages</code>, and breaking categories other than <code>FILE</code>. These struct/schema fields are not proof of runtime support. See [domain model](DOMAIN.md) and [dependency management](config/dependency.md) for current limits, including unresolved X20 replacement/frozen/import-mapping decisions.
 
 ## Infrastructure
 
 | Package | Main files / contract |
 |---------|-----------------------|
-| `internal/adapters/gitmodules` | `cache.go`, `git.go`: cache layout and Git execution; `checkout.go`, `git_source.go`: revision/candidate selection; `download.go`, `files.go`: installation and tracked-file hashing; `identity.go`: optional Git origin identity |
-| `internal/adapters/plugin` | Local, remote, built-in WASM and command executors; `Info` carries the explicit local execution directory |
-| `internal/adapters/go_git` | Historical project-tree walkers for breaking checks |
-| `internal/adapters/console` | Platform command execution |
-| `internal/adapters/prompter` | Interactive prompting |
-| `internal/fs/fs` | Core filesystem walker, exclusive regular-file copying and atomic replacement of an individual file |
-| `internal/logger` | Logger contract and implementations |
-| `internal/flags` | Shared CLI flags |
-| `internal/version` | Build/compiler version metadata |
+| <code>internal/adapters/gitmodules</code> | <code>cache.go</code>, <code>git.go</code>: cache layout and Git execution; <code>object_cache.go</code>, <code>object_lock_unix.go</code>, <code>object_lock_windows.go</code>: reusable Git object repositories and OS locks; <code>checkout.go</code>, <code>git_source.go</code>: revision/candidate selection; <code>download.go</code>, <code>files.go</code>: installation and tracked-file hashing; <code>identity.go</code>: optional Git origin identity; <code>migration.go</code>, <code>migration_config.go</code>, <code>migration_selection.go</code>: historical revision/hash verification |
+| <code>internal/adapters/plugin</code> | Local, remote, built-in WASM and command executors; <code>Info</code> carries the explicit local execution directory |
+| <code>internal/adapters/go_git</code> | Historical project-tree walkers for breaking checks |
+| <code>internal/adapters/console</code> | Platform command execution |
+| <code>internal/adapters/prompter</code> | Interactive prompting |
+| <code>internal/fs/go_git</code> | Read-only filesystem and directory walkers over historical Git trees |
+| <code>internal/fs/fs</code> | Core filesystem walker, exclusive regular-file copying and atomic replacement of an individual file |
+| <code>internal/logger</code> | Logger contract and implementations |
+| <code>internal/flags</code> | Shared CLI flags |
+| <code>internal/version</code> | Build/compiler version metadata |
 
-The Git adapter reads module formats through `module_config`; it does not parse YAML. Filesystem helpers do not interpret manifests, locks or module identities.
+Normal Git dependency reads use <code>module_config</code>. The Git adapter also has a dedicated historical YAML reader in <code>internal/adapters/gitmodules/migration_config.go</code> to reproduce legacy roots for integrity verification. Filesystem helpers do not interpret manifests, locks or module identities.
 
 See [architecture](ARCHITECTURE.md) for direction of dependencies, ownership, and persistence guarantees.

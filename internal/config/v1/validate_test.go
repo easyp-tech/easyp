@@ -55,8 +55,8 @@ generate:
   managed:
     enabled: true
     disable:
-      - field_option: json_name
-        field: example.v1.Message.name
+      - field_option: jstype
+        field: example.v1.Message.id
     override:
       - file_option: go_package_prefix
         value: example.com/gen

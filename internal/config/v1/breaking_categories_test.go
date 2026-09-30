@@ -40,12 +40,12 @@ func TestBreakingCategoriesValidation(t *testing.T) {
 			assert.Equal(t, tt.wantError, config.HasErrors(issues))
 
 			policy, err := ParsePolicy(strings.NewReader(raw))
-			require.NoError(t, err)
-			cfg, err := policy.BreakingConfig("fallback")
 			if tt.wantError {
 				require.ErrorContains(t, err, "breaking.categories")
 				return
 			}
+			require.NoError(t, err)
+			cfg, err := policy.BreakingConfig("fallback")
 			require.NoError(t, err)
 			assert.Equal(t, tt.wantUse, cfg.Use)
 			assert.Equal(t, "main", cfg.AgainstGitRef)

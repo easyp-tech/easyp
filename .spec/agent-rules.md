@@ -1,55 +1,56 @@
-<!-- generated: 2026-07-27, template: bootstrap.md -->
+<!-- generated: 2026-09-30, template: bootstrap.md -->
 # Agent Rules — EasyP
 
-Mandatory rules for AI agents. Prefer these over generic Go guides when they conflict. Expanded skills: `.agents/skills/go-code-style`, `.agents/skills/go-testing`. Dependency details: [config/dependency.md](./config/dependency.md).
+Mandatory rules for AI agents. Prefer these over generic Go guides when they conflict. Expanded skills: [go-code-style](../.agents/skills/go-code-style/SKILL.md), [go-testing](../.agents/skills/go-testing/SKILL.md). Dependency details: [config/dependency.md](./config/dependency.md). Skill examples still containing service-specific paths or gRPC error mapping are stale; the current repository ownership and CLI flow below take precedence.
 
 ## Code Style
 
-- Wrap errors as `fmt.Errorf("<called_function>: %w", err)` — function/method name only, **no package prefix**.
-- Do not assign inside `if` conditions except `:=` for block-scoped vars; assign then check on separate lines.
-- Never bare `defer x.Close()` — always wrap Close and log/handle the error.
-- No inline comments on `if` / `for` / `return` lines; comments go above if needed.
-- Imports: stdlib → third-party → project (`gci`); comments and godoc in English; exported symbols need godoc starting with the name.
-- Interfaces: context first, error last, no `I` prefix; prefer defining interfaces in the consumer package.
-- Enums: reserve zero with `_ = iota` so unset values are never silently valid.
+- Wrap errors as <code>fmt.Errorf("&lt;called_function&gt;: %w", err)</code> — function/method name only, **no package prefix**.
+- Do not assign inside <code>if</code> conditions except <code>:=</code> for block-scoped vars; assign then check on separate lines.
+- Never bare <code>defer x.Close()</code> — always wrap Close and log/handle the error.
+- No inline comments on <code>if</code> / <code>for</code> / <code>return</code> lines; comments go above if needed.
+- Imports: stdlib → third-party → project (repository convention; current lint config does not enable <code>gci</code>); comments and godoc in English; exported symbols need godoc starting with the name.
+- Interfaces: context first, error last, no <code>I</code> prefix; prefer defining interfaces in the consumer package.
+- Enums: reserve zero with <code>_ = iota</code> so unset values are never silently valid.
 
 ## Naming Conventions
 
-- Files: colocated tests as `<file>_test.go`; lint rules as `internal/rules/<rule>.go`.
+- Files: colocated tests as <code>&lt;file&gt;_test.go</code>; lint rules as <code>internal/rules/&lt;rule&gt;.go</code>.
 - Types: exported domain/entities and adapter implementations; keep config structs unexported when local.
-- Struct tags: `snake_case` (`yaml`, env) — follow `tagliatelle` / existing config patterns.
-- Do not invent parallel agent instruction files (`.cursor/rules/`, `CLAUDE.md`); root `AGENTS.md` + `.spec/` are the source of truth.
+- Struct tags: follow existing public config spellings, usually <code>snake_case</code>; retain established hyphenated keys such as <code>linters-settings</code> and <code>exclude-rules</code>.
+- Do not invent parallel agent instruction files (<code>.cursor/rules/</code>, <code>CLAUDE.md</code>); root <code>AGENTS.md</code> + <code>.spec/</code> are the source of truth.
 
 ## Error Handling
 
-- Wrap at every call site with `%w`; use `errors.Is` / `errors.As` for sentinels.
-- Domain/package-manager sentinels live under `internal/core` / `internal/core/models` (e.g. `ErrVersionNotFound`); do not invent duplicate sentinels elsewhere.
-- CLI: map known failures to documented exit codes (e.g. `ErrVersionNotFound` → exit 1 for `mod`).
+- Wrap at every call site with <code>%w</code>; use <code>errors.Is</code> / <code>errors.As</code> for sentinels.
+- Reuse existing errors in their owning packages: core parsing/breaking types, <code>modules.ErrLockedVersionChanged</code>, <code>v1.ErrLegacyConfiguration</code>, and contextual migration errors. See [ERRORS.md](./ERRORS.md); do not invent duplicate sentinels.
+- CLI: inspect the actual handler and process entrypoint before assigning exit codes. X20 local-replace/frozen/unknown-import-to-module mapping is unresolved; there is no universal package-manager sentinel-to-exit mapper.
 
 ## Testing
 
-- Use `testify` (`require` for fatal preconditions, `assert` for non-fatal checks).
-- Table-driven tests with a required `name` field; call `t.Parallel()` at top level and inside each `t.Run`.
+- Use <code>testify</code> (<code>require</code> for fatal preconditions, <code>assert</code> for non-fatal checks).
+- New slice-based table tests require a <code>name</code> field. Use <code>t.Parallel()</code> at top level and in isolated subtests; tests that change process cwd/environment must stay sequential. Existing rule tests also use named map keys.
 - No shared mutable mocks/state across parallel sub-tests — construct deps per case.
-- Prefer `require.ErrorIs` for expected errors; run with `-race` (`task test`).
-- When core/storage interfaces change, regenerate mocks with `task mocks`.
+- Prefer <code>require.ErrorIs</code> for expected errors; run with <code>-race</code> (<code>task test</code>).
+- Update test doubles when consumer interfaces change. <code>task mocks</code> currently includes a stale <code>core.Console</code> target; use the actual interface owner and see [TESTING.md](./TESTING.md).
 
 ## Dependencies
 
-- Proto deps: declare in `protobuf.mod` (and/or `generate.inputs[].git_repo.url`); lock with `protobuf.lock`; cache under `EASYPPATH` (default `~/.easyp`).
-- Vendor directory is `easyp_vendor`, not `vendor/`.
-- Use `easyp mod download` (lock-first) vs `easyp mod update` (refresh from `protobuf.mod`); commit `protobuf.lock` for CI reproducibility.
-- No remotes/mirrors/auth fields in `easyp.yaml` — auth via system git.
-- Do not hand-edit `schemas/easyp-config*.schema.json`; regenerate via `task schema:generate`.
+- Native v1 proto dependencies come from <code>protobuf.mod</code> <code>require</code> directives, never removed <code>generate.inputs</code>. Lock with <code>protobuf.lock</code>; cache under <code>EASYPPATH</code> (default <code>~/.easyp</code>). Legacy inputs are read only by dependency compatibility/migration adapters.
+- Vendor directory is <code>easyp_vendor</code>, not <code>vendor/</code>.
+- Use <code>easyp mod download</code> (lock-first) vs <code>easyp mod update</code> (refresh from <code>protobuf.mod</code>); commit <code>protobuf.lock</code> for CI reproducibility.
+- No remotes/mirrors/auth fields in <code>easyp.yaml</code> — auth via system git.
+- Regenerate schemas via <code>task schema:generate</code>: <code>schemas/easyp-v1.schema.json</code>, <code>schemas/easyp.schema.json</code>, <code>schemas/easyp.gen-v1.schema.json</code>, <code>schemas/easyp.gen.schema.json</code>, <code>schemas/protobuf.lock-v1.schema.json</code>, <code>schemas/protobuf.lock.schema.json</code>. Never hand-edit these outputs.
+- Treat <code>linters.extends</code>, <code>breaking.extends</code>, <code>generate.packages</code> and non-<code>FILE</code> breaking categories as reserved/unsupported; use [CLI.md](./CLI.md) for current v1 behavior and the migration wizard.
 
 ## Formatting
 
-- Format with `gofmt` / project tooling; lint with `task lint` (golangci-lint + hadolint where applicable).
-- Do not commit secrets, `docs/node_modules`, `coverage.out`, or the local `easyp` binary in the repo root.
-- After behavior changes, run tests for touched packages; after schema changes, run `task schema:check`.
+- Format with <code>gofmt</code> / project tooling; lint with <code>task lint</code> (golangci-lint + hadolint where applicable).
+- Do not commit secrets, generated dependency directories, <code>coverage.out</code>, or the local <code>easyp</code> binary in the repo root. The docs site is maintained in a separate repository.
+- After behavior changes, run tests for touched packages; after schema changes, run <code>task schema:check</code>.
 
 ## Quick Checklist
 
-- [ ] Error wrap = callee name only; no bare `defer Close()`
-- [ ] Tests: named cases, `t.Parallel`, no shared mutable mocks
-- [ ] Schema JSON regenerated, not hand-edited; vendor = `easyp_vendor`
+- [ ] Error wrap = callee name only; no bare <code>defer Close()</code>
+- [ ] Tests: named cases, <code>t.Parallel</code>, no shared mutable mocks
+- [ ] Schema JSON regenerated, not hand-edited; vendor = <code>easyp_vendor</code>

@@ -69,5 +69,8 @@ func ParseGenerate(r io.Reader) (Generate, error) {
 			return Generate{}, fmt.Errorf("plugins[%d]: %w", i, err)
 		}
 	}
+	if err := yamlValidationError(GenerateFile, validateExpandedV1YAML(raw, generateSchema)); err != nil {
+		return Generate{}, err
+	}
 	return result, nil
 }

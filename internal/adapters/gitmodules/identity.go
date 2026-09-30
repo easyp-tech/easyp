@@ -10,11 +10,17 @@ import (
 
 // WorkspaceIdentity returns the origin module identity for a repository root, or an empty string.
 func WorkspaceIdentity(ctx context.Context, root string) string {
+	canonicalRoot, err := filepath.EvalSymlinks(root)
+	if err != nil {
+		return ""
+	}
+	root = canonicalRoot
 	repoRoot, err := gitV1(ctx, root, "rev-parse", "--show-toplevel")
 	if err != nil || filepath.Clean(strings.TrimSpace(repoRoot)) != filepath.Clean(root) {
 		return ""
 	}
-	cmd := exec.CommandContext(ctx, "git", "-C", root, "remote", "get-url", "origin")
+	// Read the declared identity, not a transport URL rewritten by insteadOf.
+	cmd := exec.CommandContext(ctx, "git", "-C", root, "config", "--get", "remote.origin.url")
 	raw, err := cmd.Output()
 	if err != nil {
 		return ""

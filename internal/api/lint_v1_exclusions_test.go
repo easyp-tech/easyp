@@ -17,7 +17,7 @@ func TestLintV1PathExclusions(t *testing.T) {
 		name, rootPolicy, childPolicy, file, proto, lintRoot string
 		wantIssue                                            bool
 	}{
-		{name: "inherited_issue_source", rootPolicy: "issues:\n  exclude-rules:\n    - path: nested/api/**\n", childPolicy: "linters:\n  extends: unsupported\n", file: "nested/api/bad.proto", proto: "invalid proto", lintRoot: "nested"},
+		{name: "inherited_issue_source", rootPolicy: "issues:\n  exclude-rules:\n    - path: nested/api/**\n", childPolicy: "linters:\n  default: MINIMAL\n", file: "nested/api/bad.proto", proto: "invalid proto", lintRoot: "nested"},
 		{name: "child_issue_source", childPolicy: "issues:\n  exclude-rules:\n    - path: api/**\n", file: "nested/api/bad.proto", proto: "invalid proto", lintRoot: "nested/api"},
 		{name: "literal_directory", rootPolicy: "issues:\n  exclude-rules:\n    - path: nested/api\n", file: "nested/api/deep/bad.proto", proto: "invalid proto", lintRoot: "nested"},
 		{name: "named_rule", rootPolicy: "issues:\n  exclude-rules:\n    - path: nested/api/**\n      linters: [PACKAGE_DEFINED]\n", file: "nested/api/file.proto", proto: "syntax = \"proto3\";", lintRoot: "nested/api"},
@@ -51,7 +51,7 @@ func TestLintV1PathExclusions(t *testing.T) {
 func TestLintV1ExclusionBeforeDependencies(t *testing.T) {
 	t.Parallel()
 	root := t.TempDir()
-	writeV1GenerateFixture(t, root, "easyp.yaml", "version: v1\nlinters:\n  extends: unavailable\nissues:\n  exclude-rules:\n    - path: module/proto/**\n")
+	writeV1GenerateFixture(t, root, "easyp.yaml", "version: v1\nlinters:\n  default: MINIMAL\nissues:\n  exclude-rules:\n    - path: module/proto/**\n")
 	writeV1GenerateFixture(t, root, "module/protobuf.mod", "invalid manifest")
 	writeV1GenerateFixture(t, root, "module/proto/bad.proto", "invalid proto")
 	ctx := cli.NewContext(&cli.App{}, flag.NewFlagSet("test", flag.ContinueOnError), nil)
@@ -82,4 +82,15 @@ func TestLintV1NamedExclusionPreservesOtherRuleState(t *testing.T) {
 	ctx.Context = t.Context()
 	err := (Lint{}).actionV1(ctx, logger.NewNop(), filepath.Join(root, "easyp.yaml"), root, root)
 	require.ErrorIs(t, err, ErrHasLintIssue)
+}
+
+func TestLintV1ExclusionsDoNotValidateUnsupportedPolicies(t *testing.T) {
+	t.Parallel()
+	root := t.TempDir()
+	writeV1GenerateFixture(t, root, "easyp.yaml", "version: v1\nlinters:\n  extends: unavailable\nissues:\n  exclude-rules:\n    - {}\n")
+	writeV1GenerateFixture(t, root, "item.proto", "invalid proto")
+	ctx := cli.NewContext(&cli.App{}, flag.NewFlagSet("test", flag.ContinueOnError), nil)
+	ctx.Context = t.Context()
+	err := (Lint{}).actionV1(ctx, logger.NewNop(), filepath.Join(root, "easyp.yaml"), root, root)
+	require.ErrorContains(t, err, "linters.extends")
 }

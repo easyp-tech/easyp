@@ -19,10 +19,34 @@
                     "type": "string"
                   },
                   "field_option": {
-                    "type": "string"
+                    "type": "string",
+                    "enum": [
+                      "jstype"
+                    ]
                   },
                   "file_option": {
-                    "type": "string"
+                    "type": "string",
+                    "enum": [
+                      "go_package",
+                      "go_package_prefix",
+                      "java_package",
+                      "java_package_prefix",
+                      "java_package_suffix",
+                      "java_multiple_files",
+                      "java_outer_classname",
+                      "java_string_check_utf8",
+                      "csharp_namespace",
+                      "csharp_namespace_prefix",
+                      "ruby_package",
+                      "ruby_package_suffix",
+                      "php_namespace",
+                      "php_metadata_namespace",
+                      "php_metadata_namespace_suffix",
+                      "objc_class_prefix",
+                      "swift_prefix",
+                      "optimize_for",
+                      "cc_enable_arenas"
+                    ]
                   },
                   "module": {
                     "type": "string"
@@ -37,34 +61,83 @@
                 "additionalProperties": false,
                 "anyOf": [
                   {
+                    "properties": {
+                      "module": {
+                        "minLength": 1
+                      }
+                    },
                     "required": [
                       "module"
                     ]
                   },
                   {
+                    "properties": {
+                      "package": {
+                        "minLength": 1
+                      }
+                    },
                     "required": [
                       "package"
                     ]
                   },
                   {
+                    "properties": {
+                      "path": {
+                        "minLength": 1
+                      }
+                    },
                     "required": [
                       "path"
                     ]
                   },
                   {
+                    "properties": {
+                      "file_option": {
+                        "minLength": 1
+                      }
+                    },
                     "required": [
                       "file_option"
                     ]
                   },
                   {
+                    "properties": {
+                      "field_option": {
+                        "minLength": 1
+                      }
+                    },
                     "required": [
                       "field_option"
                     ]
                   },
                   {
+                    "properties": {
+                      "field": {
+                        "minLength": 1
+                      }
+                    },
                     "required": [
                       "field"
                     ]
+                  }
+                ],
+                "allOf": [
+                  {
+                    "if": {
+                      "properties": {
+                        "field": {
+                          "minLength": 1
+                        }
+                      },
+                      "required": [
+                        "field"
+                      ]
+                    },
+                    "then": {
+                      "required": [
+                        "field_option"
+                      ]
+                    }
                   }
                 ],
                 "not": {
@@ -87,10 +160,34 @@
                     "type": "string"
                   },
                   "field_option": {
-                    "type": "string"
+                    "type": "string",
+                    "enum": [
+                      "jstype"
+                    ]
                   },
                   "file_option": {
-                    "type": "string"
+                    "type": "string",
+                    "enum": [
+                      "go_package",
+                      "go_package_prefix",
+                      "java_package",
+                      "java_package_prefix",
+                      "java_package_suffix",
+                      "java_multiple_files",
+                      "java_outer_classname",
+                      "java_string_check_utf8",
+                      "csharp_namespace",
+                      "csharp_namespace_prefix",
+                      "ruby_package",
+                      "ruby_package_suffix",
+                      "php_namespace",
+                      "php_metadata_namespace",
+                      "php_metadata_namespace_suffix",
+                      "objc_class_prefix",
+                      "swift_prefix",
+                      "optimize_for",
+                      "cc_enable_arenas"
+                    ]
                   },
                   "module": {
                     "type": "string"
@@ -114,6 +211,415 @@
                     "required": [
                       "field_option"
                     ]
+                  }
+                ],
+                "allOf": [
+                  {
+                    "if": {
+                      "properties": {
+                        "field": {
+                          "minLength": 1
+                        }
+                      },
+                      "required": [
+                        "field"
+                      ]
+                    },
+                    "then": {
+                      "required": [
+                        "field_option"
+                      ]
+                    }
+                  },
+                  {
+                    "if": {
+                      "properties": {
+                        "file_option": {
+                          "const": "go_package"
+                        }
+                      },
+                      "required": [
+                        "file_option"
+                      ]
+                    },
+                    "then": {
+                      "properties": {
+                        "value": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  },
+                  {
+                    "if": {
+                      "properties": {
+                        "file_option": {
+                          "const": "go_package_prefix"
+                        }
+                      },
+                      "required": [
+                        "file_option"
+                      ]
+                    },
+                    "then": {
+                      "properties": {
+                        "value": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  },
+                  {
+                    "if": {
+                      "properties": {
+                        "file_option": {
+                          "const": "java_package"
+                        }
+                      },
+                      "required": [
+                        "file_option"
+                      ]
+                    },
+                    "then": {
+                      "properties": {
+                        "value": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  },
+                  {
+                    "if": {
+                      "properties": {
+                        "file_option": {
+                          "const": "java_package_prefix"
+                        }
+                      },
+                      "required": [
+                        "file_option"
+                      ]
+                    },
+                    "then": {
+                      "properties": {
+                        "value": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  },
+                  {
+                    "if": {
+                      "properties": {
+                        "file_option": {
+                          "const": "java_package_suffix"
+                        }
+                      },
+                      "required": [
+                        "file_option"
+                      ]
+                    },
+                    "then": {
+                      "properties": {
+                        "value": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  },
+                  {
+                    "if": {
+                      "properties": {
+                        "file_option": {
+                          "const": "java_multiple_files"
+                        }
+                      },
+                      "required": [
+                        "file_option"
+                      ]
+                    },
+                    "then": {
+                      "properties": {
+                        "value": {
+                          "type": "boolean"
+                        }
+                      }
+                    }
+                  },
+                  {
+                    "if": {
+                      "properties": {
+                        "file_option": {
+                          "const": "java_outer_classname"
+                        }
+                      },
+                      "required": [
+                        "file_option"
+                      ]
+                    },
+                    "then": {
+                      "properties": {
+                        "value": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  },
+                  {
+                    "if": {
+                      "properties": {
+                        "file_option": {
+                          "const": "java_string_check_utf8"
+                        }
+                      },
+                      "required": [
+                        "file_option"
+                      ]
+                    },
+                    "then": {
+                      "properties": {
+                        "value": {
+                          "type": "boolean"
+                        }
+                      }
+                    }
+                  },
+                  {
+                    "if": {
+                      "properties": {
+                        "file_option": {
+                          "const": "csharp_namespace"
+                        }
+                      },
+                      "required": [
+                        "file_option"
+                      ]
+                    },
+                    "then": {
+                      "properties": {
+                        "value": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  },
+                  {
+                    "if": {
+                      "properties": {
+                        "file_option": {
+                          "const": "csharp_namespace_prefix"
+                        }
+                      },
+                      "required": [
+                        "file_option"
+                      ]
+                    },
+                    "then": {
+                      "properties": {
+                        "value": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  },
+                  {
+                    "if": {
+                      "properties": {
+                        "file_option": {
+                          "const": "ruby_package"
+                        }
+                      },
+                      "required": [
+                        "file_option"
+                      ]
+                    },
+                    "then": {
+                      "properties": {
+                        "value": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  },
+                  {
+                    "if": {
+                      "properties": {
+                        "file_option": {
+                          "const": "ruby_package_suffix"
+                        }
+                      },
+                      "required": [
+                        "file_option"
+                      ]
+                    },
+                    "then": {
+                      "properties": {
+                        "value": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  },
+                  {
+                    "if": {
+                      "properties": {
+                        "file_option": {
+                          "const": "php_namespace"
+                        }
+                      },
+                      "required": [
+                        "file_option"
+                      ]
+                    },
+                    "then": {
+                      "properties": {
+                        "value": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  },
+                  {
+                    "if": {
+                      "properties": {
+                        "file_option": {
+                          "const": "php_metadata_namespace"
+                        }
+                      },
+                      "required": [
+                        "file_option"
+                      ]
+                    },
+                    "then": {
+                      "properties": {
+                        "value": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  },
+                  {
+                    "if": {
+                      "properties": {
+                        "file_option": {
+                          "const": "php_metadata_namespace_suffix"
+                        }
+                      },
+                      "required": [
+                        "file_option"
+                      ]
+                    },
+                    "then": {
+                      "properties": {
+                        "value": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  },
+                  {
+                    "if": {
+                      "properties": {
+                        "file_option": {
+                          "const": "objc_class_prefix"
+                        }
+                      },
+                      "required": [
+                        "file_option"
+                      ]
+                    },
+                    "then": {
+                      "properties": {
+                        "value": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  },
+                  {
+                    "if": {
+                      "properties": {
+                        "file_option": {
+                          "const": "swift_prefix"
+                        }
+                      },
+                      "required": [
+                        "file_option"
+                      ]
+                    },
+                    "then": {
+                      "properties": {
+                        "value": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  },
+                  {
+                    "if": {
+                      "properties": {
+                        "file_option": {
+                          "const": "optimize_for"
+                        }
+                      },
+                      "required": [
+                        "file_option"
+                      ]
+                    },
+                    "then": {
+                      "properties": {
+                        "value": {
+                          "type": "string",
+                          "enum": [
+                            "SPEED",
+                            "CODE_SIZE",
+                            "LITE_RUNTIME"
+                          ]
+                        }
+                      }
+                    }
+                  },
+                  {
+                    "if": {
+                      "properties": {
+                        "file_option": {
+                          "const": "cc_enable_arenas"
+                        }
+                      },
+                      "required": [
+                        "file_option"
+                      ]
+                    },
+                    "then": {
+                      "properties": {
+                        "value": {
+                          "type": "boolean"
+                        }
+                      }
+                    }
+                  },
+                  {
+                    "if": {
+                      "properties": {
+                        "field_option": {
+                          "const": "jstype"
+                        }
+                      },
+                      "required": [
+                        "field_option"
+                      ]
+                    },
+                    "then": {
+                      "properties": {
+                        "value": {
+                          "type": "string",
+                          "enum": [
+                            "JS_NORMAL",
+                            "JS_STRING",
+                            "JS_NUMBER"
+                          ]
+                        }
+                      }
+                    }
                   }
                 ],
                 "required": [
