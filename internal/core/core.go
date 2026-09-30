@@ -13,16 +13,18 @@ import (
 
 // Core provide to business logic of EasyP.
 type Core struct {
-	rules         []Rule
-	ignore        []string
-	ignoreOnly    map[string][]string
-	logger        logger.Logger
-	plugins       []Plugin
-	pluginWorkDir string
-	inputs        Inputs
-	importRoots   []string
-	fileModules   map[string]string
-	managedMode   ManagedModeConfig
+	rules               []Rule
+	ignore              []string
+	ignoreOnly          map[string][]string
+	allowCommentIgnores bool
+	knownLintRules      []string
+	logger              logger.Logger
+	plugins             []Plugin
+	pluginWorkDir       string
+	inputs              Inputs
+	importRoots         []string
+	fileModules         map[string]string
+	managedMode         ManagedModeConfig
 
 	breakingCheckConfig     BreakingCheckConfig
 	currentProjectGitWalker CurrentProjectGitWalker
@@ -44,6 +46,8 @@ type Options struct {
 	Rules                   []Rule
 	Ignore                  []string
 	IgnoreOnly              map[string][]string
+	AllowCommentIgnores     bool
+	KnownLintRules          []string
 	Logger                  logger.Logger
 	Plugins                 []Plugin
 	PluginWorkDir           string
@@ -62,6 +66,8 @@ func New(options Options) *Core {
 		rules:                   options.Rules,
 		ignore:                  options.Ignore,
 		ignoreOnly:              options.IgnoreOnly,
+		allowCommentIgnores:     options.AllowCommentIgnores,
+		knownLintRules:          slices.Clone(options.KnownLintRules),
 		logger:                  options.Logger,
 		plugins:                 options.Plugins,
 		pluginWorkDir:           options.PluginWorkDir,

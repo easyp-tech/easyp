@@ -8,6 +8,7 @@ import (
 	"github.com/urfave/cli/v2"
 
 	"github.com/easyp-tech/easyp/internal/flags"
+	"github.com/easyp-tech/easyp/internal/workspace"
 )
 
 // resolveRoots computes configPath, projectRoot, and the operation root.
@@ -19,6 +20,19 @@ func resolveRoots(ctx *cli.Context, rootFlagName string) (string, string, string
 
 	root := ctx.String(rootFlagName)
 	configPath := ctx.String(flags.Config.Name)
+	if !ctx.IsSet(flags.Config.Name) {
+		lookupDir := workingDir
+		if root != "" {
+			lookupDir = root
+			if !filepath.IsAbs(lookupDir) {
+				lookupDir = filepath.Join(workingDir, lookupDir)
+			}
+		}
+		configPath, err = workspace.Policy(lookupDir)
+		if err != nil {
+			return "", "", "", fmt.Errorf("Policy: %w", err)
+		}
+	}
 	if !filepath.IsAbs(configPath) {
 		configPath = filepath.Join(workingDir, configPath)
 	}

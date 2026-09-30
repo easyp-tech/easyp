@@ -11,10 +11,13 @@ directory, independently of the selected generation project.
 easyp generate --project backend --descriptor_set_out build/backend.pb --include_imports
 
 # One independent graph for each selected project/module pair.
-easyp generate --descriptor_set_out_dir build/descriptors --include_imports
+easyp generate --all --descriptor_set_out_dir build/descriptors --include_imports
 ~~~
 
-Without either flag, ordinary code generation is unchanged. With an export
+Generation selects the nearest project by default. Multiple projects require
+repeated project flags or an explicit all flag, as described in
+[context selection](review-context-and-generation.md). Without either export
+flag, generation uses the same explicit selection rules. With an export
 flag, configured plugins still run, but only after all requested graphs and
 output paths pass preflight. Pluginless projects can export descriptors too.
 

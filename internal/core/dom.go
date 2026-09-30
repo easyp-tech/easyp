@@ -111,15 +111,10 @@ func GetPackageName(protoFile *unordered.Proto) PackageName {
 	return PackageName(protoFile.ProtoBody.Packages[0].Name)
 }
 
-// AppendIssue check if lint error is ignored -> add new error to slice
-// otherwise ignore appending
+// AppendIssue records a rule finding. The lint engine applies per-file suppressions.
 func AppendIssue(
 	issues []Issue, lintRule Rule, pos meta.Position, sourceName string, comments []*parser.Comment,
 ) []Issue {
-	if CheckIsIgnored(comments, GetRuleName(lintRule)) {
-		return issues
-	}
-
 	return append(issues, buildError(lintRule, pos, sourceName))
 }
 

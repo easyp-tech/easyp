@@ -61,7 +61,9 @@ func TestFetchV1ModuleRemovesTemporaryCheckouts(t *testing.T) {
 			}
 			entries, err := os.ReadDir(cache)
 			require.NoError(t, err)
-			assert.Empty(t, entries)
+			for _, entry := range entries {
+				assert.Equal(t, "objects", entry.Name(), "temporary checkout was not removed")
+			}
 		})
 	}
 }

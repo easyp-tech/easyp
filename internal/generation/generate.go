@@ -7,18 +7,21 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
-	"strings"
 
 	v1 "github.com/easyp-tech/easyp/internal/config/v1"
 	"github.com/easyp-tech/easyp/internal/core/path_helpers"
 	"github.com/easyp-tech/easyp/internal/logger"
 	"github.com/easyp-tech/easyp/internal/modules"
+	"github.com/easyp-tech/easyp/internal/workspace"
 )
 
 // Request contains the inputs of one generation run.
 type Request struct {
 	WorkDir             string
 	Project             string
+	Projects            []string
+	AllProjects         bool
+	WorkspaceRoot       string
 	DescriptorSetOut    string
 	DescriptorSetOutDir string
 	IncludeImports      bool
@@ -42,13 +45,28 @@ func Run(ctx context.Context, log logger.Logger, cache modules.Cache, request Re
 		return fmt.Errorf("Abs: %w", err)
 	}
 	request.WorkDir = workDir
+	if request.WorkspaceRoot == "" {
+		request.WorkspaceRoot, err = workspace.Boundary(workDir)
+	} else {
+		if !filepath.IsAbs(request.WorkspaceRoot) {
+			request.WorkspaceRoot = filepath.Join(workDir, request.WorkspaceRoot)
+		}
+		request.WorkspaceRoot, err = filepath.Abs(request.WorkspaceRoot)
+	}
+	if err != nil {
+		return fmt.Errorf("Boundary: %w", err)
+	}
+	workspaceRel, err := filepath.Rel(request.WorkspaceRoot, workDir)
+	if err != nil || !filepath.IsLocal(workspaceRel) {
+		return fmt.Errorf("working directory must be inside --workspace")
+	}
 	if request.DescriptorSetOut != "" && !filepath.IsAbs(request.DescriptorSetOut) {
 		request.DescriptorSetOut = filepath.Join(workDir, request.DescriptorSetOut)
 	}
 	if request.DescriptorSetOutDir != "" && !filepath.IsAbs(request.DescriptorSetOutDir) {
 		request.DescriptorSetOutDir = filepath.Join(workDir, request.DescriptorSetOutDir)
 	}
-	configs, err := discoverV1GenerateConfigs(workDir, request.Project)
+	configs, err := selectGenerateConfigs(request)
 	if err != nil {
 		return fmt.Errorf("discoverV1GenerateConfigs: %w", err)
 	}
@@ -62,13 +80,13 @@ func Run(ctx context.Context, log logger.Logger, cache modules.Cache, request Re
 		if err != nil {
 			return fmt.Errorf("readV1GenerateConfig: %w", err)
 		}
-		if err := inheritV1GenerateOptions(workDir, configPath, &gen); err != nil {
+		if err := inheritV1GenerateOptions(request.WorkspaceRoot, configPath, &gen); err != nil {
 			return fmt.Errorf("inheritV1GenerateOptions: %w", err)
 		}
 		if len(gen.Plugins) == 0 && !exportDescriptors {
 			continue
 		}
-		modules, err := selectV1Modules(workDir, filepath.Dir(configPath), gen.Generate.Modules)
+		modules, err := selectV1Modules(request.WorkspaceRoot, filepath.Dir(configPath), gen.Generate.Modules)
 		if err != nil {
 			return fmt.Errorf("%s: %w", configPath, err)
 		}
@@ -76,19 +94,10 @@ func Run(ctx context.Context, log logger.Logger, cache modules.Cache, request Re
 			return fmt.Errorf("%s: generate.packages matching is not specified precisely enough for v1", configPath)
 		}
 		for _, module := range modules {
-			if !exportDescriptors {
-				if err := generateSelectedV1Module(ctx, log, cache, request, configPath, workDir, module, gen); err != nil {
-					return fmt.Errorf("generateSelectedV1Module: %w", err)
-				}
-				continue
-			}
 			descriptorTargets = append(descriptorTargets, generationTarget{configPath: configPath, config: gen, module: module})
 		}
 	}
-	if !exportDescriptors {
-		return nil
-	}
-	if request.Project == "" {
+	if request.AllProjects {
 		selected := descriptorTargets[:0]
 		for _, target := range descriptorTargets {
 			if len(target.config.Plugins) == 0 && len(target.config.Generate.Modules) == 0 {
@@ -104,8 +113,18 @@ func Run(ctx context.Context, log logger.Logger, cache modules.Cache, request Re
 		}
 		descriptorTargets = selected
 	}
-	if len(descriptorTargets) == 0 {
+	if len(descriptorTargets) == 0 && exportDescriptors {
 		return fmt.Errorf("descriptor set has no selected modules")
+	}
+	if !exportDescriptors {
+		if len(descriptorTargets) == 0 {
+			return nil
+		}
+		prepared, err := prepareDescriptorTargets(ctx, log, cache, request, descriptorTargets)
+		if err != nil {
+			return fmt.Errorf("prepareDescriptorTargets: %w", err)
+		}
+		return executePreparedTargets(ctx, prepared)
 	}
 	if err := generateV1DescriptorSet(ctx, log, cache, request, descriptorTargets); err != nil {
 		return fmt.Errorf("generateV1DescriptorSet: %w", err)
@@ -185,7 +204,7 @@ func discoverV1GenerateConfigs(root, project string) ([]string, error) {
 			return walkErr
 		}
 		if entry.IsDir() {
-			if path != root && (entry.Name() == ".git" || entry.Name() == "easyp_vendor" || strings.HasPrefix(entry.Name(), ".")) {
+			if workspace.SkipDirectory(root, path) {
 				return filepath.SkipDir
 			}
 			return nil

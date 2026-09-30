@@ -9,13 +9,14 @@ import (
 
 // Plugin selects a local, bundled, or remote generator and its output options.
 type Plugin struct {
-	Name    string        `yaml:"name"`
-	Path    string        `yaml:"path"`
-	Command []string      `yaml:"command"`
-	Remote  string        `yaml:"remote"`
-	Version string        `yaml:"version"`
-	Out     string        `yaml:"out"`
-	Opts    PluginOptions `yaml:"opts"`
+	Name        string        `yaml:"name"`
+	Path        string        `yaml:"path"`
+	Command     []string      `yaml:"command"`
+	Remote      string        `yaml:"remote"`
+	Version     string        `yaml:"version"`
+	Out         string        `yaml:"out"`
+	Opts        PluginOptions `yaml:"opts"`
+	WithImports bool          `yaml:"with_imports"`
 }
 
 // Validate checks the plugin source and reproducibility requirements.

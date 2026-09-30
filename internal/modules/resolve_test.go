@@ -74,10 +74,10 @@ func TestResolve(t *testing.T) {
 			wantCalls: []string{"a@" + commitA}, wantMessage: "has conflicting requirements",
 		},
 		{
-			name:      "tag and commit conflict",
+			name:      "tag and equivalent commit agree",
 			requires:  []v1.Requirement{{Module: "a", Version: "v1.0.0"}, {Module: "a", Version: commitA}},
 			revisions: map[string]Fetched{"a@v1.0.0": {Lock: v1.LockedModule{Source: "a", Version: "v1.0.0", Commit: commitA}}},
-			wantCalls: []string{"a@v1.0.0"}, wantMessage: "has conflicting requirements",
+			wantCalls: []string{"a@v1.0.0"}, want: []v1.LockedModule{{Source: "a", Version: "v1.0.0", Commit: commitA}},
 		},
 		{name: "invalid version", requires: []v1.Requirement{{Module: "a", Version: "branch"}}, wantMessage: "expected semantic version or full Git commit"},
 		{name: "fetch error keeps its cause", requires: []v1.Requirement{{Module: "a", Version: "v1.0.0"}}, fetchErrors: map[string]error{"a@v1.0.0": fetchErr}, wantCalls: []string{"a@v1.0.0"}, wantError: fetchErr},

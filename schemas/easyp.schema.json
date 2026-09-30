@@ -111,6 +111,10 @@
     "linters": {
       "type": "object",
       "properties": {
+        "allow_comment_ignores": {
+          "description": "Enable scoped easyp:disable, nolint and buf:lint:ignore comments; defaults to true. State is local to each effective lint policy.",
+          "type": "boolean"
+        },
         "default": {
           "type": "string",
           "enum": [

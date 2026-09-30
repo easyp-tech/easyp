@@ -26,7 +26,7 @@ func prepareV1GeneratorConfig(configPath, moduleDir string, gen v1.Generate, mod
 		}
 		cfg.Plugins = append(cfg.Plugins, core.Plugin{
 			Source: core.PluginSource{Name: plugin.Name, Path: plugin.Path, Command: plugin.Command, Remote: remote},
-			Out:    outRel, Options: plugin.Opts,
+			Out:    outRel, Options: plugin.Opts, WithImports: plugin.WithImports,
 		})
 	}
 	cfg.ManagedModeConfig = convertManagedModeConfig(gen.Generate.Managed)

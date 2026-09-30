@@ -37,13 +37,8 @@ func generateV1DescriptorSet(ctx context.Context, log logger.Logger, cache modul
 	if err != nil {
 		return fmt.Errorf("planDescriptorOutputs: %w", err)
 	}
-	for _, target := range prepared {
-		if err := ctx.Err(); err != nil {
-			return err
-		}
-		if err := target.plan.Execute(ctx); err != nil {
-			return fmt.Errorf("Execute for %s: %w", target.label, err)
-		}
+	if err := executePreparedTargets(ctx, prepared); err != nil {
+		return err
 	}
 	for _, output := range outputs {
 		if err := ctx.Err(); err != nil {
@@ -64,7 +59,7 @@ func prepareDescriptorTargets(ctx context.Context, log logger.Logger, cache modu
 		if err := ctx.Err(); err != nil {
 			return nil, err
 		}
-		selected, err := resolveV1GenerationModule(ctx, cache, request.WorkDir, filepath.Dir(target.configPath), target.module)
+		selected, err := resolveV1GenerationModule(ctx, cache, request.WorkspaceRoot, filepath.Dir(target.configPath), target.module)
 		if err != nil {
 			return nil, fmt.Errorf("resolveV1GenerationModule for %s: %w", target.configPath, err)
 		}
@@ -145,4 +140,20 @@ func relativeDescriptorPath(root, path string) string {
 		return filepath.ToSlash(path)
 	}
 	return filepath.ToSlash(relative)
+}
+
+func executePreparedTargets(ctx context.Context, prepared []preparedDescriptorTarget) error {
+	bucket := core.NewGenerateBucket()
+	for _, target := range prepared {
+		if err := ctx.Err(); err != nil {
+			return err
+		}
+		if err := target.plan.ExecuteInto(ctx, bucket); err != nil {
+			return fmt.Errorf("ExecuteInto for %s: %w", target.label, err)
+		}
+	}
+	if err := bucket.DumpToFs(ctx); err != nil {
+		return fmt.Errorf("DumpToFs: %w", err)
+	}
+	return nil
 }
