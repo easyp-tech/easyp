@@ -7,7 +7,24 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/easyp-tech/easyp/internal/adapters/gitmodules"
+	gitadapter "github.com/easyp-tech/easyp/internal/adapters/go_git"
 )
+
+func TestBreakingOverlayUsesSnapshotTransitively(t *testing.T) {
+	t.Parallel()
+	current, baseline := t.TempDir(), t.TempDir()
+	writeV1GenerateFixture(t, current, "b/protobuf.mod", "module example.com/wrong\n")
+	writeV1GenerateFixture(t, baseline, "protobuf.mod", "module example.com/app\nroots proto\nrequire example.com/A\nreplace example.com/A => a\nreplace example.com/B => "+filepath.Join(current, "b")+"\n")
+	writeV1GenerateFixture(t, baseline, "proto/app.proto", "syntax = \"proto3\";\n")
+	writeV1GenerateFixture(t, baseline, "a/protobuf.mod", "module example.com/A\nrequire example.com/B\nreplace example.com/B => nonexistent\n")
+	writeV1GenerateFixture(t, baseline, "b/protobuf.mod", "module example.com/B\n")
+	snapshot := &gitadapter.Snapshot{Root: baseline, RepositoryRoot: current}
+	roots, err := breakingImportRoots(t.Context(), gitmodules.New(t.TempDir()), baseline, ".", []string{"proto/app.proto"}, snapshot)
+	require.NoError(t, err)
+	assert.Equal(t, []string{filepath.Join(baseline, "proto"), filepath.Join(baseline, "a"), filepath.Join(baseline, "b")}, roots)
+}
 
 func TestBreakingScopesRespectModuleRoots(t *testing.T) {
 	t.Parallel()

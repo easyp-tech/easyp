@@ -10,18 +10,16 @@ import (
 	disk "github.com/easyp-tech/easyp/internal/fs/fs"
 )
 
-// Vendor copies verified locked protobuf sources into one import root.
+// Vendor copies the effective dependency sources into one import root.
+// Local replacements are copied without writing or creating the published lock.
 func Vendor(ctx context.Context, root string, repository Cache) error {
 	_, module, err := ReadManifest(root)
 	if err != nil {
 		return fmt.Errorf("ReadManifest: %w", err)
 	}
-	if len(module.Replaces) != 0 {
-		return fmt.Errorf("module %s: remove local replacements before vendoring a reproducible lock", module.Name)
-	}
-	dependencyRoots, err := EnsureLockedSources(ctx, root, module, repository)
+	dependencyRoots, err := EnsureSources(ctx, root, module, repository)
 	if err != nil {
-		return fmt.Errorf("EnsureLockedSources: %w", err)
+		return fmt.Errorf("EnsureSources: %w", err)
 	}
 	if err := CheckImportCollisions(root, module.Roots, dependencyRoots.Paths()); err != nil {
 		return fmt.Errorf("CheckImportCollisions: %w", err)

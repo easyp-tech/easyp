@@ -9,7 +9,6 @@ import (
 	"path/filepath"
 
 	gitadapter "github.com/easyp-tech/easyp/internal/adapters/go_git"
-	moduleconfig "github.com/easyp-tech/easyp/internal/adapters/module_config"
 	v1 "github.com/easyp-tech/easyp/internal/config/v1"
 	"github.com/easyp-tech/easyp/internal/core"
 	"github.com/easyp-tech/easyp/internal/core/path_helpers"
@@ -138,15 +137,22 @@ func breakingImportRoots(ctx context.Context, cache modules.Cache, root, moduleR
 	if err != nil {
 		return nil, fmt.Errorf("ModuleSources: %w", err)
 	}
-	local, err := snapshotLocalSources(snapshot, directory, module, make(map[string]bool))
-	if err != nil {
-		return nil, err
+	var dependencies modules.SourceRoots
+	if len(module.Replaces) > 0 {
+		graph, err := modules.EnsureEffectiveGraph(ctx, directory, module, cache, func(target string) (string, error) {
+			return snapshotReplacementPath(snapshot, directory, target)
+		})
+		if err != nil {
+			return nil, fmt.Errorf("EnsureEffectiveGraph: %w", err)
+		}
+		dependencies = graph.Sources
+	} else {
+		dependencies, err = modules.EnsureSources(ctx, directory, module, cache)
+		if err != nil {
+			return nil, fmt.Errorf("EnsureSources: %w", err)
+		}
 	}
-	locked, err := modules.EnsureLockedSources(ctx, directory, module, cache)
-	if err != nil {
-		return nil, fmt.Errorf("EnsureLockedSources: %w", err)
-	}
-	dependencies := append(local, locked...)
+
 	if err := modules.CheckImportCollisions(directory, module.Roots, dependencies.Paths()); err != nil {
 		return nil, fmt.Errorf("CheckImportCollisions: %w", err)
 	}
@@ -156,50 +162,33 @@ func breakingImportRoots(ctx context.Context, cache modules.Cache, root, moduleR
 // Local replacements inside the repository are read from the baseline snapshot.
 // External working directories have no historical identity and cannot safely
 // stand in for a dependency at the baseline revision.
-func snapshotLocalSources(snapshot *gitadapter.Snapshot, directory string, module v1.Module, visiting map[string]bool) (modules.SourceRoots, error) {
-	if visiting[directory] {
-		return nil, fmt.Errorf("baseline local dependency cycle at %s", directory)
-	}
-	visiting[directory] = true
-	defer delete(visiting, directory)
-	replacements := make(map[string]string)
-	for _, replacement := range module.Replaces {
-		replacements[replacement.Module] = replacement.Target
-	}
-	var roots modules.SourceRoots
-	for _, requirement := range module.Requires {
-		target, ok := replacements[requirement.Module]
-		if !ok {
-			continue
-		}
-		resolved := modules.ResolveReplacementPath(directory, target)
-		if filepath.IsAbs(target) {
-			relative, err := baselineRepositoryRelative(snapshot.RepositoryRoot, target)
-			if err != nil || !filepath.IsLocal(relative) {
-				return nil, fmt.Errorf("baseline replacement %s points outside the Git repository: %q; use a locked dependency for a reproducible baseline", requirement.Module, target)
-			}
-			resolved = filepath.Join(snapshot.Root, relative)
-		}
-		relative, err := filepath.Rel(snapshot.Root, resolved)
+func snapshotReplacementPath(snapshot *gitadapter.Snapshot, directory, target string) (string, error) {
+	resolved := modules.ResolveReplacementPath(directory, target)
+	if filepath.IsAbs(target) {
+		relative, err := baselineRepositoryRelative(snapshot.RepositoryRoot, target)
 		if err != nil || !filepath.IsLocal(relative) {
-			return nil, fmt.Errorf("baseline replacement %s leaves the Git snapshot: %q", requirement.Module, target)
+			return "", fmt.Errorf("baseline replacement points outside the Git repository: %q; use a locked dependency for a reproducible baseline", target)
 		}
-		dependency, err := moduleconfig.ReadGitDependency(resolved, requirement.Module)
-		if err != nil {
-			return nil, fmt.Errorf("ReadGitDependency: %w", err)
-		}
-		own, err := modules.ModuleSources(resolved, dependency)
-		if err != nil {
-			return nil, fmt.Errorf("ModuleSources: %w", err)
-		}
-		nested, err := snapshotLocalSources(snapshot, resolved, dependency, visiting)
-		if err != nil {
-			return nil, err
-		}
-		roots = append(roots, own...)
-		roots = append(roots, nested...)
+		resolved = filepath.Join(snapshot.Root, relative)
 	}
-	return roots, nil
+	relative, err := filepath.Rel(snapshot.Root, resolved)
+	if err != nil || !filepath.IsLocal(relative) {
+		return "", fmt.Errorf("baseline replacement leaves the Git snapshot: %q", target)
+	}
+	// Do not follow a snapshot symlink into present-day working files.
+	canonical, err := filepath.EvalSymlinks(resolved)
+	if err != nil {
+		return "", fmt.Errorf("EvalSymlinks: %w", err)
+	}
+	snapshotRoot, err := filepath.EvalSymlinks(snapshot.Root)
+	if err != nil {
+		return "", fmt.Errorf("EvalSymlinks: %w", err)
+	}
+	relative, err = filepath.Rel(snapshotRoot, canonical)
+	if err != nil || !filepath.IsLocal(relative) {
+		return "", fmt.Errorf("baseline replacement leaves the Git snapshot: %q", target)
+	}
+	return resolved, nil
 }
 
 // baselineRepositoryRelative accepts filesystem aliases such as macOS /tmp,

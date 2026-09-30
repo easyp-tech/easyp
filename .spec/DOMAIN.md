@@ -127,7 +127,7 @@ type Replacement struct {
 
 <code>Requirement.Version</code> is an optional token. Resolution accepts semantic versions and full Git commit IDs; an omitted version is a weak requirement. <code>modules.Resolve</code> chooses the highest semantic minimum, reconciles exact commit constraints, and uses a supplied existing pin for versionless dependencies when available. It rejects incompatible tag/commit constraints. An omitted version has no separate enum or pseudo-version model.
 
-<code>Replacement.Target</code> names a local directory. Relative targets are resolved from the module directory; dependency roots come from the replacement's native manifest. Local replacements are supported for reading sources, but <code>Get</code>, <code>Tidy</code>, <code>Update</code>, and <code>Vendor</code> reject replacements when producing reproducible project state. The X20 policy for local replacements, a frozen mode, and mapping unknown imports to modules remains unresolved; do not infer automatic dependency discovery or a frozen CLI flag from these data types.
+<code>Replacement.Target</code> names a local directory. Relative targets are resolved from the module directory; dependency roots come from the replacement's native manifest. Main-module replacements apply throughout the effective graph; replacements declared by dependencies are ignored. <code>EffectiveGraph</code> keeps local metadata separate from real remote revisions. Local operations preserve the shared lock; only explicit get/update requests can change root manifest requirements. Vendor can copy this effective graph without changing the lock. Frozen mode is separate; automatic unknown-import discovery is intentionally excluded.
 
 ### Native Lock
 

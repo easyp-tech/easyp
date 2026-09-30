@@ -67,7 +67,7 @@ Nested protobuf module roots are rebased by <code>module_config</code> from the 
 
 The Git cache lives beneath the CLI-supplied EasyP directory in <code>v1/git</code>; <code>internal/adapters/gitmodules/object_cache.go</code> maintains reusable bare object repositories with OS locks. <code>Cache.Cached</code> reads installed metadata; <code>Install</code> supplies content verification before cached metadata is trusted.
 
-The X20 decisions for local replacements, frozen operation, and unknown-import-to-module mapping remain unresolved. Current lock-writing and vendoring paths reject local replacements, and unresolved imports are reported; do not infer an implemented frozen mode or automatic import discovery.
+Local replacements use an ephemeral main-module overlay graph and never alter the shared lock. Tidy validates the overlay; get/update may edit explicit manifest requirements. Vendor copies the effective local graph without touching the lock. Frozen operation is a separate pending step; automatic unknown-import-to-module discovery is intentionally not implemented.
 
 ## Generation
 

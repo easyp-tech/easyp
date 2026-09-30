@@ -12,7 +12,8 @@ import (
 	v1 "github.com/easyp-tech/easyp/internal/config/v1"
 )
 
-// Get adds or promotes one direct requirement and records its resolved transitive requirements.
+// Get adds or promotes one direct requirement. In published mode it also records
+// resolved transitives; local overlay mode preserves the shared lock.
 func Get(ctx context.Context, root string, requirement v1.Requirement, repository Repository) error {
 	original, module, err := ReadManifest(root)
 	if err != nil {
@@ -28,6 +29,15 @@ func Get(ctx context.Context, root string, requirement v1.Requirement, repositor
 	updatedModule, err := v1.ParseModule(bytes.NewReader(updated))
 	if err != nil {
 		return fmt.Errorf("ParseModule: %w", err)
+	}
+	if len(updatedModule.Replaces) > 0 {
+		if err := validateLocalOverlay(ctx, root, updatedModule, repository, false); err != nil {
+			return err
+		}
+		if bytes.Equal(original, updated) {
+			return nil
+		}
+		return writeV1Manifest(root, updated)
 	}
 	updatedModule = directV1Module(updated, updatedModule)
 	existing, err := ReadLock(filepath.Join(root, v1.LockFile))

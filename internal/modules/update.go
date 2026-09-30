@@ -17,17 +17,19 @@ import (
 
 // Update refreshes tagged requirements within their major versions and
 // versionless requirements to Git HEAD; explicit commit pins remain fixed.
+// Local replacements skip remote version lookup and suppress lock/indirect edits.
 func Update(ctx context.Context, root string, repository VersionedRepository) error {
 	original, module, err := ReadManifest(root)
 	if err != nil {
 		return fmt.Errorf("ReadManifest: %w", err)
 	}
-	if len(module.Replaces) > 0 {
-		return fmt.Errorf("module %s: remove local replacements before updating a reproducible lock", module.Name)
-	}
 	module = directV1Module(original, module)
 	updatedVersions := make(map[string]string, len(module.Requires))
+	replaced := replacedModules(module)
 	for _, requirement := range module.Requires {
+		if replaced[requirement.Module] {
+			continue
+		}
 		version, err := latestCompatibleV1Tag(ctx, requirement.Module, requirement.Version, repository)
 		if err != nil {
 			return fmt.Errorf("latestCompatibleV1Tag: %w", err)
@@ -38,6 +40,15 @@ func Update(ctx context.Context, root string, repository VersionedRepository) er
 	updatedModule, err := v1.ParseModule(bytes.NewReader(updated))
 	if err != nil {
 		return fmt.Errorf("ParseModule: %w", err)
+	}
+	if len(updatedModule.Replaces) > 0 {
+		if err := validateLocalOverlay(ctx, root, updatedModule, repository, true); err != nil {
+			return err
+		}
+		if bytes.Equal(original, updated) {
+			return nil
+		}
+		return writeV1Manifest(root, updated)
 	}
 	updatedModule = directV1Module(updated, updatedModule)
 	existing, err := ReadLock(filepath.Join(root, v1.LockFile))

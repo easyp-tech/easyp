@@ -79,7 +79,7 @@ func (l LsFiles) Action(ctx *cli.Context) error {
 	}
 	includeImports := ctx.Bool(flagLsFilesIncludeImports.Name)
 	var cache modules.Cache
-	if includeImports && len(modules.RemoteRequirements(module)) > 0 {
+	if includeImports && (len(modules.RemoteRequirements(module)) > 0 || len(module.Replaces) > 0) {
 		cache, err = moduleCache(ctx)
 		if err != nil {
 			return fmt.Errorf("moduleCache: %w", err)

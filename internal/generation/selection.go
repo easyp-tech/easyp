@@ -9,7 +9,6 @@ import (
 	"os"
 	"path/filepath"
 
-	moduleconfig "github.com/easyp-tech/easyp/internal/adapters/module_config"
 	v1 "github.com/easyp-tech/easyp/internal/config/v1"
 	"github.com/easyp-tech/easyp/internal/logger"
 	"github.com/easyp-tech/easyp/internal/modules"
@@ -100,65 +99,70 @@ func resolveV1GenerationModule(ctx context.Context, cache modules.Cache, repoRoo
 	if err != nil {
 		return v1GenerationModule{}, fmt.Errorf("findV1LocalModuleByName: %w", err)
 	}
-	if localDir != "" {
-		return readV1GenerationModule(ctx, cache, localDir)
-	}
 	consumerDir, err := generatorV1ModuleDir(repoRoot, configDir)
 	if err != nil {
 		return v1GenerationModule{}, fmt.Errorf("generatorV1ModuleDir: %w", err)
 	}
 	_, consumer, err := modules.ReadManifest(consumerDir)
 	if err != nil {
+		if localDir != "" {
+			return readV1GenerationModule(ctx, cache, localDir)
+		}
 		return v1GenerationModule{}, fmt.Errorf("ReadManifest: %w", err)
 	}
 	if consumer.Name == selection.source {
 		return readV1GenerationModule(ctx, cache, consumerDir)
 	}
 
+	if len(consumer.Replaces) > 0 {
+		graph, err := modules.EnsureEffectiveGraph(ctx, consumerDir, consumer, cache, nil)
+		if err != nil {
+			return v1GenerationModule{}, fmt.Errorf("EnsureEffectiveGraph: %w", err)
+		}
+		if selected, ok := graph.Modules[selection.source]; ok {
+			var others modules.SourceRoots
+			for _, root := range graph.Sources {
+				if root.Module != selection.source {
+					others = append(others, root)
+				}
+			}
+			return v1GenerationModule{directory: selected.Directory, resolutionDir: consumerDir, module: selected.Module, dependencies: others}, nil
+		}
+		for _, replacement := range consumer.Replaces {
+			if replacement.Module == selection.source {
+				return v1GenerationModule{}, fmt.Errorf("module %q is not selected in the effective graph", selection.source)
+			}
+		}
+		if localDir == "" {
+			return v1GenerationModule{}, fmt.Errorf("module %q is not selected in the effective graph", selection.source)
+		}
+	}
+	if localDir != "" {
+		return readV1GenerationModule(ctx, cache, localDir)
+	}
+
 	var moduleDir string
 	var module v1.Module
 	var dependencyRoots modules.SourceRoots
-	for _, replacement := range consumer.Replaces {
-		if replacement.Module != selection.source {
-			continue
+	dependencyRoots, err = modules.EnsureLockedSources(ctx, consumerDir, consumer, cache)
+	if err != nil {
+		return v1GenerationModule{}, fmt.Errorf("EnsureLockedSources: %w", err)
+	}
+	lock, err := modules.ReadLock(filepath.Join(consumerDir, v1.LockFile))
+	if err != nil {
+		return v1GenerationModule{}, fmt.Errorf("ReadLock: %w", err)
+	}
+	for _, entry := range lock.Modules {
+		if entry.Source == selection.source {
+			moduleDir, module, err = cache.Cached(entry)
+			if err != nil {
+				return v1GenerationModule{}, fmt.Errorf("Cached: %w", err)
+			}
+			break
 		}
-		dependencyRoots, err = modules.EnsureSources(ctx, consumerDir, consumer, cache)
-		if err != nil {
-			return v1GenerationModule{}, fmt.Errorf("EnsureSources: %w", err)
-		}
-		moduleDir = modules.ResolveReplacementPath(consumerDir, replacement.Target)
-		module, err = moduleconfig.ReadGitDependency(moduleDir, selection.source)
-		if err != nil {
-			return v1GenerationModule{}, fmt.Errorf("ReadGitDependency: %w", err)
-		}
-		break
 	}
 	if moduleDir == "" {
-		dependencyRoots, err = modules.EnsureLockedSources(ctx, consumerDir, consumer, cache)
-		if err != nil {
-			return v1GenerationModule{}, fmt.Errorf("EnsureLockedSources: %w", err)
-		}
-		lock, err := modules.ReadLock(filepath.Join(consumerDir, v1.LockFile))
-		if err != nil {
-			return v1GenerationModule{}, fmt.Errorf("ReadLock: %w", err)
-		}
-		for _, entry := range lock.Modules {
-			if entry.Source == selection.source {
-				moduleDir, module, err = cache.Cached(entry)
-				if err != nil {
-					return v1GenerationModule{}, fmt.Errorf("Cached: %w", err)
-				}
-				break
-			}
-		}
-		if moduleDir == "" {
-			return v1GenerationModule{}, fmt.Errorf("module %q is not selected in %s", selection.source, filepath.Join(consumerDir, v1.LockFile))
-		}
-		localRoots, err := modules.LocalSources(consumerDir, consumer)
-		if err != nil {
-			return v1GenerationModule{}, fmt.Errorf("LocalSources: %w", err)
-		}
-		dependencyRoots = append(dependencyRoots, localRoots...)
+		return v1GenerationModule{}, fmt.Errorf("module %q is not selected in %s", selection.source, filepath.Join(consumerDir, v1.LockFile))
 	}
 
 	otherRoots := make(modules.SourceRoots, 0, len(dependencyRoots))
