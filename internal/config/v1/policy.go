@@ -57,11 +57,17 @@ func ParsePolicy(r io.Reader) (Policy, error) {
 	if err != nil {
 		return Policy{}, fmt.Errorf("expandConfigYAML: %w", err)
 	}
+	if LegacyPolicy(raw) {
+		return Policy{}, ErrLegacyConfiguration
+	}
 	var result Policy
 	decoder := yaml.NewDecoder(bytes.NewReader(raw))
 	decoder.KnownFields(true)
 	if err := decoder.Decode(&result); err != nil {
 		return Policy{}, fmt.Errorf("decode easyp.yaml: %w", err)
+	}
+	if err := requireSingleYAMLDocument(decoder, PolicyFile); err != nil {
+		return Policy{}, err
 	}
 	if result.Version == "" {
 		result.Version = "v1"
@@ -80,6 +86,9 @@ func ParsePolicy(r io.Reader) (Policy, error) {
 	if err := result.validateLintSelections(); err != nil {
 		return Policy{}, fmt.Errorf("validateLintSelections: %w", err)
 	}
+	if err := result.Issues.validatePaths(); err != nil {
+		return Policy{}, fmt.Errorf("validatePaths: %w", err)
+	}
 	return result, nil
 }
 
@@ -87,6 +96,9 @@ func ParsePolicy(r io.Reader) (Policy, error) {
 func (p Policy) LintConfig() (config.LintConfig, error) {
 	if err := p.validateLintSelections(); err != nil {
 		return config.LintConfig{}, fmt.Errorf("validateLintSelections: %w", err)
+	}
+	if err := p.Issues.validatePaths(); err != nil {
+		return config.LintConfig{}, fmt.Errorf("validatePaths: %w", err)
 	}
 	if p.Linters.Extends != "" {
 		return config.LintConfig{}, fmt.Errorf("linters.extends policy loading is not implemented")
@@ -101,15 +113,14 @@ func (p Policy) LintConfig() (config.LintConfig, error) {
 		use = append(use, "BASIC", "DEFAULT", "COMMENTS")
 	}
 	use = append(use, p.Linters.Enable...)
-	cfg := config.LintConfig{Use: use, Except: p.Linters.Disable, AllowCommentIgnores: true}
+	cfg := config.LintConfig{Use: use, Except: append([]string(nil), p.Linters.Disable...), AllowCommentIgnores: true}
 	if p.Linters.AllowCommentIgnores != nil {
 		cfg.AllowCommentIgnores = *p.Linters.AllowCommentIgnores
 	}
 	for _, rule := range p.Issues.ExcludeRules {
-		if rule.Path != "" {
-			return config.LintConfig{}, fmt.Errorf("issues.exclude-rules.path glob matching is not implemented")
+		if rule.Path == "" {
+			cfg.Except = append(cfg.Except, rule.Linters...)
 		}
-		cfg.Except = append(cfg.Except, rule.Linters...)
 	}
 	for rule, settings := range p.LinterSettings {
 		switch rule {
@@ -146,15 +157,14 @@ func (p Policy) BreakingConfig(fallbackRef string) (config.BreakingCheck, error)
 			return config.BreakingCheck{}, fmt.Errorf("breaking.categories: unsupported category %q; supported: FILE", category)
 		}
 	}
-	if p.Breaking.IgnoreUnstable {
-		return config.BreakingCheck{}, fmt.Errorf("breaking.ignore_unstable is not supported by the existing checker")
-	}
 	baseline := strings.TrimPrefix(p.Breaking.Baseline, "git:")
 	if baseline == "" {
 		baseline = fallbackRef
 	}
 	return config.BreakingCheck{
-		AgainstGitRef: baseline, Ignore: p.Breaking.Ignore,
-		Use: append([]string(nil), p.Breaking.Categories...),
+		AgainstGitRef:  baseline,
+		Ignore:         p.Breaking.Ignore,
+		Use:            append([]string(nil), p.Breaking.Categories...),
+		IgnoreUnstable: p.Breaking.IgnoreUnstable,
 	}, nil
 }

@@ -279,7 +279,7 @@ func TestValidateFileReportsSemanticIssues(t *testing.T) {
 			name:            "unsupported linter inheritance",
 			filename:        PolicyFile,
 			contents:        "linters:\n  extends: shared.yaml\n",
-			expectedMessage: "linters.extends policy loading is not implemented",
+			expectedMessage: "linters.extends",
 		},
 		{
 			name:            "unpinned remote plugin",
@@ -301,7 +301,12 @@ func TestValidateFileReportsSemanticIssues(t *testing.T) {
 
 			require.NoError(t, err)
 			require.Len(t, issues, 1)
-			assert.Equal(t, "v1_validation", issues[0].Code)
+			if tt.name == "unsupported linter inheritance" {
+				assert.Equal(t, "yaml_validation", issues[0].Code)
+				assert.Positive(t, issues[0].Line)
+			} else {
+				assert.Equal(t, "v1_validation", issues[0].Code)
+			}
 			assert.Equal(t, config.SeverityError, issues[0].Severity)
 			assert.Contains(t, issues[0].Message, tt.expectedMessage)
 		})

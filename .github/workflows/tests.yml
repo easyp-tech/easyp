@@ -32,3 +32,6 @@ jobs:
 
       - name: Start test.
         run: task test
+
+      - name: Validate native v1 repository example
+        run: task proto:check

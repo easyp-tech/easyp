@@ -1,5 +1,3 @@
-direct (
-	github.com/googleapis/googleapis
-	github.com/bufbuild/protoc-gen-validate
-	github.com/grpc-ecosystem/grpc-gateway@v2.19.1
-)
+// The CLI has no production protobuf dependencies. Its runnable example is local.
+module github.com/easyp-tech/easyp
+roots examples/proto

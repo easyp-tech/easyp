@@ -22,7 +22,9 @@
           }
         },
         "extends": {
-          "type": "string"
+          "description": "Reserved for a future policy-loading contract. Only an omitted or empty value is accepted.",
+          "type": "string",
+          "const": ""
         },
         "ignore": {
           "type": "array",
@@ -31,6 +33,7 @@
           }
         },
         "ignore_unstable": {
+          "description": "Ignore declarations in packages with unstable version suffixes; stable package checks remain enabled.",
           "type": "boolean"
         }
       },
@@ -99,6 +102,7 @@
                 }
               },
               "path": {
+                "description": "Relative to the policy providing this issues section. Supports *, ?, character classes and ** directory segments; a literal directory includes its subtree.",
                 "type": "string"
               }
             },
@@ -233,7 +237,9 @@
           }
         },
         "extends": {
-          "type": "string"
+          "description": "Reserved for a future policy-loading contract. Only an omitted or empty value is accepted.",
+          "type": "string",
+          "const": ""
         }
       },
       "additionalProperties": false

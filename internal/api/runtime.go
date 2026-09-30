@@ -75,9 +75,10 @@ func buildCore(log logger.Logger, cfg config.Config, importRoots []string) (*cor
 		ImportRoots:             importRoots,
 		CurrentProjectGitWalker: go_git.New(),
 		BreakingCheckConfig: core.BreakingCheckConfig{
-			IgnoreDirs:    append(append([]string(nil), cfg.BreakingCheck.Ignore...), defaultVendorDir),
-			AgainstGitRef: cfg.BreakingCheck.AgainstGitRef,
-			FilesCheck:    slices.Contains(cfg.BreakingCheck.Use, core.BreakingCheckFilesCheck),
+			IgnoreDirs:     append(append([]string(nil), cfg.BreakingCheck.Ignore...), defaultVendorDir),
+			AgainstGitRef:  cfg.BreakingCheck.AgainstGitRef,
+			FilesCheck:     slices.Contains(cfg.BreakingCheck.Use, core.BreakingCheckFilesCheck),
+			IgnoreUnstable: cfg.BreakingCheck.IgnoreUnstable,
 		},
 	}), nil
 }

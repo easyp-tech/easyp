@@ -53,8 +53,12 @@ issues:
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := withPath.LintConfig(); err == nil {
-		t.Fatal("path glob unexpectedly accepted without specified base semantics")
+	if _, err := withPath.LintConfig(); err != nil {
+		t.Fatal(err)
+	}
+	_, allPaths, err := withPath.Issues.ExclusionsForPath("legacy/item.proto")
+	if err != nil || !allPaths {
+		t.Fatalf("path exclusion did not match: %v, %v", allPaths, err)
 	}
 }
 

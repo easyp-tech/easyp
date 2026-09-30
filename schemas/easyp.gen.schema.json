@@ -131,10 +131,12 @@
           }
         },
         "packages": {
+          "description": "Reserved package selector. Select complete modules; only an omitted or empty list is accepted.",
           "type": "array",
           "items": {
             "type": "string"
-          }
+          },
+          "maxItems": 0
         }
       },
       "additionalProperties": false

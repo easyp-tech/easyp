@@ -57,6 +57,10 @@ func (b BreakingCheck) checkV1Policies(ctx *cli.Context, log logger.Logger, conf
 			snapshots[cfg.AgainstGitRef] = snapshot
 		}
 		repositoryRoot := snapshot.RepositoryRoot
+		ignorePaths, err := breakingIgnorePaths(repositoryRoot, filepath.Dir(source), cfg.Ignore)
+		if err != nil {
+			return nil, fmt.Errorf("breakingIgnorePaths: %w", err)
+		}
 		relative, err := filepath.Rel(repositoryRoot, scanPath)
 		if err != nil || !filepath.IsLocal(relative) {
 			return nil, fmt.Errorf("%w: %s", core.ErrRootOutsideProject, scanPath)
@@ -97,8 +101,9 @@ func (b BreakingCheck) checkV1Policies(ctx *cli.Context, log logger.Logger, conf
 				return nil, fmt.Errorf("baseline %s module %s: %w", cfg.AgainstGitRef, module, err)
 			}
 			app := core.New(core.Options{Logger: log, ImportRoots: currentImports, BreakingCheckConfig: core.BreakingCheckConfig{
-				IgnoreDirs: append(append([]string(nil), cfg.Ignore...), defaultVendorDir), AgainstGitRef: cfg.AgainstGitRef,
-				FilesCheck: slices.Contains(cfg.Use, core.BreakingCheckFilesCheck),
+				IgnoreDirs: append(append([]string(nil), ignorePaths...), defaultVendorDir), AgainstGitRef: cfg.AgainstGitRef,
+				FilesCheck:     slices.Contains(cfg.Use, core.BreakingCheckFilesCheck),
+				IgnoreUnstable: cfg.IgnoreUnstable,
 			}})
 			found, err := app.CompareBreaking(ctx.Context, newBreakingWalker(repositoryRoot, currentFiles), newBreakingWalker(snapshot.Root, baselineFiles), baselineImports)
 			if err != nil {

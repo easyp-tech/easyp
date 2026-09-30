@@ -47,7 +47,9 @@ type (
 
 	// ProtoInfo is the information of a proto file.
 	ProtoInfo struct {
-		Path                 string
+		Path string
+		// ImportPath is relative to a declared source root, independently of the scan root.
+		ImportPath           string
 		Info                 *unordered.Proto
 		ProtoFilesFromImport map[ImportPath]*unordered.Proto
 	}

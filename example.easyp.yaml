@@ -1,43 +1,7 @@
-lint:
-  use:
-    - COMMENT_ENUM
-    - COMMENT_ONEOF
-    - COMMENT_RPC
-    - COMMENT_SERVICE
-    - IMPORT_USED
-
+version: v1
+linters:
+  default: STANDARD
+  allow_comment_ignores: true
 breaking:
-  ignore:
-    - some_dir
-  against_git_ref: master
-  use:
-    - FILE
-
-generate:
-  inputs:
-    - directory: "proto"
-    - git_repo:
-        url: "github.com/sipki-tech/currency@v0.1.2"
-  plugins:
-    - name: go
-      out: .
-      opts:
-        paths: source_relative
-    - name: go-grpc
-      out: .
-      opts:
-        paths: source_relative
-        require_unimplemented_servers: false
-    - name: grpc-gateway
-      out: .
-      opts:
-        paths: source_relative
-    - name: openapiv2
-      out: .
-      opts:
-        simple_operation_ids: false
-        generate_unbound_methods: false
-    - name: validate-go
-      out: .
-      opts:
-        paths: source_relative
+  baseline: git:main
+  categories: [FILE]

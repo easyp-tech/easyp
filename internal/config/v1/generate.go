@@ -49,11 +49,17 @@ func ParseGenerate(r io.Reader) (Generate, error) {
 	if err := decoder.Decode(&result); err != nil {
 		return Generate{}, fmt.Errorf("decode easyp.gen.yaml: %w", err)
 	}
+	if err := requireSingleYAMLDocument(decoder, GenerateFile); err != nil {
+		return Generate{}, err
+	}
 	if result.Version == "" {
 		result.Version = "v1"
 	}
 	if result.Version != "v1" {
 		return Generate{}, fmt.Errorf("easyp.gen.yaml version must be v1")
+	}
+	if len(result.Generate.Packages) != 0 {
+		return Generate{}, fmt.Errorf("generate.packages is reserved; select complete modules with generate.modules")
 	}
 	if err := result.Generate.Managed.Validate(); err != nil {
 		return Generate{}, fmt.Errorf("generate.managed: %w", err)

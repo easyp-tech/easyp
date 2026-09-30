@@ -66,6 +66,11 @@ func unreplacedRequirements(requirements []v1.Requirement, replaced map[string]b
 // ReadLock parses a lockfile without installing or changing dependencies.
 func ReadLock(path string) (v1.Lock, error) {
 	raw, err := os.ReadFile(path)
+	if os.IsNotExist(err) {
+		if _, legacyErr := os.Stat(filepath.Join(filepath.Dir(path), "easyp.lock")); legacyErr == nil {
+			return v1.Lock{}, fmt.Errorf("%w: easyp.lock needs verified conversion, not renaming", v1.ErrLegacyConfiguration)
+		}
+	}
 	if err != nil {
 		return v1.Lock{}, fmt.Errorf("ReadFile: %w", err)
 	}

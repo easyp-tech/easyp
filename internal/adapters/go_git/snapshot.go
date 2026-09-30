@@ -10,7 +10,6 @@ import (
 	"path/filepath"
 
 	gogit "github.com/go-git/go-git/v5"
-	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/go-git/go-git/v5/plumbing/filemode"
 	"github.com/go-git/go-git/v5/plumbing/object"
 
@@ -27,7 +26,7 @@ type Snapshot struct {
 // Close removes the temporary snapshot.
 func (s *Snapshot) Close() error { return os.RemoveAll(s.Root) }
 
-// SnapshotRevision materializes a branch's protobuf inputs, including hidden
+// SnapshotRevision materializes a revision's protobuf inputs, including hidden
 // local replacement directories. Only relevant regular files are materialized.
 func SnapshotRevision(ctx context.Context, directory, ref string) (_ *Snapshot, err error) {
 	repository, err := gogit.PlainOpenWithOptions(directory, &gogit.PlainOpenOptions{DetectDotGit: true, EnableDotGitCommonDir: true})
@@ -41,13 +40,9 @@ func SnapshotRevision(ctx context.Context, directory, ref string) (_ *Snapshot, 
 	if err != nil {
 		return nil, fmt.Errorf("Worktree: %w", err)
 	}
-	revision, err := repository.Reference(plumbing.NewBranchReferenceName(ref), true)
+	commit, err := baselineCommit(repository, ref)
 	if err != nil {
-		return nil, &core.GitRefNotFoundError{GitRef: ref}
-	}
-	commit, err := repository.CommitObject(revision.Hash())
-	if err != nil {
-		return nil, fmt.Errorf("CommitObject: %w", err)
+		return nil, fmt.Errorf("baselineCommit: %w", err)
 	}
 	tree, err := commit.Tree()
 	if err != nil {

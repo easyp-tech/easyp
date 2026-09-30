@@ -259,3 +259,13 @@ go build -o easyp ./cmd/easyp
 ```
 
 New commands are added by implementing `api.Handler`, returning a `*cli.Command`, and registering the handler in `cmd/easyp/main.go`.
+
+
+## Explicit v0 migration
+
+<code>easyp migrate --dir . --module github.com/acme/contracts</code> previews actual
+candidate files without writing. Add <code>--resolve-lock</code> to authorize
+historical dependency integrity checks and cache access; add <code>--write</code>
+to apply a validated plan. No plugin runs. See
+[the migration contract](config/review-migration-and-polish.md) for backups,
+unsupported cases and the non-crash-atomic multi-file boundary.
