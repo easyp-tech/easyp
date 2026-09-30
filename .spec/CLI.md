@@ -305,7 +305,7 @@ Explicit config selection follows flag, then <code>EASYP_CFG</code>; relative va
 
 The cache path is resolved to an absolute path by [internal/api/runtime.go](../internal/api/runtime.go). Import consumers may install missing locked sources in that cache. Native dependency declarations belong in <code>protobuf.mod</code>, not the removed generation input configuration.
 
-Reserved features remain explicit: nonempty <code>generate.packages</code> is unsupported; only <code>FILE</code> is accepted as an additional breaking category. Unknown-import-to-Git-module discovery is intentionally excluded. Local replacement overlays apply in normal mode; explicit <code>--frozen</code> rejects them. Current parsing, execution, and schemas must all be consulted before documenting further support; see [policy.go](../internal/config/v1/policy.go), [generate.go](../internal/config/v1/generate.go), and [schema.go](../internal/config/v1/schema.go).
+Current feature boundaries remain explicit: <code>generate.packages</code> selects exact protobuf names; only <code>FILE</code> is accepted as an additional breaking category. Unknown-import-to-Git-module discovery is intentionally excluded. Local replacement overlays apply in normal mode; explicit <code>--frozen</code> rejects them. Current parsing, execution, and schemas must all be consulted before documenting further support; see [policy.go](../internal/config/v1/policy.go), [generate.go](../internal/config/v1/generate.go), and [schema.go](../internal/config/v1/schema.go).
 
 ## Exit Codes and Error Flow
 

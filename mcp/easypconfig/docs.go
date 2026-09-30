@@ -29,7 +29,7 @@ var descriptions = map[string]map[string]string{
 		"version":                                  "Configuration version; v1 is the only supported value.",
 		"generate":                                 "Select modules for this generation run.",
 		"generate.modules":                         "Module identities selected from protobuf.mod dependencies or the local workspace.",
-		"generate.packages":                        "Reserved protobuf package filter; execution is not implemented yet.",
+		"generate.packages":                        "Exact protobuf package names among selected modules. Empty means all module sources; imports remain available for compilation.",
 		"generate.managed":                         "Managed file and field option rules.",
 		"plugins":                                  "Generators executed for selected modules.",
 		"plugins[].name":                           "Local or built-in plugin name.",
@@ -72,6 +72,7 @@ func examplesFor(file string) []Example {
 		}
 	case v1.GenerateFile:
 		return []Example{
+			{Title: "package_selection", Description: "Requires an api.v1 package in the selected module sources.", YAML: "version: v1\ngenerate:\n  packages: [api.v1]\nplugins:\n  - name: go\n    out: gen\n    with_imports: true\n", Paths: []string{"generate.packages"}},
 			{Title: "local_plugin", YAML: "version: v1\nplugins:\n  - name: go\n    out: gen/go\n    opts: [paths=source_relative]\n", Paths: []string{"plugins", "plugins[]", "plugins[].name", "plugins[].out", "plugins[].opts"}},
 			{Title: "remote_plugin", YAML: "version: v1\nplugins:\n  - remote: plugins.beta.easyp.tech/protocolbuffers/go\n    version: v1.36.11\n    out: gen/go\n    opts: [paths=source_relative]\n", Paths: []string{"plugins", "plugins[]", "plugins[].remote", "plugins[].version"}},
 			{Title: "binary_path", YAML: "version: v1\nplugins:\n  - path: ./tools/protoc-gen-custom\n    out: gen/custom\n", Paths: []string{"plugins", "plugins[]", "plugins[].path"}},
@@ -109,7 +110,7 @@ func selectExamples(file, path string, limit int) []Example {
 func notesFor(file, path string) []string {
 	switch {
 	case file == v1.GenerateFile && within("generate.packages", path):
-		return []string{"generate.packages is reserved; nonempty values are rejected by schema and CLI. Use generate.modules for complete module selection."}
+		return []string{"Names match exact protobuf packages, not prefixes or file paths. Matching is across the selected modules of each project. Unknown names fail before plugins. with_imports is independent per plugin; descriptor include_imports controls exported dependencies."}
 	case file == v1.PolicyFile && path == "linters.extends":
 		return []string{"Use ./ or ../ for local files, or declared-module#policy-path. Versions belong only in protobuf.mod/protobuf.lock. Local adjustments override the base; issues are not inherited. validate-config requires verified cached content and never downloads it."}
 	case file == v1.PolicyFile && path == "issues.exclude-rules[].path":

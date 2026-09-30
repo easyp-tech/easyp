@@ -637,12 +637,12 @@
           }
         },
         "packages": {
-          "description": "Reserved package selector. Select complete modules; only an omitted or empty list is accepted.",
+          "description": "Exact protobuf packages among selected modules. Empty means all source files. Imports remain available for compilation; with_imports separately controls dependency generation.",
           "type": "array",
           "items": {
-            "type": "string"
-          },
-          "maxItems": 0
+            "type": "string",
+            "pattern": "^[A-Za-z_][A-Za-z0-9_]*(\\.[A-Za-z_][A-Za-z0-9_]*)*$"
+          }
         }
       },
       "additionalProperties": false

@@ -95,9 +95,8 @@ func documents() map[string]*schema {
 
 	generate := fromType(reflect.TypeFor[Generate]())
 	generate.Properties["version"] = &schema{Type: "string", Const: "v1"}
-	zero := 0
-	generate.Properties["generate"].Properties["packages"].MaxItems = &zero
-	generate.Properties["generate"].Properties["packages"].Description = "Reserved package selector. Select complete modules; only an omitted or empty list is accepted."
+	generate.Properties["generate"].Properties["packages"].Description = "Exact protobuf packages among selected modules. Empty means all source files. Imports remain available for compilation; with_imports separately controls dependency generation."
+	generate.Properties["generate"].Properties["packages"].Items.Pattern = PackageSelectorPattern
 	generate.Properties["options"].Properties["go"].Properties["package_prefix"].Description = "Sets go_package without enabling managed defaults for other languages; full managed mode requires generate.managed.enabled."
 	plugin := generate.Properties["plugins"].Items
 	plugin.Required = []string{"out"}

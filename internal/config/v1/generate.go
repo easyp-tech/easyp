@@ -58,8 +58,8 @@ func ParseGenerate(r io.Reader) (Generate, error) {
 	if result.Version != "v1" {
 		return Generate{}, fmt.Errorf("easyp.gen.yaml version must be v1")
 	}
-	if len(result.Generate.Packages) != 0 {
-		return Generate{}, fmt.Errorf("generate.packages is reserved; select complete modules with generate.modules")
+	if err := ValidatePackageSelectors(result.Generate.Packages); err != nil {
+		return Generate{}, err
 	}
 	if err := result.Generate.Managed.Validate(); err != nil {
 		return Generate{}, fmt.Errorf("generate.managed: %w", err)
