@@ -6,6 +6,7 @@ import (
 
 	"github.com/urfave/cli/v2"
 
+	"github.com/easyp-tech/easyp/internal/flags"
 	"github.com/easyp-tech/easyp/internal/generation"
 )
 
@@ -49,6 +50,7 @@ func (g Generate) Command() *cli.Command {
 		Description: "generate code from proto files",
 		Action:      g.Action,
 		Flags: []cli.Flag{
+			flags.Frozen(),
 			flagGenerateDescriptorSetOut,
 			flagGenerateDescriptorSetOutDir,
 			flagGenerateIncludeImports,
@@ -74,7 +76,7 @@ func (g Generate) Action(ctx *cli.Context) error {
 		return fmt.Errorf("moduleCache: %w", err)
 	}
 	return generation.Run(ctx.Context, getLogger(ctx), cache, generation.Request{
-		WorkDir: root, Projects: ctx.StringSlice(flagGenerateProject.Name), AllProjects: ctx.Bool(flagGenerateAll.Name), WorkspaceRoot: ctx.String(flagGenerateWorkspace.Name),
+		Frozen: flags.IsFrozen(ctx), WorkDir: root, Projects: ctx.StringSlice(flagGenerateProject.Name), AllProjects: ctx.Bool(flagGenerateAll.Name), WorkspaceRoot: ctx.String(flagGenerateWorkspace.Name),
 		DescriptorSetOut:    ctx.String(flagGenerateDescriptorSetOut.Name),
 		DescriptorSetOutDir: ctx.String(flagGenerateDescriptorSetOutDir.Name), IncludeImports: ctx.Bool(flagGenerateIncludeImports.Name),
 	})

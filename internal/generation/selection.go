@@ -84,14 +84,17 @@ type v1GenerationModule struct {
 }
 
 func generateSelectedV1Module(ctx context.Context, log logger.Logger, cache modules.Cache, request Request, configPath, repoRoot string, selection v1ModuleSelection, gen v1.Generate) error {
-	selected, err := resolveV1GenerationModule(ctx, cache, repoRoot, filepath.Dir(configPath), selection)
+	selected, err := resolveV1GenerationModule(ctx, cache, repoRoot, filepath.Dir(configPath), selection, request.Frozen)
 	if err != nil {
 		return fmt.Errorf("resolveV1GenerationModule: %w", err)
 	}
 	return generateV1ModuleWithRoots(ctx, log, request, configPath, selected.directory, gen, selected.module, selected.dependencies)
 }
 
-func resolveV1GenerationModule(ctx context.Context, cache modules.Cache, repoRoot, configDir string, selection v1ModuleSelection) (v1GenerationModule, error) {
+func resolveV1GenerationModule(ctx context.Context, cache modules.Cache, repoRoot, configDir string, selection v1ModuleSelection, frozen bool) (v1GenerationModule, error) {
+	if frozen {
+		return resolveFrozenGenerationModule(ctx, cache, repoRoot, configDir, selection)
+	}
 	if selection.directory != "" {
 		return readV1GenerationModule(ctx, cache, selection.directory)
 	}

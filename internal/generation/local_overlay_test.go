@@ -17,10 +17,10 @@ func TestSelectedModuleUsesMainOverlay(t *testing.T) {
 	writeV1GenerateFixture(t, root, "a/protobuf.mod", "module example.com/A\nrequire example.com/B\nreplace example.com/B => missing\n")
 	writeV1GenerateFixture(t, root, "b/protobuf.mod", "module example.com/B\n")
 	cache := gitmodules.New(t.TempDir())
-	selected, err := resolveV1GenerationModule(t.Context(), cache, root, root, v1ModuleSelection{source: "example.com/A"})
+	selected, err := resolveV1GenerationModule(t.Context(), cache, root, root, v1ModuleSelection{source: "example.com/A"}, false)
 	require.NoError(t, err)
 	assert.Equal(t, root, selected.resolutionDir)
 	assert.Equal(t, []string{filepath.Join(root, "b")}, selected.dependencies.Paths())
-	_, err = resolveV1GenerationModule(t.Context(), cache, root, root, v1ModuleSelection{source: "example.com/unused"})
+	_, err = resolveV1GenerationModule(t.Context(), cache, root, root, v1ModuleSelection{source: "example.com/unused"}, false)
 	require.ErrorContains(t, err, "not selected")
 }

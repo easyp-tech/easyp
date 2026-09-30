@@ -117,10 +117,24 @@ func (w *scopedBreakingWalker) WalkDir(visit func(string, error) error) error {
 }
 
 func breakingImportRoots(ctx context.Context, cache modules.Cache, root, moduleRelative string, files []string, snapshot *gitadapter.Snapshot) ([]string, error) {
-	if len(files) == 0 {
-		return nil, nil
-	}
+	return breakingImportRootsMode(ctx, cache, root, moduleRelative, files, snapshot, false)
+}
+
+func breakingImportRootsMode(ctx context.Context, cache modules.Cache, root, moduleRelative string, files []string, snapshot *gitadapter.Snapshot, frozen bool) ([]string, error) {
 	directory := filepath.Join(root, moduleRelative)
+	if len(files) == 0 {
+		// A deleted module has no graph in this revision, but an explicit empty
+		// module still requires its own lock and replacement validation.
+		if !frozen {
+			return nil, nil
+		}
+		if _, err := os.Stat(filepath.Join(directory, v1.ModuleFile)); os.IsNotExist(err) {
+			return nil, nil
+		}
+	}
+	if frozen {
+		return policyImportRoots(ctx, cache, directory, true)
+	}
 	if _, err := os.Stat(filepath.Join(directory, v1.ModuleFile)); os.IsNotExist(err) {
 		return []string{directory}, nil
 	} else if err != nil {

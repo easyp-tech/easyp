@@ -54,6 +54,7 @@ func (b BreakingCheck) Command() *cli.Command {
 		OnUsageError: nil,
 		Subcommands:  nil,
 		Flags: []cli.Flag{
+			flags.Frozen(),
 			flagLintDirectoryPath,
 			flagAgainstBranchName,
 			flagBreakingCheckRoot,

@@ -28,6 +28,18 @@ func findV1PolicyModuleDir(projectRoot, scanDir string) (string, error) {
 }
 
 func ensureV1PolicyImportRoots(ctx context.Context, cache modules.Cache, moduleDir string) ([]string, error) {
+	return policyImportRoots(ctx, cache, moduleDir, false)
+}
+
+func policyImportRoots(ctx context.Context, cache modules.Cache, moduleDir string, frozen bool) ([]string, error) {
+	var dependencies modules.SourceRoots
+	var err error
+	if frozen {
+		dependencies, err = modules.EnsureFrozenSources(ctx, moduleDir, cache)
+		if err != nil {
+			return nil, fmt.Errorf("EnsureFrozenSources: %w", err)
+		}
+	}
 	_, module, err := modules.ReadManifest(moduleDir)
 	if err != nil {
 		return nil, fmt.Errorf("ReadManifest: %w", err)
@@ -36,9 +48,11 @@ func ensureV1PolicyImportRoots(ctx context.Context, cache modules.Cache, moduleD
 	if err != nil {
 		return nil, fmt.Errorf("ModuleSources: %w", err)
 	}
-	dependencies, err := modules.EnsureSources(ctx, moduleDir, module, cache)
-	if err != nil {
-		return nil, fmt.Errorf("EnsureSources: %w", err)
+	if !frozen {
+		dependencies, err = modules.EnsureSources(ctx, moduleDir, module, cache)
+		if err != nil {
+			return nil, fmt.Errorf("EnsureSources: %w", err)
+		}
 	}
 	if err := modules.CheckImportCollisions(moduleDir, module.Roots, dependencies.Paths()); err != nil {
 		return nil, fmt.Errorf("CheckImportCollisions: %w", err)

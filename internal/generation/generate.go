@@ -17,6 +17,7 @@ import (
 
 // Request contains the inputs of one generation run.
 type Request struct {
+	Frozen              bool
 	WorkDir             string
 	Project             string
 	Projects            []string
@@ -83,7 +84,7 @@ func Run(ctx context.Context, log logger.Logger, cache modules.Cache, request Re
 		if err := inheritV1GenerateOptions(request.WorkspaceRoot, configPath, &gen); err != nil {
 			return fmt.Errorf("inheritV1GenerateOptions: %w", err)
 		}
-		if len(gen.Plugins) == 0 && !exportDescriptors {
+		if len(gen.Plugins) == 0 && !exportDescriptors && !request.Frozen {
 			continue
 		}
 		modules, err := selectV1Modules(request.WorkspaceRoot, filepath.Dir(configPath), gen.Generate.Modules)
@@ -112,6 +113,27 @@ func Run(ctx context.Context, log logger.Logger, cache modules.Cache, request Re
 			selected = append(selected, target)
 		}
 		descriptorTargets = selected
+	}
+	if request.Frozen {
+		checked := make(map[string]bool)
+		for _, target := range descriptorTargets {
+			// An explicit native directory owns its lock. A consumer-only
+			// generator directory need not invent another protobuf module.
+			consumer := target.module.directory
+			if consumer == "" {
+				consumer, err = generatorV1ModuleDir(request.WorkspaceRoot, filepath.Dir(target.configPath))
+				if err != nil {
+					return fmt.Errorf("generatorV1ModuleDir: %w", err)
+				}
+			}
+			if checked[consumer] {
+				continue
+			}
+			if _, err := modules.EnsureFrozenSources(ctx, consumer, cache); err != nil {
+				return fmt.Errorf("frozen project %s: %w", target.configPath, err)
+			}
+			checked[consumer] = true
+		}
 	}
 	if len(descriptorTargets) == 0 && exportDescriptors {
 		return fmt.Errorf("descriptor set has no selected modules")

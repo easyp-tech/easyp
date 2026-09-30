@@ -24,7 +24,7 @@ Mandatory rules for AI agents. Prefer these over generic Go guides when they con
 
 - Wrap at every call site with <code>%w</code>; use <code>errors.Is</code> / <code>errors.As</code> for sentinels. The lint configuration exempts identifier-style exported callee labels from ST1005, not capitalized prose errors.
 - Reuse existing errors in their owning packages: core parsing/breaking types, <code>modules.ErrLockedVersionChanged</code>, <code>v1.ErrLegacyConfiguration</code>, and contextual migration errors. See [ERRORS.md](./ERRORS.md); do not invent duplicate sentinels.
-- CLI: inspect the actual handler and process entrypoint before assigning exit codes. Local replacements preserve the published lock; frozen mode remains separate and unknown-import discovery is intentionally excluded; there is no universal package-manager sentinel-to-exit mapper.
+- CLI: inspect the actual handler and process entrypoint before assigning exit codes. Local replacements preserve the published lock; explicit frozen mode verifies only the published graph and unknown-import discovery is intentionally excluded; there is no universal package-manager sentinel-to-exit mapper.
 
 ## Testing
 

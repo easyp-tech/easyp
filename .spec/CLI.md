@@ -50,10 +50,33 @@ The framework also provides help and <code>--version</code>; there is no registe
 | <code>--cfg</code>, <code>--config</code> | string | <code>easyp.yaml</code> | <code>EASYP_CFG</code> | Explicit policy path for lint/breaking, or validation target. Discovery applies when unset. |
 | <code>--debug</code>, <code>-d</code> | bool | <code>false</code> | <code>EASYP_DEBUG</code> | Enable debug logs. |
 | <code>--format</code>, <code>-f</code> | enum | <code>text</code> in flag definition | <code>EASYP_FORMAT</code> | Select <code>text</code> or <code>json</code> for commands supporting structured output. |
+| <code>--frozen</code> | bool | <code>false</code> | — | Require the selected native manifest and locked graph without dependency re-resolution or manifest/lock writes. |
 | <code>--version</code> | bool | <code>false</code> | — | Framework version output from <code>internal/version</code>. |
 | <code>--help</code> | bool | <code>false</code> | — | Framework help. |
 
-The application explicitly registers only config, debug, and format in [internal/flags/flags.go](../internal/flags/flags.go). Config is optional. Put global flags before the command; <code>ls-files</code> also registers format locally, and <code>validate-config</code> registers both config and format locally. <code>flags.GetFormat</code> in [internal/flags/format.go](../internal/flags/format.go) selects the nearest explicitly set format, including an explicit global or environment value. Without an explicit selection, lint/breaking use text and ls-files/validate-config use JSON.
+The application registers config, debug, format, and frozen; their definitions are in [internal/flags/flags.go](../internal/flags/flags.go) and [frozen.go](../internal/flags/frozen.go). Config is optional. Put global flags before the command; <code>ls-files</code> also registers format locally, and <code>validate-config</code> registers both config and format locally. <code>flags.GetFormat</code> in [internal/flags/format.go](../internal/flags/format.go) selects the nearest explicitly set format, including an explicit global or environment value. Without an explicit selection, lint/breaking use text and ls-files/validate-config use JSON.
+
+## Frozen dependency mode
+
+<code>--frozen</code> is explicit and defaults to false; <code>CI=true</code> never enables it. Put it before the command, or directly on <code>generate</code>, <code>lint</code>, <code>breaking</code>, <code>ls-files</code>, <code>get</code>, <code>init</code>, or <code>migrate</code>. Module commands accept it on <code>mod</code> or its <code>download</code>, <code>tidy</code>, <code>vendor</code>, and <code>update</code> subcommands. A true value anywhere in the command lineage enables frozen mode; a child <code>--frozen=false</code> cannot disable a parent's true value.
+
+~~~bash
+easyp --frozen generate
+easyp generate --frozen --project services/backend
+easyp mod --frozen download
+easyp mod download --frozen
+easyp lint --frozen --path proto
+easyp breaking --frozen --against main
+easyp ls-files --frozen
+~~~
+
+Every selected native module whose dependency graph is used must have both <code>protobuf.mod</code> and <code>protobuf.lock</code>, including an empty lock for a module with no dependencies. Plain source directories without a manifest are rejected. All root <code>replace</code> directives, including unused entries, are rejected before accessing their targets or fetching dependencies. The shared validation checks direct and transitive requirements against the lock and rejects missing, invalid, incomplete, or stale graphs.
+
+Frozen operations preserve manifest and lock bytes and do not resolve dependency versions, query HEAD/tags, or update requirements. They may fill the cache using exact locked commits and verify content hashes on both cold and warm caches. Frozen mode is not offline; cache fills and configured remote plugins can require network access.
+
+<code>mod download</code> validates and installs the locked graph. <code>mod vendor</code> validates it before copying sources into <code>easyp_vendor</code>. <code>mod tidy</code>, <code>get</code>, <code>mod update</code>, and <code>init</code> refuse frozen execution; <code>migrate</code> also refuses it, including preview and interactive mode. Prepare or refresh the manifest/lock explicitly outside frozen mode.
+
+Generation validates every selected graph before any plugin executes, including descriptor-only runs. An explicit workspace-relative module path uses that module's manifest and lock; a directory containing only <code>easyp.gen.yaml</code> does not need a separate pair. For example, <code>backend/easyp.gen.yaml</code> selecting <code>proto/user</code> validates <code>proto/user/protobuf.mod</code> and <code>proto/user/protobuf.lock</code>. A dependency selected by identity still requires its consumer's manifest and lock, and does not need its own lock inside the downloaded directory. Unselected projects are ignored; frozen does not broaden <code>--project</code> or <code>--all</code> selection or change their plugin authorization. Lint keeps effective policy scoping. Breaking validates current and historical graphs with their own manifests and locks; the baseline never borrows the current lock. <code>ls-files --include-imports=false</code> still enforces frozen graph validation even though it lists only local files.
 
 ## Commands Reference
 
@@ -75,7 +98,7 @@ Policy discovery starts at the working directory or the explicit root; see Confi
 
 ### <code>easyp generate [flags]</code>
 
-Generates according to the selected <code>easyp.gen.yaml</code> files. [internal/api/generate.go](../internal/api/generate.go) registers all six flags:
+Generates according to the selected <code>easyp.gen.yaml</code> files. [internal/api/generate.go](../internal/api/generate.go) registers these generation flags, plus the shared <code>--frozen</code> flag:
 
 | Flag | Type | Default | Meaning |
 |---|---|---|---|
@@ -120,7 +143,7 @@ Current and baseline sources use their own module manifests and locks. Descendan
 
 ### <code>easyp get &lt;module&gt;[@version|@commit]</code>
 
-Adds a new direct requirement or promotes an existing indirect requirement, then resolves its transitive dependencies and writes <code>protobuf.mod</code> and <code>protobuf.lock</code>. Exactly one positional module argument is required; no command-specific flags are registered in [internal/api/get_v1.go](../internal/api/get_v1.go).
+Adds a new direct requirement or promotes an existing indirect requirement, then resolves its transitive dependencies and writes <code>protobuf.mod</code> and <code>protobuf.lock</code>. Exactly one positional module argument is required; the shared <code>--frozen</code> flag is registered in [internal/api/get_v1.go](../internal/api/get_v1.go).
 
 An explicit suffix must be a semantic version or a full Git commit. A new requirement without a suffix resolves Git HEAD. Repeating an existing requirement without a suffix preserves its specified version. Module lookup starts at the working directory and searches upward within the workspace.
 
@@ -131,7 +154,7 @@ easyp get github.com/acme/contracts@v1.2.3
 
 ### <code>easyp mod &lt;subcommand&gt;</code>
 
-All four subcommands have no command-specific flags. They use the nearest ancestor <code>protobuf.mod</code> found within the workspace, not a YAML dependency list or an unconditional current-directory root. Registration is in [internal/api/mod.go](../internal/api/mod.go); lookup is in [module_root.go](../internal/api/module_root.go).
+The <code>mod</code> parent and all four subcommands accept <code>--frozen</code>. They use the nearest ancestor <code>protobuf.mod</code> found within the workspace, not a YAML dependency list or an unconditional current-directory root. Registration is in [internal/api/mod.go](../internal/api/mod.go); lookup is in [module_root.go](../internal/api/module_root.go).
 
 | Subcommand | Behavior |
 |---|---|
@@ -147,7 +170,7 @@ easyp mod update
 easyp mod vendor
 ~~~
 
-With local replacements, <code>tidy</code> validates the ephemeral effective graph without writing manifest or lock. <code>get</code>/<code>update</code> may edit explicit requirements, but all operations preserve an existing lock byte-for-byte and do not create a local-graph lock. <code>vendor</code> copies the effective graph without changing the lock. Frozen mode is a separate pending step. Unknown imports are reported; automatic import-to-Git discovery is intentionally excluded. See [Dependency Management](config/dependency.md).
+Outside frozen mode, with local replacements, <code>tidy</code> validates the ephemeral effective graph without writing manifest or lock. <code>get</code>/<code>update</code> may edit explicit requirements, but all operations preserve an existing lock byte-for-byte and do not create a local-graph lock. <code>vendor</code> copies the effective graph without changing the lock. Unknown imports are reported; automatic import-to-Git discovery is intentionally excluded. See [Dependency Management](config/dependency.md).
 
 ### <code>easyp init [flags]</code>
 
@@ -282,7 +305,7 @@ Explicit config selection follows flag, then <code>EASYP_CFG</code>; relative va
 
 The cache path is resolved to an absolute path by [internal/api/runtime.go](../internal/api/runtime.go). Import consumers may install missing locked sources in that cache. Native dependency declarations belong in <code>protobuf.mod</code>, not the removed generation input configuration.
 
-Reserved features remain explicit: nonempty <code>linters.extends</code>/<code>breaking.extends</code> do not load shared policies; nonempty <code>generate.packages</code> is unsupported; only <code>FILE</code> is accepted as an additional breaking category. X-20's local-replacement lock semantics, explicit frozen/reproducible mode, and unknown-import-to-Git-module mapping are unresolved. None is a supported CLI flag or inferred feature. Current parsing, execution, and schemas must all be consulted before documenting further support; see [policy.go](../internal/config/v1/policy.go), [generate.go](../internal/config/v1/generate.go), and [schema.go](../internal/config/v1/schema.go).
+Reserved features remain explicit: nonempty <code>linters.extends</code>/<code>breaking.extends</code> do not load shared policies; nonempty <code>generate.packages</code> is unsupported; only <code>FILE</code> is accepted as an additional breaking category. Unknown-import-to-Git-module discovery is intentionally excluded. Local replacement overlays apply in normal mode; explicit <code>--frozen</code> rejects them. Current parsing, execution, and schemas must all be consulted before documenting further support; see [policy.go](../internal/config/v1/policy.go), [generate.go](../internal/config/v1/generate.go), and [schema.go](../internal/config/v1/schema.go).
 
 ## Exit Codes and Error Flow
 
@@ -314,7 +337,7 @@ easyp validate-config --format json > validation.json
 | <code>no selected easyp.gen.yaml</code> | Select a consumer directory with <code>--project</code>, or intentionally opt into recursive generation with <code>--all</code>. |
 | <code>multiple independent policies found</code> | Select the intended policy with global <code>--cfg</code>. |
 | Missing <code>protobuf.lock</code> during download | Resolve the manifest explicitly with <code>mod tidy</code> before downloading its pinned graph. |
-| <code>remove local replacements</code> during lock/vendor operations | Local-mode tidy/get/update/vendor preserve the shared lock; remove replacements and run tidy before publishing it. |
+| Frozen rejects missing/stale locks or local replacements | Remove replacements and prepare the manifest/lock with <code>mod tidy</code> outside frozen mode; commit both files before retrying. |
 | Legacy configuration rejection | Use <code>migrate</code> to inspect a concrete v1 conversion; generation does not silently convert v0 inputs. |
 | <code>--interactive requires terminal input and output</code> | Run the wizard in a terminal or use explicit module/write/resolve flags for scripted migration. |
 | Conflicting descriptor in a combined export | Select a compatible project set or use <code>--descriptor_set_out_dir</code> to retain separate graphs. |
