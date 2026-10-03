@@ -41,8 +41,8 @@ func (bash) RunCmdWithStdin(ctx context.Context, dir string, stdin io.Reader, co
 	var stderr bytes.Buffer
 	var stdout bytes.Buffer
 
-	fullCommand := append([]string{command}, commandParams...)
-	cmd := exec.CommandContext(ctx, "bash", "-c", strings.Join(fullCommand, " "))
+	// A command is an executable plus argv, not an implicit shell script.
+	cmd := exec.CommandContext(ctx, command, commandParams...)
 	cmd.Dir = dir
 	cmd.Stdin = stdin
 	cmd.Stderr = &stderr

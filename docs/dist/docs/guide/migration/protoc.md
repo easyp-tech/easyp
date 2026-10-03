@@ -1,3 +1,0 @@
-# Protoc
-
-## Work in progress

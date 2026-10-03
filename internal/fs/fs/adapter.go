@@ -31,3 +31,6 @@ func (a *FSAdapter) Remove(name string) error {
 	path := filepath.Join(a.rootDir, name)
 	return os.Remove(path)
 }
+
+// RootPath returns the filesystem root used to resolve diagnostic paths.
+func (a *FSAdapter) RootPath() string { return a.rootDir }

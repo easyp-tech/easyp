@@ -32,3 +32,9 @@ jobs:
 
       - name: Start test.
         run: task test
+
+      - name: Validate native v1 repository example
+        run: task proto:check
+
+      - name: Validate developer task dispatch
+        run: task dev-tools:check
