@@ -95,11 +95,14 @@ func TestLsFilesLocalOnlyWithoutCacheEnvironment(t *testing.T) {
 	tests := []struct {
 		name           string
 		manifest       string
+		policy         string
 		includeImports bool
+		wantLegacy     bool
 	}{
 		{name: "local module", manifest: "module example.com/root\n"},
 		{name: "uninstalled dependency", manifest: "module example.com/root\nrequire example.com/missing v1.0.0\n"},
 		{name: "without protobuf.mod", includeImports: true},
+		{name: "legacy project", policy: "deps: []\nlint:\n  use: [DEFAULT]\n", includeImports: true, wantLegacy: true},
 	}
 	for _, tt := range tests {
 		tt := tt
@@ -107,6 +110,9 @@ func TestLsFilesLocalOnlyWithoutCacheEnvironment(t *testing.T) {
 			root := t.TempDir()
 			if tt.manifest != "" {
 				writeV1GenerateFixture(t, root, "protobuf.mod", tt.manifest)
+			}
+			if tt.policy != "" {
+				writeV1GenerateFixture(t, root, "easyp.yaml", tt.policy)
 			}
 			writeV1GenerateFixture(t, root, "event.proto", "syntax = \"proto3\";\n")
 			t.Chdir(root)
@@ -119,6 +125,10 @@ func TestLsFilesLocalOnlyWithoutCacheEnvironment(t *testing.T) {
 
 			err := (LsFiles{}).Action(ctx)
 
+			if tt.wantLegacy {
+				require.ErrorIs(t, err, v1.ErrLegacyConfiguration)
+				return
+			}
 			require.NoError(t, err)
 		})
 	}
