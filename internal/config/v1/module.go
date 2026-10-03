@@ -128,6 +128,9 @@ func ParseModule(r io.Reader) (Module, error) {
 			if result.Name != "" || len(fields) != 1 {
 				return Module{}, fmt.Errorf("protobuf.mod:%d: expected one module identity", line)
 			}
+			if err := validateManifestModuleIdentity(fields[0], "module"); err != nil {
+				return Module{}, fmt.Errorf("protobuf.mod:%d: %w", line, err)
+			}
 			if err := ValidateModuleVersion(fields[0], ""); err != nil {
 				return Module{}, fmt.Errorf("protobuf.mod:%d: %w", line, err)
 			}
@@ -145,6 +148,9 @@ func ParseModule(r io.Reader) (Module, error) {
 		case "require":
 			if len(fields) < 1 || len(fields) > 2 {
 				return Module{}, fmt.Errorf("protobuf.mod:%d: require expects module and optional version", line)
+			}
+			if err := validateManifestModuleIdentity(fields[0], "require"); err != nil {
+				return Module{}, fmt.Errorf("protobuf.mod:%d: %w", line, err)
 			}
 			if len(fields) == 2 && strings.ContainsAny(fields[1], "()") {
 				return Module{}, fmt.Errorf("protobuf.mod:%d: invalid version token %q", line, fields[1])
@@ -164,6 +170,9 @@ func ParseModule(r io.Reader) (Module, error) {
 		case "replace":
 			if len(fields) != 3 || fields[1] != "=>" {
 				return Module{}, fmt.Errorf("protobuf.mod:%d: replace expects module => target", line)
+			}
+			if err := validateManifestModuleIdentity(fields[0], "replace"); err != nil {
+				return Module{}, fmt.Errorf("protobuf.mod:%d: %w", line, err)
 			}
 			if firstLine, ok := replaces[fields[0]]; ok {
 				return Module{}, fmt.Errorf("protobuf.mod:%d: duplicate replace source %q (first declared at line %d)", line, fields[0], firstLine)
@@ -190,6 +199,33 @@ func ParseModule(r io.Reader) (Module, error) {
 		result.Roots = []string{"."}
 	}
 	return result, nil
+}
+
+func validateManifestModuleIdentity(identity, directive string) error {
+	authorityEnd := -1
+	if scheme := strings.Index(identity, "://"); scheme >= 0 {
+		if slash := strings.Index(identity[scheme+3:], "/"); slash >= 0 {
+			authorityEnd = scheme + 3 + slash
+		} else {
+			authorityEnd = len(identity)
+		}
+	}
+	if at := strings.LastIndex(identity, "@"); at > authorityEnd {
+		base := identity[:at]
+		suffix := identity[at+1:]
+		if suffix == "" {
+			return fmt.Errorf("%s module identity %q must not end with @", directive, identity)
+		}
+		switch directive {
+		case "require":
+			return fmt.Errorf("require module identity %q must not embed version %q; use require %s %s", identity, suffix, base, suffix)
+		case "replace":
+			return fmt.Errorf("replace module identity %q must not embed version %q; use replace %s => <local-path>", identity, suffix, base)
+		default:
+			return fmt.Errorf("%s module identity %q must not embed version %q", directive, identity, suffix)
+		}
+	}
+	return nil
 }
 
 func stripModuleComment(line string) string {
