@@ -73,6 +73,12 @@ func (l LsFiles) Action(ctx *cli.Context) error {
 	if err != nil {
 		return fmt.Errorf("Getwd: %w", err)
 	}
+	if _, statErr := os.Stat(filepath.Join(root, v1.ModuleFile)); errors.Is(statErr, os.ErrNotExist) {
+		raw, readErr := os.ReadFile(filepath.Join(root, v1.PolicyFile))
+		if readErr == nil && v1.LegacyPolicy(raw) {
+			return v1.ErrLegacyConfiguration
+		}
+	}
 	module, err := modules.ReadModuleOrDefault(root)
 	if err != nil {
 		return fmt.Errorf("ReadModuleOrDefault: %w", err)
