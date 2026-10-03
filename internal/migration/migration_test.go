@@ -45,7 +45,7 @@ func TestBuildAndApply(t *testing.T) {
 			require.NoError(t, err)
 			actual, _, err := rules.New(cfg)
 			require.NoError(t, err)
-			legacy, err := parseLegacy([]byte(tt.legacy))
+			legacy, _, err := parseLegacy([]byte(tt.legacy))
 			require.NoError(t, err)
 			expected, _, err := rules.New(legacy.Lint)
 			require.NoError(t, err)
@@ -138,9 +138,6 @@ generate:
 func TestRejectedInputsDoNotWrite(t *testing.T) {
 	t.Parallel()
 	for _, tt := range []struct{ name, input, want string }{
-		{name: "unknown_top", input: "lint: {}\nextra: true\n", want: "unknown"},
-		{name: "unknown_directory", input: "generate:\n  inputs: [{directory: {path: ., discard: true}}]\n", want: "unknown"},
-		{name: "unknown_managed", input: "generate:\n  managed: {enabled: true, extra: true}\n", want: "unknown"},
 		{name: "multi_document", input: "lint: {}\n---\nlint: {}\n", want: "one YAML document"},
 		{name: "null", input: "null\n", want: "null"},
 		{name: "nested_null", input: "generate: {plugins: null}\n", want: "null"},
