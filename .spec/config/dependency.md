@@ -20,7 +20,7 @@ require (
 
 - Exactly one <code>module</code> directive is required; it identifies the module, including its directory when nested in a repository. <code>roots</code>, <code>require</code> and <code>replace</code> accept multiline blocks or individual directives. Block entries cannot share the opening/closing line. Duplicate require/replace sources are errors.
 - <code>roots</code> are relative to that manifest's directory and default to <code>.</code>.
-- Each dependency is a separate <code>require</code>. A version may be omitted, a semantic version, or a full Git commit.
+- Each dependency is a separate <code>require</code>. A version may be omitted, a semantic version, or a full Git commit, and is always a separate token: <code>require module v1.2.3</code>. Forms such as <code>require module@v1.2.3</code> or <code>replace module@v1.2.3 =&gt; path</code> are rejected instead of treating <code>@version</code> as part of module identity. An <code>@</code> inside a URL authority, such as <code>ssh://git@host/repo</code>, remains part of the transport URL.
 - Versionless requirements resolve repository HEAD on first use. Tidy preserves an existing locked commit; update refreshes it. Tags are not required for this path or explicit commits.
 - Semantic versions resolve actual tags. For a nested module, that means a directory-prefixed tag such as <code>common/v1.2.3</code>; an untagged module should use an omitted version or commit.
 - <code>easyp get repo@common-protos-1_3_1</code> also accepts named Git tags. It resolves the tag and writes the full commit into the requirement and lock; subsequent frozen operations do not depend on that tag. Branch names are not named tags.
