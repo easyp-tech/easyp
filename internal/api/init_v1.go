@@ -51,7 +51,7 @@ func initializeV1(ctx context.Context, root, identity string, prompt initializat
 		return fmt.Errorf("confirmInitialConfigFiles: %w", err)
 	}
 	for _, file := range selected {
-		if err := disk.WriteAtomicFile(filepath.Join(root, file.name), file.contents, 0o600); err != nil {
+		if err := disk.WriteAtomicFile(filepath.Join(root, file.name), file.contents, 0o644); err != nil {
 			return fmt.Errorf("WriteAtomicFile: %w", err)
 		}
 	}

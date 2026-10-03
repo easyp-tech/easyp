@@ -83,7 +83,11 @@ func TestInitializeV1WritesSelectedConfigs(t *testing.T) {
 				assert.Equal(t, contents, string(written), name)
 				info, err := os.Stat(path)
 				require.NoError(t, err)
-				assert.Equal(t, os.FileMode(0o600), info.Mode().Perm(), name)
+				wantMode := os.FileMode(0o644)
+				if _, existed := tt.existing[name]; existed {
+					wantMode = 0o600
+				}
+				assert.Equal(t, wantMode, info.Mode().Perm(), name)
 				issues, err := v1.ValidateFile(path)
 				require.NoError(t, err)
 				assert.Empty(t, issues, name)

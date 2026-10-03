@@ -109,7 +109,7 @@ func rewriteV1RequiredVersions(original []byte, updates map[string]string) []byt
 }
 
 func writeV1Manifest(root string, raw []byte) error {
-	if err := disk.WriteAtomicFile(filepath.Join(root, v1.ModuleFile), raw, 0o600); err != nil {
+	if err := disk.WriteAtomicFile(filepath.Join(root, v1.ModuleFile), raw, 0o644); err != nil {
 		return fmt.Errorf("WriteAtomicFile: %w", err)
 	}
 	return nil

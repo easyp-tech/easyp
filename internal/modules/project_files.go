@@ -64,7 +64,7 @@ func writeV1Lock(root string, lock v1.Lock) error {
 	}
 
 	raw = append([]byte("# protobuf.lock - GENERATED FILE, DO NOT EDIT MANUALLY\n"), raw...)
-	if err := disk.WriteAtomicFile(filepath.Join(root, v1.LockFile), raw, 0o600); err != nil {
+	if err := disk.WriteAtomicFile(filepath.Join(root, v1.LockFile), raw, 0o644); err != nil {
 		return fmt.Errorf("WriteAtomicFile: %w", err)
 	}
 	return nil
