@@ -42,7 +42,11 @@ rule/key; an explicitly empty section clears all base settings, and an empty
 rule map clears that rule's settings. YAML aliases/merge keys retain presence.
 Explicit false, empty scalar baseline and empty category/ignore lists remain
 local decisions rather than being replaced by inherited values. Environment
-expansion is performed on each original file, never on merged values again.
+expansion is performed only for consumer-owned policy files and their local
+extends. A policy reached through a declared dependency module treats ${...}
+placeholders literally, including relative extends inside that dependency and
+local-replacement modules physically stored inside the workspace. Values are
+never expanded again after merging.
 
 Breaking baseline and ignore paths are templates at the consuming policy, not
 paths inside the dependency cache. Each checked module resolves its own graph,

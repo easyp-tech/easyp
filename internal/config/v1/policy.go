@@ -49,12 +49,28 @@ type BreakingPolicy struct {
 	Ignore         []string `yaml:"ignore"`
 }
 
-// ParsePolicy reads and validates a v1 lint and breaking policy.
+// ParsePolicy reads and validates a consumer-owned v1 lint and breaking policy.
+// Environment placeholders are expanded before validation.
 func ParsePolicy(r io.Reader) (Policy, error) {
 	raw, err := expandConfigYAML(r)
 	if err != nil {
 		return Policy{}, fmt.Errorf("expandConfigYAML: %w", err)
 	}
+	return parsePolicyBytes(raw)
+}
+
+// ParsePolicyLiteral reads and validates a v1 policy without expanding
+// environment placeholders. Dependency-owned shared policies use this form so
+// their contents cannot read values from the consumer process environment.
+func ParsePolicyLiteral(r io.Reader) (Policy, error) {
+	raw, err := io.ReadAll(r)
+	if err != nil {
+		return Policy{}, fmt.Errorf("ReadAll: %w", err)
+	}
+	return parsePolicyBytes(raw)
+}
+
+func parsePolicyBytes(raw []byte) (Policy, error) {
 	if LegacyPolicy(raw) {
 		return Policy{}, ErrLegacyConfiguration
 	}
