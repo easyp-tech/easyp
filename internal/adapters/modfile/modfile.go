@@ -7,8 +7,6 @@ import (
 	"fmt"
 	"io"
 	"strings"
-
-	"github.com/easyp-tech/easyp/internal/core/models"
 )
 
 const (
@@ -48,13 +46,19 @@ type File struct {
 
 // Replace maps a module (name + version) to a local filesystem path.
 type Replace struct {
-	Module models.Module
+	Module Module
 	Path   string
+}
+
+// Module identifies a dependency in a legacy protobuf.mod file.
+type Module struct {
+	Name    string
+	Version string
 }
 
 type replaceKey struct {
 	name    string
-	version models.RequestedVersion
+	version string
 }
 
 // Parse parses protobuf.mod contents.
@@ -148,7 +152,7 @@ func parseDirectEntry(line string, lineNo int, seen map[string]struct{}) (string
 		return "", fmt.Errorf("%w at line %d", errEmptyDependency, lineNo)
 	}
 
-	name := models.NewModule(entry).Name
+	name := parseModule(entry).Name
 	if _, ok := seen[name]; ok {
 		return "", fmt.Errorf("%w %q at line %d", errDuplicateModule, name, lineNo)
 	}
@@ -176,11 +180,11 @@ func parseReplaceSpec(line string, lineNo int, seen map[replaceKey]struct{}) (Re
 		return Replace{}, fmt.Errorf("%w: want single module@version, got %q at line %d", errUnexpectedToken, left, lineNo)
 	}
 
-	module := models.NewModule(fields[0])
+	module := parseModule(fields[0])
 	if module.Name == "" {
 		return Replace{}, fmt.Errorf("%w at line %d", errEmptyDependency, lineNo)
 	}
-	if module.Version.IsOmitted() {
+	if module.Version == "" {
 		return Replace{}, fmt.Errorf("%w at line %d", errReplaceVersionRequired, lineNo)
 	}
 
@@ -303,11 +307,16 @@ func Write(fs FS, file File) error {
 	return nil
 }
 
-func formatModule(module models.Module) string {
-	if module.Version.IsOmitted() {
+func parseModule(raw string) Module {
+	name, version, _ := strings.Cut(raw, "@")
+	return Module{Name: name, Version: version}
+}
+
+func formatModule(module Module) string {
+	if module.Version == "" {
 		return module.Name
 	}
-	return module.Name + "@" + string(module.Version)
+	return module.Name + "@" + module.Version
 }
 
 func stripComment(line string) string {

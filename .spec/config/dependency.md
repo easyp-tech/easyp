@@ -1,332 +1,156 @@
-# EasyP Dependency Management
+# EasyP v1 Dependency Management
 
-Agent-oriented specification of how EasyP declares, downloads, locks, and resolves protobuf dependencies.
+Source of truth: <code>internal/modules</code>, <code>internal/config/v1</code>, <code>internal/adapters/gitmodules</code> and <code>internal/adapters/module_config</code>. The architectural boundaries are documented in [ARCHITECTURE.md](../ARCHITECTURE.md).
 
-Source of truth: Go code under `internal/core`, `internal/api`, and `internal/adapters`. Do not treat human docs or skill references as authoritative when they disagree with this file or the code.
+## Declaration
 
----
+Each independently required module has a native text <code>protobuf.mod</code>, parsed by
+<code>ParseModule</code> in <code>internal/config/v1/module.go</code>. This is the dependency source;
+<code>easyp.gen.yaml</code> selects modules for generation and does not declare dependencies
+through the removed <code>generate.inputs</code> format. Example manifest:
 
-## 1. Overview
-
-EasyP’s package manager is **Git-native** and shaped like Go modules:
-
-- Any Git repository path can be a dependency (no Buf Schema Registry).
-- Versions are Git tags, branch names, commit hashes, omitted (`HEAD`), or Go-style pseudo-versions.
-- Declarations live in project-root `protobuf.mod` (not in `easyp.yaml`).
-- Installs are cached under `EASYPPATH` (default `$HOME/.easyp`).
-- Reproducibility is provided by project-root `protobuf.lock`.
-- Auth, proxies, and SSH are delegated to the system `git` CLI (no remotes/mirrors/tokens in `easyp.yaml`).
-
-Vendor output directory is hardcoded as `easyp_vendor` (not `vendor/`).
-
----
-
-## 2. Declaration (`protobuf.mod`)
-
-### `direct`
-
-```
-direct (
-    github.com/googleapis/googleapis@common-protos-1_3_1
-    github.com/bufbuild/protoc-gen-validate          # version omitted → latest
+~~~text
+module github.com/acme/contracts/orders
+roots proto
+require (
+    github.com/acme/contracts/common
+    github.com/acme/types v1.2.3
 )
-```
+~~~
 
-| Property | Value |
-|----------|--------|
-| Filename | `protobuf.mod` (constant `modfile.FileName`) |
-| Location | Project working directory |
-| Section | One `direct (` … `)` block; optional `replace` lines and/or `replace (` … `)` blocks |
-| Entry format | `repo[@version]` | Split on first `@` via `models.NewModule` |
-| Omitted version | `RequestedVersion("")` | Treated as latest (`HEAD`) |
-| Missing file | Empty dependency list (not an error) |
-| Adapter | `internal/adapters/modfile/` |
+- Exactly one <code>module</code> directive is required; it identifies the module, including its directory when nested in a repository. <code>roots</code>, <code>require</code> and <code>replace</code> accept multiline blocks or individual directives. Block entries cannot share the opening/closing line. Duplicate require/replace sources are errors.
+- <code>roots</code> are relative to that manifest's directory and default to <code>.</code>.
+- Each dependency is a separate <code>require</code>. A version may be omitted, a semantic version, or a full Git commit.
+- Versionless requirements resolve repository HEAD on first use. Tidy preserves an existing locked commit; update refreshes it. Tags are not required for this path or explicit commits.
+- Semantic versions resolve actual tags. For a nested module, that means a directory-prefixed tag such as <code>common/v1.2.3</code>; an untagged module should use an omitted version or commit.
+- <code>replace &lt;module&gt; =&gt; &lt;local-path&gt;</code> supplies local source roots. Relative paths resolve from the consuming manifest directory; absolute replacement paths are used directly. Roots within a module cannot escape its directory.
+- Normal project commands use v1 manifests. Legacy metadata is read by dependency compatibility adapters and the explicit <code>easyp migrate</code> preview/apply workflow. <code>easyp migrate --interactive</code> starts the migration wizard; migration never consists of simply renaming a legacy lock. See [CLI.md](../CLI.md).
 
-There is **no** `deps` field in `easyp.yaml`. Unknown top-level key `deps` is rejected by config validation (warn/unknown).
+Nested modules get separate lock entries even when their commits match. The Git adapter tries repository candidates and the metadata reader confirms the requested module name at the candidate directory. A root manifest does not hide named nested modules.
 
-Comments: `#` and `//` to end of line. Empty lines allowed.
+## Major versions and Git mapping
 
-### `replace`
+EasyP uses Go-style semantic import versioning for module identities. Native <code>module</code>, <code>require</code>, <code>replace</code> source identities, fetched metadata and lock entries are checked; changing only the consumer manifest cannot bypass the check.
 
-```
-direct (
-    github.com/acme/weather@v1.2
-)
+- v0 and v1 share the unsuffixed identity. From v2 onward, the final path component is <code>vN</code>, where N is a decimal integer of at least 2 without leading zeros, and the SemVer major must equal N.
+- <code>/v0</code>, <code>/v1</code>, <code>/v01</code> and numeric dotted suffixes such as <code>/v2.0</code> are invalid module suffixes. Ordinary components such as <code>/2024</code> or <code>/v2beta</code> are not major suffixes. The check concerns module identities, not directories or protobuf import paths inside a module.
+- <code>golang.org/x/mod/module.SplitPathVersion</code> and <code>CheckPathMajor</code> implement the suffix rules (including Go's <code>gopkg.in/name.vN</code> spelling). Absolute local Git fixture paths and explicit transport URLs remain supported; the URL host/path is checked without treating credentials or a port as a module suffix. Transport spelling remains part of identity and is not silently normalized.
+- Omitting a version or using a full commit does not waive exact native manifest identity checks. These refs provide no semantic major to infer; a valid declared identity is still required.
 
-replace github.com/acme/weather@v1.2 => /home/project
-```
+| Requested identity | Allowed physical manifest directory | Release tag |
+|---|---|---|
+| <code>repo</code> at <code>v1.2.0</code> | repository root | <code>v1.2.0</code> |
+| <code>repo/v2</code> at <code>v2.0.0</code> | root or <code>v2/</code> | <code>v2.0.0</code> |
+| <code>repo/sub/v2</code> at <code>v2.0.0</code> | <code>sub/</code> or <code>sub/v2/</code> | <code>sub/v2.0.0</code> |
 
-Block form (equivalent):
+The final slash major suffix is logical: it is excluded from the repository candidate and the tag prefix. A tag alone does not establish module identity; the manifest at an allowed location must declare the exact requested source. Lightweight and annotated tags resolve to commits. A <code>v2/v2.0.0</code> tag does not release <code>repo/v2</code>.
 
-```
-replace (
-    github.com/acme/weather@v1.2 => ../weather
-)
-```
+<code>repo</code> and <code>repo/v2</code> are separate MVS, lock, cache and replacement identities. They may coexist when their protobuf import paths are distinct. EasyP never rewrites protobuf packages or imports; duplicate import paths still fail, even for identical content. Same-identity maximum-minimum selection, exact SHA/tag agreement, immutable tags, local overlays and explicit frozen checks remain in force.
 
-| Property | Value |
-|----------|--------|
-| Left side | `module@version` parsed by `models.NewModule` (`Name` + `Version` stored separately) |
-| Version | Required. Exact string match against lock / git-input version (`v1.2` ≠ `v1.2.0`) |
-| Right side | Local filesystem path only (not another module) |
-| Absolute path | Used as-is |
-| Relative path | Resolved against the `root` argument of `Core.Generate` (project directory) |
-| Import root | The path is passed to the compiler as-is (no buf/easyp directory prefix stripping) |
-| Duplicate | Same `Name` + `Version` twice is a parse error |
-| Scope | **generate only** (`generateModulePath`, git-repo inputs, managed-mode `mapModuleFiles`) |
-| Unused replace | No-op: a replace is applied only when that module would otherwise be added to generate import paths |
-| Dependency `protobuf.mod` | `replace` in a downloaded module is ignored; `readProtobufMod` uses `direct` only |
+The Go pre-module <code>+incompatible</code> exception is supported only for an explicitly marked, unsuffixed v2+ requirement whose exact Git revision has no native root <code>protobuf.mod</code> and no matching nested native manifest. For example, <code>repo v2.0.0+incompatible</code> resolves the root tag <code>v2.0.0</code>, never a tag literally ending in <code>+incompatible</code>. Fetch, migration, cold installation and warm cache reads verify this metadata boundary. Update preserves the marker for eligible legacy releases and rejects a selected revision that has become native. Markers on v0/v1 or on suffixed identities are rejected. An unmarked unsuffixed v2+ requirement remains invalid.
 
-`mod download`, lint, breaking, `ls-files`, and vendor still use `$EASYPPATH/mod/<name>/<version>`. Generate still calls `Download` (the cache may be populated) but does **not** pass the cache path for a replaced module.
+Migration does not invent a namespace, add a compatibility marker, or change a source/version. For an old unsuffixed native v2+ dependency, select a published <code>/vN</code> identity and matching version, or explicitly choose an unsuffixed v0/v1 release, then retry. A published native manifest can never qualify for the legacy exception. As in Go, an unversioned local replacement may contain a native manifest with the same unsuffixed identity even when replacing an explicit legacy <code>+incompatible</code> requirement. This overlay does not certify a published revision and cannot change the shared lock; frozen mode rejects replacements. Requirements read from older metadata are checked again when used at the actual source boundary.
 
-### Union with generate inputs
+See [Go major version suffixes](https://go.dev/ref/mod#major-version-suffixes) and [mapping versions to commits](https://go.dev/ref/mod#vcs-version).
 
-`buildCore` builds the effective deps list as:
+## Lock and cache
 
-```
-uniq(protobuf.mod direct + generate.inputs[].git_repo.url)
-```
+<code>protobuf.lock</code> is YAML with integer <code>version: 1</code> and a <code>modules</code> sequence. Each entry has <code>source</code>, <code>version</code>, <code>commit</code> and <code>hash</code>; the resolver sorts by source. Commits must be full 40- or 64-character hexadecimal hashes; <code>hash</code> is <code>h1:</code> plus a base64 SHA-256 digest. A commit-valued version must equal the commit. Duplicate sources, unknown fields and multiple YAML documents are rejected. The hash covers tracked regular-file content using Go's directory-hash algorithm. Symlinks/non-regular tracked entries are rejected by installation.
 
-See `modfile.Read` + `getDepsFromGenerateDeps` in `internal/api/temporaly_helper.go` / `internal/api/mod.go`.
+The CLI resolves <code>EASYPPATH</code> once for a command that needs the cache (default <code>$HOME/.easyp</code>). <code>gitmodules.Cache</code> owns <code>&lt;EASYPPATH&gt;/v1/git</code>, source keys, temporary checkout names and installation paths. Installed snapshots live under its <code>modules/&lt;source-key&gt;/&lt;commit&gt;</code> layout; reusable bare object stores live under <code>objects/&lt;remote-key&gt;</code>, with OS locks for concurrent fetches. Application callers request cached module metadata and its physical directory; they do not assemble cache paths.
 
-```yaml
-generate:
-  inputs:
-    - git_repo:
-        url: github.com/acme/contracts@v1.2.3   # also becomes a Core.deps entry
-        sub_directory: proto
-```
+<code>Cache.Install</code> verifies locked contents, including cache hits. Cached objects support shallow pinned-commit fetches with an advertised-history fallback; neither path substitutes HEAD for an unavailable pin. <code>Cache.Cached</code> reads installed metadata without downloading or rewriting files and requires prior verification. Git credentials and transport configuration remain the responsibility of system Git.
 
-There are **no** YAML fields for remotes, mirrors, auth, cache path, lockfile path, or vendor dir.
+## Operations
 
----
+| Command | Application operation | Behavior |
+|---------|-----------------------|----------|
+| <code>get &lt;module&gt;[@version\|@commit]</code> | <code>modules.Get</code> | Add/promote a direct requirement, resolve the graph and add transitive requirements |
+| <code>mod tidy</code> | <code>modules.Tidy</code> | Resolve requirements, preserve versionless pins, validate imports and write manifest/lock |
+| <code>mod download</code> | <code>modules.Download</code> | Validate the lock against the manifest before installing exact locked contents |
+| <code>mod update</code> | <code>modules.Update</code> | Refresh HEAD requirements and tagged requirements within the existing major version; retain explicit commit pins |
+| <code>mod vendor</code> | <code>modules.Vendor</code> | Verify locked sources and copy their import paths into <code>easyp_vendor</code> |
 
-## 3. CLI
+Tidy/get/update preserve existing manifest comments while editing requirements.
+<code>Get</code> adds/promotes the requested requirement as direct and records other derived
+requirements as <code>// indirect</code>. <code>Update</code> resolves from explicit direct entries,
+then classifies transitive requirements imported by root proto files as direct.
+<code>Tidy</code> also classifies newly added transitive entries and promotes an existing
+<code>// indirect</code> entry when a root proto directly imports it. The current
+<code>augmentV1ManifestRequirements</code> checks existing derived entries instead of
+skipping them, preserves their version spelling, and removes only the indirect
+marker. Its regression case is <code>TestTidyPromotesIndirectWithoutChangingLock</code>
+in <code>internal/modules/operations_test.go</code>.
+Sources: <code>internal/modules/get.go</code>, <code>internal/modules/update.go</code>,
+<code>internal/modules/operations.go</code>, <code>internal/modules/manifest_requirements.go</code>.
 
-Parent command: `easyp mod` (alias `m`) — `internal/api/mod.go`.
+### Local effective graph
 
-| Subcommand | Core method | Behavior |
-|------------|-------------|----------|
-| `mod download` | `Core.Download` | Lock-first install; empty lock → `Update` |
-| `mod update` | `Core.Update` | Install every config dep; refresh lock |
-| `mod vendor` | `Core.Vendor` | `Download`, then copy install trees → `easyp_vendor` |
+Only replacements in the main (consuming) module apply, including to required transitive modules. Dependency manifests contribute their requirements, but their replacements are ignored. A replacement alone never introduces a dependency; unused replacements are not read or downloaded. All relative replacement paths are based on the main manifest directory, even at transitive depths. Absolute paths work directly. A native replacement manifest must declare the replaced identity; missing directories and identity mismatches are contextual errors. Legacy metadata uses the existing roots/requirements adapter without executing dependency plugins or loading dependency generation policy.
 
-No subcommand-specific flags.
+<code>EnsureEffectiveGraph</code> reuses the existing version resolver with local metadata lookup. Local modules have no synthetic version, commit, hash or lock entry. Ordinary dependency cycles are deduplicated; contradictory local directory identities fail. Needed unreplaced modules reuse matching published revisions (or versionless pins) after <code>Cache.Install</code> verification. New fork requirements resolve through the real <code>Source.Fetch</code> interface and immutable-version guard, then install verified snapshots. Selection and roots remain in memory.
 
-### Global flags (all commands)
+While the main manifest contains any replacements, every operation preserves existing <code>protobuf.lock</code> bytes and does not create a missing lock. No local source information or fork-only transitive graph is persisted there. This is an explicit EasyP lock invariant: <code>protobuf.lock</code> is not Go's <code>go.sum</code>, and this does not claim that Go never changes <code>go.sum</code> with replacements.
 
-| Flag | Env | Default |
-|------|-----|---------|
-| `--cfg` / `--config` | `EASYP_CFG` | `easyp.yaml` |
-| `--debug` / `-d` | `EASYP_DEBUG` | `false` |
-| `--format` / `-f` | `EASYP_FORMAT` | `text` |
+- <code>mod tidy</code> validates the effective graph/imports and installs needed remote snapshots without changing the manifest or lock.
+- <code>get</code> can add/promote/change the explicitly requested requirement; <code>mod update</code> refreshes unreplaced direct requirements with the existing version rules. Replaced requirements need no remote fetch or version lookup. Neither command promotes fork-only transitives or writes a lock.
+- <code>mod download</code> resolves and verifies only needed unreplaced snapshots, including new fork dependencies, without downloading replaced roots or unused published-lock entries.
+- Generate (including selected dependencies and both descriptor modes), lint, ls-files and breaking use the same overlay. In-repository baseline replacements are mapped into the Git snapshot; external baseline replacements remain errors. A versionless remote dependency introduced by a historical fork requires a historical lock pin; current HEAD cannot stand in for the baseline.
+- <code>mod vendor</code> snapshots the effective local and remote dependency sources into <code>easyp_vendor</code> without writing the shared lock. It is a local artifact, not proof of a reproducible published graph. Remove replacements and run <code>mod tidy</code> before publishing the manifest/lock.
 
-### Exit codes
+A pure-local graph works unpublished and offline without a lock. New remote requirements can require network access; matching published revisions and versionless pins use verified cache when available. Remote plugins retain their own network requirements. These overlay rules apply outside explicit frozen mode; <code>CI=true</code> alone does not change them.
 
-On `models.ErrVersionNotFound`, mod handlers call `os.Exit(1)`.
+Import checking parses root sources and their reachable dependency/embedded
+imports, validates portable relative import paths, and reports the importing file.
+Unresolved imports fail resolution with <code>cannot resolve imports</code>;
+tidy does not infer a new Git module identity from an unknown proto import.
+<code>modules.ErrLockedVersionChanged</code> protects an already locked semantic version
+from silently changing commit/hash; explicit versionless updates still refresh
+HEAD. See <code>internal/modules/immutable_versions.go</code> and [ERRORS.md](../ERRORS.md)
+for the distinction between such errors and CLI exit classification.
 
----
+The resolver accepts <code>Source.Fetch</code>, independent of Git/cache. It selects the highest required semantic version, treats versionless requirements as weak constraints, and rejects incompatible exact commits (including tag/commit disagreement). It caches revision fetches within a resolution, rebuilds provisional HEAD edges when stronger requirements appear, and sorts resulting entries. <code>Update</code> additionally needs version enumeration; vendor and published download only need the cache contract; local-overlay download additionally uses Source when a new remote requirement needs resolution.
 
-## 4. Flows
+## Frozen graph validation
 
-```mermaid
-flowchart TD
-  cfg["protobuf.mod direct + generate.inputs.git_repo"] --> buildCore["buildCore → Core.deps"]
-  buildCore --> download["Core.Download / Update"]
-  download --> get["Core.Get"]
-  get --> git["bare git cache + fetch"]
-  git --> modcfg["Read buf dirs + protobuf.mod deps"]
-  modcfg --> indirect["Recursive Get for transitive deps"]
-  indirect --> archive["git archive *.proto → zip"]
-  archive --> install["storage.Install → mod/ + dirhash"]
-  install --> lock["protobuf.lock Write"]
-  lock --> consumers["lint / generate / breaking / vendor"]
-```
+Explicit <code>--frozen</code> requires <code>protobuf.mod</code> and <code>protobuf.lock</code> for each selected native dependency graph, even for a module with no dependencies. An empty graph must have an empty lock. A plain source tree without a manifest fails with a missing-manifest diagnostic. Frozen mode is never inferred from CI environment variables. See [CLI flag placement](../CLI.md#frozen-dependency-mode).
 
-### `Download` (`internal/core/download.go`)
+All root replacement directives are forbidden, even when unused. Validation rejects them before opening replacement directories or accessing dependency caches/remotes. Dependency manifests still supply transitive requirements; dependency-local replacements remain ignored. The locked closure must satisfy direct and transitive requirements with no missing or stale entries. Malformed locks, incompatible versions/commits and unexpected graph entries fail instead of triggering resolution.
 
-1. If lockfile is empty / missing → delegate to `Update`.
-2. Else install each lockfile entry via `Get`.
-3. Then install any `c.deps` entries not already in the lockfile.
+The frozen path does not call the version resolver, query HEAD or tags, or create/rewrite manifests and locks. Exact locked commits may be downloaded when absent from cache; installed sources are hash-verified on cold and warm paths. This permits reproducible dependency selection with a cold cache and does not imply offline execution. Existing Git credentials, transport configuration, and plugin network requirements still apply.
 
-### `Update` (`internal/core/update.go`)
+- <code>mod download</code> validates and installs the locked graph; <code>mod vendor</code> validates it before replacing vendor output.
+- <code>mod tidy</code>, <code>get</code>, <code>mod update</code>, and <code>init</code> refuse frozen operation. <code>migrate</code>, including preview and interactive mode, is also rejected.
+- Generation preflights every selected graph before any plugin runs. Explicit workspace-relative module paths use the selected module's manifest and lock; a generator-only directory needs no separate pair. Dependency identity selectors require the consumer manifest and lock, without requiring lock files inside downloaded dependencies. Unrelated projects are ignored and existing explicit/recursive selection rules remain unchanged.
+- Lint retains effective policy/module grouping. Breaking uses the historical manifest and lock for its baseline, independently from the current module. Local-only <code>ls-files</code> output still requires frozen graph validation.
 
-For each string in `c.deps`, parse `Module` and call `Get` (overwrites lock entries with resolved revision + hash).
+Run normal <code>mod tidy</code> after removing local replacements to prepare the shared lock, then commit the manifest and lock. Frozen success never certifies unpublished local overlays, and normal replacement/vendor semantics above remain unchanged.
 
-### `Get` / `get` (`internal/core/get.go`)
+## Metadata and imports
 
-**Fast path:** if `.info` exists for the requested module/version and hash checks pass → skip network; still rewrite lock entry.
+<code>module_config</code> handles dependency metadata in these forms:
 
-**Install path (`get`):**
+- V1 <code>protobuf.mod</code>, including named nested manifests.
+- Legacy EasyP <code>protobuf.mod</code> requirements and <code>easyp.yaml</code> inputs.
+- Buf v1 workspace/module configs and Buf v2 module roots.
+- No config: the repository directory is the default root.
 
-1. `storage.CreateCacheRepositoryDir(name)` — bare clone under `cache/<sha256(name)>`
-2. `git.New` — `origin` = `https://` + module name
-3. `repo.ReadRevision` — resolve tag / branch / commit / HEAD / pseudo-version
-4. `repo.Fetch` — shallow fetch
-5. `moduleConfig.ReadFromRepo` — buf/easyp directories + `protobuf.mod` transitive deps
-6. Recursive `Get` for each `moduleConfig.Dependencies`
-7. `repo.Archive` — `git archive --format=zip <commit> -o … "*.proto"` only
-8. `storage.Install` — extract, strip module dirs, `dirhash.HashDir`, atomic rename into `mod/`
-9. Write `.info` + `lockFile.Write`
+Root config detection checks existence; parsing belongs to format-specific readers. Missing optional files are normal. Invalid files and filesystem errors are returned. Buf roots take precedence over legacy EasyP roots when both formats occur; legacy requirements are still extracted. Buf v1/v1beta1/v2 <code>deps</code> are read as BSR references, including <code>buf.yaml</code> files selected by a v1 <code>buf.work.yaml</code>. A nonempty BSR dependency list is never ignored: dependency adaptation returns <code>UnsupportedBufRegistryDependenciesError</code> with the declaring config and references. Automatic BSR-to-Git mapping is intentionally not implemented yet; provide native <code>protobuf.mod</code> metadata for that Git dependency when using it with EasyP.
 
-### `Vendor` (`internal/core/vendor.go`)
+A nested module root <code>proto</code> becomes <code>&lt;checkout&gt;/&lt;module-directory&gt;/proto</code>. A file below that root is imported without either physical prefix. <code>modules.SourceRoots</code> preserves module identity for managed selectors. Common import paths in different physical roots are rejected rather than silently selecting one.
 
-1. `Download`
-2. For each lock entry, `cp.Copy(installDir, vendorDir)` where `vendorDir` is `easyp_vendor`
+Generation, lint, breaking and module operations share root/collision rules. Source traversal excludes hidden directories, vendored output and nested-module boundaries via <code>internal/core/path_helpers/v1_source.go</code>. Config discovery and policy inheritance use their own traversal rules.
 
----
+## Persistence guarantees
 
-## 5. Lockfile (`protobuf.lock`)
+Manifest/lock updates are coordinated by <code>writeV1ResolvedFiles</code>. If lock replacement fails after a manifest change, the original manifest is restored; any restoration failure is returned with the original error. Each individual file uses a temporary file and rename. There is no atomic transaction or crash-recovery guarantee for the pair.
 
-| Property | Value |
-|----------|--------|
-| Filename | `protobuf.lock` (constant `lockFileName`) |
-| Location | Project working directory (via `DirWalker`) |
-| Line format | `moduleName version hash` (exactly 3 space-separated fields) |
-| Hash | Go `dirhash` style (`h1:…`) of installed tree |
-| Write behavior | Full rewrite; keys sorted alphabetically |
+Vendor output is built in a temporary directory before replacing the current output; replacement failure attempts to restore the previous vendor directory. Temporary checkout and staging directories are cleaned up by their owners.
 
-Example:
+## Tests
 
-```
-github.com/googleapis/googleapis v0.0.0-20250909114430-8727b5baabcdef h1:eI+…
-github.com/grpc-ecosystem/grpc-gateway v2.19.1 h1:01NNlC…
-```
+Pure resolver tests cover semver selection, commits, versionless pins, repeated visits, cancellation and source errors. Filesystem tests cover manifest preservation, stale-lock rejection before installation, and vendor staging. Local-Git integration tests retain nested-module, hash, tag/HEAD and command coverage. Generation tests use explicit directories/cache values instead of process-wide cwd/env changes.
 
-Malformed lines (≠ 3 fields) are skipped on read. There is **no** fallback to legacy `easyp.lock`.
+## Producer-policy dependencies
 
-Key types: `models.LockFileInfo`, `models.ErrModuleNotFoundInLockFile` (`internal/core/models/lock_file_info.go`).
-
-Adapter: `internal/adapters/lock_file/`.
-
----
-
-## 6. Storage layout (`EASYPPATH`)
-
-| Env | Default |
-|-----|---------|
-| `EASYPPATH` | `$HOME/.easyp` |
-
-```
-$EASYPPATH/
-├── cache/
-│   ├── download/<moduleName>/<sanitizedVersion>.zip
-│   ├── download/<moduleName>/<sanitizedVersion>.info   # JSON InstalledModuleInfo
-│   └── <sha256(moduleName)>/                          # bare git repository
-└── mod/<moduleName>/<sanitizedVersion>/               # extracted *.proto tree
-```
-
-- `sanitizePath`: replaces `/` with `-` in version strings.
-- Install example: `~/.easyp/mod/github.com/googleapis/googleapis/v1.2.3`
-- Archive contains only `*.proto` files.
-- If remote has `buf.work.yaml` / `buf.yaml` / `easyp.yaml` directories, install strips those prefixes so import paths match.
-
-Adapter: `internal/adapters/storage/`.
-
----
-
-## 7. Version resolution
-
-`repo.ReadRevision` (`internal/adapters/repository/git/read_revision.go`):
-
-| Requested version | Resolution |
-|-------------------|------------|
-| Pseudo-version `v0.0.0-<datetime>-<commit>` | Fetch that commit |
-| Omitted | `HEAD` → tag if present, else generate pseudo-version |
-| Explicit | tag → branch → commit hash (in that order) |
-
-Pseudo-version format mirrors Go modules: `v0.0.0-20240222234643-814bf88cf225`.
-
-Helpers: `RequestedVersion.IsGenerated()`, `IsOmitted()`, `GetParts()` in `internal/core/models/module.go`.
-
-Remote URL construction: always `https://` + module path (`getRemote` in `internal/adapters/repository/git/git.go`). No SSH URLs in deps strings.
-
----
-
-## 8. Transitive / module config
-
-`ModuleConfig.ReadFromRepo` (`internal/adapters/module_config/read_from_repo.go`):
-
-1. **Directories** — Buf (`buf.work.yaml` v1 or `buf.yaml` v2), else EasyP (`easyp.yaml` generate input roots)
-2. **Dependencies** — `protobuf.mod` `direct` entries only
-
-Buf-only modules without `protobuf.mod` do not pull transitive packages via EasyP. Remote `easyp.yaml` no longer declares transitive deps.
-
----
-
-## 9. Consumers (auto-download)
-
-| Command | Calls `Download`? | Dep usage |
-|---------|-------------------|-----------|
-| `lint` | yes (`internal/core/lint.go`) | Import resolution via install dirs (replace is ignored) |
-| `generate` | yes (`internal/core/generate.go`) | `generateModulePath`: replace path if `Name`+`Version` match, else install dir; walks `git_repo` inputs |
-| `breaking` | yes (`internal/core/breaking_check.go`) | Same import resolution path as lint (replace is ignored) |
-| `mod vendor` | via `Download` | Copies install trees (replace is ignored) |
-| `ls-files` | **no** | Uses lock + install dirs if present (replace is ignored) |
-
-### Import resolution order (`readFileFromImport`)
-
-1. Local project file
-2. Each `c.deps` module’s `GetInstallDir` (via lock version)
-3. Embedded well-known types (`wellknownimports`)
-
----
-
-## 10. Auth and private repos
-
-No auth fields in `easyp.yaml`. Fetch always uses HTTPS + system `git`.
-
-Documented operational patterns (outside code):
-
-- SSH: `git config url."git@host:.insteadOf" "https://host/"`
-- Tokens: credential helper / URL rewrite
-- Corporate CA / proxy: standard git / HTTP env
-
-`generate.plugins[].remote` is **remote plugin execution** (gRPC), not proto dependency remotes.
-
----
-
-## 11. Key packages and types
-
-| Package / type | Role |
-|----------------|------|
-| `internal/api.Mod` | CLI wiring for `mod` |
-| `internal/api.buildCore` | Assembles deps and replaces from `protobuf.mod` + generate inputs, storage, lock, vendor dir |
-| `adapters/modfile` | `protobuf.mod` parse / read / write (`direct` + `replace`) |
-| `core.Core` | `Download`, `Update`, `Get`, `Vendor` |
-| `core.Storage` | Cache dirs, install, hashes, install paths |
-| `core.LockFile` | Read / Write / IsEmpty / DepsIter |
-| `core.ModuleConfig` | Read buf/easyp layout + protobuf.mod from cloned repo |
-| `models.Module` | Name + `RequestedVersion` |
-| `models.LockFileInfo` | Name, version, hash |
-| `models.InstalledModuleInfo` | Name, hash, revision version (`.info` file) |
-| `models.Revision` | CommitHash + Version |
-| `models.ModuleConfig` | `Dependencies` + `Directories` |
-| `adapters/repository/git` | Bare clone, fetch, archive, revision resolve |
-| `adapters/lock_file` | `protobuf.lock` I/O |
-| `adapters/storage` | `$EASYPPATH` layout |
-| `adapters/module_config` | Buf / EasyP module config readers |
-
-### Domain errors (`internal/core/models`)
-
-| Error | Meaning |
-|-------|---------|
-| `ErrVersionNotFound` | Tag/branch/commit could not be resolved |
-| `ErrHashDependencyMismatch` | Lock hash ≠ installed tree hash |
-| `ErrModuleNotFoundInLockFile` | Module missing from lock |
-| `ErrModuleInfoFileNotFound` | No `.info` → need install |
-| `ErrModuleNotInstalled` | Install dir missing |
-| `ErrFileNotFound` | Module config file missing in repo |
-
----
-
-## 12. Agent rules
-
-- Prefer this spec + code over outdated docs/skills that say vendor → `vendor/` (actual: `easyp_vendor`).
-- Do not invent remotes, mirrors, or auth YAML fields; they do not exist.
-- Declare deps in `protobuf.mod`; lock with `protobuf.lock`. Do not use `easyp.yaml` `deps` or `easyp.lock`.
-- Do not hand-edit generated `schemas/*.json` for config schema changes — update `mcp/easypconfig` / `internal/config`, then regenerate schemas.
-- Commit `protobuf.lock` for reproducible CI; cache lives outside the repo (`EASYPPATH`).
-- `mod download` is lock-first; use `mod update` to refresh versions from `protobuf.mod`.
-- Archives contain only `*.proto`; non-proto files from deps are never installed.
-- Transitive deps require the dependency’s own `protobuf.mod`; buf configs alone do not declare them.
+Shared policies use the same declared identities and exact locked snapshots. <code>extends</code> never infers a Git repository or duplicates a dependency version. See [policy-extends](policy-extends.md). Validation only inspects already cached, verified contents; execution can install an existing locked commit.

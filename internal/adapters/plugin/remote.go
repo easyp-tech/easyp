@@ -15,7 +15,7 @@ import (
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/pluginpb"
 
-	plugingeneratorv1 "github.com/easyp-tech/service/api/generator/v1"
+	plugingeneratorv1 "github.com/easyp-tech/service/api/easyp/generator/v1"
 
 	"github.com/easyp-tech/easyp/internal/logger"
 )
@@ -80,7 +80,7 @@ func (e *RemotePluginExecutor) Execute(ctx context.Context, plugin Info, request
 	}()
 
 	// Создаем gRPC клиент
-	client := plugingeneratorv1.NewServiceAPIClient(conn)
+	client := plugingeneratorv1.NewGeneratorAPIClient(conn)
 
 	// Формируем информацию о плагине в формате "name:version"
 	pluginInfo := fmt.Sprintf("%s:%s", pluginName, version)

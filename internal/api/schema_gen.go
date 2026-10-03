@@ -8,49 +8,31 @@ import (
 	"github.com/easyp-tech/easyp/internal/schemagen"
 )
 
-var _ Handler = (*SchemaGen)(nil)
-
+// SchemaGen writes JSON Schemas for the v1 YAML documents.
 type SchemaGen struct{}
 
-var (
-	flagSchemaGenOutVersioned = &cli.StringFlag{
-		Name:       "out-versioned",
-		Usage:      "path to versioned schema file",
-		Required:   false,
-		HasBeenSet: true,
-		Value:      schemagen.DefaultVersionedOut,
-	}
+var _ Handler = (*SchemaGen)(nil)
 
-	flagSchemaGenOutLatest = &cli.StringFlag{
-		Name:       "out-latest",
-		Usage:      "path to latest schema alias file",
-		Required:   false,
-		HasBeenSet: true,
-		Value:      schemagen.DefaultLatestOut,
-	}
-)
+var flagSchemaGenOutDir = &cli.StringFlag{
+	Name:  "out-dir",
+	Usage: "directory for generated v1 JSON Schemas",
+	Value: schemagen.DefaultOutDir,
+}
 
+// Command implements Handler.
 func (s SchemaGen) Command() *cli.Command {
 	return &cli.Command{
-		Name:        "schema-gen",
-		Usage:       "generate easyp config JSON Schema artifacts",
-		UsageText:   "schema-gen [--out-versioned path] [--out-latest path]",
-		Description: "generate versioned and latest easyp config JSON Schema artifacts",
-		Action:      s.Action,
-		Flags: []cli.Flag{
-			flagSchemaGenOutVersioned,
-			flagSchemaGenOutLatest,
-		},
+		Name:   "schema-gen",
+		Usage:  "generate JSON Schemas for v1 YAML files",
+		Action: s.Action,
+		Flags:  []cli.Flag{flagSchemaGenOutDir},
 	}
 }
 
+// Action implements Handler.
 func (s SchemaGen) Action(ctx *cli.Context) error {
-	if err := schemagen.Run(schemagen.Options{
-		VersionedOut: ctx.String(flagSchemaGenOutVersioned.Name),
-		LatestOut:    ctx.String(flagSchemaGenOutLatest.Name),
-	}); err != nil {
-		return fmt.Errorf("schemagen.Run: %w", err)
+	if err := schemagen.Run(schemagen.Options{OutDir: ctx.String(flagSchemaGenOutDir.Name)}); err != nil {
+		return fmt.Errorf("Run: %w", err)
 	}
-
 	return nil
 }

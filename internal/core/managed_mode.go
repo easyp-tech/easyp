@@ -119,6 +119,8 @@ type ManagedOverrideRule struct {
 type ManagedModeConfig struct {
 	// Enabled activates managed mode.
 	Enabled bool
+	// GoPackageOnly applies Go overrides without activating other language options.
+	GoPackageOnly bool
 	// Disable contains rules to disable managed mode for specific conditions.
 	Disable []ManagedDisableRule
 	// Override contains rules to override file and field options.
@@ -679,7 +681,7 @@ func ApplyManagedMode(
 	config ManagedModeConfig,
 	fileToModule map[string]string,
 ) error {
-	if !config.Enabled {
+	if !config.Enabled && !config.GoPackageOnly {
 		return nil
 	}
 
@@ -691,6 +693,7 @@ func ApplyManagedMode(
 		// Managed mode applies to all files. Module/path selectors are used only
 		// to narrow disable/override rules, matching buf's managed mode behavior.
 
+		hadOptions := fd.Options != nil
 		// Ensure Options is initialized
 		if fd.Options == nil {
 			fd.Options = &descriptorpb.FileOptions{}
@@ -700,7 +703,12 @@ func ApplyManagedMode(
 		applyFileOptions(fd, config, filePath, module, pkg)
 
 		// Apply field options to all messages
-		applyFieldOptionsToMessages(fd.GetMessageType(), config, filePath, module, pkg, pkg)
+		if config.Enabled {
+			applyFieldOptionsToMessages(fd.GetMessageType(), config, filePath, module, pkg, pkg)
+		}
+		if !hadOptions && proto.Size(fd.Options) == 0 {
+			fd.Options = nil
+		}
 	}
 
 	return nil
@@ -725,6 +733,9 @@ func applyFileOptions(
 	// This matches buf's behavior: "If multiple overrides for the same option apply
 	// to a file or field, the last rule takes effect."
 	for _, override := range config.Override {
+		if !config.Enabled && override.FileOption != FileOptionGoPackage && override.FileOption != FileOptionGoPackagePrefix {
+			continue
+		}
 		if override.FileOption == "" {
 			continue
 		}
@@ -751,6 +762,10 @@ func applyFileOptions(
 			continue
 		}
 
+		if handler.AffectsOption != "" && config.IsFileOptionDisabled(filePath, module, pkg, handler.AffectsOption) {
+			continue
+		}
+
 		// Apply the override
 		handler.Apply(fd, override.Value, pkg, filePath)
 		appliedOptions[override.FileOption] = true
@@ -760,6 +775,10 @@ func applyFileOptions(
 		if handler.AffectsOption != "" {
 			appliedOptions[handler.AffectsOption] = true
 		}
+	}
+
+	if !config.Enabled {
+		return
 	}
 
 	// Second pass: apply defaults for options that have defaults and weren't overridden

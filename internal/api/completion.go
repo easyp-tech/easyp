@@ -6,7 +6,7 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
-var _ Handler = (*Mod)(nil)
+var _ Handler = (*Completion)(nil)
 
 type Completion struct{}
 

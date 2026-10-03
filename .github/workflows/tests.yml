@@ -19,7 +19,7 @@ jobs:
       - name: Install Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.24'
+          go-version-file: go.mod
 
       - name: Install Task
         uses: arduino/setup-task@v1
@@ -32,3 +32,9 @@ jobs:
 
       - name: Start test.
         run: task test
+
+      - name: Validate native v1 repository example
+        run: task proto:check
+
+      - name: Validate developer task dispatch
+        run: task dev-tools:check

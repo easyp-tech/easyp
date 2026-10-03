@@ -1,4 +1,4 @@
-<!-- generated: 2026-07-27, template: bootstrap.md -->
+<!-- generated: 2026-09-30, template: bootstrap.md -->
 # EasyP Documentation
 
 This folder contains documentation to help LLMs and developers quickly understand the project context.
@@ -7,8 +7,8 @@ This folder contains documentation to help LLMs and developers quickly understan
 
 ### Core
 
-- [ARCHITECTURE.md](./ARCHITECTURE.md) — Layered architecture (cmd → api → core → adapters)
-- [PACKAGES.md](./PACKAGES.md) — Package reference for `internal/*`, `mcp/`, `cmd/`
+- [ARCHITECTURE.md](./ARCHITECTURE.md) — CLI wiring, modules, generation, migration, engines and adapters
+- [PACKAGES.md](./PACKAGES.md) — Package reference for <code>internal/*</code>, <code>mcp/</code>, <code>cmd/</code>
 - [DOMAIN.md](./DOMAIN.md) — Domain model (modules, lockfile, lint rules, plugins)
 - [CODE_STYLE.md](./CODE_STYLE.md) — Go conventions expanded from agent-rules
 
@@ -19,51 +19,54 @@ This folder contains documentation to help LLMs and developers quickly understan
 
 ### Config & Dependencies
 
-- [config/dependency.md](./config/dependency.md) — Git-native package manager (`easyp mod`, lockfile, cache)
+- [config/dependency.md](./config/dependency.md) — Git-native package manager (<code>easyp mod</code>, lockfile, cache)
 - [agent-rules.md](./agent-rules.md) — Mandatory rules for AI agents
 
 ### Domain (CLI toolkit)
 
 - [CLI.md](./CLI.md) — Commands, flags, exit codes
-- [ERRORS.md](./ERRORS.md) — Domain / models sentinel errors and CLI mapping
+- [ERRORS.md](./ERRORS.md) — Current error types, CLI flow and unresolved mappings
 - [DEPLOYMENT.md](./DEPLOYMENT.md) — Docker, CI/CD, releases
 
 ## Quick Facts
 
 | Aspect | Technology |
 |--------|------------|
-| **Language** | Go 1.24 (`github.com/easyp-tech/easyp`) |
+| **Language** | Go 1.26.6 (<code>github.com/easyp-tech/easyp</code>) |
 | **Product** | Protocol Buffers CLI toolkit |
-| **CLI** | urfave/cli (`cmd/easyp`) |
-| **Capabilities** | lint, breaking, generate, `easyp mod` |
-| **Config** | `easyp.yaml` (+ envsubst); schema via `mcp/easypconfig` → `schemas/` |
-| **Deps** | Git repositories; declare in `protobuf.mod`; lockfile `protobuf.lock`; cache `EASYPPATH` |
-| **Build** | Task (`Taskfile.yml`) |
-| **Lint** | golangci-lint (`.golangci.yml`) |
-| **Tests** | gotestsum, `-race`, testify |
-| **Human docs** | `docs/` (Vite site), https://easyp.tech |
+| **CLI** | urfave/cli v2 (<code>cmd/easyp</code>) |
+| **Capabilities** | lint, breaking, generate, get, mod, init, migrate, ls-files, validate-config, schema-gen, completion |
+| **Config** | v1 <code>easyp.yaml</code> policy + <code>easyp.gen.yaml</code> generation; <code>internal/config/v1</code> models/schema, <code>internal/schemagen</code> writer |
+| **Deps** | Git repositories; declare in <code>protobuf.mod</code>; lockfile <code>protobuf.lock</code>; cache <code>EASYPPATH</code> |
+| **Build** | Task (<code>Taskfile.yml</code>) |
+| **Lint** | golangci-lint (<code>.golangci.yml</code>) |
+| **Tests** | gotestsum, <code>-race</code>, testify |
+| **Human docs** | Root [README.md](../README.md); site maintained in separate <code>easyp-tech/docs</code> repository, https://easyp.tech |
 
 ## Project Structure
 
-```
+~~~
 easyp/
 ├── cmd/easyp/              # CLI entrypoint
 ├── internal/
 │   ├── api/                # CLI command wiring
-│   ├── core/               # Business logic (lint, generate, mod, breaking)
+│   ├── core/               # Lint/breaking engines, parsing, plugin execution
+│   ├── modules/            # Resolver, native manifests, locks, imports, vendor
+│   ├── generation/         # Consumer discovery, module selection, descriptor export
+│   ├── migration/          # Legacy conversion plans and guarded apply
 │   ├── rules/              # Lint rules (+ colocated tests)
-│   ├── config/             # easyp.yaml parse/validate
-│   └── adapters/           # Git, storage, lockfile, plugins, console
-├── mcp/easypconfig/        # Config schema metadata (source of truth)
-├── schemas/                # Generated JSON Schema artifacts
-├── docs/                   # Documentation site
+│   ├── config/v1/          # Native v1 models, parsing, validation and schemas
+│   ├── schemagen/          # Writes generated schemas
+│   └── adapters/           # Git/cache, dependency metadata, plugins, prompts
+├── mcp/easypconfig/        # MCP descriptions consuming the v1 schema
+├── schemas/               # Six generated JSON Schema artifacts
 ├── .spec/                  # Agent-oriented project docs (this tree)
 └── Taskfile.yml
-```
+~~~
 
 ## Running
 
-```sh
+~~~sh
 task init              # install local tools (golangci-lint, gotestsum, mockery)
 task build             # go build -o easyp ./cmd/easyp
 task test              # gotestsum with -race and coverage
@@ -71,16 +74,19 @@ task lint              # golangci-lint (+ hadolint where applicable)
 task quality           # test + lint
 task schema:generate   # regenerate schemas/*.json
 task schema:check      # fail if schemas drift
-task mocks             # regenerate mockery mocks
-```
+task mocks             # optional mocks for actual core and console interfaces
+task dev-tools:check   # isolated offline Taskfile regression
+~~~
 
 Without Task:
 
-```sh
+~~~sh
 go build -o easyp ./cmd/easyp
 go test -race -count=1 ./...
 go run ./cmd/easyp schema-gen
-```
+~~~
+
+<code>task lint</code> runs the local Go linter and Hadolint against root <code>Dockerfile</code>. See [TOOLS.md](./TOOLS.md) for pinned tool prerequisites and <code>task dev-tools:check</code>. Docker build helpers build locally and never publish.
 
 ## Ports
 
@@ -90,17 +96,19 @@ N/A — EasyP is a CLI tool, not a long-running server. Remote plugin execution 
 
 | Entry | Role |
 |-------|------|
-| `cmd/easyp` | Process entry; registers CLI handlers |
-| `internal/api` | Commands: lint, generate, breaking, mod, init, ls-files, schema-gen |
-| `internal/core.Core` | Business logic facade |
-| `internal/core` Storage / LockFile / ModuleConfig | Package-manager ports |
-| `easyp.yaml` + `protobuf.mod` + `protobuf.lock` | Config, declared deps, and locked proto dependencies |
-| `mcp/easypconfig` | Config schema / MCP metadata |
+| <code>cmd/easyp</code> | Process entry; registers CLI handlers |
+| <code>internal/api</code> | All registered command handlers; see [CLI.md](./CLI.md) for flags and aliases |
+| <code>Core</code> in <code>internal/core/core.go</code> | Per-engine lint, breaking and low-level generation state |
+| <code>Source</code>, <code>Cache</code>, <code>Repository</code>, <code>VersionedRepository</code> in <code>internal/modules</code> | Dependency resolution and verified installation contracts |
+| <code>internal/migration</code> + <code>internal/api/migrate_interactive.go</code> | Preview/apply conversion and interactive migration wizard |
+| <code>easyp.yaml</code> + <code>easyp.gen.yaml</code> + <code>protobuf.mod</code> + <code>protobuf.lock</code> | Policy, generation, declared dependencies and locked revisions |
+| <code>mcp/easypconfig</code> | Config schema / MCP metadata |
 
 ## Adding New Features
 
-1. **Lint rule** — add `internal/rules/<rule>.go` + `_test.go`; register via existing rule builder; mirror neighboring rules.
-2. **`easyp.yaml` schema** — change `mcp/easypconfig` and/or `internal/config`, then `task schema:generate` (never hand-edit `schemas/*.json`).
-3. **CLI command** — wire in `internal/api`, register from `cmd/easyp`; follow existing handler patterns.
-4. **Core/storage interfaces** — update interfaces, `task mocks`, add/adjust tests with `-race`.
-5. Before finishing behavior changes: run tests for touched packages; for schema changes run `task schema:check`.
+1. **Lint rule** — add <code>internal/rules/&lt;rule&gt;.go</code> + <code>&lt;file&gt;_test.go</code>; register via existing rule builder; mirror neighboring rules.
+2. **v1 schema** — change <code>internal/config/v1</code>, then <code>task schema:generate</code>; update MCP descriptions when semantics change. Never hand-edit <code>schemas/*.json</code>.
+3. **CLI command** — wire in <code>internal/api</code>, register from <code>cmd/easyp</code>; follow existing handler patterns.
+4. **Interfaces** — update consumer interfaces and their test doubles; consult [TESTING.md](./TESTING.md) before generating optional Mockery test doubles. Add/adjust tests with <code>-race</code>.
+5. Before finishing behavior changes: run tests for touched packages; for schema changes run <code>task schema:check</code>.
+6. Implemented policy inheritance, exact package selection and breaking profiles are described in [CLI.md](./CLI.md) and [ERRORS.md](./ERRORS.md); do not infer support from a declared field alone.

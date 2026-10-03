@@ -8,3 +8,5 @@ coverage.out
 node_modules
 *.tsbuildinfo
 .rules-mcp
+
+/examples/generated/

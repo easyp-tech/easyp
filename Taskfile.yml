@@ -1,63 +1,100 @@
 version: "3"
 
 vars:
-  LINTER_VERSION: "2.1.6"
-  GOTESTSUM_VERSION: "1.11.0"
+  LINTER_VERSION: "2.14.0"
+  GOTESTSUM_VERSION: "1.13.0"
   HADOLINT_VERSION: "v2.12.1-beta"
-  LOCAL_BIN: "{{.USER_WORKING_DIR}}/bin"
-  MOCKERY_VERSION: "v2.41.0"
+  LOCAL_BIN: "{{.ROOT_DIR}}/bin"
+  MOCKERY_VERSION: "v2.53.7"
+  DOCKER_IMAGE: '{{.DOCKER_IMAGE | default "easyp:local"}}'
 
 tasks:
   install_linters:
     cmds:
-      - "curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b {{.LOCAL_BIN}} v{{.LINTER_VERSION}}"
+      - |
+        set -eu
+        installer=$(mktemp)
+        trap 'rm -f "$installer"' EXIT
+        curl -fsSL https://raw.githubusercontent.com/golangci/golangci-lint/v{{.LINTER_VERSION}}/install.sh -o "$installer"
+        sh "$installer" -b {{.LOCAL_BIN | shellQuote}} v{{.LINTER_VERSION}}
 
   install_gotestsum:
     cmds:
-      - "GOBIN={{.LOCAL_BIN}} go install gotest.tools/gotestsum@v{{.GOTESTSUM_VERSION}}"
+      - 'GOBIN={{.LOCAL_BIN | shellQuote}} go install gotest.tools/gotestsum@v{{.GOTESTSUM_VERSION}}'
 
   install_mockery:
     cmds:
-      - "GOBIN={{.LOCAL_BIN}} go install github.com/vektra/mockery/v2@{{.MOCKERY_VERSION}}"
+      - 'GOBIN={{.LOCAL_BIN | shellQuote}} go install github.com/vektra/mockery/v2@{{.MOCKERY_VERSION}}'
 
   install_hadolint:
     cmds:
       - "docker pull ghcr.io/hadolint/hadolint:{{.HADOLINT_VERSION}}"
 
   init:
+    desc: Install pinned local helpers and download module dependencies
     deps:
       - install_linters
       - install_gotestsum
       - install_mockery
     cmds:
-      - "go get -v ./..."
+      - "go mod download"
 
   build:
+    desc: Build the CLI locally
     cmds:
       - "go build -o easyp ./cmd/easyp"
 
-  schema:generate:
-    desc: Generate versioned and latest easyp config JSON Schema artifacts
+  proto:check:
+    desc: Validate the native v1 example and verify deterministic generation
     cmds:
-      - "go run ./cmd/easyp schema-gen"
+      - sh scripts/check-proto-example.sh
+
+  schema:generate:
+    desc: Generate v1 JSON Schemas from the configuration models
+    cmds:
+      - "go run ./cmd/easyp schema-gen --out-dir schemas"
 
   schema:check:
-    desc: Ensure schema artifacts are up to date
+    desc: Verify committed v1 JSON Schemas match the configuration models
     cmds:
-      - task: schema:generate
-      - "git diff --exit-code -- schemas/easyp-config-v1.schema.json schemas/easyp-config.schema.json"
+      - |
+        schema_check_dir=$(mktemp -d)
+        trap 'rm -rf "$schema_check_dir"' EXIT
+        go run ./cmd/easyp schema-gen --out-dir "$schema_check_dir"
+        diff -r schemas "$schema_check_dir"
 
   test:
+    desc: Run Go tests with race detection and coverage
+    preconditions:
+      - sh: 'test -x {{printf "%s/gotestsum" .LOCAL_BIN | shellQuote}}'
+        msg: 'Missing local gotestsum; run task install_gotestsum.'
     cmds:
-      - "{{.LOCAL_BIN}}/gotestsum --format pkgname -- -coverprofile=coverage.out -race -count=1 ./..."
+      - '{{printf "%s/gotestsum" .LOCAL_BIN | shellQuote}} --format pkgname -- -coverprofile=coverage.out -race -count=1 ./...'
 
   lint:
-    deps:
-      - build
+    desc: Run both Go and Dockerfile lint checks, reporting either failure
     cmds:
-      - "docker run --rm -i ghcr.io/hadolint/hadolint:{{.HADOLINT_VERSION}} < Docker/base/Dockerfile"
-      - "docker run --rm -i ghcr.io/hadolint/hadolint:{{.HADOLINT_VERSION}} < Docker/lint/Dockerfile"
-      - "{{.LOCAL_BIN}}/golangci-lint run ./..."
+      - |
+        status=0
+        {{.TASK_EXE | shellQuote}} lint:go LOCAL_BIN={{.LOCAL_BIN | shellQuote}} || status=$?
+        {{.TASK_EXE | shellQuote}} lint:docker HADOLINT_VERSION={{.HADOLINT_VERSION | shellQuote}} || status=$?
+        exit "$status"
+
+  lint:go:
+    desc: Lint Go sources with the pinned local golangci-lint
+    preconditions:
+      - sh: 'test -x {{printf "%s/golangci-lint" .LOCAL_BIN | shellQuote}}'
+        msg: 'Missing local golangci-lint; run task install_linters.'
+    cmds:
+      - '{{printf "%s/golangci-lint" .LOCAL_BIN | shellQuote}} run ./...'
+
+  lint:docker:
+    desc: Lint the root Dockerfile with pinned Hadolint in Docker
+    preconditions:
+      - sh: 'command -v docker >/dev/null 2>&1'
+        msg: 'Docker is required; install Docker and start its daemon to run this task.'
+    cmds:
+      - 'docker run --rm -i ghcr.io/hadolint/hadolint:{{.HADOLINT_VERSION}} < {{printf "%s/Dockerfile" .ROOT_DIR | shellQuote}}'
 
   quality:
     deps:
@@ -79,62 +116,42 @@ tasks:
       - "go clean -cache"
 
   mock:
+    desc: Generate an optional mock (NAME and DIR required)
+    requires:
+      vars: [NAME, DIR]
+    preconditions:
+      - sh: 'test -x {{printf "%s/mockery" .LOCAL_BIN | shellQuote}}'
+        msg: 'Missing local mockery; run task install_mockery.'
     cmds:
-      - "{{.LOCAL_BIN}}/mockery --name {{.NAME}} --dir {{.DIR}} --output {{.DIR}}/mocks"
+      - '{{printf "%s/mockery" .LOCAL_BIN | shellQuote}} --name {{.NAME | shellQuote}} --dir {{.DIR | shellQuote}} --output {{printf "%s/mocks" .DIR | shellQuote}}'
 
   mocks:
+    desc: Generate optional core and console mocks (not required by the test suite)
     cmds:
-      - task: mock
-        vars: { NAME: "LockFile", DIR: "./internal/adapters/storage" }
-
       - task: mock
         vars: { NAME: "Rule", DIR: "./internal/core" }
       - task: mock
-        vars: { NAME: "Console", DIR: "./internal/core" }
+        vars: { NAME: "Console", DIR: "./internal/adapters/console" }
       - task: mock
         vars: { NAME: "CurrentProjectGitWalker", DIR: "./internal/core" }
-      - task: mock
-        vars: { NAME: "Storage", DIR: "./internal/core" }
-      - task: mock
-        vars: { NAME: "ModuleConfig", DIR: "./internal/core" }
-      - task: mock
-        vars: { NAME: "LockFile", DIR: "./internal/core" }
-
-  docker_base:
-    preconditions:
-      - test -f Docker/base/Dockerfile
-    cmds:
-      - docker build -f Docker/base/Dockerfile -t easyp/base:latest .
-      - docker tag easyp/base:latest easyp/base:{{.GIT_TAG}}
-
-  docker_lint:
-    preconditions:
-      - test -f Docker/lint/Dockerfile
-    cmds:
-      - docker build -f Docker/lint/Dockerfile --build-arg="EASYP_BASE_VERSION=latest" -t easyp/lint:latest .
-      - docker tag easyp/lint:latest easyp/lint:{{.GIT_TAG}}
-
-  docker_push:
-    cmds:
-      - docker push easyp/base:latest
-      - docker push easyp/base:{{.GIT_TAG}}
-      - docker push easyp/lint:latest
-      - docker push easyp/lint:{{.GIT_TAG}}
 
   docker:
-    vars:
-      GIT_TAG:
-        sh: "git describe --tags --abbrev=0"
+    desc: Build the current Docker image locally (alias for docker:build)
     cmds:
-      - task: docker_base
-        vars:
-          GIT_TAG: "{{.GIT_TAG}}"
-      - task: docker_lint
-        vars:
-          GIT_TAG: "{{.GIT_TAG}}"
-      - task: docker_push
-        vars:
-          GIT_TAG: "{{.GIT_TAG}}"
+      - task: docker:build
+
+  docker:build:
+    desc: Build root Dockerfile locally; override DOCKER_IMAGE to change the tag
+    preconditions:
+      - sh: 'command -v docker >/dev/null 2>&1'
+        msg: 'Docker is required; install Docker and start its daemon to run this task.'
+    cmds:
+      - 'docker build -f {{printf "%s/Dockerfile" .ROOT_DIR | shellQuote}} -t {{.DOCKER_IMAGE | shellQuote}} {{.ROOT_DIR | shellQuote}}'
+
+  dev-tools:check:
+    desc: Check developer task dispatch offline with isolated trace tools
+    cmds:
+      - sh scripts/check-dev-tools.sh
 
   goreleaser:check:
     desc: Check GoReleaser configuration syntax

@@ -3,8 +3,11 @@ package core
 import (
 	"context"
 	"fmt"
+	"go/parser"
+	"go/token"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 )
 
@@ -58,6 +61,25 @@ func (b *GenerateBucket) DumpToFs(_ context.Context) error {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
+	// Validate the complete generated Go layout before writing any file.
+	packages := make(map[string]string)
+	for path, file := range b.filesToWrite {
+		if !strings.HasSuffix(path, ".go") {
+			continue
+		}
+		parsed, err := parser.ParseFile(token.NewFileSet(), path, file.Data(), parser.PackageClauseOnly)
+		if err != nil {
+			return fmt.Errorf("invalid generated Go package in %s: %w", path, err)
+		}
+		key := filepath.Dir(path)
+		if strings.HasSuffix(path, "_test.go") && strings.HasSuffix(parsed.Name.Name, "_test") {
+			continue
+		}
+		if previous, ok := packages[key]; ok && previous != parsed.Name.Name {
+			return fmt.Errorf("conflicting Go packages %q and %q in %s; use distinct out directories and matching go_package import paths", previous, parsed.Name.Name, key)
+		}
+		packages[key] = parsed.Name.Name
+	}
 	// TODO: Есть возможность писать файлы асинхронно (MkdirAll до)
 	for path, file := range b.filesToWrite {
 		dir := filepath.Dir(path)
