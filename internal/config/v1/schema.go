@@ -109,6 +109,16 @@ func documents() map[string]*schema {
 		{Required: []string{"command"}},
 		{Required: []string{"remote"}},
 	}
+	plugin.AllOf = append(plugin.AllOf,
+		&schema{
+			If:   &schema{Required: []string{"remote"}},
+			Then: &schema{Required: []string{"version"}},
+		},
+		&schema{
+			If:   &schema{Not: &schema{Required: []string{"remote"}}},
+			Then: &schema{Not: &schema{Required: []string{"version"}}},
+		},
+	)
 	plugin.Properties["opts"] = &schema{OneOf: []*schema{
 		{Type: "array", Items: &schema{Type: "string"}},
 		{Type: "object", AdditionalProperties: &schema{OneOf: []*schema{

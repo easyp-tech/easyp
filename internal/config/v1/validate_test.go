@@ -285,7 +285,7 @@ func TestValidateFileReportsSemanticIssues(t *testing.T) {
 			name:            "unpinned remote plugin",
 			filename:        GenerateFile,
 			contents:        "plugins:\n  - remote: example.com/go\n    out: gen\n",
-			expectedMessage: "remote plugin requires a pinned semantic version",
+			expectedMessage: "required property \"version\" is missing",
 		},
 	}
 
@@ -301,7 +301,7 @@ func TestValidateFileReportsSemanticIssues(t *testing.T) {
 
 			require.NoError(t, err)
 			require.Len(t, issues, 1)
-			if tt.name == "invalid linter inheritance reference" {
+			if tt.name == "invalid linter inheritance reference" || tt.name == "unpinned remote plugin" {
 				assert.Equal(t, "yaml_validation", issues[0].Code)
 				assert.Positive(t, issues[0].Line)
 			} else {

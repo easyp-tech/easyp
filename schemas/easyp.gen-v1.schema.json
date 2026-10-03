@@ -759,6 +759,36 @@
             ]
           }
         ],
+        "allOf": [
+          {
+            "if": {
+              "required": [
+                "remote"
+              ]
+            },
+            "then": {
+              "required": [
+                "version"
+              ]
+            }
+          },
+          {
+            "if": {
+              "not": {
+                "required": [
+                  "remote"
+                ]
+              }
+            },
+            "then": {
+              "not": {
+                "required": [
+                  "version"
+                ]
+              }
+            }
+          }
+        ],
         "required": [
           "out"
         ]
