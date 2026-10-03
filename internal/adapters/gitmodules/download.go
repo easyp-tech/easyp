@@ -8,8 +8,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	"golang.org/x/mod/sumdb/dirhash"
-
 	moduleconfig "github.com/easyp-tech/easyp/internal/adapters/module_config"
 	v1 "github.com/easyp-tech/easyp/internal/config/v1"
 	disk "github.com/easyp-tech/easyp/internal/fs/fs"
@@ -79,12 +77,8 @@ func (c *Cache) installEntry(ctx context.Context, entry v1.LockedModule, acquire
 	if !info.IsDir() {
 		return fmt.Errorf("%s: cached path %q is not a directory; inspect this path and keep protobuf.lock unchanged", entry.Source, installed)
 	}
-	actual, err := dirhash.HashDir(installed, "", dirhash.Hash1)
-	if err != nil {
+	if err := verifyInstalledV1Module(installed, entry); err != nil {
 		return fmt.Errorf("verify cached %s at %q: %w", entry.Source, installed, err)
-	}
-	if actual != entry.Hash {
-		return fmt.Errorf("cached %s@%s hash mismatch: got %s, want %s; inspect or quarantine only cache directory %q, then rerun easyp mod download; keep protobuf.lock unchanged", entry.Source, entry.Commit, actual, entry.Hash, installed)
 	}
 	if err := moduleconfig.ValidateLegacyMajor(installed, entry.Source, entry.Version); err != nil {
 		return fmt.Errorf("ValidateLegacyMajor: %w", err)
