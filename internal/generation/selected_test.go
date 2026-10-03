@@ -2,6 +2,7 @@ package generation
 
 import (
 	"fmt"
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -200,4 +201,18 @@ func TestGenerateSelectedV1ModuleUsesGeneratorSiblingRequirements(t *testing.T) 
 			assert.Contains(t, descriptors, "dep/v1/dep.proto")
 		})
 	}
+}
+
+func TestSelectV1ModulesExplainsMissingLocalModule(t *testing.T) {
+	t.Parallel()
+
+	root := t.TempDir()
+	configDir := filepath.Join(root, "backend")
+	require.NoError(t, os.MkdirAll(configDir, 0o755))
+
+	_, err := selectV1Modules(root, configDir, []string{"."})
+
+	require.ErrorContains(t, err, "generate.modules entry \".\" is a local path")
+	require.ErrorContains(t, err, "protobuf.mod")
+	require.ErrorContains(t, err, "omit generate.modules")
 }
