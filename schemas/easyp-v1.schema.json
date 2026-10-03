@@ -1,0 +1,280 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "easyp.yaml v1",
+  "description": "Structural v1 YAML schema. EasyP CLI validation applies additional semantic checks.",
+  "type": "object",
+  "properties": {
+    "breaking": {
+      "type": "object",
+      "properties": {
+        "baseline": {
+          "type": "string",
+          "pattern": "^(git:.+)?$"
+        },
+        "categories": {
+          "description": "Selects FILE, PACKAGE, WIRE_JSON, and/or WIRE compatibility profiles. Multiple profiles apply their union; omitted or empty retains legacy checks.",
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "FILE",
+              "PACKAGE",
+              "WIRE_JSON",
+              "WIRE"
+            ]
+          }
+        },
+        "extends": {
+          "description": "Base policy for this section only, applied before local adjustments. Use ./ or ../ for a policy file or directory relative to this file, or a module identity already declared in protobuf.mod and locked in protobuf.lock, optionally with #\u003cpolicy-file-or-directory\u003e. A module reference without # loads that module's easyp.yaml. Versions are not repeated here and no new module or revision is acquired. Remote policies are read from the verified module contents of the consuming module; a base's own relative references stay inside its module. Only the referenced section and linters-settings are inherited: issues.exclude-rules, generation settings and the other section are not. Base breaking.ignore paths and the baseline are applied at this file's location, not in the module cache.",
+          "type": "string",
+          "pattern": "^(|\\.\\.?|\\.\\.?/[^\\r\\n\\\\@]+|[^\\s@#]+/[^\\s@#]*(#[^\\s@#]*)?)$"
+        },
+        "ignore": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "ignore_unstable": {
+          "description": "Ignore declarations in packages with unstable version suffixes; stable package checks remain enabled.",
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false
+    },
+    "issues": {
+      "type": "object",
+      "properties": {
+        "exclude-rules": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "linters": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "enum": [
+                    "MINIMAL",
+                    "BASIC",
+                    "DEFAULT",
+                    "COMMENTS",
+                    "UNARY_RPC",
+                    "DIRECTORY_SAME_PACKAGE",
+                    "PACKAGE_DEFINED",
+                    "PACKAGE_DIRECTORY_MATCH",
+                    "PACKAGE_SAME_DIRECTORY",
+                    "ENUM_FIRST_VALUE_ZERO",
+                    "ENUM_NO_ALLOW_ALIAS",
+                    "ENUM_PASCAL_CASE",
+                    "ENUM_VALUE_UPPER_SNAKE_CASE",
+                    "FIELD_LOWER_SNAKE_CASE",
+                    "IMPORT_NO_PUBLIC",
+                    "IMPORT_NO_WEAK",
+                    "IMPORT_USED",
+                    "MESSAGE_PASCAL_CASE",
+                    "ONEOF_LOWER_SNAKE_CASE",
+                    "PACKAGE_LOWER_SNAKE_CASE",
+                    "PACKAGE_SAME_CSHARP_NAMESPACE",
+                    "PACKAGE_SAME_GO_PACKAGE",
+                    "PACKAGE_SAME_JAVA_MULTIPLE_FILES",
+                    "PACKAGE_SAME_JAVA_PACKAGE",
+                    "PACKAGE_SAME_PHP_NAMESPACE",
+                    "PACKAGE_SAME_RUBY_PACKAGE",
+                    "PACKAGE_SAME_SWIFT_PREFIX",
+                    "RPC_PASCAL_CASE",
+                    "SERVICE_PASCAL_CASE",
+                    "ENUM_VALUE_PREFIX",
+                    "ENUM_ZERO_VALUE_SUFFIX",
+                    "FILE_LOWER_SNAKE_CASE",
+                    "RPC_REQUEST_RESPONSE_UNIQUE",
+                    "RPC_REQUEST_STANDARD_NAME",
+                    "RPC_RESPONSE_STANDARD_NAME",
+                    "PACKAGE_VERSION_SUFFIX",
+                    "SERVICE_SUFFIX",
+                    "COMMENT_ENUM",
+                    "COMMENT_ENUM_VALUE",
+                    "COMMENT_FIELD",
+                    "COMMENT_MESSAGE",
+                    "COMMENT_ONEOF",
+                    "COMMENT_RPC",
+                    "COMMENT_SERVICE",
+                    "RPC_NO_CLIENT_STREAMING",
+                    "RPC_NO_SERVER_STREAMING"
+                  ]
+                }
+              },
+              "path": {
+                "description": "Relative to the policy providing this issues section. Supports *, ?, character classes and ** directory segments; a literal directory includes its subtree.",
+                "type": "string"
+              }
+            },
+            "additionalProperties": false
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "linters": {
+      "type": "object",
+      "properties": {
+        "allow_comment_ignores": {
+          "description": "Enable scoped easyp:disable, nolint and buf:lint:ignore comments; defaults to true. State is local to each effective lint policy.",
+          "type": "boolean"
+        },
+        "default": {
+          "type": "string",
+          "enum": [
+            "MINIMAL",
+            "BASIC",
+            "STANDARD",
+            "COMMENTS"
+          ]
+        },
+        "disable": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "MINIMAL",
+              "BASIC",
+              "DEFAULT",
+              "COMMENTS",
+              "UNARY_RPC",
+              "DIRECTORY_SAME_PACKAGE",
+              "PACKAGE_DEFINED",
+              "PACKAGE_DIRECTORY_MATCH",
+              "PACKAGE_SAME_DIRECTORY",
+              "ENUM_FIRST_VALUE_ZERO",
+              "ENUM_NO_ALLOW_ALIAS",
+              "ENUM_PASCAL_CASE",
+              "ENUM_VALUE_UPPER_SNAKE_CASE",
+              "FIELD_LOWER_SNAKE_CASE",
+              "IMPORT_NO_PUBLIC",
+              "IMPORT_NO_WEAK",
+              "IMPORT_USED",
+              "MESSAGE_PASCAL_CASE",
+              "ONEOF_LOWER_SNAKE_CASE",
+              "PACKAGE_LOWER_SNAKE_CASE",
+              "PACKAGE_SAME_CSHARP_NAMESPACE",
+              "PACKAGE_SAME_GO_PACKAGE",
+              "PACKAGE_SAME_JAVA_MULTIPLE_FILES",
+              "PACKAGE_SAME_JAVA_PACKAGE",
+              "PACKAGE_SAME_PHP_NAMESPACE",
+              "PACKAGE_SAME_RUBY_PACKAGE",
+              "PACKAGE_SAME_SWIFT_PREFIX",
+              "RPC_PASCAL_CASE",
+              "SERVICE_PASCAL_CASE",
+              "ENUM_VALUE_PREFIX",
+              "ENUM_ZERO_VALUE_SUFFIX",
+              "FILE_LOWER_SNAKE_CASE",
+              "RPC_REQUEST_RESPONSE_UNIQUE",
+              "RPC_REQUEST_STANDARD_NAME",
+              "RPC_RESPONSE_STANDARD_NAME",
+              "PACKAGE_VERSION_SUFFIX",
+              "SERVICE_SUFFIX",
+              "COMMENT_ENUM",
+              "COMMENT_ENUM_VALUE",
+              "COMMENT_FIELD",
+              "COMMENT_MESSAGE",
+              "COMMENT_ONEOF",
+              "COMMENT_RPC",
+              "COMMENT_SERVICE",
+              "RPC_NO_CLIENT_STREAMING",
+              "RPC_NO_SERVER_STREAMING"
+            ]
+          }
+        },
+        "enable": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "MINIMAL",
+              "BASIC",
+              "DEFAULT",
+              "COMMENTS",
+              "UNARY_RPC",
+              "DIRECTORY_SAME_PACKAGE",
+              "PACKAGE_DEFINED",
+              "PACKAGE_DIRECTORY_MATCH",
+              "PACKAGE_SAME_DIRECTORY",
+              "ENUM_FIRST_VALUE_ZERO",
+              "ENUM_NO_ALLOW_ALIAS",
+              "ENUM_PASCAL_CASE",
+              "ENUM_VALUE_UPPER_SNAKE_CASE",
+              "FIELD_LOWER_SNAKE_CASE",
+              "IMPORT_NO_PUBLIC",
+              "IMPORT_NO_WEAK",
+              "IMPORT_USED",
+              "MESSAGE_PASCAL_CASE",
+              "ONEOF_LOWER_SNAKE_CASE",
+              "PACKAGE_LOWER_SNAKE_CASE",
+              "PACKAGE_SAME_CSHARP_NAMESPACE",
+              "PACKAGE_SAME_GO_PACKAGE",
+              "PACKAGE_SAME_JAVA_MULTIPLE_FILES",
+              "PACKAGE_SAME_JAVA_PACKAGE",
+              "PACKAGE_SAME_PHP_NAMESPACE",
+              "PACKAGE_SAME_RUBY_PACKAGE",
+              "PACKAGE_SAME_SWIFT_PREFIX",
+              "RPC_PASCAL_CASE",
+              "SERVICE_PASCAL_CASE",
+              "ENUM_VALUE_PREFIX",
+              "ENUM_ZERO_VALUE_SUFFIX",
+              "FILE_LOWER_SNAKE_CASE",
+              "RPC_REQUEST_RESPONSE_UNIQUE",
+              "RPC_REQUEST_STANDARD_NAME",
+              "RPC_RESPONSE_STANDARD_NAME",
+              "PACKAGE_VERSION_SUFFIX",
+              "SERVICE_SUFFIX",
+              "COMMENT_ENUM",
+              "COMMENT_ENUM_VALUE",
+              "COMMENT_FIELD",
+              "COMMENT_MESSAGE",
+              "COMMENT_ONEOF",
+              "COMMENT_RPC",
+              "COMMENT_SERVICE",
+              "RPC_NO_CLIENT_STREAMING",
+              "RPC_NO_SERVER_STREAMING"
+            ]
+          }
+        },
+        "extends": {
+          "description": "Base policy for this section only, applied before local adjustments. Use ./ or ../ for a policy file or directory relative to this file, or a module identity already declared in protobuf.mod and locked in protobuf.lock, optionally with #\u003cpolicy-file-or-directory\u003e. A module reference without # loads that module's easyp.yaml. Versions are not repeated here and no new module or revision is acquired. Remote policies are read from the verified module contents of the consuming module; a base's own relative references stay inside its module. Only the referenced section and linters-settings are inherited: issues.exclude-rules, generation settings and the other section are not. Base breaking.ignore paths and the baseline are applied at this file's location, not in the module cache.",
+          "type": "string",
+          "pattern": "^(|\\.\\.?|\\.\\.?/[^\\r\\n\\\\@]+|[^\\s@#]+/[^\\s@#]*(#[^\\s@#]*)?)$"
+        }
+      },
+      "additionalProperties": false
+    },
+    "linters-settings": {
+      "type": "object",
+      "properties": {
+        "ENUM_ZERO_VALUE_SUFFIX": {
+          "type": "object",
+          "properties": {
+            "suffix": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        },
+        "SERVICE_SUFFIX": {
+          "type": "object",
+          "properties": {
+            "suffix": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "version": {
+      "type": "string",
+      "const": "v1"
+    }
+  },
+  "additionalProperties": false
+}

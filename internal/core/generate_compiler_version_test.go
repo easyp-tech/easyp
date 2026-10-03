@@ -2,39 +2,18 @@ package core
 
 import (
 	"context"
-	"errors"
-	"iter"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
 
-	"github.com/easyp-tech/easyp/internal/adapters/console"
-	pluginexecutor "github.com/easyp-tech/easyp/internal/adapters/plugin"
-	"github.com/easyp-tech/easyp/internal/core/models"
-	"github.com/easyp-tech/easyp/internal/logger"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/pluginpb"
+
+	pluginexecutor "github.com/easyp-tech/easyp/internal/adapters/plugin"
+	"github.com/easyp-tech/easyp/internal/logger"
 )
-
-type emptyLockFile struct{}
-
-func (emptyLockFile) Read(moduleName string) (models.LockFileInfo, error) {
-	return models.LockFileInfo{}, errors.New("lock file info not found")
-}
-
-func (emptyLockFile) Write(moduleName string, revisionVersion string, installedPackageHash models.ModuleHash) error {
-	return nil
-}
-
-func (emptyLockFile) IsEmpty() bool {
-	return true
-}
-
-func (emptyLockFile) DepsIter() iter.Seq[models.LockFileInfo] {
-	return func(yield func(models.LockFileInfo) bool) {}
-}
 
 type captureExecutor struct {
 	requests []*pluginpb.CodeGeneratorRequest
@@ -66,7 +45,7 @@ func TestGenerateSetsCompilerVersionInRequest(t *testing.T) {
 		executor,
 	)
 
-	if err := app.Generate(context.Background(), root, ".", "", false); err != nil {
+	if err := app.Generate(context.Background(), root, "", false); err != nil {
 		t.Fatalf("Generate() error = %v", err)
 	}
 
@@ -121,10 +100,10 @@ func TestGenerateGoHeaderUsesCompilerVersion(t *testing.T) {
 		})
 	}
 
-	localExecutor := pluginexecutor.NewLocalPluginExecutor(console.New(), logger.NewNop())
+	localExecutor := pluginexecutor.NewLocalPluginExecutor(logger.NewNop())
 	app := testCoreWithPlugins(plugins, localExecutor)
 
-	if err := app.Generate(context.Background(), root, ".", "", false); err != nil {
+	if err := app.Generate(context.Background(), root, "", false); err != nil {
 		t.Fatalf("Generate() error = %v", err)
 	}
 
@@ -164,7 +143,6 @@ func testCoreWithPlugins(plugins []Plugin, localExecutor pluginexecutor.Executor
 				},
 			},
 		},
-		lockFile:        emptyLockFile{},
 		localExecutor:   localExecutor,
 		remoteExecutor:  localExecutor,
 		builtinExecutor: localExecutor,

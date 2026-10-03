@@ -41,8 +41,8 @@ func (powershell) RunCmdWithStdin(ctx context.Context, dir string, stdin io.Read
 	var stderr bytes.Buffer
 	var stdout bytes.Buffer
 
-	fullCommand := append([]string{command}, commandParams...)
-	cmd := exec.CommandContext(ctx, "powershell", "-NoProfile", "-NonInteractive", "-Command", strings.Join(fullCommand, " "))
+	// A command is an executable plus argv, not an implicit shell script.
+	cmd := exec.CommandContext(ctx, command, commandParams...)
 	cmd.Dir = dir
 	cmd.Stdin = stdin
 	cmd.Stderr = &stderr

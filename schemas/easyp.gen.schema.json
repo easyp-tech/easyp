@@ -1,0 +1,773 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "easyp.gen.yaml v1",
+  "description": "Structural v1 YAML schema. EasyP CLI validation applies additional semantic checks.",
+  "type": "object",
+  "properties": {
+    "generate": {
+      "type": "object",
+      "properties": {
+        "managed": {
+          "type": "object",
+          "properties": {
+            "disable": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "field": {
+                    "type": "string"
+                  },
+                  "field_option": {
+                    "type": "string",
+                    "enum": [
+                      "jstype"
+                    ]
+                  },
+                  "file_option": {
+                    "type": "string",
+                    "enum": [
+                      "go_package",
+                      "go_package_prefix",
+                      "java_package",
+                      "java_package_prefix",
+                      "java_package_suffix",
+                      "java_multiple_files",
+                      "java_outer_classname",
+                      "java_string_check_utf8",
+                      "csharp_namespace",
+                      "csharp_namespace_prefix",
+                      "ruby_package",
+                      "ruby_package_suffix",
+                      "php_namespace",
+                      "php_metadata_namespace",
+                      "php_metadata_namespace_suffix",
+                      "objc_class_prefix",
+                      "swift_prefix",
+                      "optimize_for",
+                      "cc_enable_arenas"
+                    ]
+                  },
+                  "module": {
+                    "type": "string"
+                  },
+                  "package": {
+                    "type": "string"
+                  },
+                  "path": {
+                    "type": "string"
+                  }
+                },
+                "additionalProperties": false,
+                "anyOf": [
+                  {
+                    "properties": {
+                      "module": {
+                        "minLength": 1
+                      }
+                    },
+                    "required": [
+                      "module"
+                    ]
+                  },
+                  {
+                    "properties": {
+                      "package": {
+                        "minLength": 1
+                      }
+                    },
+                    "required": [
+                      "package"
+                    ]
+                  },
+                  {
+                    "properties": {
+                      "path": {
+                        "minLength": 1
+                      }
+                    },
+                    "required": [
+                      "path"
+                    ]
+                  },
+                  {
+                    "properties": {
+                      "file_option": {
+                        "minLength": 1
+                      }
+                    },
+                    "required": [
+                      "file_option"
+                    ]
+                  },
+                  {
+                    "properties": {
+                      "field_option": {
+                        "minLength": 1
+                      }
+                    },
+                    "required": [
+                      "field_option"
+                    ]
+                  },
+                  {
+                    "properties": {
+                      "field": {
+                        "minLength": 1
+                      }
+                    },
+                    "required": [
+                      "field"
+                    ]
+                  }
+                ],
+                "allOf": [
+                  {
+                    "if": {
+                      "properties": {
+                        "field": {
+                          "minLength": 1
+                        }
+                      },
+                      "required": [
+                        "field"
+                      ]
+                    },
+                    "then": {
+                      "required": [
+                        "field_option"
+                      ]
+                    }
+                  }
+                ],
+                "not": {
+                  "required": [
+                    "file_option",
+                    "field_option"
+                  ]
+                }
+              }
+            },
+            "enabled": {
+              "type": "boolean"
+            },
+            "override": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "field": {
+                    "type": "string"
+                  },
+                  "field_option": {
+                    "type": "string",
+                    "enum": [
+                      "jstype"
+                    ]
+                  },
+                  "file_option": {
+                    "type": "string",
+                    "enum": [
+                      "go_package",
+                      "go_package_prefix",
+                      "java_package",
+                      "java_package_prefix",
+                      "java_package_suffix",
+                      "java_multiple_files",
+                      "java_outer_classname",
+                      "java_string_check_utf8",
+                      "csharp_namespace",
+                      "csharp_namespace_prefix",
+                      "ruby_package",
+                      "ruby_package_suffix",
+                      "php_namespace",
+                      "php_metadata_namespace",
+                      "php_metadata_namespace_suffix",
+                      "objc_class_prefix",
+                      "swift_prefix",
+                      "optimize_for",
+                      "cc_enable_arenas"
+                    ]
+                  },
+                  "module": {
+                    "type": "string"
+                  },
+                  "package": {
+                    "type": "string"
+                  },
+                  "path": {
+                    "type": "string"
+                  },
+                  "value": {}
+                },
+                "additionalProperties": false,
+                "oneOf": [
+                  {
+                    "required": [
+                      "file_option"
+                    ]
+                  },
+                  {
+                    "required": [
+                      "field_option"
+                    ]
+                  }
+                ],
+                "allOf": [
+                  {
+                    "if": {
+                      "properties": {
+                        "field": {
+                          "minLength": 1
+                        }
+                      },
+                      "required": [
+                        "field"
+                      ]
+                    },
+                    "then": {
+                      "required": [
+                        "field_option"
+                      ]
+                    }
+                  },
+                  {
+                    "if": {
+                      "properties": {
+                        "file_option": {
+                          "const": "go_package"
+                        }
+                      },
+                      "required": [
+                        "file_option"
+                      ]
+                    },
+                    "then": {
+                      "properties": {
+                        "value": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  },
+                  {
+                    "if": {
+                      "properties": {
+                        "file_option": {
+                          "const": "go_package_prefix"
+                        }
+                      },
+                      "required": [
+                        "file_option"
+                      ]
+                    },
+                    "then": {
+                      "properties": {
+                        "value": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  },
+                  {
+                    "if": {
+                      "properties": {
+                        "file_option": {
+                          "const": "java_package"
+                        }
+                      },
+                      "required": [
+                        "file_option"
+                      ]
+                    },
+                    "then": {
+                      "properties": {
+                        "value": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  },
+                  {
+                    "if": {
+                      "properties": {
+                        "file_option": {
+                          "const": "java_package_prefix"
+                        }
+                      },
+                      "required": [
+                        "file_option"
+                      ]
+                    },
+                    "then": {
+                      "properties": {
+                        "value": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  },
+                  {
+                    "if": {
+                      "properties": {
+                        "file_option": {
+                          "const": "java_package_suffix"
+                        }
+                      },
+                      "required": [
+                        "file_option"
+                      ]
+                    },
+                    "then": {
+                      "properties": {
+                        "value": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  },
+                  {
+                    "if": {
+                      "properties": {
+                        "file_option": {
+                          "const": "java_multiple_files"
+                        }
+                      },
+                      "required": [
+                        "file_option"
+                      ]
+                    },
+                    "then": {
+                      "properties": {
+                        "value": {
+                          "type": "boolean"
+                        }
+                      }
+                    }
+                  },
+                  {
+                    "if": {
+                      "properties": {
+                        "file_option": {
+                          "const": "java_outer_classname"
+                        }
+                      },
+                      "required": [
+                        "file_option"
+                      ]
+                    },
+                    "then": {
+                      "properties": {
+                        "value": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  },
+                  {
+                    "if": {
+                      "properties": {
+                        "file_option": {
+                          "const": "java_string_check_utf8"
+                        }
+                      },
+                      "required": [
+                        "file_option"
+                      ]
+                    },
+                    "then": {
+                      "properties": {
+                        "value": {
+                          "type": "boolean"
+                        }
+                      }
+                    }
+                  },
+                  {
+                    "if": {
+                      "properties": {
+                        "file_option": {
+                          "const": "csharp_namespace"
+                        }
+                      },
+                      "required": [
+                        "file_option"
+                      ]
+                    },
+                    "then": {
+                      "properties": {
+                        "value": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  },
+                  {
+                    "if": {
+                      "properties": {
+                        "file_option": {
+                          "const": "csharp_namespace_prefix"
+                        }
+                      },
+                      "required": [
+                        "file_option"
+                      ]
+                    },
+                    "then": {
+                      "properties": {
+                        "value": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  },
+                  {
+                    "if": {
+                      "properties": {
+                        "file_option": {
+                          "const": "ruby_package"
+                        }
+                      },
+                      "required": [
+                        "file_option"
+                      ]
+                    },
+                    "then": {
+                      "properties": {
+                        "value": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  },
+                  {
+                    "if": {
+                      "properties": {
+                        "file_option": {
+                          "const": "ruby_package_suffix"
+                        }
+                      },
+                      "required": [
+                        "file_option"
+                      ]
+                    },
+                    "then": {
+                      "properties": {
+                        "value": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  },
+                  {
+                    "if": {
+                      "properties": {
+                        "file_option": {
+                          "const": "php_namespace"
+                        }
+                      },
+                      "required": [
+                        "file_option"
+                      ]
+                    },
+                    "then": {
+                      "properties": {
+                        "value": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  },
+                  {
+                    "if": {
+                      "properties": {
+                        "file_option": {
+                          "const": "php_metadata_namespace"
+                        }
+                      },
+                      "required": [
+                        "file_option"
+                      ]
+                    },
+                    "then": {
+                      "properties": {
+                        "value": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  },
+                  {
+                    "if": {
+                      "properties": {
+                        "file_option": {
+                          "const": "php_metadata_namespace_suffix"
+                        }
+                      },
+                      "required": [
+                        "file_option"
+                      ]
+                    },
+                    "then": {
+                      "properties": {
+                        "value": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  },
+                  {
+                    "if": {
+                      "properties": {
+                        "file_option": {
+                          "const": "objc_class_prefix"
+                        }
+                      },
+                      "required": [
+                        "file_option"
+                      ]
+                    },
+                    "then": {
+                      "properties": {
+                        "value": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  },
+                  {
+                    "if": {
+                      "properties": {
+                        "file_option": {
+                          "const": "swift_prefix"
+                        }
+                      },
+                      "required": [
+                        "file_option"
+                      ]
+                    },
+                    "then": {
+                      "properties": {
+                        "value": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  },
+                  {
+                    "if": {
+                      "properties": {
+                        "file_option": {
+                          "const": "optimize_for"
+                        }
+                      },
+                      "required": [
+                        "file_option"
+                      ]
+                    },
+                    "then": {
+                      "properties": {
+                        "value": {
+                          "type": "string",
+                          "enum": [
+                            "SPEED",
+                            "CODE_SIZE",
+                            "LITE_RUNTIME"
+                          ]
+                        }
+                      }
+                    }
+                  },
+                  {
+                    "if": {
+                      "properties": {
+                        "file_option": {
+                          "const": "cc_enable_arenas"
+                        }
+                      },
+                      "required": [
+                        "file_option"
+                      ]
+                    },
+                    "then": {
+                      "properties": {
+                        "value": {
+                          "type": "boolean"
+                        }
+                      }
+                    }
+                  },
+                  {
+                    "if": {
+                      "properties": {
+                        "field_option": {
+                          "const": "jstype"
+                        }
+                      },
+                      "required": [
+                        "field_option"
+                      ]
+                    },
+                    "then": {
+                      "properties": {
+                        "value": {
+                          "type": "string",
+                          "enum": [
+                            "JS_NORMAL",
+                            "JS_STRING",
+                            "JS_NUMBER"
+                          ]
+                        }
+                      }
+                    }
+                  }
+                ],
+                "required": [
+                  "value"
+                ]
+              }
+            }
+          },
+          "additionalProperties": false
+        },
+        "modules": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "packages": {
+          "description": "Exact protobuf packages among selected modules. Empty means all source files. Imports remain available for compilation; with_imports separately controls dependency generation.",
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^[A-Za-z_][A-Za-z0-9_]*(\\.[A-Za-z_][A-Za-z0-9_]*)*$"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "options": {
+      "type": "object",
+      "properties": {
+        "go": {
+          "type": "object",
+          "properties": {
+            "package_prefix": {
+              "description": "Sets go_package without enabling managed defaults for other languages; full managed mode requires generate.managed.enabled.",
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "plugins": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "command": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "name": {
+            "type": "string"
+          },
+          "opts": {
+            "oneOf": [
+              {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              {
+                "type": "object",
+                "additionalProperties": {
+                  "oneOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "boolean"
+                    },
+                    {
+                      "type": "array",
+                      "items": {
+                        "oneOf": [
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "type": "number"
+                          },
+                          {
+                            "type": "boolean"
+                          }
+                        ]
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          "out": {
+            "type": "string"
+          },
+          "path": {
+            "type": "string"
+          },
+          "remote": {
+            "type": "string"
+          },
+          "version": {
+            "type": "string"
+          },
+          "with_imports": {
+            "description": "Generate code for transitive imports with this plugin only; defaults to false. Independent from descriptor --include_imports.",
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false,
+        "oneOf": [
+          {
+            "required": [
+              "name"
+            ]
+          },
+          {
+            "required": [
+              "path"
+            ]
+          },
+          {
+            "required": [
+              "command"
+            ]
+          },
+          {
+            "required": [
+              "remote"
+            ]
+          }
+        ],
+        "required": [
+          "out"
+        ]
+      }
+    },
+    "version": {
+      "type": "string",
+      "const": "v1"
+    }
+  },
+  "additionalProperties": false
+}

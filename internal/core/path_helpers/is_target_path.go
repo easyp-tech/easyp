@@ -1,9 +1,7 @@
 package path_helpers
 
 import (
-	"os"
 	"path/filepath"
-	"strings"
 )
 
 // IsTargetPath check if passed filePath is target
@@ -21,14 +19,12 @@ func IsTargetPath(targetPath, filePath string) bool {
 }
 
 func IsIgnoredPath(path string, ignore []string) bool {
-	up := ".." + string(os.PathSeparator)
-
 	for _, ignorePath := range ignore {
 		rel, err := filepath.Rel(ignorePath, path)
 		if err != nil {
 			continue
 		}
-		if strings.HasPrefix(rel, up) && rel != ".." {
+		if !filepath.IsLocal(rel) {
 			continue
 		}
 		return true

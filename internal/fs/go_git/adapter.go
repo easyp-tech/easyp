@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"path"
 	"path/filepath"
 	"strings"
@@ -28,11 +29,17 @@ func (a *GitTreeDiskAdapter) Open(name string) (io.ReadCloser, error) {
 		if err == nil {
 			return gitFile.Reader()
 		}
+		if !errors.Is(err, object.ErrFileNotFound) {
+			return nil, err
+		}
 	}
 
 	// Fall back to unrooted lookup (e.g., caller already passed a fully-qualified path)
 	gitFile, err := a.File(name)
 	if err != nil {
+		if errors.Is(err, object.ErrFileNotFound) {
+			return nil, &fs.PathError{Op: "open", Path: name, Err: fs.ErrNotExist}
+		}
 		return nil, err
 	}
 

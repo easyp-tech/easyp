@@ -1,13 +1,9 @@
 package config
 
 import (
-	"context"
 	"errors"
 	"fmt"
-	"io"
-	"os"
 
-	"github.com/a8m/envsubst"
 	"gopkg.in/yaml.v3"
 )
 
@@ -143,19 +139,6 @@ type Generate struct {
 // Input source for generating code.
 type Input struct {
 	InputFilesDir InputFilesDir `yaml:"directory"`
-	GitRepo       InputGitRepo  `yaml:"git_repo"`
-}
-
-// InputGitRepo is the configuration of the git repository.
-type InputGitRepo struct {
-	URL          string `yaml:"url"`
-	SubDirectory string `yaml:"sub_directory"`
-	Root         string `yaml:"root"`
-}
-
-// InputDirectory is the configuration of the directory.
-type InputDirectory struct {
-	Path string `yaml:"path"`
 }
 
 // InputFilesDir is the configuration of the directory with additional functionality.
@@ -174,56 +157,6 @@ type Config struct {
 
 	// BreakingCheck `breaking` command's configuration
 	BreakingCheck BreakingCheck `json:"breaking,omitempty" yaml:"breaking,omitempty"`
-}
-
-var errFileNotFound = errors.New("config file not found")
-
-// New creates a new configuration from the file.
-func New(_ context.Context, filepath string) (*Config, error) {
-	cfgFile, err := os.Open(filepath)
-	if err != nil {
-		if os.IsNotExist(err) {
-			return nil, errFileNotFound
-		}
-
-		return nil, fmt.Errorf("os.Open: %w", err)
-	}
-
-	defer func() {
-		_ = cfgFile.Close()
-	}()
-
-	buf, err := io.ReadAll(cfgFile)
-	if err != nil {
-		return nil, fmt.Errorf("io.ReadAll: %w", err)
-	}
-
-	return ParseConfig(buf)
-}
-
-// ParseConfig parses configuration from bytes with environment variable expansion.
-// Supports escaping via $$ (e.g., $$var becomes $var, $${VAR} becomes ${VAR})
-// This is the unified function for parsing easyp.yaml used throughout the codebase.
-func ParseConfig(buf []byte) (*Config, error) {
-	// Expand environment variables in the config file
-	expanded, err := envsubst.String(string(buf))
-	if err != nil {
-		return nil, fmt.Errorf("envsubst.String: %w", err)
-	}
-	buf = []byte(expanded)
-
-	cfg := &Config{}
-	err = yaml.Unmarshal(buf, &cfg)
-	if err != nil {
-		return nil, fmt.Errorf("yaml.Unmarshal: %w", err)
-	}
-
-	err = cfg.Validate()
-	if err != nil {
-		return nil, fmt.Errorf("config validation: %w", err)
-	}
-
-	return cfg, nil
 }
 
 func (d *InputFilesDir) UnmarshalYAML(value *yaml.Node) error {
@@ -250,46 +183,6 @@ func (d *InputFilesDir) UnmarshalYAML(value *yaml.Node) error {
 	default:
 		return fmt.Errorf("unsupported type for directory: %v", value.Kind)
 	}
-	return nil
-}
-
-// Validate validates the configuration.
-func (c *Config) Validate() error {
-	if c == nil {
-		return errors.New("config is nil")
-	}
-
-	// Validate plugins
-	for _, plugin := range c.Generate.Plugins {
-		// Only one source allowed.
-		var sourceCount int
-		if plugin.Name != "" {
-			sourceCount++
-		}
-		if plugin.Remote != "" {
-			sourceCount++
-		}
-		if plugin.Path != "" {
-			sourceCount++
-		}
-		if len(plugin.Command) > 0 {
-			sourceCount++
-		}
-
-		if sourceCount > 1 {
-			return fmt.Errorf("plugin has multiple sources (name, remote, path, or command)")
-		}
-
-		if sourceCount == 0 {
-			return fmt.Errorf("plugin must have one source: name, remote, path, or command")
-		}
-	}
-
-	// Validate managed mode
-	if err := c.Generate.Managed.Validate(); err != nil {
-		return fmt.Errorf("managed mode validation: %w", err)
-	}
-
 	return nil
 }
 

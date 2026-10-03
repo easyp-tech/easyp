@@ -1,4 +1,4 @@
-<!-- generated: 2026-07-27, template: deployment.md -->
+<!-- generated: 2026-09-30, template: deployment.md -->
 # Deployment
 
 ## Overview
@@ -7,16 +7,16 @@ EasyP is a Go command-line toolkit distributed through release automation and
 documented installation channels, rather than deployed as a long-running web
 service.
 
-```text
+~~~text
 pull request / push to main
   → GitHub Actions tests
   → release tag vX.Y.Z
-  → GitHub Actions release + documentation build
+  → GitHub Actions release
   → published release artifacts and container images
-```
+~~~
 
 The release workflow accepts stable semantic-version tags in the form
-`v<major>.<minor>.<patch>` only. Pre-release suffixes are explicitly rejected.
+<code>v&lt;major&gt;.&lt;minor&gt;.&lt;patch&gt;</code> only. Pre-release suffixes are explicitly rejected.
 
 ## Environments
 
@@ -25,86 +25,87 @@ The release workflow accepts stable semantic-version tags in the form
 | Local CLI | N/A | Build, test, and install the command-line tool | Local checkout | N/A |
 | Staging | N/A | No staging deployment is configured | N/A | N/A |
 | Production service | N/A | No long-running production service is configured | N/A | N/A |
-| Release distribution | GitHub Releases, Homebrew, Docker, npm | Install EasyP artifacts | `vX.Y.Z` tag | Yes |
+| Release distribution | GitHub Releases, Homebrew, Docker, npm | Install EasyP artifacts | <code>vX.Y.Z</code> tag | Yes |
 
-The repository README documents Homebrew installation, `go install`, Docker
+The repository README documents Homebrew installation, <code>go install</code>, Docker
 image use, npm installation, and binary installation from GitHub Releases.
 It does not define a service host, a staging URL, or runtime environment
 configuration.
 
 ## Docker
 
-The checked-in `Taskfile.yml` includes container targets for `easyp/base` and
-`easyp/lint`:
+The checked-in <code>Taskfile.yml</code> builds the current root <code>Dockerfile</code> locally:
 
-```sh
-task docker_base
-task docker_lint
-task docker_push
+~~~sh
 task docker
-```
+task docker:build DOCKER_IMAGE=easyp:local
+~~~
 
-`task docker` obtains `GIT_TAG` from the latest Git tag, builds both images,
-tags them as `latest` and with that tag, then pushes them.
+<code>task docker</code> aliases <code>task docker:build</code>. Both build locally with an
+overridable <code>DOCKER_IMAGE</code> tag, defaulting to <code>easyp:local</code>, and never push.
+The obsolete <code>docker_base</code>, <code>docker_lint</code> and <code>docker_push</code> targets
+have been removed. Image publishing remains in the existing release workflow.
+<code>task lint:docker</code> checks root <code>Dockerfile</code> with the pinned Hadolint image.
 
-The Taskfile expects Dockerfiles at `Docker/base/Dockerfile` and
-`Docker/lint/Dockerfile`. Those paths are not present in this checkout, so
-their base images, build stages, build arguments beyond
-`EASYP_BASE_VERSION=latest`, exposed ports, entrypoints, and image-size
-optimizations cannot be documented from the allowed source files.
+The existing root <code>Dockerfile</code> builds with <code>golang:1.26-alpine</code>,
+<code>CGO_ENABLED=0</code>, <code>-trimpath</code>, and target OS/architecture build arguments. It
+packages <code>/easyp</code> into <code>alpine:3.22</code> with CA certificates, timezone data, Git
+and Bash, and uses <code>/easyp</code> as its entrypoint. It declares no listening port.
 
 No Docker Compose configuration is present. Service definitions, volume
 mounts, and network configuration are therefore N/A.
 
 ## CI/CD Pipeline
 
-### `.github/workflows/tests.yml`
+### <code>.github/workflows/tests.yml</code>
 
-- **Trigger:** pushes to `main` and pull requests targeting any branch.
-- **Runner:** `ubuntu-latest`.
-- **Steps:** check out the repository; install Go 1.24; install Task 3.x;
-  run `task init`; run `task test`.
-- **Secrets required:** `GITHUB_TOKEN`, supplied to the Task setup action.
+- **Trigger:** pushes to <code>main</code> and pull requests targeting any branch.
+- **Runner:** <code>ubuntu-latest</code>.
+- **Steps:** check out the repository; install Go from <code>go.mod</code> (1.26.6); install Task 3.x;
+  run <code>task init</code>, <code>task test</code>, then <code>task proto:check</code>.
+- **Secrets required:** <code>GITHUB_TOKEN</code>, supplied to the Task setup action.
 
-`task init` installs the local Go development tools and resolves Go
-dependencies. `task test` runs the test suite through `gotestsum` with race
-detection and writes `coverage.out`.
+<code>task init</code> installs pinned development tools into repository-local <code>bin/</code>
+and fetches Go dependencies with <code>go mod download</code>, without a dependency
+upgrade step. <code>task test</code> runs the test suite through <code>gotestsum</code> with race
+detection and writes <code>coverage.out</code>.
 
-### `.github/workflows/release.yml`
+### <code>.github/workflows/release.yml</code>
 
-- **Trigger:** push of a stable `vX.Y.Z` tag.
-- **Runner:** `ubuntu-latest` with Go 1.24.
+- **Trigger:** push of a stable <code>vX.Y.Z</code> tag.
+- **Runner:** <code>ubuntu-latest</code>, with Go selected from <code>go.mod</code> (1.26.6).
 - **Permissions:** write access to repository contents and packages.
 - **Steps:** full-history checkout; QEMU setup; Docker Buildx setup; login to
   GitHub Container Registry; login to Docker Hub; install Go; validate the
-  tag; run GoReleaser with `release --clean --timeout=90m`.
-- **Secrets required:** `GITHUB_TOKEN`, `DOCKERHUB_USERNAME`,
-  `DOCKERHUB_TOKEN`, and `GORELEASER_AUTH_TOKEN`.
-- **Variable used:** `DOCKERHUB_IMAGE`, with `easyp/easyp` as the workflow
+  tag; run GoReleaser with <code>release --clean --timeout=90m</code>.
+- **Secrets required:** <code>GITHUB_TOKEN</code>, <code>DOCKERHUB_USERNAME</code>,
+  <code>DOCKERHUB_TOKEN</code>, and <code>GORELEASER_AUTH_TOKEN</code>.
+- **Variable used:** <code>DOCKERHUB_IMAGE</code>, with <code>easyp/easyp</code> as the workflow
   fallback value.
 
-The workflow's QEMU and Buildx setup supports the GoReleaser release process;
-the exact artifact list and image platforms are not specified by the allowed
-sources.
+<code>.goreleaser.yaml</code> configures Darwin, Windows and Linux binaries for its
+listed architectures, tar.gz archives (zip on Windows), checksums, a source
+archive and a Homebrew formula. Its active image target is
+<code>ghcr.io/easyp-tech/easyp</code> for <code>linux/amd64</code> and <code>linux/arm64</code>, using root
+<code>Dockerfile</code>. The Docker Hub image entry is commented out even though the
+workflow still logs in there.
 
-### `.github/workflows/docs.yml`
+The Homebrew install snippet obtains Bash and Zsh completion scripts from the
+registered <code>completion</code> command in <code>internal/api/completion.go</code>
+and verifies the installed binary with <code>--version</code>.
 
-- **Trigger:** push of a stable `vX.Y.Z` tag.
-- **Runner:** `ubuntu-latest`.
-- **Steps:** full-history checkout; install Node.js 20; install dependencies
-  in `docs`; build VitePress; verify English and Russian search indexes;
-  detect generated documentation changes; commit and push changed `docs/dist/`
-  files to the repository default branch.
-- **Secrets required:** `GITHUB_TOKEN`.
+### Documentation site
 
-The workflow reports that an external service pulls the changes for
-`easyp.tech`; that external deployment is not configured in this repository.
+The site and its publishing workflow live in the separate <code>easyp-tech/docs</code>
+repository. This checkout has neither a site directory nor a docs-publishing
+workflow. Do not infer its current deployment steps from removed workflow
+text; the external repository was not inspected for this audit.
 
-### `.github/workflows/relator.yml`
+### <code>.github/workflows/relator.yml</code>
 
 This workflow is not a deployment pipeline. It sends Telegram notifications
 when issues or pull requests are opened or reopened. It requires
-`TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`, and `GITHUB_TOKEN`.
+<code>TELEGRAM_BOT_TOKEN</code>, <code>TELEGRAM_CHAT_ID</code>, and <code>GITHUB_TOKEN</code>.
 
 ## Rollout Strategy
 
@@ -123,20 +124,20 @@ is defined in the allowed sources.
 No automated rollback procedure is defined. For a faulty published CLI
 release, the repository documentation and workflow sources do not specify an
 artifact withdrawal or rollback command. The actionable repository-level
-procedure is to correct the issue and publish a new stable `vX.Y.Z` tag through
+procedure is to correct the issue and publish a new stable <code>vX.Y.Z</code> tag through
 the release workflow.
 
 ## Secrets Management
 
 | Secret / Variable | Purpose | Where Set |
 |---|---|---|
-| `GITHUB_TOKEN` | GitHub API, package-registry, checkout, and documentation workflow authentication | GitHub Actions |
-| `GORELEASER_AUTH_TOKEN` | GoReleaser release authentication | GitHub Actions secret |
-| `DOCKERHUB_USERNAME` | Docker Hub login username | GitHub Actions secret |
-| `DOCKERHUB_TOKEN` | Docker Hub login token | GitHub Actions secret |
-| `DOCKERHUB_IMAGE` | Docker Hub image name override | GitHub Actions variable |
-| `TELEGRAM_BOT_TOKEN` | Relator notification authentication | GitHub Actions secret |
-| `TELEGRAM_CHAT_ID` | Relator notification destination | GitHub Actions variable |
+| <code>GITHUB_TOKEN</code> | GitHub API, package-registry and checkout authentication | GitHub Actions |
+| <code>GORELEASER_AUTH_TOKEN</code> | GoReleaser release authentication | GitHub Actions secret |
+| <code>DOCKERHUB_USERNAME</code> | Docker Hub login username | GitHub Actions secret |
+| <code>DOCKERHUB_TOKEN</code> | Docker Hub login token | GitHub Actions secret |
+| <code>DOCKERHUB_IMAGE</code> | Docker Hub image name override | GitHub Actions variable |
+| <code>TELEGRAM_BOT_TOKEN</code> | Relator notification authentication | GitHub Actions secret |
+| <code>TELEGRAM_CHAT_ID</code> | Relator notification destination | GitHub Actions variable |
 
 Secret rotation, vault integration, and runtime secret injection are not
 documented in the allowed sources.
@@ -152,3 +153,5 @@ N/A for runtime monitoring because EasyP has no deployed service in this
 repository. GitHub Actions workflow results are the available build and release
 execution record. The Relator workflow provides issue and pull-request
 notifications, but no monitoring dashboard or alert policy is configured.
+
+The runtime Dockerfile pins its APK packages through overridable build arguments. Update and verify them alongside the Alpine release; local helper builds do not publish images.

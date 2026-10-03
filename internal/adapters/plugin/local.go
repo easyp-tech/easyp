@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"log/slog"
 	"os/exec"
+	"path/filepath"
+	"strings"
 
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/pluginpb"
@@ -14,28 +16,27 @@ import (
 	"github.com/easyp-tech/easyp/internal/logger"
 )
 
+// Info describes a plugin invocation and its execution directory.
 type Info struct {
 	Source  string
+	WorkDir string
 	Command []string
 	Options map[string][]string
 }
 
-// LocalPluginExecutor executes plugins locally via terminal
+// LocalPluginExecutor invokes local plugin executables.
 type LocalPluginExecutor struct {
-	console console.Console
-	logger  logger.Logger
+	logger logger.Logger
 }
 
+// GetName identifies the local executor.
 func (e *LocalPluginExecutor) GetName() string {
 	return "LocalPluginExecutor from PATH"
 }
 
 // NewLocalPluginExecutor creates a new LocalPluginExecutor
-func NewLocalPluginExecutor(console console.Console, logger logger.Logger) *LocalPluginExecutor {
-	return &LocalPluginExecutor{
-		console: console,
-		logger:  logger,
-	}
+func NewLocalPluginExecutor(logger logger.Logger) *LocalPluginExecutor {
+	return &LocalPluginExecutor{logger: logger}
 }
 
 // isPluginInPath checks if the plugin is available in PATH
@@ -44,7 +45,7 @@ func (e *LocalPluginExecutor) isPluginInPath(source string) (string, bool) {
 	return command, err == nil
 }
 
-// Execute executes a local plugin via terminal
+// Execute runs a plugin in its working directory and decodes the response.
 func (e *LocalPluginExecutor) Execute(ctx context.Context, plugin Info, request *pluginpb.CodeGeneratorRequest) (*pluginpb.CodeGeneratorResponse, error) {
 	e.logger.Debug(ctx, "executing local plugin",
 		slog.String("plugin", plugin.Source),
@@ -60,21 +61,34 @@ func (e *LocalPluginExecutor) Execute(ctx context.Context, plugin Info, request 
 		return nil, fmt.Errorf("proto.Marshal request: %w", err)
 	}
 
-	stdIn := bytes.NewReader(reqData)
-
-	command, err := e.determineCommand(plugin.Source)
+	workDir, err := filepath.Abs(plugin.WorkDir)
+	if err != nil {
+		return nil, fmt.Errorf("Abs: %w", err)
+	}
+	source := plugin.Source
+	if !filepath.IsAbs(source) && strings.ContainsAny(source, `/\`) {
+		source = filepath.Join(workDir, source)
+	}
+	command, err := e.determineCommand(source)
 	if err != nil {
 		return nil, fmt.Errorf("determineCommand: %w", err)
 	}
 
-	stdout, err := e.console.RunCmdWithStdin(ctx, ".", stdIn, command)
-	if err != nil {
-		return nil, fmt.Errorf("run local plugin %s: %w", plugin.Source, err)
+	// Pass the executable directly so paths are never interpreted as shell syntax.
+	cmd := exec.CommandContext(ctx, command)
+	cmd.Dir = workDir
+	cmd.Stdin = bytes.NewReader(reqData)
+	var stdout, stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+	if err := cmd.Run(); err != nil {
+		runErr := &console.RunError{Command: command, Dir: workDir, Err: err, Stderr: stderr.String()}
+		return nil, fmt.Errorf("run local plugin %s: %w", plugin.Source, runErr)
 	}
 
 	// Parse response from plugin
 	var resp pluginpb.CodeGeneratorResponse
-	if err := proto.Unmarshal([]byte(stdout), &resp); err != nil {
+	if err := proto.Unmarshal(stdout.Bytes(), &resp); err != nil {
 		return nil, fmt.Errorf("proto.Unmarshal response from plugin %s: %w", plugin.Source, err)
 	}
 

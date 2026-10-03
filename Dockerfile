@@ -1,4 +1,4 @@
-FROM --platform=${BUILDPLATFORM} golang:1.25-alpine AS builder
+FROM --platform=${BUILDPLATFORM} golang:1.26-alpine AS builder
 
 ARG TARGETPLATFORM
 ARG BUILDPLATFORM
@@ -22,7 +22,17 @@ RUN go build -trimpath -o /easyp ./cmd/easyp
 
 FROM alpine:3.22
 
-RUN apk add --no-cache ca-certificates tzdata git bash
+# Keep package pins aligned with the Alpine release; override for verified updates.
+ARG CA_CERTIFICATES_VERSION=20260909-r0
+ARG TZDATA_VERSION=2026d-r0
+ARG GIT_VERSION=2.49.1-r0
+ARG BASH_VERSION=5.2.37-r0
+
+RUN apk add --no-cache \
+    ca-certificates="${CA_CERTIFICATES_VERSION}" \
+    tzdata="${TZDATA_VERSION}" \
+    git="${GIT_VERSION}" \
+    bash="${BASH_VERSION}"
 
 COPY --from=builder /easyp /easyp
 
