@@ -140,10 +140,11 @@ func ParseModule(r io.Reader) (Module, error) {
 				return Module{}, fmt.Errorf("protobuf.mod:%d: roots expects at least one path", line)
 			}
 			for _, root := range fields {
-				if filepath.IsAbs(root) || root == ".." || strings.HasPrefix(filepath.Clean(root), ".."+string(filepath.Separator)) {
+				clean := filepath.Clean(root)
+				if filepath.IsAbs(root) || clean == ".." || strings.HasPrefix(clean, ".."+string(filepath.Separator)) {
 					return Module{}, fmt.Errorf("protobuf.mod:%d: root %q leaves the module", line, root)
 				}
-				result.Roots = append(result.Roots, filepath.Clean(root))
+				result.Roots = append(result.Roots, clean)
 			}
 		case "require":
 			if len(fields) < 1 || len(fields) > 2 {
