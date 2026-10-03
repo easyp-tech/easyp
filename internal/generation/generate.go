@@ -140,6 +140,9 @@ func Run(ctx context.Context, log logger.Logger, cache modules.Cache, request Re
 	}
 	if !exportDescriptors {
 		if len(descriptorTargets) == 0 {
+			if err := emptyGenerationSelectionError(request, configs); err != nil {
+				return err
+			}
 			return nil
 		}
 		prepared, err := prepareDescriptorTargets(ctx, log, cache, request, descriptorTargets)
@@ -152,6 +155,30 @@ func Run(ctx context.Context, log logger.Logger, cache modules.Cache, request Re
 		return fmt.Errorf("generateV1DescriptorSet: %w", err)
 	}
 	return nil
+}
+
+func emptyGenerationSelectionError(request Request, selected []string) error {
+	if request.AllProjects || request.Project != "" || len(request.Projects) > 0 {
+		return nil
+	}
+	discovered, err := discoverV1GenerateConfigs(request.WorkDir, "")
+	if err != nil {
+		return fmt.Errorf("discoverV1GenerateConfigs: %w", err)
+	}
+	selectedPaths := make(map[string]bool, len(selected))
+	for _, path := range selected {
+		selectedPaths[filepath.Clean(path)] = true
+	}
+	additional := 0
+	for _, path := range discovered {
+		if !selectedPaths[filepath.Clean(path)] {
+			additional++
+		}
+	}
+	if additional == 0 {
+		return nil
+	}
+	return fmt.Errorf("selected easyp.gen.yaml has no executable generation targets; found %d additional easyp.gen.yaml below %s; use --all for recursive generation or --project <directory> to select a project explicitly", additional, request.WorkDir)
 }
 
 // isOptionsOnlyParent reports whether a config has child generators but no
