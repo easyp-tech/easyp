@@ -8,7 +8,6 @@ import (
 
 	"github.com/urfave/cli/v2"
 
-	"github.com/easyp-tech/easyp/internal/adapters/gitmodules"
 	"github.com/easyp-tech/easyp/internal/flags"
 	"github.com/easyp-tech/easyp/internal/migration"
 )
@@ -103,11 +102,11 @@ func migrationIO(ctx *cli.Context) (io.Reader, io.Writer) {
 }
 
 func migrationRepository(ctx *cli.Context) (migration.Repository, error) {
-	storage, err := getEasypPath(getLogger(ctx))
+	cache, err := moduleCache(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("getEasypPath: %w", err)
+		return nil, fmt.Errorf("moduleCache: %w", err)
 	}
-	return gitmodules.New(storage), nil
+	return cache, nil
 }
 
 func printMigrationPlan(writer io.Writer, plan *migration.Plan) error {

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	v1 "github.com/easyp-tech/easyp/internal/config/v1"
@@ -42,7 +43,7 @@ func ensureEffectiveGraph(ctx context.Context, root string, module v1.Module, ca
 		pins[entry.Source] = entry
 	}
 	locals := newLocalReplacements(root, module, localPath)
-	remote := &effectiveRemoteSource{cache: cache, pins: pins, refresh: refresh, historical: localPath != nil, modules: make(map[v1.LockedModule]EffectiveModule)}
+	remote := &effectiveRemoteSource{cache: cache, pins: pins, refresh: refresh, historical: localPath != nil, modules: make(map[[4]string]cachedEffectiveModule)}
 	loader := revisionLoader{source: remote, fetched: make(map[string]Fetched), pins: pins, local: locals.lookupRequirement}
 	if refresh {
 		loader.pins = nil
@@ -82,7 +83,12 @@ type effectiveRemoteSource struct {
 	pins       map[string]v1.LockedModule
 	refresh    bool
 	historical bool
-	modules    map[v1.LockedModule]EffectiveModule
+	modules    map[[4]string]cachedEffectiveModule
+}
+
+type cachedEffectiveModule struct {
+	module EffectiveModule
+	bsr    []v1.BSRResolution
 }
 
 func (s *effectiveRemoteSource) Fetch(ctx context.Context, name, version string) (Fetched, error) {
@@ -112,8 +118,9 @@ func (s *effectiveRemoteSource) Fetch(ctx context.Context, name, version string)
 }
 
 func (s *effectiveRemoteSource) installed(ctx context.Context, entry v1.LockedModule) (EffectiveModule, error) {
-	if selected, ok := s.modules[entry]; ok {
-		return selected, nil
+	key := [4]string{entry.Source, entry.Version, entry.Commit, entry.Hash}
+	if selected, ok := s.modules[key]; ok && slices.Equal(selected.bsr, entry.BSR) {
+		return selected.module, nil
 	}
 	if err := s.cache.Install(ctx, v1.Lock{Version: 1, Modules: []v1.LockedModule{entry}}); err != nil {
 		return EffectiveModule{}, fmt.Errorf("Install: %w", err)
@@ -123,7 +130,7 @@ func (s *effectiveRemoteSource) installed(ctx context.Context, entry v1.LockedMo
 		return EffectiveModule{}, fmt.Errorf("Cached: %w", err)
 	}
 	selected := EffectiveModule{Directory: dir, Module: module}
-	s.modules[entry] = selected
+	s.modules[key] = cachedEffectiveModule{module: selected, bsr: slices.Clone(entry.BSR)}
 	return selected, nil
 }
 

@@ -2,7 +2,6 @@ package moduleconfig
 
 import (
 	"fmt"
-	"os"
 	"strings"
 
 	"golang.org/x/mod/semver"
@@ -55,9 +54,9 @@ type legacyDependencyConfig struct {
 }
 
 func readLegacyEasyPRootsAndRequires(path string) ([]string, []v1.Requirement, error) {
-	raw, err := os.ReadFile(path)
+	raw, err := readGitDependencyConfig(path)
 	if err != nil {
-		return nil, nil, fmt.Errorf("ReadFile: %s: %w", path, err)
+		return nil, nil, fmt.Errorf("readGitDependencyConfig: %w", err)
 	}
 	var old legacyDependencyConfig
 	err = yaml.Unmarshal(raw, &old)

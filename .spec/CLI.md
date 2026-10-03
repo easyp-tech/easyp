@@ -141,14 +141,15 @@ Without an explicit <code>--against</code>, the effective policy's <code>breakin
 
 Current and baseline sources use their own module manifests and locks. Descendant policies and <code>breaking.ignore</code> are evaluated with policy ownership; ignore paths are relative to the policy file. Explicit FILE/PACKAGE/WIRE_JSON/WIRE profiles compare linked descriptors; omitted or empty categories retain the legacy checker. See [breaking-profiles.md](config/breaking-profiles.md). <code>breaking.ignore_unstable</code> is supported. Section-scoped <code>extends</code> uses bounded local policies or verified consumer dependencies. See [internal/api/breaking_v1.go](../internal/api/breaking_v1.go), [breaking_scope.go](../internal/api/breaking_scope.go), and [breaking_ignore.go](../internal/api/breaking_ignore.go).
 
-### <code>easyp get &lt;module&gt;[@version|@commit]</code>
+### <code>easyp get &lt;module&gt;[@version|@tag|@commit]</code>
 
 Adds a new direct requirement or promotes an existing indirect requirement, then resolves its transitive dependencies and writes <code>protobuf.mod</code> and <code>protobuf.lock</code>. Exactly one positional module argument is required; the shared <code>--frozen</code> flag is registered in [internal/api/get_v1.go](../internal/api/get_v1.go).
 
-An explicit version must be a semantic version or a full Git commit. Module identities use Go major suffixes: v0/v1 are unsuffixed, v2+ uses matching <code>/vN</code>; <code>+incompatible</code> is allowed only for verified pre-native unsuffixed v2+ revisions; it cannot bypass a native manifest. See [major versions and Git mapping](config/dependency.md#major-versions-and-git-mapping). A new requirement without a suffix resolves Git HEAD. Repeating an existing requirement without a suffix preserves its specified version. Module lookup starts at the working directory and searches upward within the workspace.
+An explicit query accepts a semantic version, named Git tag or full Git commit. Named tags are resolved into full commit pins in the manifest and lock; a branch name is not a tag. Module identities use Go major suffixes: v0/v1 are unsuffixed, v2+ uses matching <code>/vN</code>. For unsuffixed legacy repositories, get automatically marks verified pre-native v2+ releases with <code>+incompatible</code>; it cannot bypass a native manifest. See [major versions and Git mapping](config/dependency.md#major-versions-and-git-mapping). A new requirement without a suffix resolves Git HEAD. Repeating an existing requirement without a suffix preserves its specified version. Module lookup starts at the working directory and searches upward within the workspace.
 
 ~~~bash
 easyp get github.com/googleapis/googleapis
+easyp get github.com/googleapis/googleapis@common-protos-1_3_1
 easyp get github.com/acme/contracts@v1.2.3
 ~~~
 

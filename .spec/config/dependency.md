@@ -23,6 +23,7 @@ require (
 - Each dependency is a separate <code>require</code>. A version may be omitted, a semantic version, or a full Git commit.
 - Versionless requirements resolve repository HEAD on first use. Tidy preserves an existing locked commit; update refreshes it. Tags are not required for this path or explicit commits.
 - Semantic versions resolve actual tags. For a nested module, that means a directory-prefixed tag such as <code>common/v1.2.3</code>; an untagged module should use an omitted version or commit.
+- <code>easyp get repo@common-protos-1_3_1</code> also accepts named Git tags. It resolves the tag and writes the full commit into the requirement and lock; subsequent frozen operations do not depend on that tag. Branch names are not named tags.
 - <code>replace &lt;module&gt; =&gt; &lt;local-path&gt;</code> supplies local source roots. Relative paths resolve from the consuming manifest directory; absolute replacement paths are used directly. Roots within a module cannot escape its directory.
 - Normal project commands use v1 manifests. Legacy metadata is read by dependency compatibility adapters and the explicit <code>easyp migrate</code> preview/apply workflow. <code>easyp migrate --interactive</code> starts the migration wizard; migration never consists of simply renaming a legacy lock. See [CLI.md](../CLI.md).
 
@@ -47,7 +48,7 @@ The final slash major suffix is logical: it is excluded from the repository cand
 
 <code>repo</code> and <code>repo/v2</code> are separate MVS, lock, cache and replacement identities. They may coexist when their protobuf import paths are distinct. EasyP never rewrites protobuf packages or imports; duplicate import paths still fail, even for identical content. Same-identity maximum-minimum selection, exact SHA/tag agreement, immutable tags, local overlays and explicit frozen checks remain in force.
 
-The Go pre-module <code>+incompatible</code> exception is supported only for an explicitly marked, unsuffixed v2+ requirement whose exact Git revision has no native root <code>protobuf.mod</code> and no matching nested native manifest. For example, <code>repo v2.0.0+incompatible</code> resolves the root tag <code>v2.0.0</code>, never a tag literally ending in <code>+incompatible</code>. Fetch, migration, cold installation and warm cache reads verify this metadata boundary. Update preserves the marker for eligible legacy releases and rejects a selected revision that has become native. Markers on v0/v1 or on suffixed identities are rejected. An unmarked unsuffixed v2+ requirement remains invalid.
+The Go pre-module <code>+incompatible</code> exception is supported for an unsuffixed v2+ requirement whose exact Git revision has no native root <code>protobuf.mod</code> and no matching nested native manifest. <code>easyp get repo@v2.0.0</code> adds the marker after verifying this boundary; a manually written manifest must include it explicitly. For example, <code>repo v2.0.0+incompatible</code> resolves the root tag <code>v2.0.0</code>, never a tag literally ending in <code>+incompatible</code>. Fetch, migration, cold installation and warm cache reads verify this metadata boundary. Update preserves the marker for eligible legacy releases and rejects a selected revision that has become native. Markers on v0/v1 or on suffixed identities are rejected. An unmarked unsuffixed v2+ requirement remains invalid.
 
 Migration does not invent a namespace, add a compatibility marker, or change a source/version. For an old unsuffixed native v2+ dependency, select a published <code>/vN</code> identity and matching version, or explicitly choose an unsuffixed v0/v1 release, then retry. A published native manifest can never qualify for the legacy exception. As in Go, an unversioned local replacement may contain a native manifest with the same unsuffixed identity even when replacing an explicit legacy <code>+incompatible</code> requirement. This overlay does not certify a published revision and cannot change the shared lock; frozen mode rejects replacements. Requirements read from older metadata are checked again when used at the actual source boundary.
 
@@ -55,7 +56,7 @@ See [Go major version suffixes](https://go.dev/ref/mod#major-version-suffixes) a
 
 ## Lock and cache
 
-<code>protobuf.lock</code> is YAML with integer <code>version: 1</code> and a <code>modules</code> sequence. Each entry has <code>source</code>, <code>version</code>, <code>commit</code> and <code>hash</code>; the resolver sorts by source. Commits must be full 40- or 64-character hexadecimal hashes; <code>hash</code> is <code>h1:</code> plus a base64 SHA-256 digest. A commit-valued version must equal the commit. Duplicate sources, unknown fields and multiple YAML documents are rejected. The hash covers tracked regular-file content using Go's directory-hash algorithm. Symlinks/non-regular tracked entries are rejected by installation.
+<code>protobuf.lock</code> is YAML with integer <code>version: 1</code> and a <code>modules</code> sequence. Each entry has <code>source</code>, <code>version</code>, <code>commit</code> and <code>hash</code>; the resolver sorts by source. Commits must be full 40- or 64-character hexadecimal hashes; <code>hash</code> is <code>h1:</code> plus a base64 SHA-256 digest. A commit-valued version must equal the commit. Duplicate sources, unknown fields and multiple YAML documents are rejected. The hash covers the installed regular-file snapshot using Go's directory-hash algorithm. Git symlinks and submodules are omitted, even when a symlink is materialized as a regular file by <code>core.symlinks=false</code>. Dependency config files must be regular Git files. Buf file filters are applied before hashing and installation; non-proto regular files remain included. Legacy lock migration retains its stricter non-regular-file rejection because it must reproduce the old hash.
 
 The CLI resolves <code>EASYPPATH</code> once for a command that needs the cache (default <code>$HOME/.easyp</code>). <code>gitmodules.Cache</code> owns <code>&lt;EASYPPATH&gt;/v1/git</code>, source keys, temporary checkout names and installation paths. Installed snapshots live under its <code>modules/&lt;source-key&gt;/&lt;commit&gt;</code> layout; reusable bare object stores live under <code>objects/&lt;remote-key&gt;</code>, with OS locks for concurrent fetches. Application callers request cached module metadata and its physical directory; they do not assemble cache paths.
 
@@ -135,7 +136,40 @@ Run normal <code>mod tidy</code> after removing local replacements to prepare th
 - Buf v1 workspace/module configs and Buf v2 module roots.
 - No config: the repository directory is the default root.
 
-Root config detection checks existence; parsing belongs to format-specific readers. Missing optional files are normal. Invalid files and filesystem errors are returned. Buf roots take precedence over legacy EasyP roots when both formats occur; legacy requirements are still extracted. Buf v1/v1beta1/v2 <code>deps</code> are read as BSR references, including <code>buf.yaml</code> files selected by a v1 <code>buf.work.yaml</code>. A nonempty BSR dependency list is never ignored: dependency adaptation returns <code>UnsupportedBufRegistryDependenciesError</code> with the declaring config and references. Automatic BSR-to-Git mapping is intentionally not implemented yet; provide native <code>protobuf.mod</code> metadata for that Git dependency when using it with EasyP.
+Root config detection checks existence; parsing belongs to format-specific readers. Missing optional files are normal. Invalid files and filesystem errors are returned. Buf roots take precedence over legacy EasyP roots when both formats occur; legacy requirements are still extracted. Buf v2 <code>modules[].includes/excludes</code> and v1/v1beta1 <code>build.excludes</code> filter proto files without changing their import paths. All paths are relative to the declaring <code>buf.yaml</code>; nested v1 workspace configs are rebased to the repository. A file selected by any of the Buf modules remains available.
+
+Buf <code>deps</code> in Git dependencies are passed to <code>modules.BSRResolver</code>. The current <code>bsr.StaticResolver</code> uses an explicit table of fixed Git compatibility snapshots. Its output is the existing <code>v1.Requirement</code>; the dependency graph, Git acquisition, import checks and indirect requirement editing keep their existing paths. Native <code>protobuf.mod</code> takes precedence over Buf metadata. Direct BSR requirements in a consumer's <code>protobuf.mod</code> are not supported.
+
+### BSR compatibility snapshots
+
+The Buf adapter reads v1/v1beta1/v2 <code>buf.yaml</code> and optional <code>buf.lock</code>, including configs in v1 workspaces. It preserves the BSR identity, requested reference, locked BSR commit/digest and declaring config path. All locked transitive BSR dependencies participate. Identical declarations are deduplicated; conflicting references, invalid pins and declarations missing from an existing Buf lock fail before manifest/lock updates. Declared dependencies are resolved even when their imports are unused. Unknown BSR modules produce <code>unsupported BSR module: ...; no mapping in the BSR resolver</code>; no repository is guessed.
+
+| BSR module | Git module | Fixed Git revision |
+|---|---|---|
+| <code>buf.build/googleapis/googleapis</code> | <code>github.com/googleapis/googleapis</code> | <code>03a91044136a014466d4293eb1fe91f2b02075d2</code> |
+| <code>buf.build/grpc-ecosystem/grpc-gateway</code> | <code>github.com/grpc-ecosystem/grpc-gateway</code> | <code>v2.31.0+incompatible</code> |
+| <code>buf.build/mercari/grpc-federation</code> | <code>github.com/mercari/grpc-federation</code> | <code>v1.27.0</code> |
+| <code>buf.build/envoyproxy/protoc-gen-validate</code> | <code>github.com/envoyproxy/protoc-gen-validate</code> | <code>v1.3.3</code> |
+| <code>buf.build/bufbuild/protovalidate</code> | <code>github.com/bufbuild/protovalidate</code> | <code>v1.2.2</code> |
+
+grpc-gateway v2.26.1/v2.31.0 and grpc-federation v1.24.0/v1.27.0 declare only the Googleapis BSR dependency. Their BSR commits differ, and this backend deliberately selects the same tested Googleapis snapshot. It does **not** prove equivalence with a BSR reference or verify the BSR digest. The CLI reports this limitation when resolving; the parent Git entry records it as <code>resolution: compatibility_snapshot</code>:
+
+~~~yaml
+# Inside the requiring Git module's protobuf.lock entry:
+bsr:
+  - dependency:
+      module: buf.build/googleapis/googleapis
+      commit: 62f35d8aed1149c291d606d958a7ce32
+      config: buf.yaml
+    git:
+      module: github.com/googleapis/googleapis
+      version: 03a91044136a014466d4293eb1fe91f2b02075d2
+    resolution: compatibility_snapshot
+~~~
+
+The usual Git lock entry and verified <code>h1:</code> hash still pin the installed source. Frozen and cached operations verify the original Buf metadata against the recorded bindings and reuse their Git targets without calling the BSR backend. Locks created before this feature must be regenerated with <code>easyp mod tidy</code> if a dependency contains BSR declarations. Git tags remain subject to the existing immutable-version guard.
+
+The backend is wired in [internal/api/mod_v1_cache.go](../../internal/api/mod_v1_cache.go) through <code>gitmodules.NewWithBSRResolver</code>. A future EasyP Service implementation replaces <code>bsr.StaticResolver</code> there and implements the same <code>modules.BSRResolver</code>; it need not change the dependency graph. The temporary backend has no BSR API requests, Buf executable dependency, HTTP client, implicit latest or universal BSR-to-Git inference. Other BSR revisions can require features absent from the compatibility snapshot. Separate manifests that require incompatible exact Git commits retain the existing conflict diagnostic.
 
 A nested module root <code>proto</code> becomes <code>&lt;checkout&gt;/&lt;module-directory&gt;/proto</code>. A file below that root is imported without either physical prefix. <code>modules.SourceRoots</code> preserves module identity for managed selectors. Common import paths in different physical roots are rejected rather than silently selecting one.
 

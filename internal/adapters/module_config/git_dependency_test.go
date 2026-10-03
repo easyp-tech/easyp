@@ -215,15 +215,65 @@ func TestReadGitDependencyModuleRejectsEscapingRoot(t *testing.T) {
 	}
 }
 
-func TestReadGitDependencyModuleRejectsBufFilters(t *testing.T) {
+func TestReadGitDependencyBufProtoFilters(t *testing.T) {
 	t.Parallel()
-
-	dir := t.TempDir()
-	if err := os.WriteFile(filepath.Join(dir, "buf.yaml"), []byte("version: v2\nmodules:\n  - path: proto\n    excludes: [proto/unused]\n"), 0o644); err != nil {
-		t.Fatal(err)
+	tests := []struct {
+		name    string
+		files   map[string]string
+		roots   []string
+		filters []v1.ProtoFileFilter
+	}{
+		{
+			name:    "v2 includes and excludes",
+			files:   map[string]string{"buf.yaml": "version: v2\nmodules:\n  - path: proto\n    includes: [proto/api]\n    excludes: [proto/api/test]\n"},
+			roots:   []string{"proto"},
+			filters: []v1.ProtoFileFilter{{Root: "proto", Includes: []string{"proto/api"}, Excludes: []string{"proto/api/test"}}},
+		},
+		{
+			name:    "v2 shared root is traversed once",
+			files:   map[string]string{"buf.yaml": "version: v2\nmodules:\n  - path: proto\n    includes: [proto/a]\n  - path: proto\n    includes: [proto/b]\n"},
+			roots:   []string{"proto"},
+			filters: []v1.ProtoFileFilter{{Root: "proto", Includes: []string{"proto/a"}}, {Root: "proto", Includes: []string{"proto/b"}}},
+		},
+		{
+			name:    "v1 excludes",
+			files:   map[string]string{"buf.yaml": "version: v1\nbuild:\n  excludes: [test]\n"},
+			roots:   []string{"."},
+			filters: []v1.ProtoFileFilter{{Root: ".", Excludes: []string{"test"}}},
+		},
+		{
+			name:    "v1beta1 excludes belong to their root",
+			files:   map[string]string{"buf.yaml": "version: v1beta1\nbuild:\n  roots: [proto, third_party]\n  excludes: [proto/test]\n"},
+			roots:   []string{"proto", "third_party"},
+			filters: []v1.ProtoFileFilter{{Root: "proto", Excludes: []string{"proto/test"}}, {Root: "third_party"}},
+		},
+		{
+			name: "v1 workspace rebases nested excludes",
+			files: map[string]string{
+				"buf.work.yaml":  "version: v1\ndirectories: [proto]\n",
+				"proto/buf.yaml": "version: v1\nbuild:\n  excludes: [test]\n",
+			},
+			roots:   []string{"proto"},
+			filters: []v1.ProtoFileFilter{{Root: "proto", Excludes: []string{"proto/test"}}},
+		},
 	}
-	if _, err := ReadGitDependency(dir, "example.com/dependency"); err == nil || !strings.Contains(err.Error(), "includes/excludes") {
-		t.Fatalf("expected unsupported filter error, got %v", err)
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			dir := t.TempDir()
+			for name, body := range tt.files {
+				path := filepath.Join(dir, name)
+				require.NoError(t, os.MkdirAll(filepath.Dir(path), 0o755))
+				require.NoError(t, os.WriteFile(path, []byte(body), 0o644))
+			}
+
+			module, err := ReadGitDependency(dir, "example.com/dependency")
+
+			require.NoError(t, err)
+			require.Equal(t, tt.roots, module.Roots)
+			require.Equal(t, tt.filters, module.ProtoFilters)
+		})
 	}
 }
 
@@ -254,46 +304,47 @@ func TestParseLegacyV1RequirementByCommit(t *testing.T) {
 	require.Equal(t, v1.Requirement{Module: "github.com/acme/common", Version: commit}, got)
 }
 
-func TestReadGitDependencyRejectsBufRegistryDependencies(t *testing.T) {
+func TestReadGitDependencyBufRegistryMetadataKeepsGitIdentity(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
 		name  string
 		files map[string]string
-		refs  []string
+		roots []string
 	}{
 		{
 			name: "buf v2",
 			files: map[string]string{
 				"buf.yaml": "version: v2\nmodules:\n  - path: proto\ndeps:\n  - buf.build/googleapis/googleapis\n",
 			},
-			refs: []string{"buf.build/googleapis/googleapis"},
+			roots: []string{"proto"},
 		},
 		{
 			name: "buf v1",
 			files: map[string]string{
 				"buf.yaml": "version: v1\ndeps:\n  - buf.build/acme/payments:deadbeef\n",
 			},
-			refs: []string{"buf.build/acme/payments:deadbeef"},
+			roots: []string{"."},
 		},
 		{
 			name: "buf v1beta1",
 			files: map[string]string{
 				"buf.yaml": "version: v1beta1\nbuild:\n  roots: [proto]\ndeps:\n  - buf.build/acme/common:v1.2.3\n",
 			},
-			refs: []string{"buf.build/acme/common:v1.2.3"},
+			roots: []string{"proto"},
 		},
 		{
-			name: "buf v1 workspace aggregates nested module deps",
+			name: "buf v1 workspace with nested registry metadata",
 			files: map[string]string{
 				"buf.work.yaml":    "version: v1\ndirectories: [proto/a, proto/b]\n",
 				"proto/a/buf.yaml": "version: v1\ndeps: [buf.build/acme/a-dep]\n",
 				"proto/b/buf.yaml": "version: v1\ndeps: [buf.build/acme/b-dep:v1.0.0]\n",
 			},
-			refs: []string{"buf.build/acme/a-dep", "buf.build/acme/b-dep:v1.0.0"},
+			roots: []string{"proto/a", "proto/b"},
 		},
 	}
 	for _, tt := range tests {
+		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
@@ -304,17 +355,12 @@ func TestReadGitDependencyRejectsBufRegistryDependencies(t *testing.T) {
 				require.NoError(t, os.WriteFile(path, []byte(body), 0o644))
 			}
 
-			_, err := ReadGitDependency(dir, "example.com/dependency")
+			module, err := ReadGitDependency(dir, "example.com/dependency")
 
-			var registryErr UnsupportedBufRegistryDependenciesError
-			require.ErrorAs(t, err, &registryErr)
-			require.Len(t, registryErr.Dependencies, len(tt.refs))
-			for i, ref := range tt.refs {
-				require.Equal(t, ref, registryErr.Dependencies[i].Reference)
-				require.Contains(t, registryErr.Dependencies[i].Config, bufModuleConfigFile)
-			}
-			require.ErrorContains(t, err, "BSR-to-Git mapping")
-			require.ErrorContains(t, err, "protobuf.mod")
+			require.NoError(t, err)
+			require.Equal(t, "example.com/dependency", module.Name)
+			require.Equal(t, tt.roots, module.Roots)
+			require.Empty(t, module.Requires, "BSR identities must not become Git requirements")
 		})
 	}
 }

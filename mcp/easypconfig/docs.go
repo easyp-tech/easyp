@@ -4,12 +4,21 @@ import v1 "github.com/easyp-tech/easyp/internal/config/v1"
 
 var descriptions = map[string]map[string]string{
 	v1.LockFile: {
-		"version":           "Lock format version: integer 1, not the YAML configuration string v1.",
-		"modules":           "Published dependency graph, with one verified revision per module identity. An empty list is valid for a dependency-free module.",
-		"modules[].source":  "Exact module identity; separate v2+ lines use their matching /vN suffix.",
-		"modules[].version": "Selected semantic version or a full commit. A commit-valued version must equal commit; major suffix and legacy +incompatible provenance are checked.",
-		"modules[].commit":  "Full 40- or 64-character hexadecimal Git commit. Tags and short SHAs are not commit pins.",
-		"modules[].hash":    "h1: followed by standard base64 encoding of a 32-byte SHA-256 content digest. Fetch/install verify tracked contents; a sample hash is not proof of a real repository.",
+		"version":                              "Lock format version: integer 1, not the YAML configuration string v1.",
+		"modules":                              "Published dependency graph, with one verified revision per module identity. An empty list is valid for a dependency-free module.",
+		"modules[].source":                     "Exact module identity; separate v2+ lines use their matching /vN suffix.",
+		"modules[].version":                    "Selected semantic version or a full commit. A commit-valued version must equal commit; major suffix and legacy +incompatible provenance are checked.",
+		"modules[].commit":                     "Full 40- or 64-character hexadecimal Git commit. Tags and short SHAs are not commit pins.",
+		"modules[].hash":                       "h1: followed by standard base64 encoding of a 32-byte SHA-256 content digest. Fetch/install verify tracked contents; a sample hash is not proof of a real repository.",
+		"modules[].bsr":                        "BSR requests declared by this Git dependency and their recorded Git targets; frozen commands replay these bindings without calling a resolver.",
+		"modules[].bsr[].dependency.module":    "Original BSR identity, separate from the selected Git source.",
+		"modules[].bsr[].dependency.reference": "Requested Buf label or BSR commit; preserved even when a compatibility snapshot cannot prove equivalence.",
+		"modules[].bsr[].dependency.commit":    "Optional 32-character hexadecimal BSR commit from buf.lock; not a Git commit.",
+		"modules[].bsr[].dependency.digest":    "Optional opaque BSR digest from buf.lock. Compatibility snapshots preserve but do not verify it.",
+		"modules[].bsr[].dependency.config":    "Declaring buf.yaml path relative to the verified Git checkout, including v1 workspace directories.",
+		"modules[].bsr[].git.module":           "Git module selected by the BSR resolver; it participates in the existing dependency graph.",
+		"modules[].bsr[].git.version":          "Pinned Git semantic version or full commit. Moving references and implicit latest are not accepted.",
+		"modules[].bsr[].resolution":           "compatibility_snapshot does not guarantee BSR revision equivalence or verify its digest. exact is reserved for a backend that proves the correspondence.",
 	},
 	v1.PolicyFile: {
 		"version":                       "Configuration version; v1 is the only supported value.",
@@ -122,7 +131,7 @@ func selectExamples(file, path string, limit int) []Example {
 func notesFor(file, path string) []string {
 	switch {
 	case file == v1.LockFile:
-		return []string{"Schema comes directly from v1.SchemaJSON. ParseLock adds semantic checks for duplicate sources, matching module majors and commit-valued versions. Examples contain synthetic commits/hashes, not fetched data.", "Local replace never rewrites the published lock. --frozen requires a valid complete manifest/lock graph and rejects replacements; it may download exact pinned contents but never resolves a new version. Preserve the lock when investigating a cache mismatch."}
+		return []string{"Schema comes directly from v1.SchemaJSON. ParseLock adds semantic checks for duplicate sources, matching module majors and commit-valued versions. Examples contain synthetic commits/hashes, not fetched data.", "Local replace never rewrites the published lock. --frozen requires a valid complete manifest/lock graph and rejects replacements; it may download exact pinned contents but never resolves a new version. Preserve the lock when investigating a cache mismatch.", "BSR compatibility_snapshot bindings preserve the original request and Buf lock pin, but do not prove BSR revision equivalence or verify the BSR digest. Frozen commands validate metadata and reuse recorded Git targets; older locks with BSR dependencies require easyp mod tidy."}
 	case file == v1.GenerateFile && within("generate.packages", path):
 		return []string{"Names match exact protobuf packages, not prefixes or file paths. Matching is across the selected modules of each project. Unknown names fail before plugins. with_imports is independent per plugin; descriptor include_imports controls exported dependencies."}
 	case file == v1.PolicyFile && path == "linters.extends":

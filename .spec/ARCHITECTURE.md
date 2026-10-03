@@ -33,6 +33,8 @@ The contracts reflect actual consumers:
 
 <code>Download</code> and <code>Vendor</code> need only <code>Cache</code>. The Git adapter implements these contracts. Unit tests use explicit fake answers/errors without Git; adapter and integration tests retain local repository fixtures.
 
+Git dependencies can carry BSR requests from Buf configs and locks. The Git adapter passes them to <code>modules.BSRResolver</code>, records their pinned Git targets and provenance on the parent lock entry, and exposes ordinary requirements to the graph. The current explicit compatibility snapshots are selected in <code>api.moduleCache</code>, shared by module commands and migration; a Service backend replaces that injected implementation. Cached/frozen reads replay recorded bindings without consulting the backend. See [BSR resolution and limitations](config/dependency.md#bsr-compatibility-snapshots).
+
 ~~~text
 get / mod tidy / mod update
   -> read manifest and relevant pins

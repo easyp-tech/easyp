@@ -5,6 +5,7 @@ import (
 
 	"github.com/urfave/cli/v2"
 
+	"github.com/easyp-tech/easyp/internal/adapters/bsr"
 	"github.com/easyp-tech/easyp/internal/adapters/gitmodules"
 )
 
@@ -13,5 +14,5 @@ func moduleCache(ctx *cli.Context) (*gitmodules.Cache, error) {
 	if err != nil {
 		return nil, fmt.Errorf("getEasypPath: %w", err)
 	}
-	return gitmodules.New(root), nil
+	return gitmodules.NewWithBSRResolver(root, bsr.StaticResolver{Logger: getLogger(ctx)}), nil
 }

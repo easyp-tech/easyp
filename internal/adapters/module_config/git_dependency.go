@@ -24,6 +24,12 @@ const (
 	gitDependencyLegacyEasyP  gitDependencyMode = legacyEasyPConfigFile
 )
 
+// IsGitDependencyConfigFile reports whether a file can declare dependency roots or requirements.
+func IsGitDependencyConfigFile(name string) bool {
+	return name == dependencyManifestFile || name == bufWorkConfigFile ||
+		name == bufModuleConfigFile || name == bufLockFile || name == legacyEasyPConfigFile
+}
+
 // ReadGitDependency adapts metadata in a checked-out Git repository to
 // the roots and requirements needed by the v1 resolver. Its identity is the
 // source named by the requiring module for pre-v1 repositories.
@@ -65,7 +71,8 @@ func ReadGitDependency(dir, source string) (v1.Module, error) {
 	}
 	module := v1.Module{Name: source}
 	var bufRoots, legacyRoots []string
-	var bufRegistryDependencies []BufRegistryDependency
+	var bufFilters []v1.ProtoFileFilter
+	var bsrDependencies []v1.BSRDependency
 	foundBuf := false
 	for _, mode := range modes {
 		path := filepath.Join(dir, string(mode))
@@ -81,7 +88,8 @@ func ReadGitDependency(dir, source string) (v1.Module, error) {
 				return v1.Module{}, fmt.Errorf("readBufDependencyWorkspace: %w", err)
 			}
 			bufRoots = metadata.Roots
-			bufRegistryDependencies = append(bufRegistryDependencies, metadata.RegistryDependencies...)
+			bufFilters = metadata.ProtoFilters
+			bsrDependencies = metadata.BSRDependencies
 			foundBuf = true
 		case gitDependencyBufModule:
 			if foundBuf {
@@ -92,7 +100,8 @@ func ReadGitDependency(dir, source string) (v1.Module, error) {
 				return v1.Module{}, fmt.Errorf("readBufDependencyModule: %w", err)
 			}
 			bufRoots = metadata.Roots
-			bufRegistryDependencies = append(bufRegistryDependencies, metadata.RegistryDependencies...)
+			bufFilters = metadata.ProtoFilters
+			bsrDependencies = metadata.BSRDependencies
 			foundBuf = true
 		case gitDependencyLegacyEasyP:
 			roots, requires, err := readLegacyEasyPRootsAndRequires(path)
@@ -105,11 +114,14 @@ func ReadGitDependency(dir, source string) (v1.Module, error) {
 			return v1.Module{}, fmt.Errorf("unsupported dependency config mode %q", mode)
 		}
 	}
-	if len(bufRegistryDependencies) > 0 {
-		return v1.Module{}, UnsupportedBufRegistryDependenciesError{Dependencies: bufRegistryDependencies}
-	}
 	if foundBuf {
 		module.Roots = bufRoots
+		module.BSRDependencies = bsrDependencies
+		if slices.ContainsFunc(bufFilters, func(filter v1.ProtoFileFilter) bool {
+			return len(filter.Includes) > 0 || len(filter.Excludes) > 0
+		}) {
+			module.ProtoFilters = bufFilters
+		}
 	} else {
 		module.Roots = legacyRoots
 	}
@@ -148,9 +160,9 @@ func detectGitDependencyModes(dir string) ([]gitDependencyMode, error) {
 
 func readGitDependencyManifest(path, source string) (v1.Module, bool, error) {
 	module := v1.Module{Name: source}
-	manifest, err := os.ReadFile(path)
+	manifest, err := readGitDependencyConfig(path)
 	if err != nil {
-		return v1.Module{}, false, fmt.Errorf("ReadFile: %w", err)
+		return v1.Module{}, false, fmt.Errorf("readGitDependencyConfig: %w", err)
 	}
 	if v1.IsModuleManifest(manifest) {
 		if name := nativeDependencyName(manifest); name != "" && name != source {
@@ -190,12 +202,12 @@ func ReadGitDependencyAt(checkout, source, subdir string) (v1.Module, error) {
 	var identityErr error
 	for _, location := range locations {
 		manifestPath := filepath.Join(checkout, location, v1.ModuleFile)
-		raw, err := os.ReadFile(manifestPath)
+		raw, err := readGitDependencyConfig(manifestPath)
 		if errors.Is(err, os.ErrNotExist) {
 			continue
 		}
 		if err != nil {
-			return v1.Module{}, fmt.Errorf("ReadFile: %w", err)
+			return v1.Module{}, fmt.Errorf("readGitDependencyConfig: %w", err)
 		}
 		if !v1.IsModuleManifest(raw) {
 			continue
@@ -231,6 +243,23 @@ func ReadGitDependencyAt(checkout, source, subdir string) (v1.Module, error) {
 		return ReadGitDependency(checkout, source)
 	}
 	return v1.Module{}, fmt.Errorf("module %s requires a protobuf.mod declaring its exact identity in %v", source, locations)
+}
+
+// A symlink would be omitted from the installed snapshot, so reading it here
+// could give a downloaded module different roots or requirements from its cache.
+func readGitDependencyConfig(path string) ([]byte, error) {
+	info, err := os.Lstat(path)
+	if err != nil {
+		return nil, fmt.Errorf("Lstat: %w", err)
+	}
+	if !info.Mode().IsRegular() {
+		return nil, fmt.Errorf("non-regular dependency config %q", path)
+	}
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		return nil, fmt.Errorf("ReadFile: %w", err)
+	}
+	return raw, nil
 }
 
 // nativeDependencyName only selects metadata. The chosen manifest must still

@@ -64,6 +64,7 @@ func (c *Cache) FetchMigration(ctx context.Context, source, version, legacyHash 
 			return modules.Fetched{}, fmt.Errorf("validateMigrationSelection: %w", err)
 		}
 	}
+	files = selectV1ProtoFiles(files, checkout.module.ProtoFilters)
 	hash, err := hashV1Files(checkout.dir, files)
 	if err != nil {
 		return modules.Fetched{}, fmt.Errorf("hashV1Files: %w", err)
@@ -71,8 +72,12 @@ func (c *Cache) FetchMigration(ctx context.Context, source, version, legacyHash 
 	if version == "" {
 		version = checkout.commit
 	}
-	return modules.Fetched{Module: checkout.module, Lock: v1.LockedModule{
-		Source: source, Version: version, Commit: checkout.commit, Hash: hash,
+	module, bindings, err := c.resolveBSRDependencies(ctx, checkout.module)
+	if err != nil {
+		return modules.Fetched{}, fmt.Errorf("resolveBSRDependencies: %w", err)
+	}
+	return modules.Fetched{Module: module, Lock: v1.LockedModule{
+		Source: source, Version: version, Commit: checkout.commit, Hash: hash, BSR: bindings,
 	}}, nil
 }
 
