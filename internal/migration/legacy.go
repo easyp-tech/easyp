@@ -16,6 +16,7 @@ import (
 // These types intentionally describe v0, rather than the runtime config, whose
 // legacy fields may be removed independently of the explicit migration tool.
 type legacyConfig struct {
+	Version  string            `yaml:"version"`
 	Lint     config.LintConfig `yaml:"lint"`
 	Deps     []string          `yaml:"deps"`
 	Generate legacyGenerate    `yaml:"generate"`
@@ -67,31 +68,56 @@ func (d *legacyDirectory) UnmarshalYAML(node *yaml.Node) error {
 	return nil
 }
 
-func parseLegacy(raw []byte) (legacyConfig, error) {
+func parseLegacy(raw []byte) (legacyConfig, []string, error) {
 	var cfg legacyConfig
-	if err := decodeStrict(raw, &cfg); err != nil {
-		return legacyConfig{}, fmt.Errorf("decodeStrict: %w", err)
+	warnings, err := decodeLegacy(raw, &cfg)
+	if err != nil {
+		return legacyConfig{}, nil, fmt.Errorf("decodeLegacy: %w", err)
+	}
+	if cfg.Version != "" {
+		warnings = append(warnings, fmt.Sprintf("legacy version %q is compatibility metadata and is omitted from v1 files", cfg.Version))
 	}
 	if err := cfg.Generate.Managed.Validate(); err != nil {
-		return legacyConfig{}, fmt.Errorf("Validate: %w", err)
+		return legacyConfig{}, nil, fmt.Errorf("Validate: %w", err)
 	}
 	for i, input := range cfg.Generate.Inputs {
 		if (input.Directory == nil) == (input.GitRepo == nil) {
-			return legacyConfig{}, fmt.Errorf("generate.inputs[%d] must select exactly one directory or git_repo", i)
+			return legacyConfig{}, nil, fmt.Errorf("generate.inputs[%d] must select exactly one directory or git_repo", i)
 		}
 	}
-	return cfg, nil
+	return cfg, warnings, nil
 }
 
-// decodeStrict validates the YAML node graph before custom UnmarshalYAML
-// methods can discard keys or coerce types. It never expands the environment.
+// decodeLegacy validates values that v0 actually consumed before custom
+// UnmarshalYAML methods can coerce them. Unknown legacy keys are preserved only
+// in the byte-identical backup: v0 ignored them as well, so migration reports a
+// warning rather than inventing v1 semantics for them.
+func decodeLegacy(raw []byte, out any) ([]string, error) {
+	node, err := document(raw)
+	if err != nil {
+		return nil, fmt.Errorf("document: %w", err)
+	}
+	var warnings []string
+	if err := typedNode(node, reflect.TypeOf(out).Elem(), "config", &warnings); err != nil {
+		return nil, fmt.Errorf("typedNode: %w", err)
+	}
+	if err := node.Decode(out); err != nil {
+		return nil, fmt.Errorf("Decode: %w", err)
+	}
+	return warnings, nil
+}
+
 func decodeStrict(raw []byte, out any) error {
 	node, err := document(raw)
 	if err != nil {
 		return fmt.Errorf("document: %w", err)
 	}
-	if err := typedNode(node, reflect.TypeOf(out).Elem(), "config"); err != nil {
+	var warnings []string
+	if err := typedNode(node, reflect.TypeOf(out).Elem(), "config", &warnings); err != nil {
 		return fmt.Errorf("typedNode: %w", err)
+	}
+	if len(warnings) > 0 {
+		return fmt.Errorf("%s", warnings[0])
 	}
 	if err := node.Decode(out); err != nil {
 		return fmt.Errorf("Decode: %w", err)
@@ -115,6 +141,9 @@ func document(raw []byte) (*yaml.Node, error) {
 	if len(root.Content) != 1 {
 		return nil, fmt.Errorf("empty YAML input")
 	}
+	if root.Content[0].Tag == "!!null" {
+		return nil, fmt.Errorf("null YAML value at line %d", root.Content[0].Line)
+	}
 	if err := unambiguousNode(root.Content[0]); err != nil {
 		return nil, fmt.Errorf("unambiguousNode: %w", err)
 	}
@@ -128,11 +157,8 @@ func unambiguousNode(node *yaml.Node) error {
 	if node.Kind == yaml.AliasNode || node.Anchor != "" {
 		return fmt.Errorf("YAML aliases and anchors require manual migration (line %d)", node.Line)
 	}
-	if node.Tag == "!!null" {
-		return fmt.Errorf("null YAML value at line %d", node.Line)
-	}
 	switch node.Tag {
-	case "!!map", "!!seq", "!!str", "!!int", "!!float", "!!bool":
+	case "!!map", "!!seq", "!!str", "!!int", "!!float", "!!bool", "!!null":
 	default:
 		return fmt.Errorf("unsupported YAML tag %q at line %d", node.Tag, node.Line)
 	}
@@ -157,9 +183,16 @@ func unambiguousNode(node *yaml.Node) error {
 	return nil
 }
 
-func typedNode(node *yaml.Node, typ reflect.Type, path string) error {
+func typedNode(node *yaml.Node, typ reflect.Type, path string, warnings *[]string) error {
 	for typ.Kind() == reflect.Pointer {
 		typ = typ.Elem()
+	}
+	if node.Tag == "!!null" {
+		if path == "config.deps" && typ.Kind() == reflect.Slice {
+			*warnings = append(*warnings, "legacy deps: null is treated as an empty dependency list")
+			return nil
+		}
+		return fmt.Errorf("null YAML value at line %d", node.Line)
 	}
 	if typ == reflect.TypeFor[legacyDirectory]() && node.Kind == yaml.ScalarNode && node.Tag == "!!str" {
 		return nil
@@ -207,9 +240,10 @@ func typedNode(node *yaml.Node, typ reflect.Type, path string) error {
 			key := node.Content[i].Value
 			field, ok := fields[key]
 			if !ok {
-				return fmt.Errorf("unknown key %s.%s", path, key)
+				*warnings = append(*warnings, fmt.Sprintf("legacy key %s.%s at line %d was ignored by v0 and is omitted from v1 files", path, key, node.Content[i].Line))
+				continue
 			}
-			if err := typedNode(node.Content[i+1], field, path+"."+key); err != nil {
+			if err := typedNode(node.Content[i+1], field, path+"."+key, warnings); err != nil {
 				return err
 			}
 		}
@@ -218,7 +252,7 @@ func typedNode(node *yaml.Node, typ reflect.Type, path string) error {
 			return fmt.Errorf("%s must be a sequence", path)
 		}
 		for i, child := range node.Content {
-			if err := typedNode(child, typ.Elem(), fmt.Sprintf("%s[%d]", path, i)); err != nil {
+			if err := typedNode(child, typ.Elem(), fmt.Sprintf("%s[%d]", path, i), warnings); err != nil {
 				return err
 			}
 		}
@@ -227,7 +261,7 @@ func typedNode(node *yaml.Node, typ reflect.Type, path string) error {
 			return fmt.Errorf("%s must be a mapping", path)
 		}
 		for i := 1; i < len(node.Content); i += 2 {
-			if err := typedNode(node.Content[i], typ.Elem(), path+"."+node.Content[i-1].Value); err != nil {
+			if err := typedNode(node.Content[i], typ.Elem(), path+"."+node.Content[i-1].Value, warnings); err != nil {
 				return err
 			}
 		}

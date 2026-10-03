@@ -1,6 +1,7 @@
 package migration
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -25,7 +26,7 @@ func TestExclusionsPreserveLegacyLiteralAndPrefixSemantics(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			legacy, err := parseLegacy([]byte(tt.input))
+			legacy, _, err := parseLegacy([]byte(tt.input))
 			require.NoError(t, err)
 			raw, err := convertPolicy(legacy)
 			require.NoError(t, err)
@@ -56,8 +57,41 @@ func TestPolicyBlocksImplicitInheritance(t *testing.T) {
 	}
 }
 
-func TestLegacyFieldsDoNotDriftWithRuntime(t *testing.T) {
+func TestUnknownLegacyFieldsAreReportedAndIgnored(t *testing.T) {
 	t.Parallel()
-	_, err := parseLegacy([]byte("breaking: {ignore_unstable: true}\n"))
-	require.ErrorContains(t, err, "unknown")
+	legacy, warnings, err := parseLegacy([]byte("breaking: {ignore_unstable: true}\n"))
+	require.NoError(t, err)
+	assert.Empty(t, legacy.Breaking.Ignore)
+	require.Len(t, warnings, 1)
+	assert.Contains(t, warnings[0], "config.breaking.ignore_unstable")
+	assert.Contains(t, warnings[0], "ignored by v0")
+}
+
+func TestLegacyCompatibilityMetadata(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name        string
+		input       string
+		want        string
+		wantDeps    int
+		wantVersion string
+	}{
+		{name: "version", input: "version: v1alpha\n", want: "legacy version \"v1alpha\"", wantVersion: "v1alpha"},
+		{name: "nullable deps", input: "deps:\n", want: "empty dependency list"},
+		{name: "unknown nested key", input: "lint: {use: [DEFAULT], future_key: true}\n", want: "config.lint.future_key"},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			cfg, warnings, err := parseLegacy([]byte(tt.input))
+			require.NoError(t, err)
+			assert.Equal(t, tt.wantVersion, cfg.Version)
+			assert.Len(t, cfg.Deps, tt.wantDeps)
+			require.NotEmpty(t, warnings)
+			assert.Contains(t, strings.Join(warnings, "\n"), tt.want)
+		})
+	}
 }

@@ -162,10 +162,11 @@ func Build(ctx context.Context, options Options) (*Plan, error) {
 		p.warnings = append(p.warnings, "Already v1: no files changed and no dependencies refreshed.")
 		return p, nil
 	}
-	cfg, err := parseLegacy(policy.data)
+	cfg, legacyWarnings, err := parseLegacy(policy.data)
 	if err != nil {
 		return nil, fmt.Errorf("parseLegacy: %w", err)
 	}
+	p.warnings = append(p.warnings, legacyWarnings...)
 	roots, inputs, err := localRoots(cfg)
 	if err != nil {
 		return nil, fmt.Errorf("localRoots: %w", err)
