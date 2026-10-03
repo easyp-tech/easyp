@@ -8,6 +8,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"strings"
 
 	v1 "github.com/easyp-tech/easyp/internal/config/v1"
 	"github.com/easyp-tech/easyp/internal/logger"
@@ -46,6 +47,9 @@ func selectV1Modules(repoRoot, configDir string, names []string) ([]v1ModuleSele
 		}
 		_, err = os.Stat(filepath.Join(path, v1.ModuleFile))
 		if errors.Is(err, os.ErrNotExist) {
+			if name == "." || name == ".." || strings.HasPrefix(name, "./") || strings.HasPrefix(name, "../") {
+				return nil, fmt.Errorf("generate.modules entry %q is a local path, but %s has no %s; point to a workspace module directory containing %s, use its module identity, or omit generate.modules to select the module containing this generator", name, path, v1.ModuleFile, v1.ModuleFile)
+			}
 			result = append(result, v1ModuleSelection{source: name})
 			continue
 		}
