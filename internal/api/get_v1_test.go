@@ -82,7 +82,13 @@ func TestParseV1GetRequirement(t *testing.T) {
 		{name: "nested URL", input: "https://github.com/acme/repo.git/foo", module: "https://github.com/acme/repo.git/foo"},
 		{name: "tag", input: "github.com/acme/repo/foo@v1.2.3", module: "github.com/acme/repo/foo", version: "v1.2.3"},
 		{name: "commit", input: "github.com/acme/repo@" + strings.Repeat("a", 40), module: "github.com/acme/repo", version: strings.Repeat("a", 40)},
-		{name: "invalid version", input: "github.com/acme/repo@latest", wantErr: "expected a semantic version or full Git commit"},
+		{name: "named tag", input: "github.com/acme/repo@common-protos-1_3_1", module: "github.com/acme/repo", version: "common-protos-1_3_1"},
+		{name: "tag with slash", input: "github.com/acme/repo@schemas/stable", module: "github.com/acme/repo", version: "schemas/stable"},
+		{name: "SSH authority", input: "ssh://git@example.com/acme/repo", module: "ssh://git@example.com/acme/repo"},
+		{name: "SSH authority and tag", input: "ssh://git@example.com/acme/repo@schemas/stable", module: "ssh://git@example.com/acme/repo", version: "schemas/stable"},
+		{name: "legacy major query", input: "github.com/acme/repo@v2.26.1", module: "github.com/acme/repo", version: "v2.26.1+incompatible"},
+		{name: "native major query", input: "github.com/acme/repo/v2@v2.26.1", module: "github.com/acme/repo/v2", version: "v2.26.1"},
+		{name: "empty version", input: "github.com/acme/repo@", wantErr: "expected a version"},
 		{name: "invalid module", input: "github.com/acme/../repo", wantErr: "invalid Git module identity"},
 	}
 	for _, tt := range tests {
@@ -133,17 +139,34 @@ func TestGetPromotesIndirectAndPinsExplicitCommit(t *testing.T) {
 }
 
 func TestGetRejectsBadArgumentWithoutChangingManifest(t *testing.T) {
-	root := t.TempDir()
-	manifest := []byte("module example.com/app\n")
-	require.NoError(t, os.WriteFile(filepath.Join(root, "protobuf.mod"), manifest, 0o644))
-	t.Chdir(root)
-	app := &cli.App{Commands: []*cli.Command{(Get{}).Command()}, Metadata: map[string]any{}}
-	require.Error(t, app.Run([]string{"easyp", "get", "github.com/acme/repo@latest"}))
-	current, err := os.ReadFile(filepath.Join(root, "protobuf.mod"))
-	require.NoError(t, err)
-	require.Equal(t, manifest, current)
-	_, err = os.Stat(filepath.Join(root, "protobuf.lock"))
-	require.ErrorIs(t, err, os.ErrNotExist)
+	// The CLI finds protobuf.mod through the process working directory.
+	tests := []struct {
+		name    string
+		input   string
+		wantErr string
+	}{
+		{name: "empty_tag", input: "github.com/acme/repo@", wantErr: "expected a version"},
+		{name: "invalid_identity", input: "github.com/acme/../repo", wantErr: "invalid Git module identity"},
+	}
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			root := t.TempDir()
+			manifest := []byte("module example.com/app\n")
+			require.NoError(t, os.WriteFile(filepath.Join(root, "protobuf.mod"), manifest, 0o644))
+			t.Chdir(root)
+			app := &cli.App{Commands: []*cli.Command{(Get{}).Command()}, Metadata: map[string]any{}}
+
+			err := app.Run([]string{"easyp", "get", tt.input})
+
+			require.ErrorContains(t, err, tt.wantErr)
+			current, err := os.ReadFile(filepath.Join(root, "protobuf.mod"))
+			require.NoError(t, err)
+			require.Equal(t, manifest, current)
+			_, err = os.Stat(filepath.Join(root, "protobuf.lock"))
+			require.ErrorIs(t, err, os.ErrNotExist)
+		})
+	}
 }
 
 func TestGetResolutionFailureLeavesManifestAndLockUnchanged(t *testing.T) {

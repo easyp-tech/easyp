@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"fmt"
 	"io/fs"
-	"os"
 	"path/filepath"
 	"strings"
 
@@ -39,9 +38,9 @@ func readNestedGitDependencyModule(dir, source string) (nestedGitDependency, err
 		if entry.Name() != dependencyManifestFile || filepath.Dir(path) == dir {
 			return nil
 		}
-		raw, err := os.ReadFile(path)
+		raw, err := readGitDependencyConfig(path)
 		if err != nil {
-			return fmt.Errorf("ReadFile: %s: %w", path, err)
+			return fmt.Errorf("readGitDependencyConfig: %w", err)
 		}
 		if !v1.IsModuleManifest(raw) {
 			return nil

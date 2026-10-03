@@ -61,7 +61,7 @@ func describeModule(input DescribeInput) (DescribeOutput, error) {
 	}
 	out := DescribeOutput{SchemaVersion: SchemaVersion, File: v1.ModuleFile, SelectedPath: path, Format: "text", Notes: []string{
 		"protobuf.mod is a text manifest, not YAML. No JSON Schema is fabricated; grammar describes its actual directives. This tool returns reference data and never reads the supplied file as a path.",
-		"Module identities, roots and versions remain separate from protobuf package names. Policy extends uses declared, locked modules; exact generate.packages selectors never acquire new dependencies. BSR-to-Git discovery is not implemented.",
+		"Module identities, roots and versions remain separate from protobuf package names. Policy extends uses declared, locked modules; exact generate.packages selectors never acquire new dependencies. Buf dependencies inside Git modules use an explicit BSR resolver with fixed compatibility snapshots; direct BSR require directives and repository inference are not supported.",
 	}}
 	if enabled(input.IncludeSchema) {
 		grammar := moduleGrammar(path)

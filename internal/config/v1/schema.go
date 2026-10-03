@@ -162,6 +162,22 @@ func documents() map[string]*schema {
 	entry.Properties["version"].Pattern = `^(v[0-9]+\.[0-9]+\.[0-9]+([+-][0-9A-Za-z.-]+)?|[0-9a-fA-F]{40}|[0-9a-fA-F]{64})$`
 	entry.Properties["commit"].Pattern = `^([0-9a-fA-F]{40}|[0-9a-fA-F]{64})$`
 	entry.Properties["hash"].Pattern = `^h1:[A-Za-z0-9+/]{43}=$`
+	entry.Properties["bsr"].Description = "BSR requests and their pinned Git targets, recorded on the requiring Git module. Frozen commands replay these bindings without consulting a resolver. compatibility_snapshot does not guarantee BSR revision equivalence or verify the BSR digest."
+	binding := entry.Properties["bsr"].Items
+	binding.Required = []string{"dependency", "git", "resolution"}
+	binding.Properties["resolution"].Enum = []string{BSRCompatibilitySnapshot, BSRExactRevision}
+	dependency := binding.Properties["dependency"]
+	dependency.Required = []string{"module", "config"}
+	dependency.Properties["module"].Pattern = bsrModulePattern
+	dependency.Properties["reference"].Pattern = `^[^:\s]*$`
+	dependency.Properties["commit"].Pattern = `^[0-9a-fA-F]{32}$`
+	dependency.Properties["digest"].Pattern = bsrDigestPattern
+	dependency.Properties["config"].MinLength = 1
+	dependency.Properties["config"].Description = "Declaring buf.yaml path relative to the verified Git checkout."
+	git := binding.Properties["git"]
+	git.Required = []string{"module", "version"}
+	git.Properties["module"].MinLength = 1
+	git.Properties["version"].Pattern = entry.Properties["version"].Pattern
 
 	return map[string]*schema{
 		"easyp":         document("easyp.yaml v1", policy),

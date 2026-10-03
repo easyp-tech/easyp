@@ -113,7 +113,9 @@ While Protocol Buffers offer significant technical advantages over REST/JSON, ac
 
 ## Configuration
 
-The v1 pilot uses `protobuf.mod` for module identity, source roots, and dependencies. `easyp.gen.yaml` selects modules and plugins; `easyp.yaml` configures lint and breaking checks. Run `easyp get <module>[@version|@commit]` from the module directory to add a direct requirement and record its transitive dependencies as `// indirect`. The command writes pinned commits and content hashes to `protobuf.lock`; `easyp mod tidy` resolves requirements already in the manifest.
+The development version of EasyP v1.0 uses `protobuf.mod` for module identity, source roots, and dependencies. `easyp.gen.yaml` selects modules and plugins; `easyp.yaml` configures lint and breaking checks. Run `easyp get <module>[@version|@tag|@commit]` from the module directory to add a direct requirement and record its transitive dependencies as `// indirect`. Named Git tags are resolved to full commits before the requirement is written. The command writes pinned commits and content hashes to `protobuf.lock`; `easyp mod tidy` resolves requirements already in the manifest.
+
+Git dependencies using Buf can resolve known BSR dependencies through fixed Git snapshots, including the Googleapis dependency of grpc-gateway and grpc-federation. The lock retains the original BSR reference, commit and digest with `resolution: compatibility_snapshot`; the CLI explicitly reports that BSR revision equivalence and digest verification are not guaranteed. Frozen commands reuse the recorded mapping. Unknown BSR modules fail explicitly. See [supported mappings and resolver boundaries](.spec/config/dependency.md#bsr-compatibility-snapshots).
 
 The [`easyp_config_describe` MCP tool](mcp/easypconfig/README.md) describes the editable v1 YAML files and uses the same JSON Schemas as the CLI.
 

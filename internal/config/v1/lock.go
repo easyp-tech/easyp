@@ -19,10 +19,11 @@ type Lock struct {
 
 // LockedModule identifies one exact Git dependency in protobuf.lock.
 type LockedModule struct {
-	Source  string `yaml:"source"`
-	Version string `yaml:"version"`
-	Commit  string `yaml:"commit"`
-	Hash    string `yaml:"hash"`
+	Source  string          `yaml:"source"`
+	Version string          `yaml:"version"`
+	Commit  string          `yaml:"commit"`
+	Hash    string          `yaml:"hash"`
+	BSR     []BSRResolution `yaml:"bsr,omitempty"`
 }
 
 // ParseLock reads and validates a v1 protobuf.lock document.
@@ -78,6 +79,17 @@ func (lock Lock) Validate() error {
 		digest, err := base64.StdEncoding.DecodeString(strings.TrimPrefix(entry.Hash, "h1:"))
 		if err != nil || len(digest) != 32 {
 			return fmt.Errorf("%s: invalid content hash %q", entry.Source, entry.Hash)
+		}
+		origins := make(map[string]bool, len(entry.BSR))
+		for _, binding := range entry.BSR {
+			if err := binding.Validate(); err != nil {
+				return fmt.Errorf("Validate: %s: %w", entry.Source, err)
+			}
+			origin := binding.Dependency.Config + ":" + binding.Dependency.Module
+			if origins[origin] {
+				return fmt.Errorf("duplicate BSR binding for %s in %s", binding.Dependency.Module, binding.Dependency.Config)
+			}
+			origins[origin] = true
 		}
 	}
 	return nil

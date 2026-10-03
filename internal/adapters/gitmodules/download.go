@@ -87,10 +87,15 @@ func fetchPinnedV1Module(ctx context.Context, entry v1.LockedModule, cacheRoot, 
 	if strings.TrimSpace(commit) != entry.Commit {
 		return fmt.Errorf("%s: checked out commit does not match lock", entry.Source)
 	}
+	module, err := readCachedV1Module(checkout, entry.Source)
+	if err != nil {
+		return fmt.Errorf("readCachedV1Module: %w", err)
+	}
 	files, err := trackedV1Files(ctx, checkout)
 	if err != nil {
 		return fmt.Errorf("trackedV1Files: %w", err)
 	}
+	files = selectV1ProtoFiles(files, module.ProtoFilters)
 	actual, err := hashV1Files(checkout, files)
 	if err != nil {
 		return fmt.Errorf("hashV1Files: %w", err)
@@ -110,6 +115,21 @@ func fetchPinnedV1Module(ctx context.Context, entry v1.LockedModule, cacheRoot, 
 		return err
 	}
 	defer func() { _ = os.RemoveAll(stage) }()
+	if len(module.ProtoFilters) > 0 {
+		// A valid Buf root may become empty after includes/excludes are applied.
+		for _, root := range module.Roots {
+			info, err := os.Lstat(filepath.Join(checkout, root))
+			if err != nil {
+				return fmt.Errorf("Lstat: %w", err)
+			}
+			if !info.IsDir() {
+				return fmt.Errorf("module %s has invalid root %q: not a directory", module.Name, root)
+			}
+			if err := os.MkdirAll(filepath.Join(stage, root), 0o755); err != nil {
+				return fmt.Errorf("MkdirAll: %w", err)
+			}
+		}
+	}
 	for _, name := range files {
 		path := filepath.FromSlash(name)
 		if err := disk.CopyRegularFile(filepath.Join(checkout, path), filepath.Join(stage, path)); err != nil {

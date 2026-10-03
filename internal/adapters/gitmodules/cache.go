@@ -6,16 +6,27 @@ import (
 	"fmt"
 	"path/filepath"
 
+	"github.com/easyp-tech/easyp/internal/adapters/bsr"
 	moduleconfig "github.com/easyp-tech/easyp/internal/adapters/module_config"
 	v1 "github.com/easyp-tech/easyp/internal/config/v1"
+	"github.com/easyp-tech/easyp/internal/modules"
 )
 
 // Cache owns Git checkouts, installed contents, and their layout below EASYPPATH.
-type Cache struct{ root string }
+type Cache struct {
+	root        string
+	bsrResolver modules.BSRResolver
+}
 
 // New places the v1 Git cache below the supplied EasyP storage directory.
 func New(storageDir string) *Cache {
-	return &Cache{root: filepath.Join(storageDir, "v1", "git")}
+	return NewWithBSRResolver(storageDir, bsr.StaticResolver{})
+}
+
+// NewWithBSRResolver supplies the backend used when fetching Buf dependency metadata.
+// Cached and frozen operations replay the lock's bindings without calling this backend.
+func NewWithBSRResolver(storageDir string, resolver modules.BSRResolver) *Cache {
+	return &Cache{root: filepath.Join(storageDir, "v1", "git"), bsrResolver: resolver}
 }
 
 // Cached reads installed metadata without downloading or changing files.
@@ -31,6 +42,10 @@ func (c *Cache) Cached(entry v1.LockedModule) (string, v1.Module, error) {
 	}
 	if err := moduleconfig.ValidateLegacyMajor(directory, entry.Source, entry.Version); err != nil {
 		return "", v1.Module{}, fmt.Errorf("ValidateLegacyMajor: %w", err)
+	}
+	module, err = restoreBSRDependencies(module, entry.BSR)
+	if err != nil {
+		return "", v1.Module{}, fmt.Errorf("restoreBSRDependencies: %w", err)
 	}
 	return directory, module, nil
 }
