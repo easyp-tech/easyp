@@ -256,3 +256,20 @@ func TestRunWritesDescriptorWithoutPlugins(t *testing.T) {
 		})
 	}
 }
+
+func TestRunExplainsUnselectedChildGenerators(t *testing.T) {
+	t.Parallel()
+
+	root := t.TempDir()
+	writeV1GenerateFixture(t, root, "easyp.gen.yaml", "version: v1\noptions:\n  go:\n    package_prefix: example.com/gen\n")
+	writeV1GenerateFixture(t, root, "child/easyp.gen.yaml", "version: v1\n")
+	writeV1GenerateFixture(t, root, "child/protobuf.mod", "module example.com/child\nroots proto\n")
+	writeV1GenerateFixture(t, root, "child/proto/child.proto", "syntax = \"proto3\"; package child.v1; message Child {}\n")
+
+	err := Run(t.Context(), logger.NewNop(), nil, Request{WorkDir: root})
+
+	require.ErrorContains(t, err, "no executable generation targets")
+	require.ErrorContains(t, err, "found 1 additional easyp.gen.yaml")
+	require.ErrorContains(t, err, "--all")
+	require.ErrorContains(t, err, "--project")
+}
