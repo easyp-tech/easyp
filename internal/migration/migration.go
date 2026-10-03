@@ -323,7 +323,7 @@ func (p *Plan) addOutput(name string, content []byte, replaceLegacy bool) error 
 	if err != nil {
 		return fmt.Errorf("capture: %w", err)
 	}
-	mode := os.FileMode(0o600)
+	mode := os.FileMode(0o644)
 	if current.exists {
 		mode = current.mode
 	}
