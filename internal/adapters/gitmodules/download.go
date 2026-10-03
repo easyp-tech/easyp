@@ -32,7 +32,6 @@ func (c *Cache) VerifyCached(ctx context.Context, lock v1.Lock) error {
 }
 
 func (c *Cache) install(ctx context.Context, lock v1.Lock, acquire bool) error {
-	cacheRoot := c.root
 	if err := lock.Validate(); err != nil {
 		return fmt.Errorf("Validate: %w", err)
 	}
@@ -40,33 +39,55 @@ func (c *Cache) install(ctx context.Context, lock v1.Lock, acquire bool) error {
 		if err := ctx.Err(); err != nil {
 			return fmt.Errorf("Err: %w", err)
 		}
-		installed := v1ModuleCachePath(cacheRoot, entry)
-		info, err := os.Lstat(installed)
-		if errors.Is(err, os.ErrNotExist) {
-			if !acquire {
-				return fmt.Errorf("policy module %s@%s is not cached; run easyp mod download before validate-config: %w", entry.Source, entry.Commit, err)
-			}
-			if err := fetchPinnedV1Module(ctx, entry, cacheRoot, installed); err != nil {
-				return err
-			}
-			continue
-		}
-		if err != nil {
+		if err := c.installEntry(ctx, entry, acquire); err != nil {
 			return err
 		}
-		if !info.IsDir() {
-			return fmt.Errorf("%s: cached path %q is not a directory; inspect this path and keep protobuf.lock unchanged", entry.Source, installed)
+	}
+	return nil
+}
+
+func (c *Cache) installEntry(ctx context.Context, entry v1.LockedModule, acquire bool) error {
+	installed := v1ModuleCachePath(c.root, entry)
+	info, err := os.Lstat(installed)
+	if errors.Is(err, os.ErrNotExist) {
+		if !acquire {
+			return fmt.Errorf("policy module %s@%s is not cached; run easyp mod download before validate-config: %w", entry.Source, entry.Commit, err)
 		}
-		actual, err := dirhash.HashDir(installed, "", dirhash.Hash1)
-		if err != nil {
-			return fmt.Errorf("verify cached %s at %q: %w", entry.Source, installed, err)
+		if err := os.MkdirAll(filepath.Dir(installed), 0o755); err != nil {
+			return fmt.Errorf("MkdirAll: %w", err)
 		}
-		if actual != entry.Hash {
-			return fmt.Errorf("cached %s@%s hash mismatch: got %s, want %s; inspect or quarantine only cache directory %q, then rerun easyp mod download; keep protobuf.lock unchanged", entry.Source, entry.Commit, actual, entry.Hash, installed)
+		unlock, lockErr := lockObjectRepository(ctx, installed+".install.lock")
+		if lockErr != nil {
+			return fmt.Errorf("lockObjectRepository: %w", lockErr)
 		}
-		if err := moduleconfig.ValidateLegacyMajor(installed, entry.Source, entry.Version); err != nil {
-			return fmt.Errorf("ValidateLegacyMajor: %w", err)
+		defer unlock()
+
+		// Another process may have completed the same atomic install while this
+		// process waited for the per-snapshot lock. Reuse and verify that result
+		// rather than racing a second rename into the same cache directory.
+		info, err = os.Lstat(installed)
+		if errors.Is(err, os.ErrNotExist) {
+			if err := fetchPinnedV1Module(ctx, entry, c.root, installed); err != nil {
+				return err
+			}
+			info, err = os.Lstat(installed)
 		}
+	}
+	if err != nil {
+		return err
+	}
+	if !info.IsDir() {
+		return fmt.Errorf("%s: cached path %q is not a directory; inspect this path and keep protobuf.lock unchanged", entry.Source, installed)
+	}
+	actual, err := dirhash.HashDir(installed, "", dirhash.Hash1)
+	if err != nil {
+		return fmt.Errorf("verify cached %s at %q: %w", entry.Source, installed, err)
+	}
+	if actual != entry.Hash {
+		return fmt.Errorf("cached %s@%s hash mismatch: got %s, want %s; inspect or quarantine only cache directory %q, then rerun easyp mod download; keep protobuf.lock unchanged", entry.Source, entry.Commit, actual, entry.Hash, installed)
+	}
+	if err := moduleconfig.ValidateLegacyMajor(installed, entry.Source, entry.Version); err != nil {
+		return fmt.Errorf("ValidateLegacyMajor: %w", err)
 	}
 	return nil
 }
