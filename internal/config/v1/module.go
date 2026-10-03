@@ -69,7 +69,9 @@ func ParseModule(r io.Reader) (Module, error) {
 	blockLine := 0
 	requires := make(map[string]int)
 	replaces := make(map[string]int)
-	for line := 1; scanner.Scan(); line++ {
+	line := 0
+	for scanner.Scan() {
+		line++
 		text := scanner.Text()
 		if line == 1 {
 			text = strings.TrimPrefix(text, "\ufeff")
@@ -194,7 +196,10 @@ func ParseModule(r io.Reader) (Module, error) {
 		return Module{}, fmt.Errorf("protobuf.mod:%d: unclosed %s block", blockLine, block)
 	}
 	if result.Name == "" {
-		return Module{}, fmt.Errorf("protobuf.mod: missing module directive")
+		if line == 0 {
+			line = 1
+		}
+		return Module{}, fmt.Errorf("protobuf.mod:%d: missing module directive", line)
 	}
 	if len(result.Roots) == 0 {
 		result.Roots = []string{"."}
