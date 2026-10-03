@@ -25,7 +25,7 @@ func TestEnsureFrozenSourcesPreflight(t *testing.T) {
 	}{
 		{name: "missing_manifest", lock: "version: 1\nmodules: []\n", wantErr: "protobuf.mod"},
 		{name: "legacy_manifest", manifest: "direct (\nexample.com/a v1.0.0\n)\n", lock: "version: 1\nmodules: []\n", wantErr: "legacy"},
-		{name: "missing_empty_lock", manifest: "module example.com/app\n", wantErr: "protobuf.lock"},
+		{name: "missing_empty_lock", manifest: "module example.com/app\n", wantErr: "run easyp mod tidy without --frozen"},
 		{name: "malformed_empty_lock", manifest: "module example.com/app\n", lock: "version: 99\n", wantErr: "unsupported protobuf.lock"},
 		{name: "empty_lock", manifest: "module example.com/app\n", lock: "version: 1\nmodules: []\n"},
 		{name: "unreachable_replace_before_lock", manifest: "module example.com/app\nreplace example.com/unused => ./missing\n", lock: "invalid yaml: [", wantErr: "replace"},

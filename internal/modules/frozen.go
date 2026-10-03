@@ -2,7 +2,9 @@ package modules
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"os"
 	"path/filepath"
 	"slices"
 
@@ -33,6 +35,9 @@ func ensureFrozenSources(ctx context.Context, root string, repository Cache) (So
 	}
 	lock, err := ReadLock(filepath.Join(root, v1.LockFile))
 	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return nil, fmt.Errorf("frozen mode requires %s; run easyp mod tidy without --frozen and commit the generated lock: %w", v1.LockFile, err)
+		}
 		return nil, fmt.Errorf("ReadLock: %w", err)
 	}
 	err = validateFrozenRequirements(module.Requires, lock)
