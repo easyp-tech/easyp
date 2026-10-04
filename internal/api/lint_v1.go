@@ -144,6 +144,13 @@ func (l Lint) actionV1(ctx *cli.Context, log logger.Logger, configPath, projectR
 			if err != nil {
 				return fmt.Errorf("LintConfig: %w", err)
 			}
+			if moduleDir != "" {
+				_, module, moduleErr := modules.ReadManifest(moduleDir)
+				if moduleErr != nil {
+					return fmt.Errorf("ReadManifest: %w", moduleErr)
+				}
+				lintConfig.PackageDirectoryPrefix = v1PackageDirectoryPrefix(module.Name)
+			}
 			var importRoots []string
 			if moduleDir != "" {
 				roots, known := moduleRoots[moduleDir]
@@ -216,6 +223,19 @@ type v1LintPolicySources struct {
 type v1LintAppKey struct {
 	policy    v1LintPolicySources
 	moduleDir string
+}
+
+func v1PackageDirectoryPrefix(identity string) string {
+	logical := filepath.ToSlash(strings.TrimSuffix(identity, "/"))
+	if major, err := v1.ModulePathMajor(identity); err == nil && major != "" {
+		logical = strings.TrimSuffix(logical, major)
+	}
+	logical = strings.TrimSuffix(logical, "/")
+	if logical == "" {
+		return ""
+	}
+	base := filepath.Base(logical)
+	return strings.TrimSuffix(base, ".git")
 }
 
 func v1IssueRuleExcluded(name string, selections []string) bool {

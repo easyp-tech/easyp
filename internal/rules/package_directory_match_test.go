@@ -73,3 +73,28 @@ func TestPackageDirectoryMatch_Validate(t *testing.T) {
 		})
 	}
 }
+
+func TestPackageDirectoryMatch_ModuleQualifiedPackage(t *testing.T) {
+	t.Parallel()
+
+	r, protos := start(t)
+	info := protos[validAuthProto]
+	info.ImportPath = "v1/service.proto"
+	rule := rules.PackageDirectoryMatch{Root: ".", Prefix: "user"}
+
+	info.Info.ProtoBody.Packages[0].Name = "user.v1"
+	issues, err := rule.Validate(info)
+	r.NoError(err)
+	r.Empty(issues)
+
+	info.Info.ProtoBody.Packages[0].Name = "v1"
+	issues, err = rule.Validate(info)
+	r.NoError(err)
+	r.Empty(issues)
+
+	info.Info.ProtoBody.Packages[0].Name = "other.v1"
+	issues, err = rule.Validate(info)
+	r.NoError(err)
+	r.Len(issues, 1)
+	r.Contains(issues[0].Message, `expected "v1" or module-qualified "user.v1"`)
+}
