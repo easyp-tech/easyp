@@ -16,7 +16,7 @@ func cacheFileIdentity(info os.FileInfo) (cacheIdentity, bool) {
 		Device:            uint64(stat.Dev),
 		Inode:             uint64(stat.Ino),
 		Links:             uint64(stat.Nlink),
-		ChangeSeconds:     stat.Ctim.Sec,
-		ChangeNanoseconds: stat.Ctim.Nsec,
+		ChangeSeconds:     int64(stat.Ctim.Sec),
+		ChangeNanoseconds: int64(stat.Ctim.Nsec),
 	}, true
 }
