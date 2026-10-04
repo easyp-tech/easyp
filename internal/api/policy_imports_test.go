@@ -1,6 +1,7 @@
 package api
 
 import (
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -66,6 +67,120 @@ func TestFindPolicyModule(t *testing.T) {
 
 			require.NoError(t, err)
 			assert.Equal(t, want, moduleDir)
+		})
+	}
+}
+
+func TestUnselectedReplacementSources(t *testing.T) {
+	t.Parallel()
+	const consumer = "module example.com/client\nreplace example.com/dep => ./fork\n"
+	tests := []struct {
+		name          string
+		scanPath      string
+		sourcePath    string
+		files         map[string]string
+		wantExcluded  bool
+		errorContains string
+	}{
+		{
+			name: "replacement without manifest", scanPath: ".", sourcePath: "fork/api/item.proto",
+			files: map[string]string{"protobuf.mod": consumer}, wantExcluded: true,
+		},
+		{
+			name: "legacy replacement manifest", scanPath: ".", sourcePath: "fork/item.proto",
+			files: map[string]string{"protobuf.mod": consumer, "fork/protobuf.mod": "direct (\n)\n"}, wantExcluded: true,
+		},
+		{
+			name: "nested native replacement module", scanPath: ".", sourcePath: "fork/nested/item.proto",
+			files: map[string]string{"protobuf.mod": consumer, "fork/nested/protobuf.mod": "module example.com/nested\n"}, wantExcluded: true,
+		},
+		{
+			name: "explicit replacement directory", scanPath: "fork", sourcePath: "fork/api/item.proto",
+			files: map[string]string{"protobuf.mod": consumer},
+		},
+		{
+			name: "explicit replacement file", scanPath: "fork/api/item.proto", sourcePath: "fork/api/item.proto",
+			files: map[string]string{"protobuf.mod": consumer},
+		},
+		{
+			name: "explicit replacement subtree", scanPath: "fork/api", sourcePath: "fork/api/item.proto",
+			files: map[string]string{"protobuf.mod": consumer},
+		},
+		{
+			name: "similar sibling directory", scanPath: ".", sourcePath: "fork-other/item.proto",
+			files: map[string]string{"protobuf.mod": consumer},
+		},
+		{
+			name: "independent workspace module", scanPath: ".", sourcePath: "other/item.proto",
+			files: map[string]string{"protobuf.mod": consumer, "other/protobuf.mod": "module example.com/other\n"},
+		},
+		{
+			name: "selected replacement has its own replacement", scanPath: "fork", sourcePath: "fork/nested/item.proto",
+			files: map[string]string{
+				"protobuf.mod":      consumer,
+				"fork/protobuf.mod": "module example.com/dep\nreplace example.com/nested => ./nested\n",
+			},
+			wantExcluded: true,
+		},
+		{
+			name: "no consuming module", scanPath: ".", sourcePath: "fork/item.proto",
+		},
+		{
+			name: "invalid consuming manifest", scanPath: ".", sourcePath: "api/item.proto",
+			files: map[string]string{"protobuf.mod": "module example.com/client\nroots ../outside\n"}, errorContains: "ParseModule",
+		},
+	}
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			root := t.TempDir()
+			for path, content := range tt.files {
+				writeV1GenerateFixture(t, root, path, content)
+			}
+			writeV1GenerateFixture(t, root, tt.sourcePath, "syntax = \"proto3\";\n")
+
+			excluded, err := isUnselectedReplacementSource(root, root, filepath.Join(root, tt.scanPath), filepath.Join(root, tt.sourcePath))
+
+			if tt.errorContains != "" {
+				require.ErrorContains(t, err, tt.errorContains)
+				assert.False(t, excluded)
+				return
+			}
+			require.NoError(t, err)
+			assert.Equal(t, tt.wantExcluded, excluded)
+		})
+	}
+}
+
+func TestPolicyPathContains(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name      string
+		directory string
+		path      string
+		want      bool
+	}{
+		{name: "exact directory", directory: "fork", path: "fork", want: true},
+		{name: "source file", directory: "fork", path: "fork/item.proto", want: true},
+		{name: "file is not a directory", directory: "fork/item.proto", path: "fork/item.proto"},
+		{name: "similar sibling", directory: "fork", path: "fork-other/item.proto"},
+		{name: "aliased directory", directory: "alias", path: "fork/item.proto", want: true},
+		{name: "aliased source", directory: "fork", path: "alias/item.proto", want: true},
+		{name: "missing aliased source", directory: "fork", path: "alias/deleted/item.proto", want: true},
+	}
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			root := t.TempDir()
+			writeV1GenerateFixture(t, root, "fork/item.proto", "syntax = \"proto3\";\n")
+			require.NoError(t, os.Symlink(filepath.Join(root, "fork"), filepath.Join(root, "alias")))
+
+			contains, err := policyPathContains(filepath.Join(root, tt.directory), filepath.Join(root, tt.path))
+
+			require.NoError(t, err)
+			assert.Equal(t, tt.want, contains)
 		})
 	}
 }

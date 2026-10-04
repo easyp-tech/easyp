@@ -76,7 +76,7 @@ func policyReferenceValidator(ctx *cli.Context) func(string) ([]config.Validatio
 			if err != nil {
 				return nil, err
 			}
-			scopes, scanErr := selectedPolicyScopes(boundary, relative, true)
+			scopes, scanErr := selectedPolicyScopes(boundary, boundary, relative, true)
 			if scanErr == nil {
 				var modules []string
 				for _, name := range slices.Sorted(maps.Keys(scopes)) {

@@ -1,6 +1,7 @@
 package api
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -8,6 +9,7 @@ import (
 	"path/filepath"
 
 	v1 "github.com/easyp-tech/easyp/internal/config/v1"
+	"github.com/easyp-tech/easyp/internal/core/path_helpers"
 	"github.com/easyp-tech/easyp/internal/modules"
 )
 
@@ -27,30 +29,52 @@ func findV1PolicyModuleDir(projectRoot, scanDir string) (string, error) {
 	return "", nil
 }
 
-func isReplacementTargetModule(projectRoot, moduleDir string) (bool, error) {
-	if moduleDir == "" {
-		return false, nil
-	}
-	for _, ancestor := range ancestorDirs(filepath.Dir(moduleDir), projectRoot) {
+func isUnselectedReplacementSource(projectRoot, repositoryRoot, scanPath, sourcePath string) (bool, error) {
+	directories := ancestorDirs(filepath.Dir(sourcePath), projectRoot)
+	// Read consuming manifests before replacement metadata, which may use a
+	// legacy format or declare additional nested modules.
+	for i := len(directories) - 1; i >= 0; i-- {
+		ancestor := directories[i]
 		manifest := filepath.Join(ancestor, v1.ModuleFile)
-		_, err := os.Stat(manifest)
+		raw, err := os.ReadFile(manifest)
 		if errors.Is(err, os.ErrNotExist) {
 			continue
 		}
 		if err != nil {
-			return false, fmt.Errorf("Stat: %w", err)
+			return false, fmt.Errorf("ReadFile: %w", err)
 		}
-		_, module, err := modules.ReadManifest(ancestor)
+		if !v1.IsModuleManifest(raw) {
+			continue
+		}
+		module, err := v1.ParseModule(bytes.NewReader(raw))
 		if err != nil {
-			return false, fmt.Errorf("ReadManifest: %w", err)
+			return false, fmt.Errorf("ParseModule: %w", err)
 		}
 		for _, replacement := range module.Replaces {
 			target := modules.ResolveReplacementPath(ancestor, replacement.Target)
-			match, err := samePolicyPath(target, moduleDir)
-			if err != nil {
-				return false, err
+			// Snapshot manifests retain absolute paths from their original checkout.
+			if filepath.IsAbs(replacement.Target) && projectRoot != repositoryRoot {
+				relative, err := baselineRepositoryRelative(repositoryRoot, target)
+				if err != nil {
+					return false, fmt.Errorf("baselineRepositoryRelative: %w", err)
+				}
+				if !filepath.IsLocal(relative) {
+					continue
+				}
+				target = filepath.Join(projectRoot, relative)
 			}
-			if match {
+			containsSource, err := policyPathContains(target, sourcePath)
+			if err != nil {
+				return false, fmt.Errorf("policyPathContains: %w", err)
+			}
+			if !containsSource {
+				continue
+			}
+			selected, err := policyPathContains(target, scanPath)
+			if err != nil {
+				return false, fmt.Errorf("policyPathContains: %w", err)
+			}
+			if !selected {
 				return true, nil
 			}
 		}
@@ -58,22 +82,44 @@ func isReplacementTargetModule(projectRoot, moduleDir string) (bool, error) {
 	return false, nil
 }
 
-func samePolicyPath(left, right string) (bool, error) {
-	leftAbs, err := filepath.Abs(left)
+func policyPathContains(directory, path string) (bool, error) {
+	directoryAbs, err := filepath.Abs(directory)
 	if err != nil {
 		return false, fmt.Errorf("Abs: %w", err)
 	}
-	rightAbs, err := filepath.Abs(right)
+	pathAbs, err := filepath.Abs(path)
 	if err != nil {
 		return false, fmt.Errorf("Abs: %w", err)
 	}
-	if resolved, err := filepath.EvalSymlinks(leftAbs); err == nil {
-		leftAbs = resolved
+	info, err := os.Stat(directoryAbs)
+	if errors.Is(err, os.ErrNotExist) {
+		return false, nil
 	}
-	if resolved, err := filepath.EvalSymlinks(rightAbs); err == nil {
-		rightAbs = resolved
+	if err != nil {
+		return false, fmt.Errorf("Stat: %w", err)
 	}
-	return filepath.Clean(leftAbs) == filepath.Clean(rightAbs), nil
+	if !info.IsDir() {
+		return false, nil
+	}
+	directoryAbs, err = filepath.EvalSymlinks(directoryAbs)
+	if err != nil {
+		return false, fmt.Errorf("EvalSymlinks: %w", err)
+	}
+	// A deleted source can still be selected for baseline comparison. Resolve
+	// its nearest existing ancestor so filesystem aliases retain that selection.
+	suffix := ""
+	for {
+		resolved, err := filepath.EvalSymlinks(pathAbs)
+		if err != nil {
+			if !errors.Is(err, os.ErrNotExist) || filepath.Dir(pathAbs) == pathAbs {
+				return false, fmt.Errorf("EvalSymlinks: %w", err)
+			}
+			suffix = filepath.Join(filepath.Base(pathAbs), suffix)
+			pathAbs = filepath.Dir(pathAbs)
+			continue
+		}
+		return path_helpers.IsTargetPath(directoryAbs, filepath.Join(resolved, suffix)), nil
+	}
 }
 
 func ensureV1PolicyImportRoots(ctx context.Context, cache modules.Cache, moduleDir string) ([]string, error) {

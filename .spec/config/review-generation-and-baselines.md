@@ -58,10 +58,12 @@ under vendor therefore does not break a root lint invocation. A vendor target
 explicitly selected through --path is excluded too. Import resolution for user
 sources continues through their module roots and verified dependencies.
 
-Local replacement modules are also import-only during consumer lint and
-breaking checks. Their policies are skipped before parsing, so legacy or
-invalid replacement-local policy does not affect the consumer. Selecting the
-replacement explicitly through `--path` still validates its policy.
+Local replacement sources are also import-only during consumer lint and
+breaking checks, including legacy/Buf metadata and nested modules. Their paths
+are excluded before reading their policies. Selecting a replacement explicitly
+through `--path` still validates its policy. Absolute in-repository targets are
+rebased into the baseline snapshot during source selection as well as import
+resolution. Unused replacements pointing to files cannot hide checked sources.
 
 ## X-24: a recorded version cannot silently change identity
 

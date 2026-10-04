@@ -28,22 +28,45 @@ func TestBreakingOverlayUsesSnapshotTransitively(t *testing.T) {
 
 func TestBreakingScopesRespectModuleRoots(t *testing.T) {
 	t.Parallel()
-	root := t.TempDir()
-	for name, body := range map[string]string{
-		"protobuf.mod": "module example.com/root\nroots proto\n", "proto/owned.proto": "syntax = \"proto3\";", "other.proto": "not a selected input",
-		"child/protobuf.mod": "module example.com/child\nroots schema\n", "child/schema/child.proto": "syntax = \"proto3\";", "child/outside.proto": "not a selected input",
-		"easyp_vendor/dep.proto": "not checked", "child/easyp_vendor/dep.proto": "not checked", ".deps/external.proto": "not checked",
-	} {
-		writeV1GenerateFixture(t, root, name, body)
+	tests := []struct {
+		name   string
+		path   string
+		scopes map[string]breakingScope
+	}{
+		{
+			name: "only module roots", path: ".",
+			scopes: map[string]breakingScope{
+				".":     {files: []string{"proto/owned.proto"}},
+				"child": {files: []string{"child/schema/child.proto"}},
+			},
+		},
+		{name: "missing source path", path: "absent", scopes: map[string]breakingScope{}},
 	}
-	scopes, err := discoverBreakingScopes(root, ".")
-	require.NoError(t, err)
-	require.Len(t, scopes, 2)
-	assert.Equal(t, []string{"proto/owned.proto"}, scopes["."].files)
-	assert.Equal(t, []string{"child/schema/child.proto"}, scopes["child"].files)
-	scopes, err = discoverBreakingScopes(root, "absent")
-	require.NoError(t, err)
-	assert.Empty(t, scopes)
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			root := t.TempDir()
+			for name, body := range map[string]string{
+				"protobuf.mod":                 "module example.com/root\nroots proto\n",
+				"proto/owned.proto":            "syntax = \"proto3\";",
+				"other.proto":                  "not a selected input",
+				"child/protobuf.mod":           "module example.com/child\nroots schema\n",
+				"child/schema/child.proto":     "syntax = \"proto3\";",
+				"child/outside.proto":          "not a selected input",
+				"easyp_vendor/dep.proto":       "not checked",
+				"child/easyp_vendor/dep.proto": "not checked",
+				".deps/external.proto":         "not checked",
+			} {
+				writeV1GenerateFixture(t, root, name, body)
+			}
+
+			scopes, err := discoverBreakingScopes(root, root, tt.path)
+
+			require.NoError(t, err)
+			assert.Equal(t, tt.scopes, scopes)
+		})
+	}
 }
 
 func TestBaselineRepositoryAliases(t *testing.T) {

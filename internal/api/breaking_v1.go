@@ -16,7 +16,6 @@ import (
 	"github.com/easyp-tech/easyp/internal/config"
 	v1 "github.com/easyp-tech/easyp/internal/config/v1"
 	"github.com/easyp-tech/easyp/internal/core"
-	"github.com/easyp-tech/easyp/internal/core/path_helpers"
 	"github.com/easyp-tech/easyp/internal/flags"
 	"github.com/easyp-tech/easyp/internal/logger"
 	"github.com/easyp-tech/easyp/internal/modules"
@@ -78,11 +77,11 @@ func (b BreakingCheck) checkV1Policies(ctx *cli.Context, log logger.Logger, conf
 		if err != nil || !filepath.IsLocal(relative) {
 			return nil, fmt.Errorf("%w: %s", core.ErrRootOutsideProject, scanPath)
 		}
-		current, err := selectedPolicyScopes(repositoryRoot, relative, flags.IsFrozen(ctx))
+		current, err := selectedPolicyScopes(repositoryRoot, repositoryRoot, relative, flags.IsFrozen(ctx))
 		if err != nil {
 			return nil, fmt.Errorf("discoverBreakingScopes current: %w", err)
 		}
-		baseline, err := selectedPolicyScopes(snapshot.Root, relative, flags.IsFrozen(ctx))
+		baseline, err := selectedPolicyScopes(snapshot.Root, snapshot.RepositoryRoot, relative, flags.IsFrozen(ctx))
 		if err != nil {
 			return nil, fmt.Errorf("discoverBreakingScopes baseline: %w", err)
 		}
@@ -206,15 +205,11 @@ func discoverV1BreakingPolicySources(scanPath, projectRoot, configPath string) (
 		if entry.IsDir() || entry.Name() != v1.PolicyFile || path == configPath {
 			return nil
 		}
-		moduleDir, err := findV1PolicyModuleDir(projectRoot, filepath.Dir(path))
+		unselectedReplacement, err := isUnselectedReplacementSource(projectRoot, projectRoot, scanPath, path)
 		if err != nil {
-			return fmt.Errorf("findV1PolicyModuleDir: %w", err)
+			return fmt.Errorf("isUnselectedReplacementSource: %w", err)
 		}
-		replacementTarget, err := isReplacementTargetModule(projectRoot, moduleDir)
-		if err != nil {
-			return fmt.Errorf("isReplacementTargetModule: %w", err)
-		}
-		if replacementTarget && !path_helpers.IsTargetPath(moduleDir, scanPath) {
+		if unselectedReplacement {
 			return nil
 		}
 		_, source, err := resolveV1BreakingPolicy(filepath.Dir(path), projectRoot, configPath)
@@ -283,14 +278,14 @@ func (b BreakingCheck) checkV1ExtendedBreakingSource(
 	if err != nil || !filepath.IsLocal(relative) {
 		return nil, fmt.Errorf("%w: %s", core.ErrRootOutsideProject, scanPath)
 	}
-	current, err := selectedPolicyScopes(repositoryRoot, relative, flags.IsFrozen(ctx))
+	current, err := selectedPolicyScopes(repositoryRoot, repositoryRoot, relative, flags.IsFrozen(ctx))
 	if err != nil {
 		return nil, fmt.Errorf("selectedPolicyScopes: %w", err)
 	}
 	// Retain a native module after deletion of its last proto file, even in
 	// normal mode. Frozen's additional empty-scope checks remain mandatory.
 	if !flags.IsFrozen(ctx) {
-		expanded, expandErr := selectedPolicyScopes(repositoryRoot, relative, true)
+		expanded, expandErr := selectedPolicyScopes(repositoryRoot, repositoryRoot, relative, true)
 		if expandErr == nil {
 			current = expanded
 		}
@@ -349,7 +344,7 @@ func (b BreakingCheck) checkV1ExtendedBreakingSource(
 		scopes, known := baselineScopes[ref]
 		if !known {
 			var err error
-			scopes, err = selectedPolicyScopes(snapshot.Root, relative, flags.IsFrozen(ctx))
+			scopes, err = selectedPolicyScopes(snapshot.Root, snapshot.RepositoryRoot, relative, flags.IsFrozen(ctx))
 			if err != nil {
 				return nil, nil, fmt.Errorf("selectedPolicyScopes: %w", err)
 			}
