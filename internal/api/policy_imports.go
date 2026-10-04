@@ -27,6 +27,55 @@ func findV1PolicyModuleDir(projectRoot, scanDir string) (string, error) {
 	return "", nil
 }
 
+func isReplacementTargetModule(projectRoot, moduleDir string) (bool, error) {
+	if moduleDir == "" {
+		return false, nil
+	}
+	for _, ancestor := range ancestorDirs(filepath.Dir(moduleDir), projectRoot) {
+		manifest := filepath.Join(ancestor, v1.ModuleFile)
+		_, err := os.Stat(manifest)
+		if errors.Is(err, os.ErrNotExist) {
+			continue
+		}
+		if err != nil {
+			return false, fmt.Errorf("Stat: %w", err)
+		}
+		_, module, err := modules.ReadManifest(ancestor)
+		if err != nil {
+			return false, fmt.Errorf("ReadManifest: %w", err)
+		}
+		for _, replacement := range module.Replaces {
+			target := modules.ResolveReplacementPath(ancestor, replacement.Target)
+			match, err := samePolicyPath(target, moduleDir)
+			if err != nil {
+				return false, err
+			}
+			if match {
+				return true, nil
+			}
+		}
+	}
+	return false, nil
+}
+
+func samePolicyPath(left, right string) (bool, error) {
+	leftAbs, err := filepath.Abs(left)
+	if err != nil {
+		return false, fmt.Errorf("Abs: %w", err)
+	}
+	rightAbs, err := filepath.Abs(right)
+	if err != nil {
+		return false, fmt.Errorf("Abs: %w", err)
+	}
+	if resolved, err := filepath.EvalSymlinks(leftAbs); err == nil {
+		leftAbs = resolved
+	}
+	if resolved, err := filepath.EvalSymlinks(rightAbs); err == nil {
+		rightAbs = resolved
+	}
+	return filepath.Clean(leftAbs) == filepath.Clean(rightAbs), nil
+}
+
 func ensureV1PolicyImportRoots(ctx context.Context, cache modules.Cache, moduleDir string) ([]string, error) {
 	return policyImportRoots(ctx, cache, moduleDir, false)
 }

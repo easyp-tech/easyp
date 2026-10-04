@@ -48,6 +48,13 @@ func discoverBreakingScopes(root, scanRelative string) (map[string]breakingScope
 		}
 		key := "."
 		if directory != "" {
+			replacementTarget, err := isReplacementTargetModule(root, directory)
+			if err != nil {
+				return err
+			}
+			if replacementTarget && !path_helpers.IsTargetPath(directory, scan) {
+				return nil
+			}
 			module, known := manifests[directory]
 			if !known {
 				_, module, err = modules.ReadManifest(directory)
