@@ -35,9 +35,9 @@ func (i Init) Command() *cli.Command {
 	return &cli.Command{
 		Name:        "init",
 		Aliases:     []string{"i"},
-		Usage:       "initialize configuration",
-		UsageText:   "initialize configuration",
-		Description: "initialize configuration",
+		Usage:       "initialize native v1 project configuration",
+		UsageText:   "easyp init [--dir DIR] [--module MODULE]",
+		Description: "Create protobuf.mod, easyp.yaml, and easyp.gen.yaml without overwriting files unless confirmed.",
 		Action:      i.Action,
 		Flags: []cli.Flag{
 			flags.Frozen(),

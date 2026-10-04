@@ -37,11 +37,10 @@ func main() {
 	app := &cli.App{
 		Name:        "easyp",
 		HelpName:    "easyp",
-		Usage:       "usage info",
-		UsageText:   "usage text info",
-		ArgsUsage:   "args usage info",
+		Usage:       "modern Protocol Buffers toolkit",
+		UsageText:   "easyp [global options] command [command options]",
 		Version:     version.System(),
-		Description: "description info",
+		Description: "Manage protobuf dependencies, lint APIs, generate code, and check compatibility.",
 		Commands: buildCommand(
 			api.Lint{},
 			api.Mod{},

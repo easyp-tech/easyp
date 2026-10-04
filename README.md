@@ -43,7 +43,7 @@ For other installation methods, see our [official documentation](https://easyp.t
 ```sh
 # Initialize a new project
 mkdir my-proto-project && cd my-proto-project
-easyp init
+easyp init --module github.com/acme/my-proto-project
 
 # Add your .proto files to the project
 mkdir api
