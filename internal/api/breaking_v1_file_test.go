@@ -37,7 +37,7 @@ service ItemService {
 		wantMoved  int
 		wantDelete int
 	}{
-		{name: "default ignores moves"},
+		{name: "default detects moves", wantMoved: 4},
 		{name: "FILE detects moves", categories: "  categories: [FILE]\n", wantMoved: 4},
 		{name: "FILE preserves field checks", categories: "  categories: [FILE]\n", removeID: true, wantMoved: 4, wantDelete: 1},
 	}
