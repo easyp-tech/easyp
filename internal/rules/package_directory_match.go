@@ -1,6 +1,7 @@
 package rules
 
 import (
+	"fmt"
 	"path/filepath"
 	"strings"
 
@@ -33,7 +34,12 @@ func (d *PackageDirectoryMatch) Validate(protoInfo core.ProtoInfo) ([]core.Issue
 
 	for _, pkgInfo := range protoInfo.Info.ProtoBody.Packages {
 		if pkgInfo.Name != expectedPackage {
-			res = core.AppendIssue(res, d, pkgInfo.Meta.Pos, protoInfo.Path, pkgInfo.Comments)
+			sourceName := protoInfo.Path
+			if protoInfo.ImportPath != "" {
+				sourceName = protoInfo.ImportPath
+			}
+			res = core.AppendIssue(res, d, pkgInfo.Meta.Pos, sourceName, pkgInfo.Comments)
+			res[len(res)-1].Message = fmt.Sprintf("package %q does not match module-relative directory %q; expected %q", pkgInfo.Name, preparePath, expectedPackage)
 		}
 	}
 

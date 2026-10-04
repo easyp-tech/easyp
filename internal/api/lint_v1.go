@@ -185,9 +185,13 @@ func (l Lint) actionV1(ctx *cli.Context, log logger.Logger, configPath, projectR
 			return fmt.Errorf("Lint: %w", err)
 		}
 		for _, issue := range fileIssues {
-			if !v1IssueRuleExcluded(issue.RuleName, excludedByPath[filepath.ToSlash(issue.Path)]) {
-				issues = append(issues, issue)
+			if v1IssueRuleExcluded(issue.RuleName, excludedByPath[filepath.ToSlash(issue.Path)]) {
+				continue
 			}
+			if issue.RuleName == "PACKAGE_DIRECTORY_MATCH" && issue.SourceName != "" {
+				issue.Path = filepath.ToSlash(issue.SourceName)
+			}
+			issues = append(issues, issue)
 		}
 	}
 	// Grouping must not reorder user-facing diagnostics between policy subtrees.

@@ -41,7 +41,7 @@ func TestPackageDirectoryMatch_Validate(t *testing.T) {
 					Column:   1,
 				},
 				SourceName: "./../../testdata/auth/service.proto",
-				Message:    "package does not match directory path",
+				Message:    "package \"Session\" does not match module-relative directory \"auth\"; expected \"auth\"",
 				RuleName:   "PACKAGE_DIRECTORY_MATCH",
 			},
 			wantErr: nil,
