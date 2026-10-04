@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - 'main'
+      - 'v1.0'
   pull_request:
     branches:
       - '*'
@@ -29,6 +30,9 @@ jobs:
 
       - name: Prepare test.
         run: task init
+
+      - name: Lint Go sources
+        run: task lint:go
 
       - name: Start test.
         run: task test
