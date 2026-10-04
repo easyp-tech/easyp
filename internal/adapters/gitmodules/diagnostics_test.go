@@ -93,6 +93,7 @@ func TestTagAccessErrorIsNotMissingVersion(t *testing.T) {
 func TestGitCancellationKeepsContextCause(t *testing.T) {
 	t.Parallel()
 	root := t.TempDir()
+	runTestGit(t, root, "init", "-q")
 	ctx, cancel := context.WithCancel(t.Context())
 	defer cancel()
 	result := make(chan error, 1)
