@@ -16,7 +16,7 @@ func TestDescribeFileBreakingCategory(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, got.Fields, 1)
 	assert.Contains(t, got.Fields[0].Description, "FILE")
-	assert.Contains(t, strings.Join(got.Notes, " "), "Omitted or empty categories preserve legacy checks")
+	assert.Contains(t, strings.Join(got.Notes, " "), "Omitted or empty categories default to FILE")
 	assert.Equal(t, "array", got.Schema["type"])
 	items, ok := got.Schema["items"].(map[string]any)
 	require.True(t, ok)
