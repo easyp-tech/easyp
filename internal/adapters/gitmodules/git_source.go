@@ -31,6 +31,7 @@ func (candidate v1GitModuleCandidate) tag(version string) string {
 // parent Git URL with the removed suffix as its module directory. The module
 // manifest at that suffix confirms the candidate for untagged requirements.
 func v1GitModuleCandidates(source string) ([]v1GitModuleCandidate, error) {
+	identity := source
 	major, err := v1.ModulePathMajor(source)
 	if err != nil {
 		return nil, fmt.Errorf("ModulePathMajor: %w", err)
@@ -40,7 +41,7 @@ func v1GitModuleCandidates(source string) ([]v1GitModuleCandidate, error) {
 		source = strings.TrimSuffix(source, major)
 	}
 	if filepath.IsAbs(source) {
-		return localV1GitModuleCandidates(source), nil
+		return localV1GitModuleCandidates(source, identity), nil
 	}
 	if strings.Contains(source, "://") {
 		parsed, err := url.Parse(source)
@@ -79,20 +80,73 @@ func validV1GitModuleParts(parts []string) bool {
 	return len(parts) > 0
 }
 
-func localV1GitModuleCandidates(source string) []v1GitModuleCandidate {
+func localV1GitModuleCandidates(source, identity string) []v1GitModuleCandidate {
 	clean := filepath.Clean(source)
-	var candidates []v1GitModuleCandidate
-	for remote := clean; remote != filepath.Dir(remote); remote = filepath.Dir(remote) {
-		subdir, err := filepath.Rel(remote, clean)
-		if err != nil {
-			continue
+	candidates := []v1GitModuleCandidate{{remote: clean}}
+
+	info, err := os.Stat(clean)
+	switch {
+	case err == nil:
+		if !info.IsDir() {
+			return candidates
 		}
-		if subdir == "." {
-			subdir = ""
+		if localGitRoot(clean) {
+			return candidates
 		}
-		candidates = append(candidates, v1GitModuleCandidate{remote: remote, subdir: subdir})
+		if !hasLocalModuleMetadata(clean, identity) {
+			return candidates
+		}
+		for remote := filepath.Dir(clean); remote != filepath.Dir(remote); remote = filepath.Dir(remote) {
+			if !localGitRoot(remote) {
+				continue
+			}
+			return appendLocalV1GitCandidate(candidates, remote, clean)
+		}
+	case os.IsNotExist(err):
+		// Logical nested module paths used for tag lookup need not exist as
+		// directories. They may inherit only the nearest existing ancestor,
+		// and only when that ancestor itself is the Git worktree root.
+		for ancestor := filepath.Dir(clean); ancestor != filepath.Dir(ancestor); ancestor = filepath.Dir(ancestor) {
+			_, statErr := os.Stat(ancestor)
+			if os.IsNotExist(statErr) {
+				continue
+			}
+			if statErr != nil || !localGitRoot(ancestor) {
+				return candidates
+			}
+			return appendLocalV1GitCandidate(candidates, ancestor, clean)
+		}
+	default:
+		return candidates
 	}
 	return candidates
+}
+
+func localGitRoot(path string) bool {
+	_, err := os.Stat(filepath.Join(path, ".git"))
+	return err == nil
+}
+
+func hasLocalModuleMetadata(path, identity string) bool {
+	for _, name := range []string{v1.ModuleFile, "buf.work.yaml", "buf.yaml", "easyp.yaml"} {
+		if info, err := os.Stat(filepath.Join(path, name)); err == nil && !info.IsDir() {
+			return true
+		}
+	}
+	major, err := v1.ModulePathMajor(identity)
+	if err == nil && strings.HasPrefix(major, "/") {
+		info, statErr := os.Stat(filepath.Join(path, strings.TrimPrefix(major, "/"), v1.ModuleFile))
+		return statErr == nil && !info.IsDir()
+	}
+	return false
+}
+
+func appendLocalV1GitCandidate(candidates []v1GitModuleCandidate, remote, clean string) []v1GitModuleCandidate {
+	subdir, err := filepath.Rel(remote, clean)
+	if err != nil || !filepath.IsLocal(subdir) {
+		return candidates
+	}
+	return append(candidates, v1GitModuleCandidate{remote: remote, subdir: subdir})
 }
 
 func pathV1GitModuleCandidates(parts []string, remote func([]string) string, minParts int) []v1GitModuleCandidate {

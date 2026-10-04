@@ -1,6 +1,7 @@
 package gitmodules
 
 import (
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -9,7 +10,11 @@ import (
 
 func TestV1GitModuleCandidates(t *testing.T) {
 	t.Parallel()
-	local := filepath.Join(t.TempDir(), "repo", "foo", "bar")
+	localRoot := filepath.Join(t.TempDir(), "repo")
+	local := filepath.Join(localRoot, "foo", "bar")
+	require.NoError(t, os.MkdirAll(local, 0o755))
+	require.NoError(t, os.WriteFile(filepath.Join(local, "protobuf.mod"), []byte("module "+filepath.ToSlash(local)+"\n"), 0o644))
+	runTestGit(t, localRoot, "init", "-q")
 	tests := []struct {
 		name       string
 		source     string
@@ -19,7 +24,7 @@ func TestV1GitModuleCandidates(t *testing.T) {
 	}{
 		{name: "bare module path", source: "github.com/acme/repo/foo/bar", wantRemote: "https://github.com/acme/repo", wantDir: "foo/bar", wantTag: "foo/bar/v1.2.3"},
 		{name: "HTTPS module path", source: "https://example.com/acme/repo.git/foo", wantRemote: "https://example.com/acme/repo.git", wantDir: "foo", wantTag: "foo/v1.2.3"},
-		{name: "local Git repository", source: local, wantRemote: filepath.Dir(filepath.Dir(local)), wantDir: filepath.Join("foo", "bar"), wantTag: "foo/bar/v1.2.3"},
+		{name: "local Git repository", source: local, wantRemote: localRoot, wantDir: filepath.Join("foo", "bar"), wantTag: "foo/bar/v1.2.3"},
 	}
 	for _, tt := range tests {
 		tt := tt
@@ -58,4 +63,18 @@ func TestV1GitModuleCandidatesRejectTraversal(t *testing.T) {
 			require.ErrorContains(t, err, "invalid Git module")
 		})
 	}
+}
+
+func TestLocalV1GitModuleCandidatesDoNotInheritUnrelatedWorktree(t *testing.T) {
+	t.Parallel()
+
+	outer := t.TempDir()
+	runTestGit(t, outer, "init", "-q")
+	source := filepath.Join(outer, "tmp", "not-a-repository")
+	require.NoError(t, os.MkdirAll(source, 0o755))
+
+	candidates, err := v1GitModuleCandidates(source)
+
+	require.NoError(t, err)
+	require.Equal(t, []v1GitModuleCandidate{{remote: source}}, candidates)
 }
