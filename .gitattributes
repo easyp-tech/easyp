@@ -1,1 +1,2 @@
 testdata/**/*.proto text eol=lf
+.agents export-ignore

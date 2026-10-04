@@ -3,7 +3,8 @@ version: 2
 project_name: easyp
 
 builds:
-  - binary: easyp
+  - id: easyp
+    binary: easyp
     main: ./cmd/easyp/
     flags:
       - -trimpath
@@ -22,6 +23,33 @@ builds:
       - 7
     gomips:
       - hardfloat
+    ignore:
+      - goos: windows
+        goarch: arm
+
+  - id: easyp-mcp
+    binary: easyp-mcp
+    main: ./cmd/easyp-mcp/
+    flags:
+      - -trimpath
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - darwin
+      - windows
+      - linux
+    goarch:
+      - amd64
+      - arm64
+      - arm
+    goarm:
+      - 6
+      - 7
+    gomips:
+      - hardfloat
+    ignore:
+      - goos: windows
+        goarch: arm
 
 archives:
   - formats:
@@ -72,7 +100,9 @@ source:
   name_template: '{{ .ProjectName }}-{{ .Version }}-source'
 
 dockers_v2:
-  - images:
+  - ids:
+      - easyp
+    images:
       - "ghcr.io/easyp-tech/easyp"
 #      - "{{ .Env.DOCKERHUB_IMAGE }}"
     tags:
