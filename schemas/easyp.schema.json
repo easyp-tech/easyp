@@ -12,7 +12,7 @@
           "pattern": "^(git:.+)?$"
         },
         "categories": {
-          "description": "Selects FILE, PACKAGE, WIRE_JSON, and/or WIRE compatibility profiles. Multiple profiles apply their union; omitted or empty retains legacy checks.",
+          "description": "Selects FILE, PACKAGE, WIRE_JSON, and/or WIRE compatibility profiles. Multiple profiles apply their union; omitted or empty defaults to FILE.",
           "type": "array",
           "items": {
             "type": "string",

@@ -83,7 +83,7 @@ func documents() map[string]*schema {
 	}
 	policy.Properties["breaking"].Properties["baseline"].Pattern = "^(git:.+)?$"
 	policy.Properties["breaking"].Properties["categories"].Items.Enum = config.BreakingProfileNames()
-	policy.Properties["breaking"].Properties["categories"].Description = "Selects FILE, PACKAGE, WIRE_JSON, and/or WIRE compatibility profiles. Multiple profiles apply their union; omitted or empty retains legacy checks."
+	policy.Properties["breaking"].Properties["categories"].Description = "Selects FILE, PACKAGE, WIRE_JSON, and/or WIRE compatibility profiles. Multiple profiles apply their union; omitted or empty defaults to FILE."
 
 	for _, section := range []string{"linters", "breaking"} {
 		extends := policy.Properties[section].Properties["extends"]

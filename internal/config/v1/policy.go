@@ -159,11 +159,15 @@ func (p Policy) BreakingConfig(fallbackRef string) (config.BreakingCheck, error)
 	if baseline == "" {
 		baseline = fallbackRef
 	}
+	categories := append([]string(nil), p.Breaking.Categories...)
+	if len(categories) == 0 {
+		categories = []string{"FILE"}
+	}
 	return config.BreakingCheck{
 		AgainstGitRef:  baseline,
 		Ignore:         p.Breaking.Ignore,
-		Use:            append([]string(nil), p.Breaking.Categories...),
-		Categories:     append([]string(nil), p.Breaking.Categories...),
+		Use:            append([]string(nil), categories...),
+		Categories:     categories,
 		IgnoreUnstable: p.Breaking.IgnoreUnstable,
 	}, nil
 }

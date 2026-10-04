@@ -20,8 +20,8 @@ func TestBreakingCategoriesValidation(t *testing.T) {
 		wantUse    []string
 		wantError  bool
 	}{
-		{name: "omitted"},
-		{name: "empty", categories: "  categories: []\n"},
+		{name: "omitted", wantUse: []string{"FILE"}},
+		{name: "empty", categories: "  categories: []\n", wantUse: []string{"FILE"}},
 		{name: "FILE", categories: "  categories: [FILE]\n", wantUse: []string{"FILE"}},
 		{name: "duplicate FILE", categories: "  categories: [FILE, FILE]\n", wantUse: []string{"FILE", "FILE"}},
 		{name: "PACKAGE", categories: "  categories: [PACKAGE]\n", wantUse: []string{"PACKAGE"}},
@@ -51,7 +51,7 @@ func TestBreakingCategoriesValidation(t *testing.T) {
 			require.NoError(t, err)
 			assert.Equal(t, tt.wantUse, cfg.Use)
 			assert.Equal(t, "main", cfg.AgainstGitRef)
-			if len(cfg.Use) > 0 {
+			if len(policy.Breaking.Categories) > 0 {
 				cfg.Use[0] = "changed"
 				assert.Equal(t, tt.wantUse[0], policy.Breaking.Categories[0])
 			}
