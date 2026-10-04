@@ -67,7 +67,8 @@ func New(cfg config.LintConfig) ([]core.Rule, map[string][]string, error) {
 		&DirectorySamePackage{},
 		&PackageDefined{},
 		&PackageDirectoryMatch{
-			Root: ".", // TODO: fix me
+			Root:   ".",
+			Prefix: cfg.PackageDirectoryPrefix,
 		},
 		&PackageSameDirectory{},
 
