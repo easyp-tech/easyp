@@ -406,7 +406,7 @@ func goPackageOutputPath(name string, filesToGenerate []string, descriptors []*d
 		source = filepath.ToSlash(source)
 		sourceDir := filepath.ToSlash(filepath.Dir(source))
 		sourceBase := strings.TrimSuffix(filepath.Base(source), ".proto")
-		if outputDir != sourceDir || !(strings.HasPrefix(outputBase, sourceBase+".") || strings.HasPrefix(outputBase, sourceBase+"_")) {
+		if outputDir != sourceDir || (!strings.HasPrefix(outputBase, sourceBase+".") && !strings.HasPrefix(outputBase, sourceBase+"_")) {
 			continue
 		}
 		packageDir := strings.ReplaceAll(descriptor.GetPackage(), ".", "/")
