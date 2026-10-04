@@ -155,18 +155,6 @@ func (c *ManagedModeConfig) IsFieldOptionDisabled(filePath, module, protoPackage
 	return false
 }
 
-// GetFileOptionOverride returns the override value for a file option, or nil if not overridden.
-// If multiple overrides match, the last matching rule wins (buf behavior).
-func (c *ManagedModeConfig) GetFileOptionOverride(filePath, module, protoPackage string, option FileOptionType) any {
-	var result any
-	for _, rule := range c.Override {
-		if rule.FileOption == option && rule.matchesFileContext(filePath, module, protoPackage) {
-			result = rule.Value
-		}
-	}
-	return result
-}
-
 // GetFieldOptionOverride returns the override value for a field option, or nil if not overridden.
 // If multiple overrides match, the last matching rule wins (buf behavior).
 func (c *ManagedModeConfig) GetFieldOptionOverride(filePath, module, protoPackage string, option FieldOptionType, fieldName string) any {

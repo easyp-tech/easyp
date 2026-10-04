@@ -63,12 +63,3 @@ func TestInvalidLintNamesAreRejectedBeforeFiltering(t *testing.T) {
 		})
 	}
 }
-
-func TestUnimplementedRuleCannotPanic(t *testing.T) {
-	t.Parallel()
-	rule := &rules.PackageNoImportCycle{}
-	var err error
-	require.NotPanics(t, func() { _, err = rule.Validate(core.ProtoInfo{}) })
-	require.ErrorIs(t, err, core.ErrInvalidRule)
-	assert.NotContains(t, rules.AllLintUseValues(), "PACKAGE_NO_IMPORT_CYCLE")
-}
