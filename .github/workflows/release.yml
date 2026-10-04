@@ -53,7 +53,7 @@ jobs:
       - name: Create release
         uses: goreleaser/goreleaser-action@v6
         with:
-          version: latest
+          version: v2.18.2
           args: release --clean --timeout=90m
         env:
           GITHUB_TOKEN: ${{ secrets.GORELEASER_AUTH_TOKEN }}
