@@ -5,14 +5,10 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"io"
 	"strings"
 )
 
 const (
-	// FileName is the project-root dependency declaration file.
-	FileName = "protobuf.mod"
-
 	directiveDirect  = "direct"
 	directiveReplace = "replace"
 	replaceArrow     = "=>"
@@ -30,13 +26,6 @@ var (
 	errGarbageOutside         = errors.New("content outside direct block")
 	errMultipleDirect         = errors.New("multiple direct blocks")
 )
-
-// FS is the minimal filesystem surface used to read/write protobuf.mod.
-type FS interface {
-	Open(name string) (io.ReadCloser, error)
-	Create(name string) (io.WriteCloser, error)
-	Exists(name string) bool
-}
 
 // File is the parsed contents of protobuf.mod.
 type File struct {
@@ -231,33 +220,6 @@ func isSingleLineReplace(line string) bool {
 	return rest[0] == ' ' || rest[0] == '\t'
 }
 
-// Read reads protobuf.mod from fs. Missing file yields an empty File.
-func Read(fs FS) (File, error) {
-	if !fs.Exists(FileName) {
-		return File{}, nil
-	}
-
-	fp, err := fs.Open(FileName)
-	if err != nil {
-		return File{}, fmt.Errorf("fs.Open: %w", err)
-	}
-	defer func() {
-		_ = fp.Close()
-	}()
-
-	data, err := io.ReadAll(fp)
-	if err != nil {
-		return File{}, fmt.Errorf("io.ReadAll: %w", err)
-	}
-
-	file, err := Parse(data)
-	if err != nil {
-		return File{}, fmt.Errorf("Parse: %w", err)
-	}
-
-	return file, nil
-}
-
 // Format renders a protobuf.mod file.
 func Format(file File) []byte {
 	var b strings.Builder
@@ -287,24 +249,6 @@ func Format(file File) []byte {
 		b.WriteString(")\n")
 	}
 	return []byte(b.String())
-}
-
-// Write writes file to protobuf.mod via fs.
-func Write(fs FS, file File) error {
-	fp, err := fs.Create(FileName)
-	if err != nil {
-		return fmt.Errorf("fs.Create: %w", err)
-	}
-	defer func() {
-		_ = fp.Close()
-	}()
-
-	_, err = fp.Write(Format(file))
-	if err != nil {
-		return fmt.Errorf("fp.Write: %w", err)
-	}
-
-	return nil
 }
 
 func parseModule(raw string) Module {

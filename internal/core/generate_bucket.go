@@ -51,12 +51,6 @@ func (b *GenerateBucket) GetFile(_ context.Context, path string) (*ImmutableData
 	return file, ok
 }
 
-func (b *GenerateBucket) RemoveFile(_ context.Context, path string) {
-	b.lock.Lock()
-	defer b.lock.Unlock()
-	delete(b.filesToWrite, path)
-}
-
 func (b *GenerateBucket) DumpToFs(_ context.Context) error {
 	b.lock.Lock()
 	defer b.lock.Unlock()
