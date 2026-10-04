@@ -34,6 +34,13 @@ jobs:
       - name: Lint Go sources
         run: task lint:go
 
+      - name: Cross-compile Linux ARM release binaries
+        env:
+          GOOS: linux
+          GOARCH: arm
+          GOARM: "7"
+        run: go build ./cmd/easyp ./cmd/easyp-mcp
+
       - name: Start test.
         run: task test
 
