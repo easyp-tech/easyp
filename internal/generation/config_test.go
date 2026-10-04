@@ -103,7 +103,7 @@ func TestPrepareV1GeneratorConfigPreservesManagedPriority(t *testing.T) {
 
 	prefix := "example.com/options"
 	managedRule := config.ManagedOverrideRule{FileOption: "go_package_prefix", Value: "example.com/managed"}
-	optionRule := core.ManagedOverrideRule{FileOption: "go_package_prefix", Value: prefix}
+	optionRule := core.ManagedOverrideRule{FileOption: "go_package_prefix", Value: prefix, PackagePath: true}
 	tests := []struct {
 		name          string
 		prefix        string
