@@ -20,6 +20,7 @@ This folder contains documentation to help LLMs and developers quickly understan
 ### Config & Dependencies
 
 - [config/dependency.md](./config/dependency.md) — Git-native package manager (<code>easyp mod</code>, lockfile, cache)
+- [../V1_RELEASE_NOTES.md](../V1_RELEASE_NOTES.md) — unreleased v1 contract changes that supersede the earlier pilot RFC
 - [agent-rules.md](./agent-rules.md) — Mandatory rules for AI agents
 
 ### Domain (CLI toolkit)

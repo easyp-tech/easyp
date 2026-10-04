@@ -8,8 +8,8 @@ documented installation channels, rather than deployed as a long-running web
 service.
 
 ~~~text
-pull request / push to main
-  → GitHub Actions tests
+pull request / push to main or v1.0
+  → GitHub Actions tests + Go lint + release-target compile guard
   → release tag vX.Y.Z
   → GitHub Actions release
   → published release artifacts and container images
@@ -59,16 +59,19 @@ mounts, and network configuration are therefore N/A.
 
 ### <code>.github/workflows/tests.yml</code>
 
-- **Trigger:** pushes to <code>main</code> and pull requests targeting any branch.
+- **Trigger:** pushes to <code>main</code> or <code>v1.0</code>, and pull requests targeting any branch.
 - **Runner:** <code>ubuntu-latest</code>.
 - **Steps:** check out the repository; install Go from <code>go.mod</code> (1.26.6); install Task 3.x;
-  run <code>task init</code>, <code>task test</code>, then <code>task proto:check</code>.
+  run <code>task init</code>, <code>task lint:go</code>, cross-compile <code>easyp</code> and
+  <code>easyp-mcp</code> for Linux ARMv7, run <code>task test</code>, then
+  <code>task proto:check</code> and <code>task dev-tools:check</code>.
 - **Secrets required:** <code>GITHUB_TOKEN</code>, supplied to the Task setup action.
 
 <code>task init</code> installs pinned development tools into repository-local <code>bin/</code>
 and fetches Go dependencies with <code>go mod download</code>, without a dependency
 upgrade step. <code>task test</code> runs the test suite through <code>gotestsum</code> with race
-detection and writes <code>coverage.out</code>.
+detection and writes <code>coverage.out</code>. The explicit Linux ARM compile step guards
+platform-specific cache-verification helpers used by release targets.
 
 ### <code>.github/workflows/release.yml</code>
 
@@ -77,15 +80,18 @@ detection and writes <code>coverage.out</code>.
 - **Permissions:** write access to repository contents and packages.
 - **Steps:** full-history checkout; QEMU setup; Docker Buildx setup; login to
   GitHub Container Registry; login to Docker Hub; install Go; validate the
-  tag; run GoReleaser with <code>release --clean --timeout=90m</code>.
+  tag; run pinned GoReleaser <code>v2.18.2</code> with
+  <code>release --clean --timeout=90m</code>.
 - **Secrets required:** <code>GITHUB_TOKEN</code>, <code>DOCKERHUB_USERNAME</code>,
   <code>DOCKERHUB_TOKEN</code>, and <code>GORELEASER_AUTH_TOKEN</code>.
 - **Variable used:** <code>DOCKERHUB_IMAGE</code>, with <code>easyp/easyp</code> as the workflow
   fallback value.
 
-<code>.goreleaser.yaml</code> configures Darwin, Windows and Linux binaries for its
-listed architectures, tar.gz archives (zip on Windows), checksums, a source
-archive and a Homebrew formula. Its active image target is
+<code>.goreleaser.yaml</code> configures Darwin, Windows and Linux builds for both
+<code>easyp</code> and <code>easyp-mcp</code>, tar.gz archives (zip on Windows), checksums,
+a source archive and a Homebrew formula. The source archive follows Git export
+attributes; <code>.agents</code> is marked <code>export-ignore</code> and is not shipped there.
+Docker packaging explicitly selects the <code>easyp</code> build. Its active image target is
 <code>ghcr.io/easyp-tech/easyp</code> for <code>linux/amd64</code> and <code>linux/arm64</code>, using root
 <code>Dockerfile</code>. The Docker Hub image entry is commented out even though the
 workflow still logs in there.

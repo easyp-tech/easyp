@@ -192,6 +192,8 @@ EasyP is released under the [Apache License 2.0](LICENSE).
 
 ### Working with the v1 pilot
 
+The implementation and `.spec` tree define the current unreleased v1 contract. Some earlier pilot RFC examples were intentionally superseded; see [v1.0 pre-release contract notes](V1_RELEASE_NOTES.md) before treating an old RFC example as a compatibility requirement.
+
 The repository's native configuration has a runnable local example. Run
 <code>task proto:check</code> to validate it, lint it and verify repeatable
 generation without altering the source checkout. User configuration is split
