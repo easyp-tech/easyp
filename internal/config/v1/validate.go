@@ -40,6 +40,13 @@ func ValidateFile(path string) ([]config.ValidationIssue, error) {
 func validateGenerate(raw []byte) []config.ValidationIssue {
 	issues := ValidateGenerateYAML(raw)
 	if config.HasErrors(issues) {
+		// The schema correctly requires a separate version for remote plugins,
+		// but an embedded legacy-style :version has a more actionable semantic
+		// diagnostic than the generic missing-property error.
+		if _, err := ParseGenerate(bytes.NewReader(raw)); err != nil &&
+			strings.Contains(err.Error(), "split remote into remote:") {
+			return []config.ValidationIssue{validationError(GenerateFile, err)}
+		}
 		return issues
 	}
 	if _, err := ParseGenerate(bytes.NewReader(raw)); err != nil {
