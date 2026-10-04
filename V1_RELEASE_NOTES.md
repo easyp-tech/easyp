@@ -35,6 +35,7 @@ The current command behavior is documented in [`.spec/CLI.md`](.spec/CLI.md):
 - `generate.packages` selects exact protobuf package names;
 - dependencies are available for imports but are not automatically generation targets;
 - `with_imports` is per-plugin and does not change descriptor-export `--include_imports` semantics.
+- source-relative Go output follows the effective descriptor `go_package`, including disable rules, overrides, and path markers; plugin-controlled import layouts stay intact. See [generation details](.spec/config/review-generation-and-baselines.md).
 
 ## Migration
 

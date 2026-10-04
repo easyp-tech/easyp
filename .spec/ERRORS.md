@@ -164,7 +164,7 @@ Field presence in a Go struct is not a promise of implemented runtime behavior:
 | <code>linters.extends</code> | Invalid reference syntax fails parsing; missing bases, cycles and boundary violations fail context-aware resolution. Direct engine conversion rejects an unresolved base. CLI validation never downloads dependencies. |
 | <code>breaking.extends</code> | Resolves independently in the checked module context. Invalid or unresolved bases fail explicitly; baseline and ignore paths belong to the consumer. |
 | <code>generate.packages</code> | Exact package names; malformed names fail config validation and unmatched names fail generation before plugins. Dependencies remain available for compilation. |
-| <code>breaking.categories</code> | FILE/PACKAGE/WIRE_JSON/WIRE are implemented profiles. Unknown categories fail shared validation; omitted or empty retains the legacy checker. See [profile catalog](config/breaking-profiles.md). |
+| <code>breaking.categories</code> | FILE/PACKAGE/WIRE_JSON/WIRE are implemented profiles. Unknown categories fail shared validation; omitted or empty categories default to FILE for v1 policies. See [profile catalog](config/breaking-profiles.md). |
 
 <code>ParsePolicy</code> and <code>ParseGenerate</code> also validate already-expanded
 YAML through <code>validateExpandedV1YAML</code>; environment substitution is not

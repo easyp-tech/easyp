@@ -65,16 +65,35 @@ func TestV1GitModuleCandidatesRejectTraversal(t *testing.T) {
 	}
 }
 
-func TestLocalV1GitModuleCandidatesDoNotInheritUnrelatedWorktree(t *testing.T) {
+func TestLocalV1GitModuleCandidatesStopAtNearestWorktree(t *testing.T) {
 	t.Parallel()
 
-	outer := t.TempDir()
-	runTestGit(t, outer, "init", "-q")
-	source := filepath.Join(outer, "tmp", "not-a-repository")
-	require.NoError(t, os.MkdirAll(source, 0o755))
+	tests := []struct {
+		name   string
+		exists bool
+	}{
+		{name: "existing directory without live metadata", exists: true},
+		{name: "directory removed in live checkout"},
+	}
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 
-	candidates, err := v1GitModuleCandidates(source)
+			outer := t.TempDir()
+			runTestGit(t, outer, "init", "-q")
+			repository := filepath.Join(outer, "nested")
+			require.NoError(t, os.MkdirAll(repository, 0o755))
+			runTestGit(t, repository, "init", "-q")
+			source := filepath.Join(repository, "foo", "bar")
+			if tt.exists {
+				require.NoError(t, os.MkdirAll(source, 0o755))
+			}
 
-	require.NoError(t, err)
-	require.Equal(t, []v1GitModuleCandidate{{remote: source}}, candidates)
+			candidates, err := v1GitModuleCandidates(source)
+
+			require.NoError(t, err)
+			require.Equal(t, []v1GitModuleCandidate{{remote: source}, {remote: repository, subdir: filepath.Join("foo", "bar")}}, candidates)
+		})
+	}
 }
