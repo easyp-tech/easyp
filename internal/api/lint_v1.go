@@ -94,6 +94,17 @@ func (l Lint) actionV1(ctx *cli.Context, log logger.Logger, configPath, projectR
 	})
 	var issues []core.IssueInfo
 	for _, file := range files {
+		moduleDir, err := findV1PolicyModuleDir(projectRoot, filepath.Dir(file))
+		if err != nil {
+			return fmt.Errorf("findV1PolicyModuleDir: %w", err)
+		}
+		replacementTarget, err := isReplacementTargetModule(projectRoot, moduleDir)
+		if err != nil {
+			return fmt.Errorf("isReplacementTargetModule: %w", err)
+		}
+		if replacementTarget && !path_helpers.IsTargetPath(moduleDir, searchDir) {
+			continue
+		}
 		policy, policyKey, lintersPresence, settingsPresence, err := resolveV1LintPolicyDetailed(filepath.Dir(file), projectRoot, configPath)
 		if err != nil {
 			return fmt.Errorf("resolveV1LintPolicy: %w", err)
@@ -110,17 +121,6 @@ func (l Lint) actionV1(ctx *cli.Context, log logger.Logger, configPath, projectR
 			return fmt.Errorf("ExclusionsForPath: %w", err)
 		}
 		if excludeFile {
-			continue
-		}
-		moduleDir, err := findV1PolicyModuleDir(projectRoot, filepath.Dir(file))
-		if err != nil {
-			return fmt.Errorf("findV1PolicyModuleDir: %w", err)
-		}
-		replacementTarget, err := isReplacementTargetModule(projectRoot, moduleDir)
-		if err != nil {
-			return fmt.Errorf("isReplacementTargetModule: %w", err)
-		}
-		if replacementTarget && !path_helpers.IsTargetPath(moduleDir, searchDir) {
 			continue
 		}
 		if flags.IsFrozen(ctx) && moduleDir == "" {

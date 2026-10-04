@@ -16,6 +16,7 @@ import (
 	"github.com/easyp-tech/easyp/internal/config"
 	v1 "github.com/easyp-tech/easyp/internal/config/v1"
 	"github.com/easyp-tech/easyp/internal/core"
+	"github.com/easyp-tech/easyp/internal/core/path_helpers"
 	"github.com/easyp-tech/easyp/internal/flags"
 	"github.com/easyp-tech/easyp/internal/logger"
 	"github.com/easyp-tech/easyp/internal/modules"
@@ -203,6 +204,17 @@ func discoverV1BreakingPolicySources(scanPath, projectRoot, configPath string) (
 			return nil
 		}
 		if entry.IsDir() || entry.Name() != v1.PolicyFile || path == configPath {
+			return nil
+		}
+		moduleDir, err := findV1PolicyModuleDir(projectRoot, filepath.Dir(path))
+		if err != nil {
+			return fmt.Errorf("findV1PolicyModuleDir: %w", err)
+		}
+		replacementTarget, err := isReplacementTargetModule(projectRoot, moduleDir)
+		if err != nil {
+			return fmt.Errorf("isReplacementTargetModule: %w", err)
+		}
+		if replacementTarget && !path_helpers.IsTargetPath(moduleDir, scanPath) {
 			return nil
 		}
 		_, source, err := resolveV1BreakingPolicy(filepath.Dir(path), projectRoot, configPath)

@@ -2,12 +2,23 @@
 
 ## X-14: Go package prefix is not full managed mode
 
-options.go.package_prefix applies Go option overrides without enabling defaults
-and derives the managed Go import/output path from the protobuf package path, not merely the physical source directory. This keeps multiple selected modules with the same relative source directory (for example user/v1 and order/v1) in distinct Go packages even with paths=source_relative.
-for Java, C#, PHP, Ruby, Objective-C or C++. The internal GoPackageOnly runtime
-mode is not a new YAML setting. Empty options are not materialized in otherwise
-unchanged descriptors. Other languages and field-option overrides require an
-explicit generate.managed.enabled: true.
+`options.go.package_prefix` applies Go option overrides without enabling
+defaults for Java, C#, PHP, Ruby, Objective-C or C++. Ordinary prefixes derive
+multi-segment Go import paths from the protobuf package hierarchy. This keeps
+modules such as `user.v1` and `order.v1` in distinct generated directories even
+when both contain `v1/*.proto` and use `paths=source_relative`. Single-segment
+packages and path markers retain their existing file path semantics.
+
+Source-relative Go output follows the final descriptor `go_package`, relative
+to the configured prefix (the stable parent for marker templates). Disabled
+options and explicit overrides therefore keep imports and output directories
+consistent. Packages outside that prefix keep their plugin output paths.
+`paths=import` and the plugin's `module` option retain plugin-controlled layout.
+
+The internal GoPackageOnly runtime mode is not a new YAML setting. Empty
+options are not materialized in otherwise unchanged descriptors. Other
+languages and field-option overrides require an explicit
+`generate.managed.enabled: true`.
 
 The existing ordering remains: inherited prefixes precede explicit managed
 Go overrides; a directly specified options.go.package_prefix follows them.
@@ -46,6 +57,11 @@ reading policies or constructing module contexts. A legacy or invalid policy
 under vendor therefore does not break a root lint invocation. A vendor target
 explicitly selected through --path is excluded too. Import resolution for user
 sources continues through their module roots and verified dependencies.
+
+Local replacement modules are also import-only during consumer lint and
+breaking checks. Their policies are skipped before parsing, so legacy or
+invalid replacement-local policy does not affect the consumer. Selecting the
+replacement explicitly through `--path` still validates its policy.
 
 ## X-24: a recorded version cannot silently change identity
 
