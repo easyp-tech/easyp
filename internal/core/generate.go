@@ -243,14 +243,18 @@ func (p *GenerationPlan) ExecuteInto(ctx context.Context, filesToWrite *Generate
 			outputDir = filepath.Join(root, plugin.Out)
 		}
 		for _, file := range resp.File {
-			if !filepath.IsLocal(filepath.FromSlash(file.GetName())) {
-				return fmt.Errorf("plugin returned invalid output path %q", file.GetName())
+			outputName := file.GetName()
+			if c.goPackageOutputByPackage {
+				outputName = goPackageOutputPath(outputName, filesToGenerate, fileDescriptors)
 			}
-			path := filepath.Join(outputDir, file.GetName())
+			if !filepath.IsLocal(filepath.FromSlash(outputName)) {
+				return fmt.Errorf("plugin returned invalid output path %q", outputName)
+			}
+			path := filepath.Join(outputDir, filepath.FromSlash(outputName))
 
 			c.logger.Debug(ctx, "generated file",
 				slog.String("plugin", source),
-				slog.String("file", file.GetName()),
+				slog.String("file", outputName),
 				slog.String("plugin_out", plugin.Out),
 				slog.String("full_path", path),
 			)
@@ -382,4 +386,34 @@ func (c *Core) buildFileToModuleMap(files []string) map[string]string {
 	}
 	maps.Copy(fileToModule, c.fileModules)
 	return fileToModule
+}
+
+func goPackageOutputPath(name string, filesToGenerate []string, descriptors []*descriptorpb.FileDescriptorProto) string {
+	if !strings.HasSuffix(name, ".go") {
+		return name
+	}
+	descriptorByName := make(map[string]*descriptorpb.FileDescriptorProto, len(descriptors))
+	for _, descriptor := range descriptors {
+		descriptorByName[descriptor.GetName()] = descriptor
+	}
+	output := filepath.ToSlash(name)
+	outputDir, outputBase := filepath.ToSlash(filepath.Dir(output)), filepath.Base(output)
+	for _, source := range filesToGenerate {
+		descriptor := descriptorByName[source]
+		if descriptor == nil || descriptor.GetPackage() == "" {
+			continue
+		}
+		source = filepath.ToSlash(source)
+		sourceDir := filepath.ToSlash(filepath.Dir(source))
+		sourceBase := strings.TrimSuffix(filepath.Base(source), ".proto")
+		if outputDir != sourceDir || !(strings.HasPrefix(outputBase, sourceBase+".") || strings.HasPrefix(outputBase, sourceBase+"_")) {
+			continue
+		}
+		packageDir := strings.ReplaceAll(descriptor.GetPackage(), ".", "/")
+		if packageDir == sourceDir {
+			return name
+		}
+		return filepath.ToSlash(filepath.Join(packageDir, outputBase))
+	}
+	return name
 }

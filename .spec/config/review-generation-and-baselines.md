@@ -3,6 +3,7 @@
 ## X-14: Go package prefix is not full managed mode
 
 options.go.package_prefix applies Go option overrides without enabling defaults
+and derives the managed Go import/output path from the protobuf package path, not merely the physical source directory. This keeps multiple selected modules with the same relative source directory (for example user/v1 and order/v1) in distinct Go packages even with paths=source_relative.
 for Java, C#, PHP, Ruby, Objective-C or C++. The internal GoPackageOnly runtime
 mode is not a new YAML setting. Empty options are not materialized in otherwise
 unchanged descriptors. Other languages and field-option overrides require an
