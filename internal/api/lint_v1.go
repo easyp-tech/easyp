@@ -15,7 +15,6 @@ import (
 	"github.com/easyp-tech/easyp/internal/config"
 	v1 "github.com/easyp-tech/easyp/internal/config/v1"
 	"github.com/easyp-tech/easyp/internal/core"
-	"github.com/easyp-tech/easyp/internal/core/path_helpers"
 	"github.com/easyp-tech/easyp/internal/flags"
 	"github.com/easyp-tech/easyp/internal/logger"
 	"github.com/easyp-tech/easyp/internal/modules"
@@ -59,7 +58,7 @@ func (l Lint) actionV1(ctx *cli.Context, log logger.Logger, configPath, projectR
 		if err != nil {
 			return fmt.Errorf("Rel: %w", err)
 		}
-		selected, err := selectedPolicyScopes(projectRoot, relative, true)
+		selected, err := selectedPolicyScopes(projectRoot, projectRoot, relative, true)
 		if err != nil {
 			return fmt.Errorf("selectedPolicyScopes: %w", err)
 		}
@@ -94,16 +93,16 @@ func (l Lint) actionV1(ctx *cli.Context, log logger.Logger, configPath, projectR
 	})
 	var issues []core.IssueInfo
 	for _, file := range files {
+		unselectedReplacement, err := isUnselectedReplacementSource(projectRoot, projectRoot, searchDir, file)
+		if err != nil {
+			return fmt.Errorf("isUnselectedReplacementSource: %w", err)
+		}
+		if unselectedReplacement {
+			continue
+		}
 		moduleDir, err := findV1PolicyModuleDir(projectRoot, filepath.Dir(file))
 		if err != nil {
 			return fmt.Errorf("findV1PolicyModuleDir: %w", err)
-		}
-		replacementTarget, err := isReplacementTargetModule(projectRoot, moduleDir)
-		if err != nil {
-			return fmt.Errorf("isReplacementTargetModule: %w", err)
-		}
-		if replacementTarget && !path_helpers.IsTargetPath(moduleDir, searchDir) {
-			continue
 		}
 		policy, policyKey, lintersPresence, settingsPresence, err := resolveV1LintPolicyDetailed(filepath.Dir(file), projectRoot, configPath)
 		if err != nil {

@@ -11,8 +11,8 @@ import (
 
 // selectedPolicyScopes retains explicit empty modules in frozen mode, so
 // deleting the last source cannot bypass validation of the current graph.
-func selectedPolicyScopes(root, relative string, frozen bool) (map[string]breakingScope, error) {
-	scopes, err := discoverBreakingScopes(root, relative)
+func selectedPolicyScopes(root, repositoryRoot, relative string, frozen bool) (map[string]breakingScope, error) {
+	scopes, err := discoverBreakingScopes(root, repositoryRoot, relative)
 	if err != nil || !frozen {
 		return scopes, err
 	}

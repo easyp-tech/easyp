@@ -20,7 +20,8 @@ type breakingScope struct{ files []string }
 
 // discoverBreakingScopes assigns files to the nearest module in this revision.
 // Repository-relative paths make findings independent of --root and import roots.
-func discoverBreakingScopes(root, scanRelative string) (map[string]breakingScope, error) {
+// root is the scanned tree; repositoryRoot identifies absolute replacement paths.
+func discoverBreakingScopes(root, repositoryRoot, scanRelative string) (map[string]breakingScope, error) {
 	scopes := make(map[string]breakingScope)
 	scan := filepath.Join(root, scanRelative)
 	if _, err := os.Stat(scan); os.IsNotExist(err) {
@@ -42,19 +43,19 @@ func discoverBreakingScopes(root, scanRelative string) (map[string]breakingScope
 		if entry.IsDir() || filepath.Ext(path) != ".proto" {
 			return nil
 		}
+		unselectedReplacement, err := isUnselectedReplacementSource(root, repositoryRoot, scan, path)
+		if err != nil {
+			return fmt.Errorf("isUnselectedReplacementSource: %w", err)
+		}
+		if unselectedReplacement {
+			return nil
+		}
 		directory, err := findV1PolicyModuleDir(root, filepath.Dir(path))
 		if err != nil {
 			return err
 		}
 		key := "."
 		if directory != "" {
-			replacementTarget, err := isReplacementTargetModule(root, directory)
-			if err != nil {
-				return err
-			}
-			if replacementTarget && !path_helpers.IsTargetPath(directory, scan) {
-				return nil
-			}
 			module, known := manifests[directory]
 			if !known {
 				_, module, err = modules.ReadManifest(directory)
