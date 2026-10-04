@@ -15,6 +15,7 @@ import (
 	"github.com/easyp-tech/easyp/internal/config"
 	v1 "github.com/easyp-tech/easyp/internal/config/v1"
 	"github.com/easyp-tech/easyp/internal/core"
+	"github.com/easyp-tech/easyp/internal/core/path_helpers"
 	"github.com/easyp-tech/easyp/internal/flags"
 	"github.com/easyp-tech/easyp/internal/logger"
 	"github.com/easyp-tech/easyp/internal/modules"
@@ -114,6 +115,13 @@ func (l Lint) actionV1(ctx *cli.Context, log logger.Logger, configPath, projectR
 		moduleDir, err := findV1PolicyModuleDir(projectRoot, filepath.Dir(file))
 		if err != nil {
 			return fmt.Errorf("findV1PolicyModuleDir: %w", err)
+		}
+		replacementTarget, err := isReplacementTargetModule(projectRoot, moduleDir)
+		if err != nil {
+			return fmt.Errorf("isReplacementTargetModule: %w", err)
+		}
+		if replacementTarget && !path_helpers.IsTargetPath(moduleDir, searchDir) {
+			continue
 		}
 		if flags.IsFrozen(ctx) && moduleDir == "" {
 			return fmt.Errorf("frozen lint requires protobuf.mod for %s", file)
