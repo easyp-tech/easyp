@@ -41,7 +41,7 @@ func (c *Cache) FetchMigration(ctx context.Context, source, version, legacyHash 
 	if err := moduleconfig.ValidateLegacyMajor(checkout.dir, source, version); err != nil {
 		return modules.Fetched{}, fmt.Errorf("ValidateLegacyMajor: %w", err)
 	}
-	files, err := migrationTrackedFiles(ctx, checkout.dir)
+	files, auxiliarySymlinks, err := migrationTrackedFiles(ctx, checkout.dir, checkout.module.Roots...)
 	if err != nil {
 		return modules.Fetched{}, fmt.Errorf("migrationTrackedFiles: %w", err)
 	}
@@ -53,7 +53,13 @@ func (c *Cache) FetchMigration(ctx context.Context, source, version, legacyHash 
 		return modules.Fetched{}, fmt.Errorf("hasNativeMigrationModule: %w", err)
 	}
 	if !native || legacyHash != "" {
-		oldHash, treeErr := hashMigrationLegacyFiles(checkout.dir, files)
+		var oldHash string
+		var treeErr error
+		// Omitting an auxiliary link cannot reproduce a historical whole tree.
+		// Only the released proto archive can prove a legacy hash in that case.
+		if !auxiliarySymlinks {
+			oldHash, treeErr = hashMigrationLegacyFiles(checkout.dir, files)
+		}
 		if treeErr != nil {
 			treeErr = fmt.Errorf("hashMigrationLegacyFiles: %w", treeErr)
 		}
@@ -63,13 +69,17 @@ func (c *Cache) FetchMigration(ctx context.Context, source, version, legacyHash 
 		// Non-proto collisions in the whole-tree representation do not make
 		// a released v0 proto archive unverifiable. Each candidate must prove
 		// the recorded hash independently at this same pinned checkout.
-		if legacyHash != "" && (treeErr != nil || oldHash != legacyHash) {
+		if auxiliarySymlinks || (legacyHash != "" && (treeErr != nil || oldHash != legacyHash)) {
 			archiveHash, err := hashMigrationProtoArchive(ctx, checkout.dir, files)
 			if err != nil {
 				return modules.Fetched{}, errors.Join(treeErr, fmt.Errorf("hashMigrationProtoArchive: %w", err))
 			}
-			if archiveHash != legacyHash {
-				mismatch := fmt.Errorf("legacy hash mismatch for %s at %s: got archive %s or whole-tree %s, want %s", source, checkout.commit, archiveHash, oldHash, legacyHash)
+			if legacyHash != "" && archiveHash != legacyHash {
+				candidates := "archive " + archiveHash
+				if !auxiliarySymlinks {
+					candidates += " or whole-tree " + oldHash
+				}
+				mismatch := fmt.Errorf("legacy hash mismatch for %s at %s: got %s, want %s", source, checkout.commit, candidates, legacyHash)
 				return modules.Fetched{}, errors.Join(treeErr, mismatch)
 			}
 		}
@@ -94,26 +104,50 @@ func (c *Cache) FetchMigration(ctx context.Context, source, version, legacyHash 
 	}}, nil
 }
 
-func migrationTrackedFiles(ctx context.Context, checkout string) ([]string, error) {
+// migrationTrackedFiles returns regular files and whether auxiliary Git links
+// were omitted. Links that can affect proto sources or metadata are refused.
+func migrationTrackedFiles(ctx context.Context, checkout string, roots ...string) ([]string, bool, error) {
 	files, err := trackedV1Files(ctx, checkout)
 	if err != nil {
-		return nil, fmt.Errorf("trackedV1Files: %w", err)
+		return nil, false, fmt.Errorf("trackedV1Files: %w", err)
 	}
 	// A Git symlink may be checked out as a regular file on systems that do
 	// not support symlinks. Inspect Git modes as well as filesystem modes.
 	raw, err := gitV1(ctx, checkout, "ls-files", "--stage", "-z")
 	if err != nil {
-		return nil, fmt.Errorf("gitV1: %w", err)
+		return nil, false, fmt.Errorf("gitV1: %w", err)
 	}
+	var auxiliarySymlinks bool
 	for _, entry := range strings.Split(strings.TrimSuffix(raw, "\x00"), "\x00") {
 		if entry == "" {
 			continue
 		}
-		if !strings.HasPrefix(entry, "100644 ") && !strings.HasPrefix(entry, "100755 ") {
-			return nil, fmt.Errorf("unsupported non-regular Git mode in %q", entry)
+		metadata, name, ok := strings.Cut(entry, "\t")
+		fields := strings.Fields(metadata)
+		if !ok || len(fields) != 3 || fields[2] != "0" {
+			return nil, false, fmt.Errorf("invalid Git index entry %q", entry)
+		}
+		switch fields[0] {
+		case "100644", "100755":
+			continue
+		case "120000":
+			if path.Ext(name) == ".proto" {
+				return nil, false, fmt.Errorf("unsupported non-regular Git mode in %q", entry)
+			}
+			for _, root := range roots {
+				root = path.Clean(filepath.ToSlash(root))
+				if root == name || strings.HasPrefix(root, name+"/") {
+					return nil, false, fmt.Errorf("unsupported non-regular Git mode in %q used by root %q", entry, root)
+				}
+			}
+			// The path is outside proto and metadata selection. Never inspect
+			// or follow its target, even when Git materializes it as a file.
+			auxiliarySymlinks = true
+		default:
+			return nil, false, fmt.Errorf("unsupported non-regular Git mode in %q", entry)
 		}
 	}
-	return files, nil
+	return files, auxiliarySymlinks, nil
 }
 
 // hashMigrationLegacyFiles calculates the whole-tree legacy hash without

@@ -38,3 +38,40 @@ func TestReadBufDependencyModuleRejectsInvalidPaths(t *testing.T) {
 		})
 	}
 }
+
+func TestReadBufDependencyWorkspaceRejectsSymlinkAncestorBeforeMetadataRead(t *testing.T) {
+	t.Parallel()
+
+	for _, tt := range []struct {
+		name       string
+		link       string
+		root       string
+		targetRoot string
+	}{
+		{name: "directory_link", link: "proto", root: "proto", targetRoot: "."},
+		{name: "ancestor_link", link: "api", root: "api/proto", targetRoot: "proto"},
+		{name: "dangling_link", link: "proto", root: "proto", targetRoot: "missing"},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			checkout, outside := t.TempDir(), t.TempDir()
+			if tt.name != "dangling_link" {
+				metadata := filepath.Join(outside, tt.targetRoot, bufModuleConfigFile)
+				require.NoError(t, os.MkdirAll(filepath.Dir(metadata), 0o755))
+				require.NoError(t, os.WriteFile(metadata, []byte("version: v1\ndeps: [buf.build/acme/outside]\n"), 0o644))
+			}
+			target := outside
+			if tt.name == "dangling_link" {
+				target = filepath.Join(outside, tt.targetRoot)
+			}
+			require.NoError(t, os.Symlink(target, filepath.Join(checkout, tt.link)))
+			workspace := filepath.Join(checkout, bufWorkConfigFile)
+			require.NoError(t, os.WriteFile(workspace, []byte("version: v1\ndirectories: ["+tt.root+"]\n"), 0o644))
+
+			_, err := readBufDependencyWorkspace(workspace)
+
+			require.ErrorContains(t, err, "non-regular dependency directory")
+			require.NotContains(t, err.Error(), "buf.build/acme/outside")
+		})
+	}
+}
