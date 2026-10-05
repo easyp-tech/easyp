@@ -67,4 +67,13 @@ The current command behavior is documented in [`.spec/CLI.md`](.spec/CLI.md):
 
 `easyp migrate` is the supported v0-to-v1 transition path. It accepts the documented legacy compatibility metadata, preserves legacy inputs until apply succeeds, and does not silently reinterpret a pilot-RFC file as a native v1 manifest.
 
+The wizard preserves legacy directory selections through exact protobuf package
+selectors when their current files and import names match. Sources stay in place
+and omitted or empty roots retain the `.` default. Partial-package selections
+remain blocked. Historical lock entries with annotated-tag spelling such as
+`v0.4.0^{}` retain their original hash verification and unchanged backup bytes.
+Released v0 proto archive hashes are verified before the native tracked-tree
+hash is calculated. Archive attributes that change proto paths or bytes block
+migration.
+
 When reviewing v1.0, treat differences listed in this document as deliberate pre-release contract changes. A failing literal example from the earlier pilot RFC is not by itself a product defect if the current behavior matches this document and the linked `.spec` contract.

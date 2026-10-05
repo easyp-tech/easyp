@@ -53,12 +53,25 @@ func (c *Cache) FetchMigration(ctx context.Context, source, version, legacyHash 
 		return modules.Fetched{}, fmt.Errorf("hasNativeMigrationModule: %w", err)
 	}
 	if !native || legacyHash != "" {
-		oldHash, err := hashMigrationLegacyFiles(checkout.dir, files)
-		if err != nil {
-			return modules.Fetched{}, fmt.Errorf("hashMigrationLegacyFiles: %w", err)
+		oldHash, treeErr := hashMigrationLegacyFiles(checkout.dir, files)
+		if treeErr != nil {
+			treeErr = fmt.Errorf("hashMigrationLegacyFiles: %w", treeErr)
 		}
-		if legacyHash != "" && oldHash != legacyHash {
-			return modules.Fetched{}, fmt.Errorf("legacy hash mismatch for %s at %s: got %s, want %s", source, checkout.commit, oldHash, legacyHash)
+		if legacyHash == "" && treeErr != nil {
+			return modules.Fetched{}, treeErr
+		}
+		// Non-proto collisions in the whole-tree representation do not make
+		// a released v0 proto archive unverifiable. Each candidate must prove
+		// the recorded hash independently at this same pinned checkout.
+		if legacyHash != "" && (treeErr != nil || oldHash != legacyHash) {
+			archiveHash, err := hashMigrationProtoArchive(ctx, checkout.dir, files)
+			if err != nil {
+				return modules.Fetched{}, errors.Join(treeErr, fmt.Errorf("hashMigrationProtoArchive: %w", err))
+			}
+			if archiveHash != legacyHash {
+				mismatch := fmt.Errorf("legacy hash mismatch for %s at %s: got archive %s or whole-tree %s, want %s", source, checkout.commit, archiveHash, oldHash, legacyHash)
+				return modules.Fetched{}, errors.Join(treeErr, mismatch)
+			}
 		}
 		if err := validateMigrationSelection(checkout.dir, files, checkout.module); err != nil {
 			return modules.Fetched{}, fmt.Errorf("validateMigrationSelection: %w", err)
@@ -103,10 +116,10 @@ func migrationTrackedFiles(ctx context.Context, checkout string) ([]string, erro
 	return files, nil
 }
 
-// hashMigrationLegacyFiles reproduces the old installer's path rewrite without
-// creating an installed tree. All tracked files participate, including files
-// outside import roots and non-proto files. Directory nodes also participate in
-// collision detection because buildInstallTree created them before hashing.
+// hashMigrationLegacyFiles calculates the whole-tree legacy hash without
+// creating an installed tree. All tracked files and their renamed directory
+// nodes participate. Released v0 installers instead used the filtered Git
+// archive reproduced by hashMigrationProtoArchive.
 func hashMigrationLegacyFiles(checkout string, files []string) (string, error) {
 	directories := make(map[string]bool)
 	for _, name := range files {

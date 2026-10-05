@@ -41,6 +41,14 @@ before execution remain unchanged. Selection never modifies dependency state,
 proto packages, import names or a published lock. Frozen checks still verify
 the selected module graph; local replacements remain forbidden in frozen mode.
 
+The migration wizard can infer these selectors for legacy local directory
+inputs. It preserves the existing roots (including the default `.`) and source
+locations, requiring exact equality of current import names and physical files.
+It rejects an empty inferred list, a partial package, boundary changes or a
+local filter combined with whole-module Git generation inputs. Both the source
+map and inferred selectors are rechecked before apply. The preview warns that
+future files in a selected package participate regardless of their directory.
+
 Regressions verify exact/prefix distinction, multiple files, multiple modules,
 no-plugin failures, invalid unselected/required sources, custom options, per-
 plugin imports, both descriptor modes and compiled Go output with a local

@@ -254,3 +254,15 @@ Run <code>easyp migrate</code> in a terminal for a guided migration, or add
 access and applying files require separate confirmations, both defaulting to no.
 Explicit <code>--module</code> without the wizard keeps the preview-first script
 interface; <code>--interactive=false</code> disables automatic prompting.
+
+Legacy directory inputs can migrate without moving sources when exact
+<code>generate.packages</code> selectors preserve their current files and import
+names. The wizard proves that equivalence and keeps the original import roots;
+an omitted or empty legacy root defaults to <code>.</code>. Selecting only part
+of a package still requires manual migration. Future files declaring a selected
+package participate in generation too. Historical <code>easyp.lock</code> entries
+such as <code>v0.4.0^{}</code> are verified as the corresponding annotated Git tag,
+including the original content hash, while the old lock remains unchanged.
+The migration verifies released v0's proto archive hashes before calculating
+the native tracked-tree hash; Git archive attributes must preserve proto paths
+and contents.
