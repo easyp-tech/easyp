@@ -59,6 +59,7 @@ The current command behavior is documented in [`.spec/CLI.md`](.spec/CLI.md):
 - generation discovery is nearest-project by default and recursive only with `--all`;
 - `generate.modules` selects module identities or workspace module paths;
 - `generate.packages` selects exact protobuf package names;
+- `generate.paths` selects literal import-relative files or directory subtrees, intersecting packages;
 - dependencies are available for imports but are not automatically generation targets;
 - `with_imports` is per-plugin and does not change descriptor-export `--include_imports` semantics.
 - source-relative Go output follows the effective descriptor `go_package`, including disable rules, overrides, and path markers; plugin-controlled import layouts stay intact. See [generation details](.spec/config/review-generation-and-baselines.md).
@@ -67,10 +68,13 @@ The current command behavior is documented in [`.spec/CLI.md`](.spec/CLI.md):
 
 `easyp migrate` is the supported v0-to-v1 transition path. It accepts the documented legacy compatibility metadata, preserves legacy inputs until apply succeeds, and does not silently reinterpret a pilot-RFC file as a native v1 manifest.
 
-The wizard preserves legacy directory selections through exact protobuf package
-selectors when their current files and import names match. Sources stay in place
-and omitted or empty roots retain the `.` default. Partial-package selections
-remain blocked. Historical lock entries with annotated-tag spelling such as
+The wizard preserves legacy directory selections through literal
+<code>generate.paths</code>, retaining root <code>.</code>, source locations and
+import names. Paths select files or component-bounded directory subtrees and
+intersect optional package selectors. Same-package build copies outside the
+selected path stay out of generation. Complete packages remain a mixed-root
+fallback. Unknown selectors fail before plugins, including no-plugin parents
+selected with <code>--all</code>. Historical lock entries with annotated-tag spelling such as
 `v0.4.0^{}` retain their original hash verification and unchanged backup bytes.
 Released v0 proto archive hashes are verified before the native tracked-tree
 hash is calculated. Archive attributes that change proto paths or bytes block

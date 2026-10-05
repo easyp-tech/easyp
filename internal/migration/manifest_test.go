@@ -54,7 +54,7 @@ func TestDirectoryPathIsRelativeToRoot(t *testing.T) {
 	t.Parallel()
 	for _, tt := range []struct{ name, extra, wantError string }{
 		{name: "same_import_names"},
-		{name: "scope_widening", extra: "proto/other.proto", wantError: "scope"},
+		{name: "path_selection_preserves_scope", extra: "proto/other.proto"},
 		{name: "hidden_scope_narrowing", extra: "proto/api/.hidden/extra.proto", wantError: "scope"},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
@@ -73,6 +73,7 @@ func TestDirectoryPathIsRelativeToRoot(t *testing.T) {
 			require.NoError(t, err)
 			assert.Equal(t, map[string]string{"api/a.proto": filepath.Join("proto", "api", "a.proto")}, plan.sources)
 			assert.Equal(t, []string{"proto"}, plan.roots)
+			assert.Equal(t, []string{"api"}, plan.paths)
 		})
 	}
 }

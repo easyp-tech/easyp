@@ -255,12 +255,15 @@ access and applying files require separate confirmations, both defaulting to no.
 Explicit <code>--module</code> without the wizard keeps the preview-first script
 interface; <code>--interactive=false</code> disables automatic prompting.
 
-Legacy directory inputs can migrate without moving sources when exact
-<code>generate.packages</code> selectors preserve their current files and import
-names. The wizard proves that equivalence and keeps the original import roots;
-an omitted or empty legacy root defaults to <code>.</code>. Selecting only part
-of a package still requires manual migration. Future files declaring a selected
-package participate in generation too. Historical <code>easyp.lock</code> entries
+Legacy directory inputs can migrate without moving sources through literal
+<code>generate.paths</code> selectors. Paths select files or directory subtrees
+relative to proto import roots; they do not change <code>protobuf.mod</code> roots
+or import access. Empty or omitted roots still mean <code>.</code>. For example,
+<code>paths: [mcp]</code> keeps Gradle copies of the same package outside the
+selected directory out of generation. Complete package selectors remain a
+fallback for representable mixed-root configurations. The wizard proves exact
+file/import equality and rechecks the fixed selection before applying it.
+Historical <code>easyp.lock</code> entries
 such as <code>v0.4.0^{}</code> are verified as the corresponding annotated Git tag,
 including the original content hash, while the old lock remains unchanged.
 The migration verifies released v0's proto archive hashes before calculating

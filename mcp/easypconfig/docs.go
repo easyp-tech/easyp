@@ -46,7 +46,8 @@ var descriptions = map[string]map[string]string{
 		"version":                                  "Configuration version; v1 is the only supported value.",
 		"generate":                                 "Select modules for this generation run.",
 		"generate.modules":                         "Module identities selected from protobuf.mod dependencies or the local workspace.",
-		"generate.packages":                        "Exact protobuf package names among selected modules. Empty means all module sources; imports remain available for compilation.",
+		"generate.packages":                        "Exact protobuf package names among selected modules, intersected with generate.paths. Empty means all packages; imports remain available for compilation.",
+		"generate.paths":                           "Literal proto import-relative files or directory subtrees across selected modules, intersected with generate.packages. Empty means all paths; . selects the whole namespace. Distinct from plugins.opts.paths, which controls plugin output layout.",
 		"generate.managed":                         "Managed file and field option rules.",
 		"plugins":                                  "Generators executed for selected modules.",
 		"plugins[].name":                           "Local or built-in plugin name.",
@@ -94,6 +95,7 @@ func examplesFor(file string) []Example {
 	case v1.GenerateFile:
 		return []Example{
 			{Title: "package_selection", Description: "Requires an api.v1 package in the selected module sources.", YAML: "version: v1\ngenerate:\n  packages: [api.v1]\nplugins:\n  - name: go\n    out: gen\n    with_imports: true\n", Paths: []string{"generate.packages"}},
+			{Title: "path_selection", Description: "Requires a source in the mcp import subtree of a selected module; plugin paths controls generated output layout.", YAML: "version: v1\ngenerate:\n  paths: [mcp]\nplugins:\n  - name: go\n    out: gen\n    opts: [paths=source_relative]\n", Paths: []string{"generate.paths"}},
 			{Title: "local_plugin", YAML: "version: v1\nplugins:\n  - name: go\n    out: gen/go\n    opts: [paths=source_relative]\n", Paths: []string{"plugins", "plugins[]", "plugins[].name", "plugins[].out", "plugins[].opts"}},
 			{Title: "remote_plugin", YAML: "version: v1\nplugins:\n  - remote: plugins.beta.easyp.tech/protocolbuffers/go\n    version: v1.36.11\n    out: gen/go\n    opts: [paths=source_relative]\n", Paths: []string{"plugins", "plugins[]", "plugins[].remote", "plugins[].version"}},
 			{Title: "binary_path", YAML: "version: v1\nplugins:\n  - path: ./tools/protoc-gen-custom\n    out: gen/custom\n", Paths: []string{"plugins", "plugins[]", "plugins[].path"}},
@@ -133,7 +135,9 @@ func notesFor(file, path string) []string {
 	case file == v1.LockFile:
 		return []string{"Schema comes directly from v1.SchemaJSON. ParseLock adds semantic checks for duplicate sources, matching module majors and commit-valued versions. Examples contain synthetic commits/hashes, not fetched data.", "Local replace never rewrites the published lock. --frozen requires a valid complete manifest/lock graph and rejects replacements; it may download exact pinned contents but never resolves a new version. Preserve the lock when investigating a cache mismatch.", "BSR compatibility_snapshot bindings preserve the original request and Buf lock pin, but do not prove BSR revision equivalence or verify the BSR digest. Frozen commands validate metadata and reuse recorded Git targets; older locks with BSR dependencies require easyp mod tidy."}
 	case file == v1.GenerateFile && within("generate.packages", path):
-		return []string{"Names match exact protobuf packages, not prefixes or file paths. Matching is across the selected modules of each project. Unknown names fail before plugins. with_imports is independent per plugin; descriptor include_imports controls exported dependencies."}
+		return []string{"Names match exact protobuf packages, not prefixes or file paths. Package and path filters intersect. Every selector must match an output source across the selected modules of each project, even without plugins. Unknown names fail before plugins and descriptor writes. Generation filters are not inherited. with_imports is independent per plugin; descriptor include_imports controls exported dependencies."}
+	case file == v1.GenerateFile && within("generate.paths", path):
+		return []string{"Selectors match literal proto import-relative file names or component-bounded directory subtrees. Empty or omitted paths select all paths; . selects the whole namespace. Canonical portable relative paths cannot contain whitespace, dot segments, absolute paths, backslashes or globs. Package and path filters intersect; every selector must match an output source across the selected modules of each project, even without plugins. Unknown selectors fail before plugins and descriptor writes. Module roots, source boundaries and required imports remain unchanged; no gitignore filtering is added. Generation filters are not inherited. plugins.opts.paths is a plugin output-layout option; with_imports and descriptor include_imports retain their separate meanings."}
 	case file == v1.PolicyFile && path == "linters.extends":
 		return []string{"Use ./ or ../ for local files, or declared-module#policy-path. Versions belong only in protobuf.mod/protobuf.lock. Local adjustments override the base; issues are not inherited. validate-config requires verified cached content and never downloads it."}
 	case file == v1.PolicyFile && path == "issues.exclude-rules[].path":

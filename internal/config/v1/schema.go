@@ -96,8 +96,13 @@ func documents() map[string]*schema {
 
 	generate := fromType(reflect.TypeFor[Generate]())
 	generate.Properties["version"] = &schema{Type: "string", Const: "v1"}
-	generate.Properties["generate"].Properties["packages"].Description = "Exact protobuf packages among selected modules. Empty means all source files. Imports remain available for compilation; with_imports separately controls dependency generation."
+	generate.Properties["generate"].Properties["packages"].Description = "Exact protobuf packages among selected modules, intersected with generate.paths. Empty means all packages. Each selector must match a selected output source. Imports remain available for compilation; with_imports separately controls dependency generation."
 	generate.Properties["generate"].Properties["packages"].Items.Pattern = PackageSelectorPattern
+	generate.Properties["generate"].Properties["paths"].Description = "Literal proto import-relative files or directory subtrees across selected modules, intersected with generate.packages. Empty or omitted means all paths; . selects the whole namespace. Paths must be canonical portable relative names without whitespace, dot segments, absolute paths, backslashes or globs. Each selector must match a selected output source. Module roots and required imports remain unchanged. Distinct from plugins.opts.paths, which controls plugin output layout."
+	generate.Properties["generate"].Properties["paths"].Items.Pattern = PathSelectorPattern
+	// Some schema validators allow a final newline before the regex end anchor.
+	// Reject forbidden characters independently so they agree with CLI parsing.
+	generate.Properties["generate"].Properties["paths"].Items.Not = &schema{Pattern: pathSelectorForbiddenPattern}
 	generate.Properties["options"].Properties["go"].Properties["package_prefix"].Description = "Sets go_package without enabling managed defaults for other languages; full managed mode requires generate.managed.enabled."
 	plugin := generate.Properties["plugins"].Items
 	plugin.Required = []string{"out"}

@@ -1,8 +1,8 @@
-# Exact protobuf package selection
+# Protobuf package and path selection
 
 A nonempty generate.packages selects exact protobuf package names within the
-modules selected by a generation project. Empty or omitted selects all source
-files, preserving the existing behavior. Names follow protobuf identifier
+modules selected by a generation project. Empty or omitted means all packages
+within generate.paths; without either filter, all module sources participate. Names follow protobuf identifier
 syntax; they are not prefixes, filesystem paths, globs or expressions.
 
 ~~~yaml
@@ -16,8 +16,9 @@ plugins:
     with_imports: true
 ~~~
 
-All files declaring a selected package participate. Matching is across the
-project's selected modules, not separately required in every module. Modules
+All files declaring a selected package within the selected paths participate.
+Matching is across the project's selected modules, not separately required in
+every module. Modules
 with no matching package do not execute plugins or produce empty descriptor
 sets. Unknown names fail before any plugin, including partially matched lists.
 Duplicate names are idempotent. Explicit package validation applies even to an
@@ -41,13 +42,40 @@ before execution remain unchanged. Selection never modifies dependency state,
 proto packages, import names or a published lock. Frozen checks still verify
 the selected module graph; local replacements remain forbidden in frozen mode.
 
-The migration wizard can infer these selectors for legacy local directory
-inputs. It preserves the existing roots (including the default `.`) and source
-locations, requiring exact equality of current import names and physical files.
-It rejects an empty inferred list, a partial package, boundary changes or a
-local filter combined with whole-module Git generation inputs. Both the source
-map and inferred selectors are rechecked before apply. The preview warns that
-future files in a selected package participate regardless of their directory.
+## Literal paths
+
+<code>generate.paths</code> selects exact proto import-relative files or directory
+subtrees across the project's selected modules. Empty means all module sources;
+<code>.</code> explicitly selects all. Matching is component-bounded: <code>mcp</code>
+does not select <code>mcp-copy</code>. Canonical relative paths are required;
+absolute paths, traversal, backslashes and globs are rejected. These selectors
+are separate from plugin <code>opts.paths</code>, which controls output layout.
+
+~~~yaml
+version: v1
+generate:
+  paths: [mcp]
+plugins:
+  - name: go
+    out: .
+    opts: {paths: source_relative}
+~~~
+
+Paths and packages intersect. Each selector must match a resulting source in
+at least one selected module. Unknown or partially unmatched lists fail before
+plugins or descriptor writes, including no-plugin projects and parents selected
+with <code>--all</code>. Source discovery respects existing module/Buf filters;
+required imports outside the selected paths still compile. No automatic Git
+ignore policy is introduced. Roots, source locations and import names stay fixed.
+
+The migration wizard prefers exact directory paths after whole-root equality.
+It falls back to complete package selectors only when paths cannot preserve a
+mixed-root selection. The current import-name/physical-file maps must match,
+and sources plus fixed paths/packages are rechecked before apply. Empty inferred
+selection, alias/boundary changes and local filters combined with whole-module
+Git generation inputs remain rejected. Future same-package build copies outside
+a selected directory do not widen that directory's targets. Package fallback
+previews still warn that future files declaring selected packages participate.
 
 Regressions verify exact/prefix distinction, multiple files, multiple modules,
 no-plugin failures, invalid unselected/required sources, custom options, per-

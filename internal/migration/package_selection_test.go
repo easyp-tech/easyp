@@ -17,7 +17,7 @@ func TestMigrationPackageSelectionPreservesLegacyInputs(t *testing.T) {
 	for _, tt := range []struct {
 		name, inputs string
 		files        map[string]string
-		wantPackages []string
+		wantPaths    []string
 		wantFiles    map[string]string
 	}{
 		{
@@ -28,20 +28,20 @@ func TestMigrationPackageSelectionPreservesLegacyInputs(t *testing.T) {
 				"internal/testproto/example.proto": "syntax = \"proto3\"; package example.v1; message Example {}",
 				"testdata/unsupported.proto":       "package unsupported.v1; message {",
 			},
-			wantPackages: []string{"mcp.options.v1"},
-			wantFiles:    map[string]string{"mcp/options/v1/options.proto": "mcp/options/v1/options.proto"},
+			wantPaths: []string{"mcp"},
+			wantFiles: map[string]string{"mcp/options/v1/options.proto": "mcp/options/v1/options.proto"},
 		},
 		{
-			name:         "omitted root defaults to dot",
-			inputs:       "[{directory: {path: mcp}}]",
-			files:        map[string]string{"mcp/a.proto": "package mcp.v1;", "other.proto": "package other.v1;"},
-			wantPackages: []string{"mcp.v1"}, wantFiles: map[string]string{"mcp/a.proto": "mcp/a.proto"},
+			name:      "omitted root defaults to dot",
+			inputs:    "[{directory: {path: mcp}}]",
+			files:     map[string]string{"mcp/a.proto": "package mcp.v1;", "other.proto": "package other.v1;"},
+			wantPaths: []string{"mcp"}, wantFiles: map[string]string{"mcp/a.proto": "mcp/a.proto"},
 		},
 		{
-			name:         "empty root defaults to dot",
-			inputs:       "[{directory: {path: mcp, root: ''}}]",
-			files:        map[string]string{"mcp/a.proto": "package mcp.v1;", "other.proto": "package other.v1;"},
-			wantPackages: []string{"mcp.v1"}, wantFiles: map[string]string{"mcp/a.proto": "mcp/a.proto"},
+			name:      "empty root defaults to dot",
+			inputs:    "[{directory: {path: mcp, root: ''}}]",
+			files:     map[string]string{"mcp/a.proto": "package mcp.v1;", "other.proto": "package other.v1;"},
+			wantPaths: []string{"mcp"}, wantFiles: map[string]string{"mcp/a.proto": "mcp/a.proto"},
 		},
 		{
 			name:   "complete packages and overlapping inputs",
@@ -52,8 +52,8 @@ func TestMigrationPackageSelectionPreservesLegacyInputs(t *testing.T) {
 				"selected/b/third.proto":  "option java_package = \"package fake;\"; package a.v1;",
 				"other.proto":             "package other.v1;",
 			},
-			wantPackages: []string{"a.v1", "z.v1"},
-			wantFiles:    map[string]string{"selected/a/first.proto": "selected/a/first.proto", "selected/a/second.proto": "selected/a/second.proto", "selected/b/third.proto": "selected/b/third.proto"},
+			wantPaths: []string{"selected", "selected/a"},
+			wantFiles: map[string]string{"selected/a/first.proto": "selected/a/first.proto", "selected/a/second.proto": "selected/a/second.proto", "selected/b/third.proto": "selected/b/third.proto"},
 		},
 		{
 			name:      "whole root keeps selection omitted",
@@ -75,7 +75,8 @@ func TestMigrationPackageSelectionPreservesLegacyInputs(t *testing.T) {
 			assert.Equal(t, tt.wantFiles, plan.sources)
 			gen, err := v1.ParseGenerate(bytes.NewReader(outputContent(t, plan, v1.GenerateFile)))
 			require.NoError(t, err)
-			assert.Equal(t, tt.wantPackages, gen.Generate.Packages)
+			assert.Empty(t, gen.Generate.Packages)
+			assert.Equal(t, tt.wantPaths, gen.Generate.Paths)
 			require.Len(t, gen.Plugins, 1)
 			assert.Equal(t, ".", gen.Plugins[0].Out)
 			assert.Equal(t, []string{"source_relative"}, gen.Plugins[0].Opts["paths"])
@@ -97,8 +98,6 @@ func TestMigrationPackageSelectionRejectsChangedScope(t *testing.T) {
 		name, path, selected, other, extraInput string
 		files                                   map[string]string
 	}{
-		{name: "partial package", path: "selected", selected: "package selected.v1;", other: "package selected.v1;"},
-		{name: "missing package", path: "selected", selected: "syntax = \"proto3\";", other: "package other.v1;"},
 		{name: "hidden source", path: ".selected", selected: "package selected.v1;", other: "package other.v1;"},
 		{name: "vendor source", path: "easyp_vendor", selected: "package selected.v1;", other: "package other.v1;"},
 		{name: "nested module", path: "selected", selected: "package selected.v1;", other: "package other.v1;", files: map[string]string{"selected/protobuf.mod": "module example.com/nested\n"}},
@@ -156,16 +155,15 @@ func TestMigrationPackageSelectionRechecksFixedSelectors(t *testing.T) {
 	writeFixture(t, root, "other.proto", "package other.v1;")
 	plan, err := Build(t.Context(), Options{Dir: root, Module: "example.com/acme/api"})
 	require.NoError(t, err)
-	require.Equal(t, []string{"selected.v1"}, plan.packages)
+	require.Equal(t, []string{"selected"}, plan.paths)
 	require.NoError(t, os.Remove(filepath.Join(root, "other.proto")))
-	recomputed, packages, err := proveLocalSelection(root, plan.inputs, plan.roots)
+	recomputed, err := proveLocalSelection(root, plan.inputs, plan.roots)
 	require.NoError(t, err)
-	require.Equal(t, plan.sources, recomputed, "selected paths and bytes are unchanged")
-	require.Empty(t, packages, "whole-root proof would silently drop the approved selectors")
-	require.ErrorContains(t, plan.CheckUnchanged(), "selection changed")
-	require.ErrorContains(t, plan.Apply(), "selection changed")
-	assert.Equal(t, legacy, string(mustRead(t, root, "easyp.yaml")))
-	assert.NoFileExists(t, filepath.Join(root, v1.ModuleFile))
+	require.Equal(t, plan.sources, recomputed.files, "selected paths and bytes are unchanged")
+	require.Equal(t, plan.paths, recomputed.paths, "removing outside files must not drop the approved directory filter")
+	require.NoError(t, plan.CheckUnchanged())
+	require.NoError(t, plan.Apply())
+	assert.Equal(t, legacy, string(mustRead(t, root, "easyp.yaml.v0.bak")))
 }
 
 func TestMigrationPackageSelectionRechecksInitiallyEmptyTree(t *testing.T) {
@@ -188,8 +186,7 @@ func TestMigrationPackageSelectionRechecksUnselectedDeclarations(t *testing.T) {
 	for _, tt := range []struct {
 		name, changed string
 	}{
-		{name: "new selected package source", changed: "outside/new.proto"},
-		{name: "unselected package becomes selected", changed: "other.proto"},
+		{name: "new selected source", changed: "selected/new.proto"},
 		{name: "selected package changes", changed: "selected/a.proto"},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
