@@ -49,3 +49,12 @@ jobs:
 
       - name: Validate developer task dispatch
         run: task dev-tools:check
+
+      - name: Install pinned GoReleaser
+        uses: goreleaser/goreleaser-action@v6
+        with:
+          version: v2.18.2
+          install-only: true
+
+      - name: Validate nightly release configuration
+        run: goreleaser check

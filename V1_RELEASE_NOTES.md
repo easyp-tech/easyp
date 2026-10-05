@@ -1,6 +1,32 @@
 # EasyP v1.0 — pre-release contract notes
 
-EasyP v1.0 is still unreleased. The implementation and the current `.spec` documents are the source of truth for the v1 contract.
+EasyP v1.0 has no stable release. It is prepared for explicitly selected nightly
+versions; the default installation remains the stable v0.17.0 release. The
+implementation and the current `.spec` documents are the source of truth for
+the v1 contract.
+
+## Distribution and Go module compatibility
+
+After the v1 branch is merged into `main`, v1 is published only with
+`v1.0.0-nightly.YYYYMMDD.N` tags. The workflow marks releases as prereleases,
+keeps GitHub Latest unchanged, and publishes only the exact Docker tag. It does
+not publish a Homebrew formula. See [installation](README.md#v1-nightly-explicit-opt-in)
+and [release operations](.spec/DEPLOYMENT.md).
+
+The Go module path remains `github.com/easyp-tech/easyp`: v0 and v1 share a path,
+and `/vN` is required only for v2 and later. Pinned v0 requirements are unchanged
+by a branch merge. While v1 has only prerelease tags, `go install ...@latest` and
+`go get -u` for v0 consumers select the existing stable release. Explicit nightly
+requirements opt into the v1 API and configuration contract, which may break
+v0 callers. Do not create a stable `v1.0.0` Git tag during the nightly period:
+Go reads Git tags independently of GitHub Release flags, and that tag would
+become eligible for ordinary updates. See [Go's version rules](https://go.dev/doc/modules/version-numbers)
+and [version queries](https://go.dev/ref/mod#version-queries).
+
+Go uses one version per module path in each build. A dependency that requires a
+higher v1 nightly can also raise the selected EasyP version through
+[minimal version selection](https://go.dev/ref/mod#minimal-version-selection).
+The v0/v1 path therefore provides no API isolation between them.
 
 An earlier pilot design RFC was used to bootstrap the v1 branch. Some of its examples and proposed defaults were intentionally superseded during implementation and review. They must not be used as compatibility requirements when they conflict with the contracts below.
 

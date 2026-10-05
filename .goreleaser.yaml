@@ -8,6 +8,9 @@ builds:
     main: ./cmd/easyp/
     flags:
       - -trimpath
+    ldflags:
+      - -s -w
+      - -X github.com/easyp-tech/easyp/internal/version.releaseVersion={{ if .IsSnapshot }}{{ .Version }}{{ else }}{{ .Tag }}{{ end }}
     env:
       - CGO_ENABLED=0
     goos:
@@ -32,6 +35,9 @@ builds:
     main: ./cmd/easyp-mcp/
     flags:
       - -trimpath
+    ldflags:
+      - -s -w
+      - -X github.com/easyp-tech/easyp/internal/version.releaseVersion={{ if .IsSnapshot }}{{ .Version }}{{ else }}{{ .Tag }}{{ end }}
     env:
       - CGO_ENABLED=0
     goos:
@@ -89,6 +95,8 @@ changelog:
 
 release:
   skip_upload: false
+  prerelease: true
+  make_latest: false
   github:
     owner: easyp-tech
     name: easyp
@@ -104,10 +112,8 @@ dockers_v2:
       - easyp
     images:
       - "ghcr.io/easyp-tech/easyp"
-#      - "{{ .Env.DOCKERHUB_IMAGE }}"
     tags:
       - "{{ .Tag }}"
-      - "latest"
     dockerfile: Dockerfile
     platforms:
       - linux/amd64
@@ -122,6 +128,7 @@ dockers_v2:
     sbom: false
     flags:
       - "--provenance=false"
+      - "--build-arg=RELEASE_VERSION={{ if .IsSnapshot }}{{ .Version }}{{ else }}{{ .Tag }}{{ end }}"
     extra_files:
       - go.mod
       - go.sum
@@ -129,24 +136,3 @@ dockers_v2:
       - internal
       - mcp
       - wellknownimports
-
-brews:
-  - description: Easy modern protobuf tooling for all your needs.
-    homepage: https://easyp.tech
-    skip_upload: false
-    repository:
-      owner: easyp-tech
-      name: homebrew-tap
-    commit_author:
-      name: easyp-tech-releaser
-      email: action@github.com
-    directory: Formula
-    install: |
-      bin.install "easyp"
-      output = Utils.popen_read("#{bin}/easyp completion bash")
-      (bash_completion/"easyp").write output
-      output = Utils.popen_read("#{bin}/easyp completion zsh")
-      (zsh_completion/"_easyp").write output
-      prefix.install_metafiles
-    test: |
-      system "#{bin}/easyp --version"

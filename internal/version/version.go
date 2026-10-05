@@ -26,11 +26,13 @@ type buildMetadata struct {
 }
 
 var (
-	metadata     buildMetadata
-	metadataOnce sync.Once
+	// releaseVersion is set by release builds using the Go linker's -X flag.
+	releaseVersion string
+	metadata       buildMetadata
+	metadataOnce   sync.Once
 )
 
-// System returns application version based on build info embedded into binary.
+// System returns the release version, falling back to embedded build info.
 func System() string {
 	return getBuildMetadata().easypVersion
 }
@@ -50,10 +52,16 @@ func getBuildMetadata() buildMetadata {
 func readBuildMetadata() buildMetadata {
 	bi, ok := debug.ReadBuildInfo()
 	if !ok {
-		return buildMetadataFromVersions(develVersion, unknownVersion)
+		bi = nil
 	}
+	return buildMetadataFromBuildInfo(bi, releaseVersion)
+}
 
-	easypVersion := easypVersionFromBuildInfo(bi)
+func buildMetadataFromBuildInfo(bi *debug.BuildInfo, release string) buildMetadata {
+	easypVersion := release
+	if easypVersion == "" {
+		easypVersion = easypVersionFromBuildInfo(bi)
+	}
 	protocompileVersion := dependencyVersion(bi, protocompileModulePath)
 
 	return buildMetadataFromVersions(easypVersion, protocompileVersion)

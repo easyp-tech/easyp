@@ -4,6 +4,7 @@ ARG TARGETPLATFORM
 ARG BUILDPLATFORM
 ARG TARGETOS
 ARG TARGETARCH
+ARG RELEASE_VERSION
 
 LABEL stage=gobuilder
 
@@ -18,7 +19,7 @@ RUN go mod download
 
 COPY . .
 
-RUN go build -trimpath -o /easyp ./cmd/easyp
+RUN go build -trimpath -ldflags "-s -w -X github.com/easyp-tech/easyp/internal/version.releaseVersion=${RELEASE_VERSION}" -o /easyp ./cmd/easyp
 
 FROM alpine:3.22
 

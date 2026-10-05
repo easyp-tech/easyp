@@ -1,8 +1,8 @@
 # EasyP
 
 [![License](https://img.shields.io/github/license/easyp-tech/easyp?color=blue)](https://github.com/easyp-tech/easyp/blob/main/LICENSE)
-[![Release](https://img.shields.io/github/v/release/easyp-tech/easyp?include_prereleases)](https://github.com/easyp-tech/easyp/releases)
-[![CI](https://github.com/easyp-tech/easyp/workflows/ci/badge.svg)](https://github.com/easyp-tech/easyp/actions?workflow=ci)
+[![Stable release](https://img.shields.io/github/v/release/easyp-tech/easyp)](https://github.com/easyp-tech/easyp/releases/latest)
+[![CI](https://github.com/easyp-tech/easyp/actions/workflows/tests.yml/badge.svg)](https://github.com/easyp-tech/easyp/actions/workflows/tests.yml)
 
 **Modern Protocol Buffers toolkit for streamlined development workflows**
 
@@ -15,6 +15,10 @@ The `easyp` CLI is a comprehensive tool for working with [Protocol Buffers](http
 - **Integration with remote plugins** for consistent, isolated execution
 
 ## Installation
+
+The latest stable release is **v0.17.0**. The source on this branch implements
+**v1.0**, which is distributed only through explicitly selected nightly versions.
+Merging v1 into `main` does not update the stable installation channels.
 
 ### Homebrew
 
@@ -32,15 +36,55 @@ go install github.com/easyp-tech/easyp/cmd/easyp@latest
 
 ### Other methods
 
-For other installation methods, see our [official documentation](https://easyp.tech/docs/guide/introduction/install), which covers:
+For archives and Docker installation, see the [installation guide](https://easyp.tech/docs/introduction/install).
 
-- Installing `easyp` via npm
-- Using `easyp` as a Docker image
-- Installing as a binary from GitHub Releases
+### v1 nightly (explicit opt-in)
+
+Choose an existing `v1.0.0-nightly.YYYYMMDD.N` tag from
+[GitHub Releases](https://github.com/easyp-tech/easyp/releases). The tag below is a
+placeholder; replace it with a published nightly. Building v1 requires Go 1.26.6
+or later.
+
+```sh
+EASYP_NIGHTLY_VERSION=v1.0.0-nightly.YYYYMMDD.N
+EASYP_NIGHTLY_BIN="$HOME/.local/share/easyp-nightly/bin"
+mkdir -p "$EASYP_NIGHTLY_BIN"
+GOBIN="$EASYP_NIGHTLY_BIN" go install "github.com/easyp-tech/easyp/cmd/easyp@$EASYP_NIGHTLY_VERSION"
+GOBIN="$EASYP_NIGHTLY_BIN" go install "github.com/easyp-tech/easyp/cmd/easyp-mcp@$EASYP_NIGHTLY_VERSION"
+"$EASYP_NIGHTLY_BIN/easyp" --version
+```
+
+Nightly archives contain both `easyp` and `easyp-mcp`, with a checksums file in the
+same release. The CLI container uses the exact tag
+`ghcr.io/easyp-tech/easyp:<nightly-tag>`. Nightlies do not update Homebrew,
+GitHub Latest, or the Docker `latest` tag. `go install ...@latest` continues to
+select the stable v0 release while v1 has only prerelease tags.
+
+Go modules use the same `github.com/easyp-tech/easyp` path for v0 and v1; there is
+no `/v1` suffix. The `/v2` suffix is required starting with v2. Existing pinned
+v0 dependencies keep their versions after the merge, but explicitly upgrading
+to v1 may require API and configuration changes. Creating a **stable Git tag**
+`v1.0.0` would make it eligible for `@latest`, even without a GitHub Release, so
+v1 stable tags must not be created during the nightly period. See
+[Go module version numbering](https://go.dev/doc/modules/version-numbers).
+
+Go selects one version per module path for a build. Another dependency requiring
+a v1 nightly can raise the selected version through
+[minimal version selection](https://go.dev/ref/mod#minimal-version-selection),
+so library consumers also need a dependency graph compatible with v0.
 
 ## Quick Start
 
+These commands describe the v1 nightly contract. Select the nightly binary
+above, or build this checkout, before using them. For an existing v0 project,
+run `easyp migrate` to preview its migration and `easyp migrate --write` to apply
+the plan.
+
 ```sh
+# Select the explicitly installed nightly for this terminal's v1 examples.
+export PATH="$HOME/.local/share/easyp-nightly/bin:$PATH"
+easyp --version
+
 # Initialize a new project
 mkdir my-proto-project && cd my-proto-project
 easyp init --module github.com/acme/my-proto-project
@@ -71,11 +115,11 @@ easyp --help
 
 For comprehensive usage information, consult EasyP's [documentation](https://easyp.tech), especially these guides:
 
-* [What is EasyP?](https://easyp.tech/docs/guide/introduction/what-is) - Overview and key concepts
-* [`easyp lint`](https://easyp.tech/docs/guide/cli/linter/linter) - Code linting and validation
-* [`easyp breaking`](https://easyp.tech/docs/guide/cli/breaking-changes/breaking-changes) - Breaking change detection
-* [`easyp mod`](https://easyp.tech/docs/guide/cli/package-manager/package-manager) - Package management
-* [`easyp generate`](https://easyp.tech/docs/guide/cli/generator/generator) - Code generation
+* [What is EasyP?](https://easyp.tech/docs/introduction/what-is) - Overview and key concepts
+* [`easyp lint`](https://easyp.tech/docs/cli/linter) - Code linting and validation
+* [`easyp breaking`](https://easyp.tech/docs/cli/breaking-changes) - Breaking change detection
+* [`easyp mod`](https://easyp.tech/docs/cli/package-manager) - Package management
+* [`easyp generate`](https://easyp.tech/docs/cli/generator) - Code generation
 * `easyp validate-config` - Validate `easyp.yaml` structure and types (JSON or text output)
 * Global flag: `--format, -f` / env `EASYP_FORMAT` (`text` or `json`) for commands that support formatted output
 

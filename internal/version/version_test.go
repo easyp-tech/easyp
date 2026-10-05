@@ -3,7 +3,103 @@ package version
 import (
 	"runtime/debug"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
+
+func TestBuildMetadataFromBuildInfoReleaseVersion(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name           string
+		release        string
+		mainVersion    string
+		revision       string
+		modified       bool
+		dependency     string
+		missingInfo    bool
+		wantVersion    string
+		wantDependency string
+		wantSuffix     string
+	}{
+		{
+			name: "stable release overrides local VCS", release: "v1.0.0", mainVersion: develMainVersion,
+			revision: "abcdef1234567890", modified: true, dependency: "v0.14.1",
+			wantVersion: "v1.0.0", wantDependency: "v0.14.1", wantSuffix: "v1.0.0-bufbuild-protocompile-easyp",
+		},
+		{
+			name: "nightly release overrides main module", release: "v1.0.0-nightly.20261005", mainVersion: "v0.17.1",
+			revision: "abcdef1234567890", modified: true, dependency: "v0.14.1",
+			wantVersion: "v1.0.0-nightly.20261005", wantDependency: "v0.14.1", wantSuffix: "v1.0.0-bufbuild-protocompile-easyp-nightly.20261005",
+		},
+		{
+			name: "stable release without build info", release: "v1.0.0", missingInfo: true,
+			wantVersion: "v1.0.0", wantDependency: unknownVersion, wantSuffix: "v1.0.0-bufbuild-protocompile-easyp",
+		},
+		{
+			name: "nightly release without build info", release: "v1.0.0-nightly.20261005", missingInfo: true,
+			wantVersion: "v1.0.0-nightly.20261005", wantDependency: unknownVersion, wantSuffix: "v1.0.0-bufbuild-protocompile-easyp-nightly.20261005",
+		},
+		{
+			name: "empty override preserves go install version", mainVersion: "v1.2.3", dependency: "v0.14.1-rc1",
+			wantVersion: "v1.2.3", wantDependency: "v0.14.1-rc1", wantSuffix: "v1.2.3-bufbuild-protocompile-rc1-easyp",
+		},
+		{
+			name: "empty override preserves VCS revision", mainVersion: develMainVersion, revision: "abcdef1234567890", dependency: "v0.14.1",
+			wantVersion: "abcdef1", wantDependency: "v0.14.1", wantSuffix: "abcdef1-bufbuild-protocompile-easyp",
+		},
+		{
+			name: "empty override preserves modified VCS revision", mainVersion: develMainVersion, revision: "abcdef1234567890", modified: true, dependency: "v0.14.1",
+			wantVersion: "abcdef1-modified", wantDependency: "v0.14.1", wantSuffix: "abcdef1-bufbuild-protocompile-easyp-modified",
+		},
+		{
+			name: "empty override preserves main dirty marker normalization", mainVersion: "v1.2.3+dirty", dependency: "v0.14.1",
+			wantVersion: "v1.2.3+modified", wantDependency: "v0.14.1", wantSuffix: "v1.2.3-bufbuild-protocompile-easyp-modified",
+		},
+		{
+			name: "empty override without build info", missingInfo: true,
+			wantVersion: develVersion, wantDependency: unknownVersion, wantSuffix: "devel-bufbuild-protocompile-easyp",
+		},
+		{
+			name:        "empty override without module or VCS metadata",
+			wantVersion: develVersion, wantDependency: unknownVersion, wantSuffix: "devel-bufbuild-protocompile-easyp",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			var info *debug.BuildInfo
+			if !tt.missingInfo {
+				info = &debug.BuildInfo{Main: debug.Module{Version: tt.mainVersion}}
+				if tt.revision != "" {
+					info.Settings = append(info.Settings, debug.BuildSetting{Key: "vcs.revision", Value: tt.revision})
+				}
+				if tt.modified {
+					info.Settings = append(info.Settings, debug.BuildSetting{Key: "vcs.modified", Value: "true"})
+				}
+				if tt.dependency != "" {
+					info.Deps = []*debug.Module{{Path: protocompileModulePath, Version: tt.dependency}}
+				}
+			}
+
+			metadata := buildMetadataFromBuildInfo(info, tt.release)
+
+			assert.Equal(t, tt.wantVersion, metadata.easypVersion)
+			assert.Equal(t, tt.wantDependency, metadata.protocompileVersion)
+			require.NotNil(t, metadata.compilerVersion)
+			assert.Equal(t, tt.wantSuffix, metadata.compilerVersion.GetSuffix())
+			if tt.dependency != "" {
+				assert.Equal(t, int32(14), metadata.compilerVersion.GetMinor())
+				assert.Equal(t, int32(1), metadata.compilerVersion.GetPatch())
+			} else {
+				assert.Zero(t, metadata.compilerVersion.GetMinor())
+				assert.Zero(t, metadata.compilerVersion.GetPatch())
+			}
+		})
+	}
+}
 
 func TestEasypVersionFromBuildInfo(t *testing.T) {
 	t.Parallel()
