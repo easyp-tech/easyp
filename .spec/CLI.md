@@ -214,16 +214,16 @@ easyp migrate --dir . --module github.com/acme/contracts --resolve-lock --write
 
 Flag-only invocation previews without file writes unless <code>--write</code> is supplied. If dependency integrity checks are required, application remains blocked until <code>--resolve-lock</code> authorizes them. Existing native outputs are not overwritten with conflicting candidates; legacy replaced files receive <code>.v0.bak</code> backups and <code>easyp.lock</code> is retained unchanged. Legacy <code>version</code> metadata such as <code>v1alpha</code> is accepted and omitted with a warning; <code>deps: null</code> means an empty dependency list. Keys that the v0 parser ignored are also omitted with source-path warnings instead of being assigned invented v1 semantics, while the byte-identical v0 backup preserves them. Known fields with invalid or ambiguous values still block migration. The plan rechecks observed files before applying and rolls back ordinary write failures, but multiple replacements are not process-crash atomic. See [internal/migration/migration.go](../internal/migration/migration.go), [apply.go](../internal/migration/apply.go), and [migration review context](config/review-migration-and-polish.md).
 
-Local directory selection may become exact <code>generate.packages</code> selectors
-without moving sources. The plan first compares whole roots, then permits only
-nonempty complete-package selectors whose import-name-to-physical-source map
-equals the legacy selection. Omitted or empty legacy roots keep the default
-<code>.</code>; native manifests with no <code>roots</code> use that same default.
-Partial packages, changed import names, hidden/vendor/nested-module selection
-changes and inferred filters mixed with whole-module Git generation inputs stay
-blocked. Before applying, the plan rechecks both the source map and the fixed
-package selectors. The preview warns that future files declaring these packages
-also become targets. See [package selection](config/package-selection.md).
+Local directory selection may become literal <code>generate.paths</code> selectors
+without moving sources. The plan compares whole roots, then the original
+import-relative paths, then complete protobuf packages for mixed-root cases.
+Each candidate must preserve the exact import-name-to-physical-source map.
+Omitted or empty legacy roots keep <code>.</code>; native manifests with no
+<code>roots</code> use that same default. Same-package files outside selected
+paths do not become generation targets, including ignored Gradle build copies.
+Changed import names, hidden/vendor/nested-module boundary changes and inferred
+local filters mixed with whole-module Git inputs stay blocked. The plan rechecks
+sources, paths and packages before applying. See [source selection](config/package-selection.md).
 
 Historical <code>easyp.lock</code> entries may use a full SemVer tag followed by
 Git's peeled-ref suffix <code>^{}</code>. Migration verifies the corresponding

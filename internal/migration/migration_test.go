@@ -144,7 +144,7 @@ func TestRejectedInputsDoNotWrite(t *testing.T) {
 		{name: "empty", input: "", want: "empty"},
 		{name: "alias", input: "lint: &lint {}\nbreaking: *lint\n", want: "alias"},
 		{name: "duplicate", input: "lint: {}\nlint: {}\n", want: "duplicate"},
-		{name: "sliced", input: "generate:\n  inputs: [{directory: {root: ., path: selected}}]\n", want: "scope"},
+		{name: "nested_boundary", input: "generate:\n  inputs: [{directory: {root: ., path: selected}}]\n", want: "scope"},
 		{name: "external", input: "generate:\n  inputs: [{directory: {root: ../external, path: .}}]\n", want: "manual"},
 		{name: "placeholder", input: "generate:\n  inputs: [{directory: '${ROOT}'}]\n", want: "placeholder"},
 		{name: "git_slice", input: "generate:\n  inputs: [{git_repo: {url: example.com/acme/deps, sub_directory: api}}]\n", want: "manual"},
@@ -157,6 +157,9 @@ func TestRejectedInputsDoNotWrite(t *testing.T) {
 			writeFixture(t, root, "easyp.yaml", tt.input)
 			writeFixture(t, root, "selected/a.proto", "syntax = \"proto3\";\n")
 			writeFixture(t, root, "other.proto", "syntax = \"proto3\";\n")
+			if tt.name == "nested_boundary" {
+				writeFixture(t, root, "selected/protobuf.mod", "module example.test/nested\n")
+			}
 			_, err := Build(context.Background(), Options{Dir: root, Module: "example.com/acme/api"})
 			require.ErrorContains(t, err, tt.want)
 			assert.Equal(t, tt.input, string(mustRead(t, root, "easyp.yaml")))

@@ -84,7 +84,7 @@ func Run(ctx context.Context, log logger.Logger, cache modules.Cache, request Re
 		if err := inheritV1GenerateOptions(request.WorkspaceRoot, configPath, &gen); err != nil {
 			return fmt.Errorf("inheritV1GenerateOptions: %w", err)
 		}
-		if len(gen.Plugins) == 0 && len(gen.Generate.Packages) == 0 && !exportDescriptors && !request.Frozen {
+		if len(gen.Plugins) == 0 && len(gen.Generate.Packages) == 0 && len(gen.Generate.Paths) == 0 && !exportDescriptors && !request.Frozen {
 			continue
 		}
 		modules, err := selectV1Modules(request.WorkspaceRoot, filepath.Dir(configPath), gen.Generate.Modules)
@@ -94,6 +94,9 @@ func Run(ctx context.Context, log logger.Logger, cache modules.Cache, request Re
 		if err := v1.ValidatePackageSelectors(gen.Generate.Packages); err != nil {
 			return fmt.Errorf("%s: %w", configPath, err)
 		}
+		if err := v1.ValidatePathSelectors(gen.Generate.Paths); err != nil {
+			return fmt.Errorf("%s: %w", configPath, err)
+		}
 		for _, module := range modules {
 			descriptorTargets = append(descriptorTargets, generationTarget{configPath: configPath, config: gen, module: module})
 		}
@@ -101,7 +104,8 @@ func Run(ctx context.Context, log logger.Logger, cache modules.Cache, request Re
 	if request.AllProjects {
 		selected := descriptorTargets[:0]
 		for _, target := range descriptorTargets {
-			if len(target.config.Plugins) == 0 && len(target.config.Generate.Modules) == 0 {
+			if len(target.config.Plugins) == 0 && len(target.config.Generate.Modules) == 0 &&
+				len(target.config.Generate.Packages) == 0 && len(target.config.Generate.Paths) == 0 {
 				inherited, err := isOptionsOnlyParent(target.configPath, target.config, configs)
 				if err != nil {
 					return fmt.Errorf("isOptionsOnlyParent: %w", err)

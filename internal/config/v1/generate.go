@@ -20,10 +20,11 @@ type Generate struct {
 	Options                  GenerateOptions `yaml:"options"`
 }
 
-// GenerateTargets selects modules and their managed descriptor options.
+// GenerateTargets selects module sources and their managed descriptor options.
 type GenerateTargets struct {
 	Modules  []string           `yaml:"modules"`
 	Packages []string           `yaml:"packages"`
+	Paths    []string           `yaml:"paths"`
 	Managed  config.ManagedMode `yaml:"managed"`
 }
 
@@ -59,6 +60,9 @@ func ParseGenerate(r io.Reader) (Generate, error) {
 		return Generate{}, fmt.Errorf("easyp.gen.yaml version must be v1")
 	}
 	if err := ValidatePackageSelectors(result.Generate.Packages); err != nil {
+		return Generate{}, err
+	}
+	if err := ValidatePathSelectors(result.Generate.Paths); err != nil {
 		return Generate{}, err
 	}
 	if err := result.Generate.Managed.Validate(); err != nil {

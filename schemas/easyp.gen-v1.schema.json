@@ -637,11 +637,22 @@
           }
         },
         "packages": {
-          "description": "Exact protobuf packages among selected modules. Empty means all source files. Imports remain available for compilation; with_imports separately controls dependency generation.",
+          "description": "Exact protobuf packages among selected modules, intersected with generate.paths. Empty means all packages. Each selector must match a selected output source. Imports remain available for compilation; with_imports separately controls dependency generation.",
           "type": "array",
           "items": {
             "type": "string",
             "pattern": "^[A-Za-z_][A-Za-z0-9_]*(\\.[A-Za-z_][A-Za-z0-9_]*)*$"
+          }
+        },
+        "paths": {
+          "description": "Literal proto import-relative files or directory subtrees across selected modules, intersected with generate.packages. Empty or omitted means all paths; . selects the whole namespace. Paths must be canonical portable relative names without whitespace, dot segments, absolute paths, backslashes or globs. Each selector must match a selected output source. Module roots and required imports remain unchanged. Distinct from plugins.opts.paths, which controls plugin output layout.",
+          "type": "array",
+          "items": {
+            "type": "string",
+            "not": {
+              "pattern": "[\\\\:*?\\[\\]\"\u003c\u003e|\\x00-\\x20\\x7f-\\x9f   - \u2028\u2029  　﻿]"
+            },
+            "pattern": "^(\\.|([^/.\\\\:*?\\[\\]\"\u003c\u003e|\\x00-\\x20\\x7f-\\x9f   - \u2028\u2029  　﻿]|\\.[^/.\\\\:*?\\[\\]\"\u003c\u003e|\\x00-\\x20\\x7f-\\x9f   - \u2028\u2029  　﻿]|\\.\\.[^/\\\\:*?\\[\\]\"\u003c\u003e|\\x00-\\x20\\x7f-\\x9f   - \u2028\u2029  　﻿])[^/\\\\:*?\\[\\]\"\u003c\u003e|\\x00-\\x20\\x7f-\\x9f   - \u2028\u2029  　﻿]*(/([^/.\\\\:*?\\[\\]\"\u003c\u003e|\\x00-\\x20\\x7f-\\x9f   - \u2028\u2029  　﻿]|\\.[^/.\\\\:*?\\[\\]\"\u003c\u003e|\\x00-\\x20\\x7f-\\x9f   - \u2028\u2029  　﻿]|\\.\\.[^/\\\\:*?\\[\\]\"\u003c\u003e|\\x00-\\x20\\x7f-\\x9f   - \u2028\u2029  　﻿])[^/\\\\:*?\\[\\]\"\u003c\u003e|\\x00-\\x20\\x7f-\\x9f   - \u2028\u2029  　﻿]*)*)$"
           }
         }
       },
