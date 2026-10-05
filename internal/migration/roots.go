@@ -9,7 +9,9 @@ import (
 	"slices"
 	"strings"
 
+	v1 "github.com/easyp-tech/easyp/internal/config/v1"
 	"github.com/easyp-tech/easyp/internal/core/path_helpers"
+	"github.com/easyp-tech/easyp/internal/protosource"
 )
 
 func localRoots(cfg legacyConfig) ([]string, []legacyDirectory, error) {
@@ -48,26 +50,71 @@ func localRoots(cfg legacyConfig) ([]string, []legacyDirectory, error) {
 }
 
 // proveLocalSelection compares both the physical files and their import names.
-// A subset can only migrate when whole v1 roots select exactly the same files.
-func proveLocalSelection(root string, inputs []legacyDirectory, roots []string) (map[string]string, error) {
+// A subset requires complete packages selecting exactly the same native sources.
+func proveLocalSelection(root string, inputs []legacyDirectory, roots []string) (map[string]string, []string, error) {
 	legacy, current := make(map[string]string), make(map[string]string)
 	for _, input := range inputs {
 		importRoot := filepath.Join(root, input.Root)
 		search := filepath.Join(importRoot, input.Path)
 		if err := collectProto(root, importRoot, search, false, legacy); err != nil {
-			return nil, fmt.Errorf("collectProto: %w", err)
+			return nil, nil, fmt.Errorf("collectProto: %w", err)
 		}
 	}
 	for _, moduleRoot := range roots {
 		importRoot := filepath.Join(root, moduleRoot)
 		if err := collectProto(root, importRoot, importRoot, true, current); err != nil {
-			return nil, fmt.Errorf("collectProto: %w", err)
+			return nil, nil, fmt.Errorf("collectProto: %w", err)
 		}
 	}
-	if !maps.Equal(legacy, current) {
-		return nil, fmt.Errorf("v1 roots would change generation scope or .proto import names (including hidden/vendor/nested modules); split the module or reorganize legacy inputs manually; no v1 directory selection syntax can preserve this configuration")
+	if maps.Equal(legacy, current) {
+		return current, nil, nil
 	}
-	return current, nil
+	const scopeError = "v1 roots would change generation scope or .proto import names (including hidden/vendor/nested modules); whole roots and complete protobuf packages cannot preserve this configuration; split the module or migrate separate generation projects manually"
+	// An empty package selector means all files at runtime, never no files.
+	if len(legacy) == 0 {
+		return nil, nil, fmt.Errorf("%s", scopeError)
+	}
+	packages := make(map[string]bool)
+	for _, name := range slices.Sorted(maps.Keys(legacy)) {
+		physical := legacy[name]
+		if current[name] != physical {
+			return nil, nil, fmt.Errorf("%s", scopeError)
+		}
+		declared, err := readSourcePackage(root, physical)
+		if err != nil {
+			return nil, nil, fmt.Errorf("readSourcePackage: %w", err)
+		}
+		if declared == "" {
+			return nil, nil, fmt.Errorf("%s", scopeError)
+		}
+		if err := v1.ValidatePackageSelectors([]string{declared}); err != nil {
+			return nil, nil, fmt.Errorf("ValidatePackageSelectors: %w", err)
+		}
+		packages[declared] = true
+	}
+	selected := make(map[string]string)
+	for _, name := range slices.Sorted(maps.Keys(current)) {
+		physical := current[name]
+		declared, err := readSourcePackage(root, physical)
+		if err != nil {
+			return nil, nil, fmt.Errorf("readSourcePackage: %w", err)
+		}
+		if packages[declared] {
+			selected[name] = physical
+		}
+	}
+	if !maps.Equal(legacy, selected) {
+		return nil, nil, fmt.Errorf("%s", scopeError)
+	}
+	return selected, slices.Sorted(maps.Keys(packages)), nil
+}
+
+func readSourcePackage(root, name string) (string, error) {
+	raw, err := os.ReadFile(filepath.Join(root, name))
+	if err != nil {
+		return "", fmt.Errorf("ReadFile: %w", err)
+	}
+	return protosource.Package(raw), nil
 }
 
 func collectProto(root, importRoot, search string, native bool, files map[string]string) error {

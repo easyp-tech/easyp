@@ -56,6 +56,7 @@ type Plan struct {
 	alreadyV1 bool
 	inputs    []legacyDirectory
 	roots     []string
+	packages  []string
 	sources   map[string]string
 }
 
@@ -116,11 +117,11 @@ func (p *Plan) Apply() error {
 
 func (p *Plan) verifySourceSelection() error {
 	if len(p.inputs) > 0 {
-		sources, err := proveLocalSelection(p.tx.root, p.inputs, p.roots)
+		sources, packages, err := proveLocalSelection(p.tx.root, p.inputs, p.roots)
 		if err != nil {
 			return fmt.Errorf("proveLocalSelection: %w", err)
 		}
-		if !maps.Equal(sources, p.sources) {
+		if !maps.Equal(sources, p.sources) || !slices.Equal(packages, p.packages) {
 			return fmt.Errorf("local .proto source selection changed since planning; preview again")
 		}
 	}
@@ -176,9 +177,17 @@ func Build(ctx context.Context, options Options) (*Plan, error) {
 	if err := checkManagedLocal(cfg, options.Module, len(inputs) > 0); err != nil {
 		return nil, fmt.Errorf("checkManagedLocal: %w", err)
 	}
-	p.sources, err = proveLocalSelection(tx.root, inputs, roots)
+	p.sources, p.packages, err = proveLocalSelection(tx.root, inputs, roots)
 	if err != nil {
 		return nil, fmt.Errorf("proveLocalSelection: %w", err)
+	}
+	if len(p.packages) > 0 {
+		for _, input := range cfg.Generate.Inputs {
+			if input.GitRepo != nil {
+				return nil, fmt.Errorf("inferred package selectors would change the generation scope of whole-module Git inputs; migrate separate generation projects manually")
+			}
+		}
+		p.warnings = append(p.warnings, "Legacy directory selection is preserved through exact generate.packages selectors. Import roots and source paths stay unchanged; future files declaring those packages also participate in generation.")
 	}
 	for _, source := range p.sources {
 		if _, err := tx.capture(source); err != nil {
@@ -241,7 +250,7 @@ func Build(ctx context.Context, options Options) (*Plan, error) {
 	if err != nil {
 		return nil, fmt.Errorf("convertPolicy: %w", err)
 	}
-	generateBytes, err := convertGenerate(cfg, selected)
+	generateBytes, err := convertGenerate(cfg, selected, p.packages)
 	if err != nil {
 		return nil, fmt.Errorf("convertGenerate: %w", err)
 	}

@@ -39,7 +39,14 @@ func parseLegacyLock(raw []byte) (map[string]legacyPin, error) {
 		if err := validIdentity(fields[0]); err != nil {
 			return nil, fmt.Errorf("validIdentity: %w", err)
 		}
-		version, err := migrationVersion(fields[1])
+		legacyVersion := fields[1]
+		// v0 could persist the peeled-ref line from an annotated Git tag.
+		// Only full SemVer tags qualify; pseudo-shaped names must retain their
+		// tag semantics rather than entering legacy pseudo-to-commit conversion.
+		if tag, peeled := strings.CutSuffix(legacyVersion, "^{}"); peeled && semver.IsValid(tag) && fullSemver.MatchString(tag) && !legacyPseudo.MatchString(tag) {
+			legacyVersion = tag
+		}
+		version, err := migrationVersion(legacyVersion)
 		if err != nil {
 			return nil, fmt.Errorf("migrationVersion: %w", err)
 		}
