@@ -28,6 +28,15 @@ independently. Missing historical pins, retags and hash mismatches fail. The old
 easyp.lock remains byte-identical. Empty projects receive a native empty lock,
 so the retained old lock cannot block later normal module commands.
 
+Auxiliary Git symlinks such as PGV's example-workspace/.bazelrc are excluded
+without dereferencing targets. Proto links, configured roots and their symlink
+ancestors, dependency metadata links and submodules remain errors. Git index
+modes preserve those checks when core.symlinks=false materializes link targets
+as text. If any auxiliary link is omitted, only a verified released-v0 proto
+archive hash proves historical contents; the native regular-file tree hash is
+computed separately. Archive path/content equivalence is checked even for an
+initial migration without a historical lock.
+
 The application transaction stages all results and .v0.bak recovery copies,
 checks observed contents/permissions/source scope again, and rolls back ordinary
 failures. Conflicting existing files and unsafe symlink destinations are refused.

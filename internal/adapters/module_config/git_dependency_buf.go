@@ -65,6 +65,9 @@ func readBufDependencyWorkspace(path string) (bufDependencyMetadata, error) {
 		if !filepath.IsLocal(directory) && directory != "." {
 			return bufDependencyMetadata{}, fmt.Errorf("%s: directory %q leaves the repository", path, directory)
 		}
+		if err := validateGitDependencyDirectory(base, directory); err != nil {
+			return bufDependencyMetadata{}, fmt.Errorf("validateGitDependencyDirectory: %w", err)
+		}
 		modulePath := filepath.Join(base, directory, bufModuleConfigFile)
 		_, err := os.Lstat(modulePath)
 		if os.IsNotExist(err) {

@@ -213,8 +213,8 @@ func TestFetchMigrationRejectsUnsafeNodes(t *testing.T) {
 			if tt.submodule {
 				runTestGit(t, repository, "update-index", "--add", "--cacheinfo", "160000,"+commit+",unsafe")
 			} else {
-				require.NoError(t, os.Symlink("file.proto", filepath.Join(repository, "unsafe")))
-				runTestGit(t, repository, "add", "unsafe")
+				require.NoError(t, os.Symlink("file.proto", filepath.Join(repository, "unsafe.proto")))
+				runTestGit(t, repository, "add", "unsafe.proto")
 			}
 			runTestGit(t, repository, "-c", "user.name=EasyP Test", "-c", "user.email=test@example.com", "commit", "-qm", "unsafe")
 			runTestGit(t, repository, "tag", "v1.0.0")
@@ -228,15 +228,15 @@ func TestFetchMigrationRejectsUnsafeNodes(t *testing.T) {
 	}
 }
 
-func TestMigrationTrackedFilesRejectsMaterializedSymlink(t *testing.T) {
+func TestMigrationTrackedFilesRejectsMaterializedProtoSymlink(t *testing.T) {
 	t.Parallel()
 
-	repository, _ := migrationTestRepository(t, map[string]string{"link": "target.proto"})
-	blob := strings.TrimSpace(runTestGit(t, repository, "rev-parse", "HEAD:link"))
+	repository, _ := migrationTestRepository(t, map[string]string{"link.proto": "target.proto"})
+	blob := strings.TrimSpace(runTestGit(t, repository, "rev-parse", "HEAD:link.proto"))
 	// A checkout with core.symlinks=false materializes a Git symlink as a
 	// regular file. The index mode must still prevent legacy verification.
-	runTestGit(t, repository, "update-index", "--cacheinfo", "120000,"+blob+",link")
-	_, err := migrationTrackedFiles(t.Context(), repository)
+	runTestGit(t, repository, "update-index", "--cacheinfo", "120000,"+blob+",link.proto")
+	_, _, err := migrationTrackedFiles(t.Context(), repository)
 	require.ErrorContains(t, err, "non-regular Git mode")
 }
 

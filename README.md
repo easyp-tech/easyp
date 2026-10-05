@@ -269,3 +269,7 @@ including the original content hash, while the old lock remains unchanged.
 The migration verifies released v0's proto archive hashes before calculating
 the native tracked-tree hash; Git archive attributes must preserve proto paths
 and contents.
+Auxiliary Git symlinks, such as <code>example-workspace/.bazelrc</code>, are
+omitted without reading their targets. Symlinks at proto source paths, dependency
+metadata paths or configured source roots still block migration. If links were omitted,
+historical verification requires the actual v0 proto archive hash.

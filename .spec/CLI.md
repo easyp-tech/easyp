@@ -235,6 +235,13 @@ contents after legacy root rewrites, while the new lock covers the tracked v1
 checkout. Migration verifies either the historical archive hash or the existing
 whole-tree hash at the pinned revision. It rejects archive attributes that omit
 or alter proto sources rather than silently changing their contracts.
+Auxiliary Git symlinks outside proto/configured-root/metadata roles are omitted
+without dereferencing their targets, including dangling links and Git links
+materialized as text by <code>core.symlinks=false</code>. Links affecting proto
+sources, source roots or dependency metadata remain errors. When auxiliary
+links are omitted, a regular-file-only whole-tree hash cannot prove historical
+v0 contents: the actual proto archive must match. The new native hash covers
+the regular tracked files and excludes the omitted links.
 
 ### <code>easyp ls-files [flags]</code>
 
