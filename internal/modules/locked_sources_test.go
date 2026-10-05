@@ -73,7 +73,9 @@ func TestEnsureSourcesExcludesReplacedModuleFromCache(t *testing.T) {
 			assert.Equal(t, []string{localA, cachedB}, roots.Paths())
 			assert.Equal(t, []v1.LockedModule{lock.Modules[1]}, cache.installed.Modules)
 			assert.Equal(t, []string{"example.com/B"}, cache.cached)
-			assert.NoError(t, CheckImportCollisions(root, module.Roots, roots.Paths()))
+			own, err := ModuleSources(root, module)
+			require.NoError(t, err)
+			assert.NoError(t, CheckSourceCollisions(append(own, roots...)))
 		})
 	}
 }

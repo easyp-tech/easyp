@@ -14,6 +14,7 @@ import (
 	"github.com/easyp-tech/easyp/internal/config"
 	"github.com/easyp-tech/easyp/internal/core"
 	"github.com/easyp-tech/easyp/internal/logger"
+	"github.com/easyp-tech/easyp/internal/modules"
 	"github.com/easyp-tech/easyp/internal/rules"
 )
 
@@ -58,7 +59,7 @@ func getEasypPath(log logger.Logger) (string, error) {
 	return easypPath, nil
 }
 
-func buildCore(log logger.Logger, cfg config.Config, importRoots []string) (*core.Core, error) {
+func buildCore(log logger.Logger, cfg config.Config, importRoots modules.SourceRoots) (*core.Core, error) {
 
 	lintRules, ignoreOnly, err := rules.New(cfg.Lint)
 	if err != nil {
@@ -72,7 +73,8 @@ func buildCore(log logger.Logger, cfg config.Config, importRoots []string) (*cor
 		AllowCommentIgnores:     cfg.Lint.AllowCommentIgnores,
 		KnownLintRules:          rules.AllRuleNames(),
 		Logger:                  log,
-		ImportRoots:             importRoots,
+		ImportRoots:             importRoots.Paths(),
+		ImportFileAllowed:       importRoots.FileAllowed(),
 		CurrentProjectGitWalker: go_git.New(),
 		BreakingCheckConfig: core.BreakingCheckConfig{
 			IgnoreDirs:     append(append([]string(nil), cfg.BreakingCheck.Ignore...), defaultVendorDir),

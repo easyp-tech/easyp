@@ -132,21 +132,28 @@ func (l LsFiles) Action(ctx *cli.Context) error {
 func listV1Files(ctx context.Context, moduleDir string, module v1.Module, includeImports bool, cache modules.Cache) (v1ListResult, error) {
 	result := v1ListResult{Files: []v1ListedFile{}, Roots: []v1ListedRoot{}}
 	index := make(map[string]v1ListedFile)
-	for _, root := range module.Roots {
-		path := filepath.Join(moduleDir, root)
-		result.Roots = append(result.Roots, v1ListedRoot{Path: filepath.ToSlash(path), Source: "workspace"})
-		if err := indexV1ProtoRoot(path, "workspace", index, &result.Files); err != nil {
+	roots, err := modules.ModuleSources(moduleDir, module)
+	if err != nil {
+		return v1ListResult{}, fmt.Errorf("ModuleSources: %w", err)
+	}
+	var dependencies modules.SourceRoots
+	if includeImports {
+		dependencies, err = modules.EnsureSources(ctx, moduleDir, module, cache)
+		if err != nil {
+			return v1ListResult{}, fmt.Errorf("EnsureSources: %w", err)
+		}
+	}
+	allowed := append(append(modules.SourceRoots(nil), roots...), dependencies...).FileAllowed()
+	for _, root := range roots {
+		result.Roots = append(result.Roots, v1ListedRoot{Path: filepath.ToSlash(root.Path), Source: "workspace"})
+		if err := indexV1ProtoRoot(root, "workspace", allowed, index, &result.Files); err != nil {
 			return v1ListResult{}, fmt.Errorf("indexV1ProtoRoot: %w", err)
 		}
 	}
 	if includeImports {
-		dependencies, err := modules.EnsureSources(ctx, moduleDir, module, cache)
-		if err != nil {
-			return v1ListResult{}, fmt.Errorf("EnsureSources: %w", err)
-		}
 		for _, dependency := range dependencies {
 			result.Roots = append(result.Roots, v1ListedRoot{Path: filepath.ToSlash(dependency.Path), Source: "dependency"})
-			if err := indexV1ProtoRoot(dependency.Path, "dependency", index, nil); err != nil {
+			if err := indexV1ProtoRoot(dependency, "dependency", allowed, index, nil); err != nil {
 				return v1ListResult{}, fmt.Errorf("indexV1ProtoRoot: %w", err)
 			}
 		}
@@ -157,14 +164,17 @@ func listV1Files(ctx context.Context, moduleDir string, module v1.Module, includ
 	return result, nil
 }
 
-func indexV1ProtoRoot(root, source string, index map[string]v1ListedFile, selected *[]v1ListedFile) error {
-	return modules.WalkProtoFiles(root, func(path string) error {
-		importPath, err := filepath.Rel(root, path)
+func indexV1ProtoRoot(root modules.SourceRoot, source string, allowed func(string) bool, index map[string]v1ListedFile, selected *[]v1ListedFile) error {
+	return root.Walk(func(path string) error {
+		if allowed != nil && !allowed(path) {
+			return nil
+		}
+		importPath, err := filepath.Rel(root.Path, path)
 		if err != nil {
 			return fmt.Errorf("Rel: %w", err)
 		}
 		importPath = filepath.ToSlash(importPath)
-		file := v1ListedFile{AbsPath: filepath.ToSlash(path), ImportPath: importPath, Source: source, Root: filepath.ToSlash(root)}
+		file := v1ListedFile{AbsPath: filepath.ToSlash(path), ImportPath: importPath, Source: source, Root: filepath.ToSlash(root.Path)}
 		if previous, exists := index[importPath]; exists && previous.AbsPath != file.AbsPath {
 			return fmt.Errorf("duplicate import path %q: %s and %s", importPath, previous.AbsPath, file.AbsPath)
 		}

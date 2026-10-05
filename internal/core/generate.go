@@ -100,6 +100,9 @@ func (c *Core) prepareGeneration(ctx context.Context, root string, selected []st
 			case filepath.Ext(walkPath) != ".proto":
 				return nil
 			}
+			if c.importFileAllowed != nil && !c.importFileAllowed(filepath.Join(root, walkPath)) {
+				return nil
+			}
 
 			// Convert to relative path matching proto import format
 			addedFile := stripPrefix(walkPath, inputFilesDir.Root)
@@ -133,7 +136,7 @@ func (c *Core) prepareGeneration(ctx context.Context, root string, selected []st
 	slices.Reverse(imports)
 
 	compiler := protocompile.Compiler{
-		Resolver:       wellknownimports.WithStandardImports(&protocompile.SourceResolver{ImportPaths: imports}),
+		Resolver:       wellknownimports.WithStandardImports(&protocompile.SourceResolver{ImportPaths: imports, Accessor: c.openSourceFile}),
 		SourceInfoMode: protocompile.SourceInfoStandard,
 	}
 
@@ -245,14 +248,28 @@ func (p *GenerationPlan) ExecuteInto(ctx context.Context, filesToWrite *Generate
 		var goOutputDirs map[string]string
 		paths := plugin.Options["paths"]
 		if c.goPackageOutputPrefix != "" && len(paths) > 0 && paths[len(paths)-1] == "source_relative" {
-			goOutputDirs = goPackageOutputDirs(c.goPackageOutputPrefix, filesToGenerate, fileDescriptors)
+			goOutputDirs = goPackageOutputDirs(c.goPackageOutputPrefix, filesToGenerate, fileDescriptors, plugin.Options)
 		}
 		for _, file := range resp.File {
-			outputName := goPackageOutputPath(file, goOutputDirs)
+			originalName := file.GetName()
+			if !filepath.IsLocal(filepath.FromSlash(originalName)) {
+				return fmt.Errorf("plugin returned invalid output path %q", originalName)
+			}
+			outputName := originalName
+			if file.GetInsertionPoint() == "" {
+				outputName = goPackageOutputPath(file, goOutputDirs)
+			}
 			if !filepath.IsLocal(filepath.FromSlash(outputName)) {
 				return fmt.Errorf("plugin returned invalid output path %q", outputName)
 			}
 			path := filepath.Join(outputDir, filepath.FromSlash(outputName))
+			originalPath := filepath.Join(outputDir, filepath.FromSlash(originalName))
+			if file.GetInsertionPoint() != "" {
+				path, err = filesToWrite.insertionOutputPath(originalPath)
+				if err != nil {
+					return fmt.Errorf("insertionOutputPath: %w", err)
+				}
+			}
 
 			c.logger.Debug(ctx, "generated file",
 				slog.String("plugin", source),
@@ -263,6 +280,9 @@ func (p *GenerationPlan) ExecuteInto(ctx context.Context, filesToWrite *Generate
 
 			if err := addFileWithInsertionPoint(ctx, path, file, filesToWrite); err != nil {
 				return fmt.Errorf("addFileWithInsertionPoint: %w", err)
+			}
+			if file.GetInsertionPoint() == "" {
+				filesToWrite.recordOutputPath(originalPath, path)
 			}
 		}
 	}

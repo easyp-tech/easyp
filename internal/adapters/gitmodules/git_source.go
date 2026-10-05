@@ -83,19 +83,13 @@ func localV1GitModuleCandidates(source string) []v1GitModuleCandidate {
 	clean := filepath.Clean(source)
 	candidates := []v1GitModuleCandidate{{remote: clean}}
 
-	info, err := os.Stat(clean)
-	if err != nil && !os.IsNotExist(err) {
-		return candidates
-	}
-	if err == nil && !info.IsDir() {
-		return candidates
-	}
 	if localGitRoot(clean) {
 		return candidates
 	}
 	// The requested revision may predate removal of the module directory or
-	// its manifest. ReadGitDependencyAt verifies identity in that revision;
-	// a repository candidate alone does not make an unrelated directory a module.
+	// replacement of any path component by a file. ReadGitDependencyAt verifies
+	// identity in that revision; a repository candidate alone does not make an
+	// unrelated directory a module.
 	for remote := filepath.Dir(clean); remote != filepath.Dir(remote); remote = filepath.Dir(remote) {
 		if localGitRoot(remote) {
 			return appendLocalV1GitCandidate(candidates, remote, clean)

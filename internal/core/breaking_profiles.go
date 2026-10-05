@@ -55,13 +55,13 @@ func selectedBreakingProfiles(categories []string) (breakingProfiles, error) {
 }
 
 func (c *Core) compareBreakingProfiles(
-	ctx context.Context, current, against DirWalker, againstImportRoots []string, profiles breakingProfiles,
+	ctx context.Context, current, against DirWalker, baseline *Core, profiles breakingProfiles,
 ) ([]IssueInfo, error) {
-	currentGraph, err := compileBreakingGraph(ctx, current, c.importRoots, c.breakingCheckConfig.IgnoreDirs)
+	currentGraph, err := c.compileBreakingGraph(ctx, current)
 	if err != nil {
 		return nil, fmt.Errorf("compile current descriptors: %w", err)
 	}
-	againstGraph, err := compileBreakingGraph(ctx, against, againstImportRoots, c.breakingCheckConfig.IgnoreDirs)
+	againstGraph, err := baseline.compileBreakingGraph(ctx, against)
 	if err != nil {
 		return nil, fmt.Errorf("compile baseline descriptors: %w", err)
 	}
@@ -72,7 +72,8 @@ func (c *Core) compareBreakingProfiles(
 	return compareBreakingGraphs(againstGraph, currentGraph, profiles), nil
 }
 
-func compileBreakingGraph(ctx context.Context, walker DirWalker, importRoots, ignoreDirs []string) (*breakingGraph, error) {
+func (c *Core) compileBreakingGraph(ctx context.Context, walker DirWalker) (*breakingGraph, error) {
+	importRoots, ignoreDirs := c.importRoots, c.breakingCheckConfig.IgnoreDirs
 	rooted, ok := walker.(interface{ RootPath() string })
 	if !ok {
 		return nil, fmt.Errorf("breaking source does not expose its root path")
@@ -118,7 +119,7 @@ func compileBreakingGraph(ctx context.Context, walker DirWalker, importRoots, ig
 		imports = []string{root}
 	}
 	compiler := protocompile.Compiler{
-		Resolver:       wellknownimports.WithStandardImports(&protocompile.SourceResolver{ImportPaths: imports}),
+		Resolver:       wellknownimports.WithStandardImports(&protocompile.SourceResolver{ImportPaths: imports, Accessor: c.openSourceFile}),
 		SourceInfoMode: protocompile.SourceInfoStandard,
 	}
 	compiled, err := compiler.Compile(ctx, targets...)

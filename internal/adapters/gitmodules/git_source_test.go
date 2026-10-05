@@ -71,9 +71,12 @@ func TestLocalV1GitModuleCandidatesStopAtNearestWorktree(t *testing.T) {
 	tests := []struct {
 		name   string
 		exists bool
+		file   string
 	}{
 		{name: "existing directory without live metadata", exists: true},
 		{name: "directory removed in live checkout"},
+		{name: "module directory replaced by a file", file: "foo/bar"},
+		{name: "ancestor directory replaced by a file", file: "foo"},
 	}
 	for _, tt := range tests {
 		tt := tt
@@ -88,6 +91,11 @@ func TestLocalV1GitModuleCandidatesStopAtNearestWorktree(t *testing.T) {
 			source := filepath.Join(repository, "foo", "bar")
 			if tt.exists {
 				require.NoError(t, os.MkdirAll(source, 0o755))
+			}
+			if tt.file != "" {
+				path := filepath.Join(repository, tt.file)
+				require.NoError(t, os.MkdirAll(filepath.Dir(path), 0o755))
+				require.NoError(t, os.WriteFile(path, []byte("no longer a directory\n"), 0o644))
 			}
 
 			candidates, err := v1GitModuleCandidates(source)

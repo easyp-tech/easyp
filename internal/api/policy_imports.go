@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 
+	gitadapter "github.com/easyp-tech/easyp/internal/adapters/go_git"
 	v1 "github.com/easyp-tech/easyp/internal/config/v1"
 	"github.com/easyp-tech/easyp/internal/core/path_helpers"
 	"github.com/easyp-tech/easyp/internal/modules"
@@ -29,40 +30,33 @@ func findV1PolicyModuleDir(projectRoot, scanDir string) (string, error) {
 	return "", nil
 }
 
-func isUnselectedReplacementSource(projectRoot, repositoryRoot, scanPath, sourcePath string) (bool, error) {
-	directories := ancestorDirs(filepath.Dir(sourcePath), projectRoot)
+type policyReplacementSources struct {
+	ctx                         context.Context
+	projectRoot, repositoryRoot string
+	cache                       func() (modules.Cache, error)
+	frozen                      bool
+	manifests                   map[string]v1.Module
+	targets                     map[string][]string
+}
+
+func newPolicyReplacementSources(ctx context.Context, projectRoot, repositoryRoot string, cache func() (modules.Cache, error), frozen bool) *policyReplacementSources {
+	return &policyReplacementSources{
+		ctx: ctx, projectRoot: projectRoot, repositoryRoot: repositoryRoot, cache: cache, frozen: frozen,
+		manifests: make(map[string]v1.Module), targets: make(map[string][]string),
+	}
+}
+
+func (s *policyReplacementSources) isUnselectedReplacementSource(scanPath, sourcePath string) (bool, error) {
+	directories := ancestorDirs(filepath.Dir(sourcePath), s.projectRoot)
 	// Read consuming manifests before replacement metadata, which may use a
 	// legacy format or declare additional nested modules.
 	for i := len(directories) - 1; i >= 0; i-- {
 		ancestor := directories[i]
-		manifest := filepath.Join(ancestor, v1.ModuleFile)
-		raw, err := os.ReadFile(manifest)
-		if errors.Is(err, os.ErrNotExist) {
-			continue
-		}
+		targets, err := s.replacementTargets(ancestor, scanPath, sourcePath)
 		if err != nil {
-			return false, fmt.Errorf("ReadFile: %w", err)
+			return false, fmt.Errorf("replacementTargets: %w", err)
 		}
-		if !v1.IsModuleManifest(raw) {
-			continue
-		}
-		module, err := v1.ParseModule(bytes.NewReader(raw))
-		if err != nil {
-			return false, fmt.Errorf("ParseModule: %w", err)
-		}
-		for _, replacement := range module.Replaces {
-			target := modules.ResolveReplacementPath(ancestor, replacement.Target)
-			// Snapshot manifests retain absolute paths from their original checkout.
-			if filepath.IsAbs(replacement.Target) && projectRoot != repositoryRoot {
-				relative, err := baselineRepositoryRelative(repositoryRoot, target)
-				if err != nil {
-					return false, fmt.Errorf("baselineRepositoryRelative: %w", err)
-				}
-				if !filepath.IsLocal(relative) {
-					continue
-				}
-				target = filepath.Join(projectRoot, relative)
-			}
+		for _, target := range targets {
 			containsSource, err := policyPathContains(target, sourcePath)
 			if err != nil {
 				return false, fmt.Errorf("policyPathContains: %w", err)
@@ -80,6 +74,105 @@ func isUnselectedReplacementSource(projectRoot, repositoryRoot, scanPath, source
 		}
 	}
 	return false, nil
+}
+
+// Resolve each consuming graph once per discovery pass. Only reached main-module
+// replacements own import-only trees; unused directives never open their targets.
+func (s *policyReplacementSources) replacementTargets(directory, scanPath, sourcePath string) ([]string, error) {
+	if targets, known := s.targets[directory]; known {
+		return targets, nil
+	}
+	module, err := s.replacementManifest(directory)
+	if err != nil {
+		return nil, fmt.Errorf("replacementManifest: %w", err)
+	}
+	if len(module.Replaces) == 0 {
+		s.targets[directory] = nil
+		return nil, nil
+	}
+	// An explicitly selected replacement or independent module does not use an
+	// unrelated ancestor's graph. Declarations only identify possible ownership;
+	// the effective graph below decides whether a candidate is actually reached.
+	candidate := false
+	for _, replacement := range module.Replaces {
+		target := modules.ResolveReplacementPath(directory, replacement.Target)
+		if filepath.IsAbs(replacement.Target) && s.projectRoot != s.repositoryRoot {
+			relative, err := baselineRepositoryRelative(s.repositoryRoot, target)
+			if err != nil {
+				return nil, fmt.Errorf("baselineRepositoryRelative: %w", err)
+			}
+			if !filepath.IsLocal(relative) {
+				continue
+			}
+			target = filepath.Join(s.projectRoot, relative)
+		}
+		containsSource, err := policyPathContains(target, sourcePath)
+		if err != nil {
+			return nil, fmt.Errorf("policyPathContains: %w", err)
+		}
+		if !containsSource {
+			continue
+		}
+		selected, err := policyPathContains(target, scanPath)
+		if err != nil {
+			return nil, fmt.Errorf("policyPathContains: %w", err)
+		}
+		if !selected {
+			candidate = true
+			break
+		}
+	}
+	if !candidate {
+		return nil, nil
+	}
+	if s.frozen {
+		return nil, fmt.Errorf("frozen mode rejects replace directives in protobuf.mod; remove replace before using --frozen")
+	}
+	var cache modules.Cache
+	if s.cache != nil {
+		cache, err = s.cache()
+		if err != nil {
+			return nil, fmt.Errorf("cache: %w", err)
+		}
+	}
+	var localPath func(string) (string, error)
+	if s.projectRoot != s.repositoryRoot {
+		snapshot := &gitadapter.Snapshot{Root: s.projectRoot, RepositoryRoot: s.repositoryRoot}
+		localPath = func(target string) (string, error) {
+			return snapshotReplacementPath(snapshot, directory, target)
+		}
+	}
+	graph, err := modules.EnsureEffectiveGraph(s.ctx, directory, module, cache, localPath)
+	if err != nil {
+		return nil, fmt.Errorf("EnsureEffectiveGraph: %w", err)
+	}
+	var targets []string
+	for _, replacement := range module.Replaces {
+		if dependency, reached := graph.Modules[replacement.Module]; reached {
+			targets = append(targets, dependency.Directory)
+		}
+	}
+	s.targets[directory] = targets
+	return targets, nil
+}
+
+func (s *policyReplacementSources) replacementManifest(directory string) (v1.Module, error) {
+	if module, known := s.manifests[directory]; known {
+		return module, nil
+	}
+	raw, err := os.ReadFile(filepath.Join(directory, v1.ModuleFile))
+	if err != nil && !errors.Is(err, os.ErrNotExist) {
+		return v1.Module{}, fmt.Errorf("ReadFile: %w", err)
+	}
+	var module v1.Module
+	if v1.IsModuleManifest(raw) {
+		module, err = v1.ParseModule(bytes.NewReader(raw))
+		if err != nil {
+			return v1.Module{}, fmt.Errorf("ParseModule: %w", err)
+		}
+	}
+	s.manifests[directory] = module
+	return module, nil
 }
 
 func policyPathContains(directory, path string) (bool, error) {
@@ -105,28 +198,18 @@ func policyPathContains(directory, path string) (bool, error) {
 	if err != nil {
 		return false, fmt.Errorf("EvalSymlinks: %w", err)
 	}
-	// A deleted source can still be selected for baseline comparison. Resolve
-	// its nearest existing ancestor so filesystem aliases retain that selection.
-	suffix := ""
-	for {
-		resolved, err := filepath.EvalSymlinks(pathAbs)
-		if err != nil {
-			if !errors.Is(err, os.ErrNotExist) || filepath.Dir(pathAbs) == pathAbs {
-				return false, fmt.Errorf("EvalSymlinks: %w", err)
-			}
-			suffix = filepath.Join(filepath.Base(pathAbs), suffix)
-			pathAbs = filepath.Dir(pathAbs)
-			continue
-		}
-		return path_helpers.IsTargetPath(directoryAbs, filepath.Join(resolved, suffix)), nil
+	pathAbs, err = canonicalPolicyPath(pathAbs)
+	if err != nil {
+		return false, fmt.Errorf("canonicalPolicyPath: %w", err)
 	}
+	return path_helpers.IsTargetPath(directoryAbs, pathAbs), nil
 }
 
-func ensureV1PolicyImportRoots(ctx context.Context, cache modules.Cache, moduleDir string) ([]string, error) {
+func ensureV1PolicyImportRoots(ctx context.Context, cache modules.Cache, moduleDir string) (modules.SourceRoots, error) {
 	return policyImportRoots(ctx, cache, moduleDir, false)
 }
 
-func policyImportRoots(ctx context.Context, cache modules.Cache, moduleDir string, frozen bool) ([]string, error) {
+func policyImportRoots(ctx context.Context, cache modules.Cache, moduleDir string, frozen bool) (modules.SourceRoots, error) {
 	var dependencies modules.SourceRoots
 	var err error
 	if frozen {
@@ -149,8 +232,9 @@ func policyImportRoots(ctx context.Context, cache modules.Cache, moduleDir strin
 			return nil, fmt.Errorf("EnsureSources: %w", err)
 		}
 	}
-	if err := modules.CheckImportCollisions(moduleDir, module.Roots, dependencies.Paths()); err != nil {
-		return nil, fmt.Errorf("CheckImportCollisions: %w", err)
+	allSources := append(roots, dependencies...)
+	if err := modules.CheckSourceCollisions(allSources); err != nil {
+		return nil, fmt.Errorf("CheckSourceCollisions: %w", err)
 	}
-	return append(roots.Paths(), dependencies.Paths()...), nil
+	return allSources, nil
 }

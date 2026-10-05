@@ -21,8 +21,12 @@ func Vendor(ctx context.Context, root string, repository Cache) error {
 	if err != nil {
 		return fmt.Errorf("EnsureSources: %w", err)
 	}
-	if err := CheckImportCollisions(root, module.Roots, dependencyRoots.Paths()); err != nil {
-		return fmt.Errorf("CheckImportCollisions: %w", err)
+	own, err := ModuleSources(root, module)
+	if err != nil {
+		return fmt.Errorf("ModuleSources: %w", err)
+	}
+	if err := CheckSourceCollisions(append(own, dependencyRoots...)); err != nil {
+		return fmt.Errorf("CheckSourceCollisions: %w", err)
 	}
 	return writeV1Vendor(root, dependencyRoots)
 }
@@ -33,8 +37,12 @@ func writeV1Vendor(root string, roots SourceRoots) error {
 		return fmt.Errorf("MkdirTemp: %w", err)
 	}
 	defer func() { _ = os.RemoveAll(stage) }()
+	allowed := roots.FileAllowed()
 	for _, source := range roots {
-		err := WalkProtoFiles(source.Path, func(path string) error {
+		err := source.Walk(func(path string) error {
+			if allowed != nil && !allowed(path) {
+				return nil
+			}
 			importPath, err := filepath.Rel(source.Path, path)
 			if err != nil {
 				return fmt.Errorf("Rel: %w", err)

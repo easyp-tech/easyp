@@ -91,7 +91,17 @@ func (c *Core) openImportFile(disk FS, importName string) (io.ReadCloser, error)
 	if !filepath.IsLocal(importName) {
 		return nil, fmt.Errorf("invalid import path %q", importName)
 	}
-	f, err := disk.Open(importName)
+	var f io.ReadCloser
+	var err error
+	allowed := true
+	if rooted, ok := disk.(interface{ RootPath() string }); ok && c.importFileAllowed != nil {
+		allowed = c.importFileAllowed(filepath.Join(rooted.RootPath(), importName))
+	}
+	if allowed {
+		f, err = disk.Open(importName)
+	} else {
+		err = os.ErrNotExist
+	}
 	switch {
 	case errors.Is(err, os.ErrNotExist):
 		// Search dependency roots when the current filesystem has no matching file.
@@ -103,7 +113,7 @@ func (c *Core) openImportFile(disk FS, importName string) (io.ReadCloser, error)
 
 	for _, root := range c.importRoots {
 		fullPath := filepath.Join(root, importName)
-		f, err := os.Open(fullPath)
+		f, err := c.openSourceFile(fullPath)
 		if err != nil {
 			if errors.Is(err, os.ErrNotExist) {
 				continue

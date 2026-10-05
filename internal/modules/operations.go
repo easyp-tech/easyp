@@ -58,16 +58,20 @@ func resolveV1Lock(ctx context.Context, root string, module v1.Module, existing 
 	if err := repository.Install(ctx, lock); err != nil {
 		return v1.Lock{}, fmt.Errorf("module %s: %w", module.Name, err)
 	}
-	dependencyRoots, err := cachedRoots(lock, repository)
+	dependencyRoots, err := CachedSources(lock, repository)
 	if err != nil {
 		return v1.Lock{}, fmt.Errorf("module %s: %w", module.Name, err)
 	}
-	if err := CheckImportCollisions(root, module.Roots, dependencyRoots); err != nil {
+	own, err := ModuleSources(root, module)
+	if err != nil {
+		return v1.Lock{}, fmt.Errorf("ModuleSources: %w", err)
+	}
+	if err := CheckSourceCollisions(append(own, dependencyRoots...)); err != nil {
 		return v1.Lock{}, fmt.Errorf("module %s: %w", module.Name, err)
 	}
-	unresolved, err := findUnresolvedV1Imports(root, module.Roots, dependencyRoots)
+	unresolved, err := findUnresolvedV1ImportsWithSources(root, module.Roots, dependencyRoots)
 	if err != nil {
-		return v1.Lock{}, fmt.Errorf("findUnresolvedV1Imports: %w", err)
+		return v1.Lock{}, fmt.Errorf("findUnresolvedV1ImportsWithSources: %w", err)
 	}
 	if len(unresolved) > 0 {
 		return v1.Lock{}, fmt.Errorf("module %s: cannot resolve imports %v", module.Name, unresolved)
@@ -95,6 +99,6 @@ func Download(ctx context.Context, root string, repository Cache) error {
 	if err := repository.Install(ctx, lock); err != nil {
 		return err
 	}
-	_, err = cachedRoots(lock, repository)
+	_, err = CachedSources(lock, repository)
 	return err
 }

@@ -21,7 +21,8 @@ type breakingScope struct{ files []string }
 // discoverBreakingScopes assigns files to the nearest module in this revision.
 // Repository-relative paths make findings independent of --root and import roots.
 // root is the scanned tree; repositoryRoot identifies absolute replacement paths.
-func discoverBreakingScopes(root, repositoryRoot, scanRelative string) (map[string]breakingScope, error) {
+func discoverBreakingScopes(replacements *policyReplacementSources, scanRelative string) (map[string]breakingScope, error) {
+	root := replacements.projectRoot
 	scopes := make(map[string]breakingScope)
 	scan := filepath.Join(root, scanRelative)
 	if _, err := os.Stat(scan); os.IsNotExist(err) {
@@ -43,7 +44,7 @@ func discoverBreakingScopes(root, repositoryRoot, scanRelative string) (map[stri
 		if entry.IsDir() || filepath.Ext(path) != ".proto" {
 			return nil
 		}
-		unselectedReplacement, err := isUnselectedReplacementSource(root, repositoryRoot, scan, path)
+		unselectedReplacement, err := replacements.isUnselectedReplacementSource(scan, path)
 		if err != nil {
 			return fmt.Errorf("isUnselectedReplacementSource: %w", err)
 		}
@@ -127,11 +128,11 @@ func (w *scopedBreakingWalker) WalkDir(visit func(string, error) error) error {
 	return nil
 }
 
-func breakingImportRoots(ctx context.Context, cache modules.Cache, root, moduleRelative string, files []string, snapshot *gitadapter.Snapshot) ([]string, error) {
+func breakingImportRoots(ctx context.Context, cache modules.Cache, root, moduleRelative string, files []string, snapshot *gitadapter.Snapshot) (modules.SourceRoots, error) {
 	return breakingImportRootsMode(ctx, cache, root, moduleRelative, files, snapshot, false)
 }
 
-func breakingImportRootsMode(ctx context.Context, cache modules.Cache, root, moduleRelative string, files []string, snapshot *gitadapter.Snapshot, frozen bool) ([]string, error) {
+func breakingImportRootsMode(ctx context.Context, cache modules.Cache, root, moduleRelative string, files []string, snapshot *gitadapter.Snapshot, frozen bool) (modules.SourceRoots, error) {
 	directory := filepath.Join(root, moduleRelative)
 	if len(files) == 0 {
 		// A deleted module has no graph in this revision, but an explicit empty
@@ -147,7 +148,7 @@ func breakingImportRootsMode(ctx context.Context, cache modules.Cache, root, mod
 		return policyImportRoots(ctx, cache, directory, true)
 	}
 	if _, err := os.Stat(filepath.Join(directory, v1.ModuleFile)); os.IsNotExist(err) {
-		return []string{directory}, nil
+		return modules.SourceRoots{{Path: directory}}, nil
 	} else if err != nil {
 		return nil, fmt.Errorf("Stat: %w", err)
 	}
@@ -178,10 +179,11 @@ func breakingImportRootsMode(ctx context.Context, cache modules.Cache, root, mod
 		}
 	}
 
-	if err := modules.CheckImportCollisions(directory, module.Roots, dependencies.Paths()); err != nil {
-		return nil, fmt.Errorf("CheckImportCollisions: %w", err)
+	allSources := append(own, dependencies...)
+	if err := modules.CheckSourceCollisions(allSources); err != nil {
+		return nil, fmt.Errorf("CheckSourceCollisions: %w", err)
 	}
-	return append(own.Paths(), dependencies.Paths()...), nil
+	return allSources, nil
 }
 
 // Local replacements inside the repository are read from the baseline snapshot.
@@ -219,28 +221,54 @@ func snapshotReplacementPath(snapshot *gitadapter.Snapshot, directory, target st
 // baselineRepositoryRelative accepts filesystem aliases such as macOS /tmp,
 // including paths deleted from the current tree but present at the baseline.
 func baselineRepositoryRelative(root, target string) (string, error) {
-	relative, err := filepath.Rel(root, target)
-	if err == nil && filepath.IsLocal(relative) {
-		return relative, nil
-	}
 	realRoot, err := filepath.EvalSymlinks(root)
 	if err != nil {
 		return "", fmt.Errorf("EvalSymlinks: %w", err)
 	}
-	ancestor := target
-	var suffix []string
+	resolved, err := canonicalPolicyPath(target)
+	if err != nil {
+		return "", fmt.Errorf("canonicalPolicyPath: %w", err)
+	}
+	return filepath.Rel(realRoot, resolved)
+}
+
+// canonicalPolicyPath resolves aliases before retaining a deleted path suffix.
+// A dangling alias still identifies its historical target in the Git snapshot.
+func canonicalPolicyPath(target string) (string, error) {
+	ancestor, err := filepath.Abs(target)
+	if err != nil {
+		return "", fmt.Errorf("Abs: %w", err)
+	}
+	suffix := ""
+	links := 0
 	for {
 		resolved, err := filepath.EvalSymlinks(ancestor)
 		if err == nil {
-			for i := len(suffix) - 1; i >= 0; i-- {
-				resolved = filepath.Join(resolved, suffix[i])
-			}
-			return filepath.Rel(realRoot, resolved)
+			return filepath.Join(resolved, suffix), nil
 		}
 		if !os.IsNotExist(err) || filepath.Dir(ancestor) == ancestor {
 			return "", fmt.Errorf("EvalSymlinks: %w", err)
 		}
-		suffix = append(suffix, filepath.Base(ancestor))
+		info, statErr := os.Lstat(ancestor)
+		if statErr != nil && !os.IsNotExist(statErr) {
+			return "", fmt.Errorf("Lstat: %w", statErr)
+		}
+		if statErr == nil && info.Mode()&os.ModeSymlink != 0 {
+			link, err := os.Readlink(ancestor)
+			if err != nil {
+				return "", fmt.Errorf("Readlink: %w", err)
+			}
+			links++
+			if links > 255 {
+				return "", fmt.Errorf("too many symlinks in %s", target)
+			}
+			if !filepath.IsAbs(link) {
+				link = filepath.Join(filepath.Dir(ancestor), link)
+			}
+			ancestor = link
+			continue
+		}
+		suffix = filepath.Join(filepath.Base(ancestor), suffix)
 		ancestor = filepath.Dir(ancestor)
 	}
 }

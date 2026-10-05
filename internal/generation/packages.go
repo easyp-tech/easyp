@@ -29,7 +29,7 @@ func selectedPackageFiles(ctx context.Context, selected v1GenerationModule, pack
 	seen := make(map[string]bool)
 	var files []string
 	for _, root := range roots {
-		err := modules.WalkProtoFiles(root.Path, func(path string) error {
+		err := root.Walk(func(path string) error {
 			if err := ctx.Err(); err != nil {
 				return fmt.Errorf("Err: %w", err)
 			}

@@ -7,6 +7,7 @@ import (
 	"go/token"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"sync"
 )
@@ -28,12 +29,14 @@ func (i *ImmutableData) Data() []byte {
 // It provides methods for adding, retrieving, and removing files.
 type GenerateBucket struct {
 	filesToWrite map[string]*ImmutableData
+	outputPaths  map[string][]string
 	lock         sync.RWMutex
 }
 
 func NewGenerateBucket() *GenerateBucket {
 	return &GenerateBucket{
 		filesToWrite: make(map[string]*ImmutableData),
+		outputPaths:  make(map[string][]string),
 	}
 }
 
@@ -49,6 +52,33 @@ func (b *GenerateBucket) GetFile(_ context.Context, path string) (*ImmutableData
 	defer b.lock.RUnlock()
 	file, ok := b.filesToWrite[path]
 	return file, ok
+}
+
+// recordOutputPath retains response filenames in their output directory across
+// plugins and plans. Several producers may share a filename but relocate it to
+// distinct packages, so that filename becomes ambiguous for later insertions.
+func (b *GenerateBucket) recordOutputPath(originalPath, outputPath string) {
+	b.lock.Lock()
+	defer b.lock.Unlock()
+
+	if !slices.Contains(b.outputPaths[originalPath], outputPath) {
+		b.outputPaths[originalPath] = append(b.outputPaths[originalPath], outputPath)
+	}
+}
+
+func (b *GenerateBucket) insertionOutputPath(originalPath string) (string, error) {
+	b.lock.RLock()
+	defer b.lock.RUnlock()
+
+	paths := b.outputPaths[originalPath]
+	switch len(paths) {
+	case 0:
+		return originalPath, nil
+	case 1:
+		return paths[0], nil
+	default:
+		return "", fmt.Errorf("ambiguous insertion target %q maps to multiple generated output paths %q", originalPath, paths)
+	}
 }
 
 func (b *GenerateBucket) DumpToFs(_ context.Context) error {
