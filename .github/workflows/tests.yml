@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - 'main'
+      - 'v1.0'
   pull_request:
     branches:
       - '*'
@@ -30,5 +31,30 @@ jobs:
       - name: Prepare test.
         run: task init
 
+      - name: Lint Go sources
+        run: task lint:go
+
+      - name: Cross-compile Linux ARM release binaries
+        env:
+          GOOS: linux
+          GOARCH: arm
+          GOARM: "7"
+        run: go build ./cmd/easyp ./cmd/easyp-mcp
+
       - name: Start test.
         run: task test
+
+      - name: Validate native v1 repository example
+        run: task proto:check
+
+      - name: Validate developer task dispatch
+        run: task dev-tools:check
+
+      - name: Install pinned GoReleaser
+        uses: goreleaser/goreleaser-action@v6
+        with:
+          version: v2.18.2
+          install-only: true
+
+      - name: Validate nightly release configuration
+        run: goreleaser check

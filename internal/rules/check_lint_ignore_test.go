@@ -10,7 +10,7 @@ import (
 	"github.com/easyp-tech/easyp/internal/rules"
 )
 
-func TestCheckNoLint(t *testing.T) {
+func TestRuleDiagnosticsAreFilteredByTheEngine(t *testing.T) {
 	t.Parallel()
 
 	tests := map[string]struct {
@@ -37,7 +37,7 @@ func TestCheckNoLint(t *testing.T) {
 			rule := rules.MessagePascalCase{}
 			issues, err := rule.Validate(protos[tc.fileName])
 			r.NoError(err)
-			r.Empty(issues)
+			r.NotEmpty(issues)
 		})
 	}
 }

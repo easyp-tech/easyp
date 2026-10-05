@@ -1,0 +1,104 @@
+package modules
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"os"
+	"path/filepath"
+
+	v1 "github.com/easyp-tech/easyp/internal/config/v1"
+)
+
+// Tidy resolves v1 requirements and records published commits and hashes.
+// With local replacements it only validates/installs the ephemeral graph.
+func Tidy(ctx context.Context, root string, repository Repository) error {
+	original, module, err := ReadManifest(root)
+	if err != nil {
+		return fmt.Errorf("ReadManifest: %w", err)
+	}
+	if len(module.Replaces) > 0 {
+		return validateLocalOverlay(ctx, root, module, repository, false)
+	}
+	existing, err := ReadLock(filepath.Join(root, v1.LockFile))
+	if err != nil && !errors.Is(err, os.ErrNotExist) {
+		return fmt.Errorf("ReadLock: %w", err)
+	}
+	lock, err := resolveV1LockWithPins(ctx, root, module, existing, repository)
+	if err != nil {
+		return fmt.Errorf("resolveV1LockWithPins: %w", err)
+	}
+	updated, err := augmentV1ManifestRequirements(original, root, module, lock, repository)
+	if err != nil {
+		return fmt.Errorf("augmentV1ManifestRequirements: %w", err)
+	}
+	return writeV1ResolvedFiles(root, original, updated, lock)
+}
+
+func resolveV1LockWithPins(ctx context.Context, root string, module v1.Module, existing v1.Lock, repository Repository) (v1.Lock, error) {
+	if len(module.Replaces) > 0 {
+		return v1.Lock{}, fmt.Errorf("module %s: remove local replacements before writing a reproducible lock", module.Name)
+	}
+	return resolveV1Lock(ctx, root, module, existing, repository, true)
+}
+
+func resolveV1Lock(ctx context.Context, root string, module v1.Module, existing v1.Lock, repository Repository, preserveHeads bool) (v1.Lock, error) {
+	pins := make(map[string]v1.LockedModule, len(existing.Modules))
+	for _, entry := range existing.Modules {
+		pins[entry.Source] = entry
+	}
+	guard := lockedVersionSource{Source: repository, locked: pins}
+	if !preserveHeads {
+		pins = nil
+	}
+	lock, err := Resolve(ctx, module, guard, pins)
+	if err != nil {
+		return v1.Lock{}, fmt.Errorf("module %s: %w", module.Name, err)
+	}
+	if err := repository.Install(ctx, lock); err != nil {
+		return v1.Lock{}, fmt.Errorf("module %s: %w", module.Name, err)
+	}
+	dependencyRoots, err := CachedSources(lock, repository)
+	if err != nil {
+		return v1.Lock{}, fmt.Errorf("module %s: %w", module.Name, err)
+	}
+	own, err := ModuleSources(root, module)
+	if err != nil {
+		return v1.Lock{}, fmt.Errorf("ModuleSources: %w", err)
+	}
+	if err := CheckSourceCollisions(append(own, dependencyRoots...)); err != nil {
+		return v1.Lock{}, fmt.Errorf("module %s: %w", module.Name, err)
+	}
+	unresolved, err := findUnresolvedV1ImportsWithSources(root, module.Roots, dependencyRoots)
+	if err != nil {
+		return v1.Lock{}, fmt.Errorf("findUnresolvedV1ImportsWithSources: %w", err)
+	}
+	if len(unresolved) > 0 {
+		return v1.Lock{}, fmt.Errorf("module %s: cannot resolve imports %v", module.Name, unresolved)
+	}
+	return lock, nil
+}
+
+// Download installs published pins, or needed unreplaced snapshots in local
+// overlay mode. It never changes the shared manifest or lock.
+func Download(ctx context.Context, root string, repository Cache) error {
+	_, module, err := ReadManifest(root)
+	if err != nil {
+		return fmt.Errorf("ReadManifest: %w", err)
+	}
+	if len(module.Replaces) > 0 {
+		return validateLocalOverlay(ctx, root, module, repository, false)
+	}
+	lock, err := ReadLock(filepath.Join(root, v1.LockFile))
+	if err != nil {
+		return fmt.Errorf("read protobuf.lock; run easyp mod tidy: %w", err)
+	}
+	if err := ValidateRequirements(RemoteRequirements(module), lock); err != nil {
+		return err
+	}
+	if err := repository.Install(ctx, lock); err != nil {
+		return err
+	}
+	_, err = CachedSources(lock, repository)
+	return err
+}

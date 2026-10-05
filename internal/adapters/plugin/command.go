@@ -69,7 +69,11 @@ func (e *CommandPluginExecutor) Execute(ctx context.Context, plugin Info, reques
 		commandParams = commandParts[1:]
 	}
 
-	stdout, err := e.console.RunCmdWithStdin(ctx, ".", stdIn, command, commandParams...)
+	workDir := plugin.WorkDir
+	if workDir == "" {
+		workDir = "."
+	}
+	stdout, err := e.console.RunCmdWithStdin(ctx, workDir, stdIn, command, commandParams...)
 	if err != nil {
 		return nil, fmt.Errorf("run command %s: %w", strings.Join(commandParts, " "), err)
 	}

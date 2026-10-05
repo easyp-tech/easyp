@@ -4,8 +4,9 @@ certs
 bin
 /easyp
 coverage.out
-easyp.lock
 .DS_Store
 node_modules
 *.tsbuildinfo
 .rules-mcp
+
+/examples/generated/

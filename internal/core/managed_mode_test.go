@@ -56,6 +56,7 @@ func TestApplyManagedMode_GoPackagePrefix(t *testing.T) {
 		fileName     string
 		protoPackage string
 		goPackage    string
+		packagePath  bool
 	}{
 		{
 			name:         "two_dots_in_package",
@@ -68,6 +69,13 @@ func TestApplyManagedMode_GoPackagePrefix(t *testing.T) {
 			fileName:     "task/v1/task.proto",
 			protoPackage: "task.v1",
 			goPackage:    "github.com/acme/weather/gen/go/task/v1;taskv1",
+		},
+		{
+			name:         "module_relative_source_directory",
+			fileName:     "v1/user.proto",
+			protoPackage: "user.v1",
+			goPackage:    "github.com/acme/weather/gen/go/user/v1;userv1",
+			packagePath:  true,
 		},
 		{
 			name:         "no_dots_in_package",
@@ -89,8 +97,9 @@ func TestApplyManagedMode_GoPackagePrefix(t *testing.T) {
 				Enabled: true,
 				Override: []ManagedOverrideRule{
 					{
-						FileOption: FileOptionGoPackagePrefix,
-						Value:      "github.com/acme/weather/gen/go",
+						FileOption:  FileOptionGoPackagePrefix,
+						Value:       "github.com/acme/weather/gen/go",
+						PackagePath: tt.packagePath,
 					},
 				},
 			}

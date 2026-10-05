@@ -66,7 +66,7 @@ func TestAllLintUseValues(t *testing.T) {
 	for _, ruleName := range rules.AllRuleNames() {
 		require.Contains(t, values, ruleName)
 	}
-	require.Contains(t, values, "PACKAGE_NO_IMPORT_CYCLE")
+	require.NotContains(t, values, "PACKAGE_NO_IMPORT_CYCLE")
 	require.Equal(t, len(values), len(uniqueStrings(values)))
 }
 

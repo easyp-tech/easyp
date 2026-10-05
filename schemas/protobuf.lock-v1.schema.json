@@ -1,0 +1,118 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "protobuf.lock v1",
+  "description": "Structural v1 YAML schema. EasyP CLI validation applies additional semantic checks.",
+  "type": "object",
+  "properties": {
+    "modules": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "bsr": {
+            "description": "BSR requests and their pinned Git targets, recorded on the requiring Git module. Frozen commands replay these bindings without consulting a resolver. compatibility_snapshot does not guarantee BSR revision equivalence or verify the BSR digest.",
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "dependency": {
+                  "type": "object",
+                  "properties": {
+                    "commit": {
+                      "type": "string",
+                      "pattern": "^[0-9a-fA-F]{32}$"
+                    },
+                    "config": {
+                      "description": "Declaring buf.yaml path relative to the verified Git checkout.",
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "digest": {
+                      "type": "string",
+                      "pattern": "^[^:\\s]+:[0-9a-fA-F]+$"
+                    },
+                    "module": {
+                      "type": "string",
+                      "pattern": "^[^/:\\s]+/[^/:\\s]+/[^/:\\s]+$"
+                    },
+                    "reference": {
+                      "type": "string",
+                      "pattern": "^[^:\\s]*$"
+                    }
+                  },
+                  "additionalProperties": false,
+                  "required": [
+                    "module",
+                    "config"
+                  ]
+                },
+                "git": {
+                  "type": "object",
+                  "properties": {
+                    "module": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "version": {
+                      "type": "string",
+                      "pattern": "^(v[0-9]+\\.[0-9]+\\.[0-9]+([+-][0-9A-Za-z.-]+)?|[0-9a-fA-F]{40}|[0-9a-fA-F]{64})$"
+                    }
+                  },
+                  "additionalProperties": false,
+                  "required": [
+                    "module",
+                    "version"
+                  ]
+                },
+                "resolution": {
+                  "type": "string",
+                  "enum": [
+                    "compatibility_snapshot",
+                    "exact"
+                  ]
+                }
+              },
+              "additionalProperties": false,
+              "required": [
+                "dependency",
+                "git",
+                "resolution"
+              ]
+            }
+          },
+          "commit": {
+            "type": "string",
+            "pattern": "^([0-9a-fA-F]{40}|[0-9a-fA-F]{64})$"
+          },
+          "hash": {
+            "type": "string",
+            "pattern": "^h1:[A-Za-z0-9+/]{43}=$"
+          },
+          "source": {
+            "type": "string",
+            "minLength": 1
+          },
+          "version": {
+            "type": "string",
+            "pattern": "^(v[0-9]+\\.[0-9]+\\.[0-9]+([+-][0-9A-Za-z.-]+)?|[0-9a-fA-F]{40}|[0-9a-fA-F]{64})$"
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "source",
+          "version",
+          "commit",
+          "hash"
+        ]
+      }
+    },
+    "version": {
+      "type": "integer",
+      "const": 1
+    }
+  },
+  "additionalProperties": false,
+  "required": [
+    "version"
+  ]
+}
