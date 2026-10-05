@@ -119,8 +119,9 @@ task; lint findings and Docker failures are not suppressed.
 
 <code>task quality</code> depends on both <code>task test</code> and <code>task lint</code>. It is the closest
 local approximation of the test and lint checks. CI's <code>tests.yml</code> workflow
-performs <code>task init</code>, <code>task test</code>, <code>task proto:check</code> and <code>task dev-tools:check</code>; it does not invoke
-the lint target in that workflow.
+performs <code>task init</code>, <code>task lint:go</code>, a Linux ARMv7 cross-compile,
+<code>task test</code>, <code>task proto:check</code>, <code>task dev-tools:check</code>, and a
+pinned GoReleaser configuration check. Docker lint remains a separate local check.
 
 ## Generated Artifacts
 
@@ -190,8 +191,11 @@ remains in the existing release workflow.
 <code>task goreleaser:check</code> validates GoReleaser configuration. The snapshot
 tasks create or select a <code>multiarch</code> Docker Buildx builder and run
 <code>goreleaser release --snapshot --clean</code>; they do not publish a release.
-The release workflow runs for stable <code>vMAJOR.MINOR.PATCH</code> tags and authenticates
-to GitHub Container Registry and Docker Hub.
+The pinned GoReleaser version is <code>2.18.2</code>; CI also runs its configuration check.
+This branch's release workflow accepts only explicit
+<code>v1.0.0-nightly.YYYYMMDD.N</code> tags and authenticates to GitHub Container Registry.
+It never updates GitHub Latest, the stable Homebrew formula, or the Docker
+<code>latest</code> tag. See [nightly release operations](DEPLOYMENT.md).
 
 ## Dependency and Vendor Tools
 
