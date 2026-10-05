@@ -1,0 +1,7 @@
+# EasyP starter config: minimal linting only
+# Usage: copy to your project root as easyp.yaml
+
+lint:
+  use:
+    - DEFAULT
+  allow_comment_ignores: true

@@ -3,319 +3,213 @@ package prompter
 import (
 	"context"
 	"fmt"
+	"io"
+	"os"
+	"strconv"
 	"strings"
-
-	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
 )
 
-// InteractivePrompter provides interactive prompts via bubbletea.
-type InteractivePrompter struct{}
+// InteractivePrompter provides deterministic line-oriented terminal prompts.
+// It deliberately avoids terminal capability/background queries so invoking an
+// EasyP command never writes OSC/CSI probes before the command itself runs.
+type InteractivePrompter struct {
+	In  io.Reader
+	Out io.Writer
+}
 
 var _ Prompter = InteractivePrompter{}
 
-// Styles
-var (
-	questionStyle = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("6"))
-	cursorStyle   = lipgloss.NewStyle().Foreground(lipgloss.Color("2"))
-	checkedStyle  = lipgloss.NewStyle().Foreground(lipgloss.Color("2"))
-	helpStyle     = lipgloss.NewStyle().Foreground(lipgloss.Color("8"))
-)
-
-// --- Confirm ---
-
-type confirmModel struct {
-	question     string
-	defaultValue bool
-	value        bool
-	done         bool
-	cancelled    bool
+func (p InteractivePrompter) input() io.Reader {
+	if p.In != nil {
+		return p.In
+	}
+	return os.Stdin
 }
 
-func (m confirmModel) Init() tea.Cmd { return nil }
-
-func (m confirmModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	if msg, ok := msg.(tea.KeyMsg); ok {
-		switch msg.String() {
-		case "y", "Y":
-			m.value = true
-			m.done = true
-			return m, tea.Quit
-		case "n", "N":
-			m.value = false
-			m.done = true
-			return m, tea.Quit
-		case "enter":
-			m.value = m.defaultValue
-			m.done = true
-			return m, tea.Quit
-		case "ctrl+c", "q":
-			m.cancelled = true
-			return m, tea.Quit
-		}
+func (p InteractivePrompter) output() io.Writer {
+	if p.Out != nil {
+		return p.Out
 	}
-	return m, nil
+	return os.Stdout
 }
 
-func (m confirmModel) View() string {
-	if m.done {
-		result := "No"
-		if m.value {
-			result = "Yes"
-		}
-		return fmt.Sprintf("%s %s\n", questionStyle.Render(m.question), result)
-	}
+func (p InteractivePrompter) Confirm(ctx context.Context, message string, defaultValue bool) (bool, error) {
 	hint := "[y/N]"
-	if m.defaultValue {
+	if defaultValue {
 		hint = "[Y/n]"
 	}
-	return fmt.Sprintf("%s %s ", questionStyle.Render(m.question), helpStyle.Render(hint))
-}
-
-func (InteractivePrompter) Confirm(_ context.Context, message string, defaultValue bool) (bool, error) {
-	m := confirmModel{question: message, defaultValue: defaultValue}
-	result, err := tea.NewProgram(m).Run()
-	if err != nil {
-		return defaultValue, fmt.Errorf("bubbletea: %w", err)
-	}
-	cm := result.(confirmModel)
-	if cm.cancelled {
-		return defaultValue, context.Canceled
-	}
-	return cm.value, nil
-}
-
-// --- Select ---
-
-type selectModel struct {
-	question string
-	options  []string
-	cursor   int
-	done     bool
-	cancelled bool
-}
-
-func (m selectModel) Init() tea.Cmd { return nil }
-
-func (m selectModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	if msg, ok := msg.(tea.KeyMsg); ok {
-		switch msg.String() {
-		case "up", "k":
-			if m.cursor > 0 {
-				m.cursor--
-			}
-		case "down", "j":
-			if m.cursor < len(m.options)-1 {
-				m.cursor++
-			}
-		case "enter":
-			m.done = true
-			return m, tea.Quit
-		case "ctrl+c", "q":
-			m.cancelled = true
-			return m, tea.Quit
+	for {
+		if err := ctx.Err(); err != nil {
+			return defaultValue, err
 		}
-	}
-	return m, nil
-}
-
-func (m selectModel) View() string {
-	if m.done {
-		return fmt.Sprintf("%s %s\n", questionStyle.Render(m.question), m.options[m.cursor])
-	}
-	var b strings.Builder
-	b.WriteString(questionStyle.Render(m.question) + "\n")
-	for i, opt := range m.options {
-		cursor := "  "
-		if i == m.cursor {
-			cursor = cursorStyle.Render("> ")
+		if _, err := fmt.Fprintf(p.output(), "%s %s: ", message, hint); err != nil {
+			return defaultValue, fmt.Errorf("write prompt: %w", err)
 		}
-		b.WriteString(fmt.Sprintf("%s%s\n", cursor, opt))
-	}
-	b.WriteString(helpStyle.Render("↑/↓ navigate • enter select • q quit"))
-	return b.String()
-}
-
-func (InteractivePrompter) Select(_ context.Context, message string, options []string, defaultIndex int) (int, error) {
-	m := selectModel{question: message, options: options, cursor: defaultIndex}
-	result, err := tea.NewProgram(m).Run()
-	if err != nil {
-		return defaultIndex, fmt.Errorf("bubbletea: %w", err)
-	}
-	sm := result.(selectModel)
-	if sm.cancelled {
-		return defaultIndex, context.Canceled
-	}
-	return sm.cursor, nil
-}
-
-// --- MultiSelect ---
-
-type multiSelectModel struct {
-	question  string
-	options   []string
-	cursor    int
-	selected  map[int]bool
-	done      bool
-	cancelled bool
-}
-
-func (m multiSelectModel) Init() tea.Cmd { return nil }
-
-func (m multiSelectModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	if msg, ok := msg.(tea.KeyMsg); ok {
-		switch msg.String() {
-		case "up", "k":
-			if m.cursor > 0 {
-				m.cursor--
-			}
-		case "down", "j":
-			if m.cursor < len(m.options)-1 {
-				m.cursor++
-			}
-		case " ":
-			m.selected[m.cursor] = !m.selected[m.cursor]
-		case "a":
-			allSelected := true
-			for i := range m.options {
-				if !m.selected[i] {
-					allSelected = false
-					break
-				}
-			}
-			for i := range m.options {
-				m.selected[i] = !allSelected
-			}
-		case "enter":
-			m.done = true
-			return m, tea.Quit
-		case "ctrl+c", "q":
-			m.cancelled = true
-			return m, tea.Quit
+		line, err := readPromptLine(p.input())
+		if err != nil {
+			return defaultValue, fmt.Errorf("read prompt: %w", err)
 		}
-	}
-	return m, nil
-}
-
-func (m multiSelectModel) View() string {
-	if m.done {
-		var selected []string
-		for i, opt := range m.options {
-			if m.selected[i] {
-				selected = append(selected, opt)
-			}
-		}
-		return fmt.Sprintf("%s %s\n", questionStyle.Render(m.question), strings.Join(selected, ", "))
-	}
-	var b strings.Builder
-	b.WriteString(questionStyle.Render(m.question) + "\n")
-	for i, opt := range m.options {
-		cursor := "  "
-		if i == m.cursor {
-			cursor = cursorStyle.Render("> ")
-		}
-		check := "[ ] "
-		if m.selected[i] {
-			check = checkedStyle.Render("[x] ")
-		}
-		b.WriteString(fmt.Sprintf("%s%s%s\n", cursor, check, opt))
-	}
-	b.WriteString(helpStyle.Render("↑/↓ navigate • space toggle • a all • enter confirm • q quit"))
-	return b.String()
-}
-
-func (InteractivePrompter) MultiSelect(_ context.Context, message string, options []string, defaults []bool) ([]int, error) {
-	selected := make(map[int]bool)
-	for i, d := range defaults {
-		selected[i] = d
-	}
-	m := multiSelectModel{question: message, options: options, selected: selected}
-	result, err := tea.NewProgram(m).Run()
-	if err != nil {
-		var indices []int
-		for i, d := range defaults {
-			if d {
-				indices = append(indices, i)
-			}
-		}
-		return indices, fmt.Errorf("bubbletea: %w", err)
-	}
-	msm := result.(multiSelectModel)
-	if msm.cancelled {
-		var indices []int
-		for i, d := range defaults {
-			if d {
-				indices = append(indices, i)
-			}
-		}
-		return indices, context.Canceled
-	}
-	var indices []int
-	for i := range options {
-		if msm.selected[i] {
-			indices = append(indices, i)
-		}
-	}
-	return indices, nil
-}
-
-// --- Input ---
-
-type inputModel struct {
-	question     string
-	defaultValue string
-	value        string
-	done         bool
-	cancelled    bool
-}
-
-func (m inputModel) Init() tea.Cmd { return nil }
-
-func (m inputModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	if msg, ok := msg.(tea.KeyMsg); ok {
-		switch msg.String() {
-		case "enter":
-			if m.value == "" {
-				m.value = m.defaultValue
-			}
-			m.done = true
-			return m, tea.Quit
-		case "ctrl+c":
-			m.cancelled = true
-			return m, tea.Quit
-		case "backspace":
-			if len(m.value) > 0 {
-				m.value = m.value[:len(m.value)-1]
-			}
+		switch strings.ToLower(strings.TrimSpace(line)) {
+		case "":
+			return defaultValue, nil
+		case "y", "yes":
+			return true, nil
+		case "n", "no":
+			return false, nil
+		case "q":
+			return defaultValue, context.Canceled
 		default:
-			if len(msg.String()) == 1 {
-				m.value += msg.String()
+			if _, err := fmt.Fprintln(p.output(), "Please answer yes or no."); err != nil {
+				return defaultValue, fmt.Errorf("write prompt: %w", err)
 			}
 		}
 	}
-	return m, nil
 }
 
-func (m inputModel) View() string {
-	if m.done {
-		return fmt.Sprintf("%s %s\n", questionStyle.Render(m.question), m.value)
+func (p InteractivePrompter) Select(ctx context.Context, message string, options []string, defaultIndex int) (int, error) {
+	if len(options) == 0 {
+		return 0, fmt.Errorf("select requires at least one option")
 	}
-	defaultHint := ""
-	if m.defaultValue != "" {
-		defaultHint = helpStyle.Render(fmt.Sprintf(" (%s)", m.defaultValue))
+	if defaultIndex < 0 || defaultIndex >= len(options) {
+		return 0, fmt.Errorf("default selection %d is outside 0..%d", defaultIndex, len(options)-1)
 	}
-	return fmt.Sprintf("%s%s %s", questionStyle.Render(m.question), defaultHint, m.value)
+	for {
+		if err := ctx.Err(); err != nil {
+			return defaultIndex, err
+		}
+		if _, err := fmt.Fprintln(p.output(), message); err != nil {
+			return defaultIndex, fmt.Errorf("write prompt: %w", err)
+		}
+		for i, option := range options {
+			if _, err := fmt.Fprintf(p.output(), "  %d) %s\n", i+1, option); err != nil {
+				return defaultIndex, fmt.Errorf("write prompt: %w", err)
+			}
+		}
+		if _, err := fmt.Fprintf(p.output(), "Selection [%d]: ", defaultIndex+1); err != nil {
+			return defaultIndex, fmt.Errorf("write prompt: %w", err)
+		}
+		line, err := readPromptLine(p.input())
+		if err != nil {
+			return defaultIndex, fmt.Errorf("read prompt: %w", err)
+		}
+		value := strings.TrimSpace(line)
+		if value == "" {
+			return defaultIndex, nil
+		}
+		if strings.EqualFold(value, "q") {
+			return defaultIndex, context.Canceled
+		}
+		index, err := strconv.Atoi(value)
+		if err == nil && index >= 1 && index <= len(options) {
+			return index - 1, nil
+		}
+		if _, err := fmt.Fprintln(p.output(), "Enter one of the listed numbers."); err != nil {
+			return defaultIndex, fmt.Errorf("write prompt: %w", err)
+		}
+	}
 }
 
-func (InteractivePrompter) Input(_ context.Context, message string, defaultValue string) (string, error) {
-	m := inputModel{question: message, defaultValue: defaultValue}
-	result, err := tea.NewProgram(m).Run()
+func (p InteractivePrompter) MultiSelect(ctx context.Context, message string, options []string, defaults []bool) ([]int, error) {
+	if len(defaults) > len(options) {
+		return nil, fmt.Errorf("default selections exceed available options")
+	}
+	if err := ctx.Err(); err != nil {
+		return selectedDefaults(defaults), err
+	}
+	if _, err := fmt.Fprintln(p.output(), message); err != nil {
+		return nil, fmt.Errorf("write prompt: %w", err)
+	}
+	for i, option := range options {
+		selected := " "
+		if i < len(defaults) && defaults[i] {
+			selected = "x"
+		}
+		if _, err := fmt.Fprintf(p.output(), "  %d) [%s] %s\n", i+1, selected, option); err != nil {
+			return nil, fmt.Errorf("write prompt: %w", err)
+		}
+	}
+	if _, err := fmt.Fprint(p.output(), "Selections (comma separated; Enter keeps defaults): "); err != nil {
+		return nil, fmt.Errorf("write prompt: %w", err)
+	}
+	line, err := readPromptLine(p.input())
 	if err != nil {
-		return defaultValue, fmt.Errorf("bubbletea: %w", err)
+		return selectedDefaults(defaults), fmt.Errorf("read prompt: %w", err)
 	}
-	im := result.(inputModel)
-	if im.cancelled {
-		return defaultValue, context.Canceled
+	value := strings.TrimSpace(line)
+	if value == "" {
+		return selectedDefaults(defaults), nil
 	}
-	return im.value, nil
+	if strings.EqualFold(value, "q") {
+		return selectedDefaults(defaults), context.Canceled
+	}
+	seen := make(map[int]bool)
+	var result []int
+	for _, item := range strings.FieldsFunc(value, func(r rune) bool { return r == ',' || r == ' ' || r == '\t' }) {
+		index, err := strconv.Atoi(item)
+		if err != nil || index < 1 || index > len(options) {
+			return selectedDefaults(defaults), fmt.Errorf("selection %q is not one of 1..%d", item, len(options))
+		}
+		index--
+		if !seen[index] {
+			seen[index] = true
+			result = append(result, index)
+		}
+	}
+	return result, nil
+}
+
+func (p InteractivePrompter) Input(ctx context.Context, message string, defaultValue string) (string, error) {
+	if err := ctx.Err(); err != nil {
+		return defaultValue, err
+	}
+	suffix := ": "
+	if defaultValue != "" {
+		suffix = fmt.Sprintf(" [%s]: ", defaultValue)
+	}
+	if _, err := fmt.Fprint(p.output(), message+suffix); err != nil {
+		return defaultValue, fmt.Errorf("write prompt: %w", err)
+	}
+	line, err := readPromptLine(p.input())
+	if err != nil {
+		return defaultValue, fmt.Errorf("read prompt: %w", err)
+	}
+	value := strings.TrimSpace(line)
+	if value == "" {
+		return defaultValue, nil
+	}
+	return value, nil
+}
+
+func selectedDefaults(defaults []bool) []int {
+	var result []int
+	for i, selected := range defaults {
+		if selected {
+			result = append(result, i)
+		}
+	}
+	return result
+}
+
+// readPromptLine reads exactly through one newline without buffering bytes from
+// the next answer. That matters when several prompts share a pipe or TTY.
+func readPromptLine(reader io.Reader) (string, error) {
+	var result strings.Builder
+	var one [1]byte
+	for {
+		n, err := reader.Read(one[:])
+		if n == 1 {
+			switch one[0] {
+			case '\n':
+				return strings.TrimSuffix(result.String(), "\r"), nil
+			default:
+				result.WriteByte(one[0])
+			}
+		}
+		if err != nil {
+			if err == io.EOF && result.Len() > 0 {
+				return strings.TrimSuffix(result.String(), "\r"), nil
+			}
+			return "", err
+		}
+	}
 }

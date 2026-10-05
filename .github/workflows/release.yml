@@ -1,10 +1,13 @@
-name: "Release"
+name: "v1 Nightly Release"
 on:
   push:
     tags:
-      # Only match tags like v1.0.0, v2.3.4, etc.
-      # Exclude pre-release versions like v1.0.0-rc1, v1.0.0-alpha, v1.0.0-beta.1
-      - 'v[0-9]+.[0-9]+.[0-9]+'
+      # v1 stays opt-in after the branch is merged into main.
+      - 'v1.0.0-nightly.*'
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
   release:
@@ -16,6 +19,9 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+
+      - name: Validate release tag and source branch
+        run: bash scripts/validate-release-tag.sh "$GITHUB_REF_NAME"
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
@@ -30,31 +36,14 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Login to Docker Hub
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-
       - uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
 
-      - name: Validate release tag
-        run: |
-          # Ensure we're only releasing stable versions (no pre-release suffixes)
-          if [[ ! "${GITHUB_REF_NAME}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-            echo "❌ Tag ${GITHUB_REF_NAME} is not a valid release version"
-            echo "Only stable version tags (v*.*.* without suffixes) are allowed for release"
-            exit 1
-          fi
-          echo "✅ Valid release tag: ${GITHUB_REF_NAME}"
-
       - name: Create release
         uses: goreleaser/goreleaser-action@v6
         with:
-          version: latest
+          version: v2.18.2
           args: release --clean --timeout=90m
         env:
           GITHUB_TOKEN: ${{ secrets.GORELEASER_AUTH_TOKEN }}
-          DOCKERHUB_IMAGE: ${{ vars.DOCKERHUB_IMAGE || 'easyp/easyp' }}

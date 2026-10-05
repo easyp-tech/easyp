@@ -105,6 +105,10 @@ type ManagedOverrideRule struct {
 	FieldOption FieldOptionType
 	// Value is the value to set for the option.
 	Value any
+	// PackagePath makes go_package_prefix derive its import path from the
+	// protobuf package hierarchy. It is used only by options.go.package_prefix;
+	// regular managed overrides retain buf-compatible file-directory semantics.
+	PackagePath bool
 	// Module applies this override only to files in the specified module.
 	Module string
 	// Package applies this override only to files in the specified protobuf package.
@@ -119,6 +123,8 @@ type ManagedOverrideRule struct {
 type ManagedModeConfig struct {
 	// Enabled activates managed mode.
 	Enabled bool
+	// GoPackageOnly applies Go overrides without activating other language options.
+	GoPackageOnly bool
 	// Disable contains rules to disable managed mode for specific conditions.
 	Disable []ManagedDisableRule
 	// Override contains rules to override file and field options.
@@ -147,18 +153,6 @@ func (c *ManagedModeConfig) IsFieldOptionDisabled(filePath, module, protoPackage
 		}
 	}
 	return false
-}
-
-// GetFileOptionOverride returns the override value for a file option, or nil if not overridden.
-// If multiple overrides match, the last matching rule wins (buf behavior).
-func (c *ManagedModeConfig) GetFileOptionOverride(filePath, module, protoPackage string, option FileOptionType) any {
-	var result any
-	for _, rule := range c.Override {
-		if rule.FileOption == option && rule.matchesFileContext(filePath, module, protoPackage) {
-			result = rule.Value
-		}
-	}
-	return result
 }
 
 // GetFieldOptionOverride returns the override value for a field option, or nil if not overridden.
@@ -339,76 +333,11 @@ var fileOptionHandlers = []FileOptionHandler{
 		HasDefault:    false,
 		AffectsOption: FileOptionGoPackage,
 		Apply: func(fd *descriptorpb.FileDescriptorProto, value any, pkg, filePath string) {
-			if prefix, ok := value.(string); ok {
-				// go_package_prefix sets go_package to <prefix>/<file_directory>;<package_name>
-				//
-				// Example: file "api/task/service.proto" with proto package "task.v1"
-				//   generates: go_package = "prefix/api/task;taskv1"
-				//   path: "prefix/api/task" (physical file directory)
-				//   package name: "taskv1" (last 2 segments of proto package combined)
-
-				// If the value contains {{file_path}} or {{file_path_spec}}, use file path instead
-				if strings.Contains(prefix, "{{file_path}}") || strings.Contains(prefix, "{{file_path_spec}}") {
-					// Marker for generating paths based on file path
-					// Uses the file path directly, removing .proto extension
-					// {{file_path_spec}} is an alias for {{file_path}} - kept for backward compatibility
-					pathWithoutExt := normalizePath(strings.TrimSuffix(filePath, ".proto"))
-					replaced := strings.ReplaceAll(prefix, "{{file_path}}", pathWithoutExt)
-					replaced = strings.ReplaceAll(replaced, "{{file_path_spec}}", pathWithoutExt)
-					fd.Options.GoPackage = proto.String(replaced)
-				} else if strings.Contains(prefix, "{{file_dir}}") {
-					// Marker for using only the directory path, without filename
-					// Example: internal/cms/as_service.proto -> internal/cms
-					dir := normalizePath(filepath.Dir(filePath))
-					replaced := strings.ReplaceAll(prefix, "{{file_dir}}", dir)
-					fd.Options.GoPackage = proto.String(replaced)
-				} else if strings.Contains(prefix, "{{file_dir_without:") {
-					// Marker for using directory path with prefix removal: {{file_dir_without:prefix/}}
-					// Example: {{file_dir_without:internal/}} for internal/cms/as_service.proto -> cms
-					dir := filepath.Dir(filePath)
-					base := strings.TrimSuffix(filepath.Base(filePath), ".proto")
-					// Remove common suffixes like _service, _grpc to get base name
-					baseName := base
-					if strings.HasSuffix(baseName, "_service") {
-						baseName = strings.TrimSuffix(baseName, "_service")
-					} else if strings.HasSuffix(baseName, "_grpc") {
-						baseName = strings.TrimSuffix(baseName, "_grpc")
-					}
-					// Use directory + base name for path
-					pathWithBase := normalizePath(filepath.Join(dir, baseName))
-					replaced := replacePathMarkers(prefix, "{{file_dir_without:", pathWithBase)
-					fd.Options.GoPackage = proto.String(replaced)
-				} else if strings.Contains(prefix, "{{file_path_without:") {
-					// Marker for generating paths with prefix removal: {{file_path_without:prefix/}}
-					// Example: {{file_path_without:internal/}} removes "internal/" from the beginning
-					pathWithoutExt := normalizePath(strings.TrimSuffix(filePath, ".proto"))
-					replaced := replacePathMarkers(prefix, "{{file_path_without:", pathWithoutExt)
-					fd.Options.GoPackage = proto.String(replaced)
-				} else {
-					// With paths=source_relative:
-					// - Import path comes from physical file directory
-					// - Package name derived from proto package:
-					//   * 1 segment ("common"): omit explicit name, let protoc-gen-go derive from import path
-					//   * 2+ segments ("task.v1", "acme.api.v2"): combine last 2 -> "taskv1", "apiv2"
-
-					fileDir := normalizePath(filepath.Dir(filePath))
-					segments := strings.Split(pkg, ".")
-					var goPackage string
-
-					if len(segments) == 1 {
-						// Single segment: omit explicit package name
-						// protoc-gen-go will derive it from path.Base(importPath)
-						goPackage = prefix + "/" + fileDir
-					} else {
-						// Multiple segments: combine last 2
-						packageNameBase := segments[len(segments)-2] + segments[len(segments)-1]
-						cleanPkg := cleanPackageName(packageNameBase)
-						goPackage = prefix + "/" + fileDir + ";" + cleanPkg
-					}
-
-					fd.Options.GoPackage = proto.String(goPackage)
-				}
+			prefix, ok := value.(string)
+			if !ok {
+				return
 			}
+			applyGoPackagePrefix(fd, prefix, pkg, filePath, false)
 		},
 	},
 
@@ -679,7 +608,7 @@ func ApplyManagedMode(
 	config ManagedModeConfig,
 	fileToModule map[string]string,
 ) error {
-	if !config.Enabled {
+	if !config.Enabled && !config.GoPackageOnly {
 		return nil
 	}
 
@@ -691,6 +620,7 @@ func ApplyManagedMode(
 		// Managed mode applies to all files. Module/path selectors are used only
 		// to narrow disable/override rules, matching buf's managed mode behavior.
 
+		hadOptions := fd.Options != nil
 		// Ensure Options is initialized
 		if fd.Options == nil {
 			fd.Options = &descriptorpb.FileOptions{}
@@ -700,7 +630,12 @@ func ApplyManagedMode(
 		applyFileOptions(fd, config, filePath, module, pkg)
 
 		// Apply field options to all messages
-		applyFieldOptionsToMessages(fd.GetMessageType(), config, filePath, module, pkg, pkg)
+		if config.Enabled {
+			applyFieldOptionsToMessages(fd.GetMessageType(), config, filePath, module, pkg, pkg)
+		}
+		if !hadOptions && proto.Size(fd.Options) == 0 {
+			fd.Options = nil
+		}
 	}
 
 	return nil
@@ -725,6 +660,9 @@ func applyFileOptions(
 	// This matches buf's behavior: "If multiple overrides for the same option apply
 	// to a file or field, the last rule takes effect."
 	for _, override := range config.Override {
+		if !config.Enabled && override.FileOption != FileOptionGoPackage && override.FileOption != FileOptionGoPackagePrefix {
+			continue
+		}
 		if override.FileOption == "" {
 			continue
 		}
@@ -751,8 +689,21 @@ func applyFileOptions(
 			continue
 		}
 
-		// Apply the override
-		handler.Apply(fd, override.Value, pkg, filePath)
+		if handler.AffectsOption != "" && config.IsFileOptionDisabled(filePath, module, pkg, handler.AffectsOption) {
+			continue
+		}
+
+		// options.go.package_prefix follows the RFC package hierarchy while
+		// explicit managed overrides keep buf-compatible file-directory semantics.
+		if override.FileOption == FileOptionGoPackagePrefix && override.PackagePath {
+			prefix, ok := override.Value.(string)
+			if !ok {
+				continue
+			}
+			applyGoPackagePrefix(fd, prefix, pkg, filePath, true)
+		} else {
+			handler.Apply(fd, override.Value, pkg, filePath)
+		}
 		appliedOptions[override.FileOption] = true
 
 		// If this handler affects another option (e.g., go_package_prefix affects go_package),
@@ -760,6 +711,10 @@ func applyFileOptions(
 		if handler.AffectsOption != "" {
 			appliedOptions[handler.AffectsOption] = true
 		}
+	}
+
+	if !config.Enabled {
+		return
 	}
 
 	// Second pass: apply defaults for options that have defaults and weren't overridden
@@ -798,6 +753,54 @@ func applyFileOptions(
 			appliedOptions[handler.AffectsOption] = true
 		}
 	}
+}
+
+func applyGoPackagePrefix(
+	fd *descriptorpb.FileDescriptorProto,
+	prefix, pkg, filePath string,
+	packagePath bool,
+) {
+	// Marker forms keep their historical file-path semantics.
+	if strings.Contains(prefix, "{{file_path}}") || strings.Contains(prefix, "{{file_path_spec}}") {
+		pathWithoutExt := normalizePath(strings.TrimSuffix(filePath, ".proto"))
+		replaced := strings.ReplaceAll(prefix, "{{file_path}}", pathWithoutExt)
+		replaced = strings.ReplaceAll(replaced, "{{file_path_spec}}", pathWithoutExt)
+		fd.Options.GoPackage = proto.String(replaced)
+		return
+	}
+	if strings.Contains(prefix, "{{file_dir}}") {
+		dir := normalizePath(filepath.Dir(filePath))
+		fd.Options.GoPackage = proto.String(strings.ReplaceAll(prefix, "{{file_dir}}", dir))
+		return
+	}
+	if strings.Contains(prefix, "{{file_dir_without:") {
+		dir := filepath.Dir(filePath)
+		base := strings.TrimSuffix(filepath.Base(filePath), ".proto")
+		baseName := strings.TrimSuffix(strings.TrimSuffix(base, "_service"), "_grpc")
+		pathWithBase := normalizePath(filepath.Join(dir, baseName))
+		fd.Options.GoPackage = proto.String(replacePathMarkers(prefix, "{{file_dir_without:", pathWithBase))
+		return
+	}
+	if strings.Contains(prefix, "{{file_path_without:") {
+		pathWithoutExt := normalizePath(strings.TrimSuffix(filePath, ".proto"))
+		fd.Options.GoPackage = proto.String(replacePathMarkers(prefix, "{{file_path_without:", pathWithoutExt))
+		return
+	}
+
+	fileDir := normalizePath(filepath.Dir(filePath))
+	segments := strings.Split(pkg, ".")
+	importPath := fileDir
+	if packagePath && len(segments) > 1 {
+		importPath = normalizePath(strings.ReplaceAll(pkg, ".", "/"))
+	}
+	var goPackage string
+	if len(segments) == 1 {
+		goPackage = prefix + "/" + importPath
+	} else {
+		packageNameBase := segments[len(segments)-2] + segments[len(segments)-1]
+		goPackage = prefix + "/" + importPath + ";" + cleanPackageName(packageNameBase)
+	}
+	fd.Options.GoPackage = proto.String(goPackage)
 }
 
 // applyFieldOptionsToMessages recursively applies field options to all messages.

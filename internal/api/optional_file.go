@@ -1,0 +1,18 @@
+package api
+
+import (
+	"errors"
+	"fmt"
+	"os"
+)
+
+func readOptionalFile(path string) ([]byte, bool, error) {
+	raw, err := os.ReadFile(path)
+	if errors.Is(err, os.ErrNotExist) {
+		return nil, false, nil
+	}
+	if err != nil {
+		return nil, false, fmt.Errorf("ReadFile: %w", err)
+	}
+	return raw, true, nil
+}

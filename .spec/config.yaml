@@ -1,0 +1,7 @@
+context: EasyP is a Protocol Buffers CLI toolkit (Go) — lint, breaking, generate, easyp mod.
+docs_dir: .spec
+doc_freshness_days: 30
+auto_branch: false
+auto_worktree: false
+test_skill: go-testing
+rules.docs: Prefer code under internal/ and AGENTS.md over marketing docs. Vendor dir is easyp_vendor. Link .spec/config/dependency.md for package manager details.
