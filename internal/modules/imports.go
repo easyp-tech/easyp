@@ -96,15 +96,27 @@ func (s v1ImportSource) imports() ([]string, error) {
 // findUnresolvedV1Imports parses root sources and only the dependency files
 // reachable from them. Unrelated dependency protos need not be valid or complete.
 func findUnresolvedV1Imports(moduleDir string, roots, dependencyRoots []string) ([]v1UnresolvedImport, error) {
-	allRoots := make([]string, 0, len(roots)+len(dependencyRoots))
+	sources := make(SourceRoots, 0, len(dependencyRoots))
+	for _, root := range dependencyRoots {
+		sources = append(sources, SourceRoot{Path: root})
+	}
+	return findUnresolvedV1ImportsWithSources(moduleDir, roots, sources)
+}
+
+func findUnresolvedV1ImportsWithSources(moduleDir string, roots []string, dependencyRoots SourceRoots) ([]v1UnresolvedImport, error) {
+	allRoots := make(SourceRoots, 0, len(roots)+len(dependencyRoots))
 	for _, root := range roots {
-		allRoots = append(allRoots, filepath.Join(moduleDir, root))
+		allRoots = append(allRoots, SourceRoot{Path: filepath.Join(moduleDir, root)})
 	}
 	allRoots = append(allRoots, dependencyRoots...)
+	allowed := allRoots.FileAllowed()
 	var queue []v1ImportSource
 	seen := make(map[v1ImportSource]bool)
 	for _, sourceRoot := range allRoots[:len(roots)] {
-		err := WalkProtoFiles(sourceRoot, func(path string) error {
+		err := sourceRoot.Walk(func(path string) error {
+			if allowed != nil && !allowed(path) {
+				return nil
+			}
 			source := v1ImportSource{path: path}
 			if !seen[source] {
 				seen[source] = true
@@ -133,7 +145,7 @@ func findUnresolvedV1Imports(moduleDir string, roots, dependencyRoots []string) 
 				continue
 			}
 			seenImports[importPath] = true
-			imported, err := resolveV1ImportSource(importPath, allRoots)
+			imported, err := resolveV1ImportSource(importPath, allRoots, allowed)
 			if errors.Is(err, os.ErrNotExist) {
 				unresolved = append(unresolved, v1UnresolvedImport{owner: source.path, path: importPath})
 				continue
@@ -150,9 +162,18 @@ func findUnresolvedV1Imports(moduleDir string, roots, dependencyRoots []string) 
 	return unresolved, nil
 }
 
-func resolveV1ImportSource(importPath string, roots []string) (v1ImportSource, error) {
+func resolveV1ImportSource(importPath string, roots SourceRoots, allowed func(string) bool) (v1ImportSource, error) {
 	for _, root := range roots {
-		candidate := filepath.Join(root, filepath.FromSlash(importPath))
+		candidate := filepath.Join(root.Path, filepath.FromSlash(importPath))
+		if allowed != nil {
+			// The shared filter checks both owners. This root still needs to own
+			// the import's spelling, but a selected target may belong to another root.
+			if !allowed(candidate) || !root.allowsPath(candidate, root.Path) {
+				continue
+			}
+		} else if !root.allows(candidate, root.Path) {
+			continue
+		}
 		info, err := os.Stat(candidate)
 		if errors.Is(err, os.ErrNotExist) {
 			continue

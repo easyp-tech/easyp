@@ -53,12 +53,22 @@ func (l Lint) actionV1(ctx *cli.Context, log logger.Logger, configPath, projectR
 		return fmt.Errorf("WalkDir: %w", err)
 	}
 	var cache modules.Cache
+	replacements := newPolicyReplacementSources(ctx.Context, projectRoot, projectRoot, func() (modules.Cache, error) {
+		if cache == nil {
+			var err error
+			cache, err = moduleCache(ctx)
+			if err != nil {
+				return nil, fmt.Errorf("moduleCache: %w", err)
+			}
+		}
+		return cache, nil
+	}, flags.IsFrozen(ctx))
 	if flags.IsFrozen(ctx) {
 		relative, err := filepath.Rel(projectRoot, searchDir)
 		if err != nil {
 			return fmt.Errorf("Rel: %w", err)
 		}
-		selected, err := selectedPolicyScopes(projectRoot, projectRoot, relative, true)
+		selected, err := selectedPolicyScopes(replacements, relative, true)
 		if err != nil {
 			return fmt.Errorf("selectedPolicyScopes: %w", err)
 		}
@@ -76,7 +86,7 @@ func (l Lint) actionV1(ctx *cli.Context, log logger.Logger, configPath, projectR
 	batchFiles := make(map[v1LintAppKey][]string)
 	var batchOrder []v1LintAppKey
 	excludedByPath := make(map[string][]string)
-	moduleRoots := map[string][]string{}
+	moduleRoots := map[string]modules.SourceRoots{}
 	policyBoundary, err := workspace.Boundary(projectRoot)
 	if err != nil {
 		return fmt.Errorf("Boundary: %w", err)
@@ -93,7 +103,7 @@ func (l Lint) actionV1(ctx *cli.Context, log logger.Logger, configPath, projectR
 	})
 	var issues []core.IssueInfo
 	for _, file := range files {
-		unselectedReplacement, err := isUnselectedReplacementSource(projectRoot, projectRoot, searchDir, file)
+		unselectedReplacement, err := replacements.isUnselectedReplacementSource(searchDir, file)
 		if err != nil {
 			return fmt.Errorf("isUnselectedReplacementSource: %w", err)
 		}
@@ -150,7 +160,7 @@ func (l Lint) actionV1(ctx *cli.Context, log logger.Logger, configPath, projectR
 				}
 				lintConfig.PackageDirectoryPrefix = v1PackageDirectoryPrefix(module.Name)
 			}
-			var importRoots []string
+			var importRoots modules.SourceRoots
 			if moduleDir != "" {
 				roots, known := moduleRoots[moduleDir]
 				if !known {

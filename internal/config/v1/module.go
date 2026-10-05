@@ -16,7 +16,7 @@ type Module struct {
 	Roots    []string
 	Requires []Requirement
 	Replaces []Replacement
-	// ProtoFilters carries Buf source selection relative to the Git checkout.
+	// ProtoFilters carries Buf source selection relative to the dependency directory.
 	// Native protobuf.mod files leave it empty.
 	ProtoFilters []ProtoFileFilter
 	// BSRDependencies retains Buf metadata until a backend chooses Git requirements.

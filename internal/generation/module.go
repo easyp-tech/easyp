@@ -26,8 +26,9 @@ func prepareV1ModuleCore(log logger.Logger, request Request, configPath, moduleD
 	if err != nil {
 		return nil, fmt.Errorf("ModuleSources: %w", err)
 	}
-	if err := modules.CheckImportCollisions(moduleDir, module.Roots, importRoots.Paths()); err != nil {
-		return nil, fmt.Errorf("CheckImportCollisions: %w", err)
+	allSources := append(append(modules.SourceRoots(nil), sources...), importRoots...)
+	if err := modules.CheckSourceCollisions(allSources); err != nil {
+		return nil, fmt.Errorf("CheckSourceCollisions: %w", err)
 	}
 	options, err := prepareV1GeneratorConfig(configPath, moduleDir, gen, module)
 	if err != nil {
@@ -36,6 +37,7 @@ func prepareV1ModuleCore(log logger.Logger, request Request, configPath, moduleD
 	options.Logger = log
 	options.PluginWorkDir = request.WorkDir
 	options.ImportRoots = importRoots.Paths()
+	options.ImportFileAllowed = allSources.FileAllowed()
 	if options.ManagedModeConfig.Enabled || options.ManagedModeConfig.GoPackageOnly {
 		roots := append(modules.SourceRoots(nil), importRoots...)
 		roots = append(roots, sources...)

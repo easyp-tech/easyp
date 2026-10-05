@@ -53,19 +53,25 @@ func (c *Core) BreakingCheck(ctx context.Context, projectRoot, workingDir, path 
 // CompareBreaking compares explicitly scoped inputs with revision-specific imports.
 // Neither filesystem can fall back to the other revision's dependency roots.
 func (c *Core) CompareBreaking(ctx context.Context, current, against DirWalker, againstImportRoots []string) ([]IssueInfo, error) {
+	return c.CompareBreakingWithImports(ctx, current, against, againstImportRoots, nil)
+}
+
+// CompareBreakingWithImports keeps source filters isolated between the two revisions.
+func (c *Core) CompareBreakingWithImports(ctx context.Context, current, against DirWalker, againstImportRoots []string, againstFileAllowed func(string) bool) ([]IssueInfo, error) {
+	baseline := *c
+	baseline.importRoots = againstImportRoots
+	baseline.importFileAllowed = againstFileAllowed
 	if len(c.breakingCheckConfig.Categories) > 0 {
 		profiles, err := selectedBreakingProfiles(c.breakingCheckConfig.Categories)
 		if err != nil {
 			return nil, err
 		}
-		return c.compareBreakingProfiles(ctx, current, against, againstImportRoots, profiles)
+		return c.compareBreakingProfiles(ctx, current, against, &baseline, profiles)
 	}
 	currentFiles, err := c.readProtoFiles(ctx, current)
 	if err != nil {
 		return nil, fmt.Errorf("readProtoFiles current: %w", err)
 	}
-	baseline := *c
-	baseline.importRoots = againstImportRoots
 	againstFiles, err := baseline.readProtoFiles(ctx, against)
 	if err != nil {
 		return nil, fmt.Errorf("readProtoFiles baseline: %w", err)

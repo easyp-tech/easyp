@@ -23,7 +23,7 @@ func TestBreakingOverlayUsesSnapshotTransitively(t *testing.T) {
 	snapshot := &gitadapter.Snapshot{Root: baseline, RepositoryRoot: current}
 	roots, err := breakingImportRoots(t.Context(), gitmodules.New(t.TempDir()), baseline, ".", []string{"proto/app.proto"}, snapshot)
 	require.NoError(t, err)
-	assert.Equal(t, []string{filepath.Join(baseline, "proto"), filepath.Join(baseline, "a"), filepath.Join(baseline, "b")}, roots)
+	assert.Equal(t, []string{filepath.Join(baseline, "proto"), filepath.Join(baseline, "a"), filepath.Join(baseline, "b")}, roots.Paths())
 }
 
 func TestBreakingScopesRespectModuleRoots(t *testing.T) {
@@ -61,7 +61,8 @@ func TestBreakingScopesRespectModuleRoots(t *testing.T) {
 				writeV1GenerateFixture(t, root, name, body)
 			}
 
-			scopes, err := discoverBreakingScopes(root, root, tt.path)
+			replacements := newPolicyReplacementSources(t.Context(), root, root, nil, false)
+			scopes, err := discoverBreakingScopes(replacements, tt.path)
 
 			require.NoError(t, err)
 			assert.Equal(t, tt.scopes, scopes)
@@ -79,6 +80,50 @@ func TestBaselineRepositoryAliases(t *testing.T) {
 	got, err := baselineRepositoryRelative(repo, filepath.Join(alias, "deleted", "dep"))
 	require.NoError(t, err)
 	assert.Equal(t, filepath.Join("deleted", "dep"), got)
+}
+
+func TestBaselineRepositoryInternalAliases(t *testing.T) {
+	t.Parallel()
+	root := t.TempDir()
+	writeV1GenerateFixture(t, root, "module/api/item.proto", "syntax = \"proto3\";\n")
+	require.NoError(t, os.Symlink("module", filepath.Join(root, "alias")))
+	tests := []struct {
+		name string
+		path string
+		want string
+	}{
+		{name: "module", path: "alias", want: "module"},
+		{name: "subdirectory", path: "alias/api", want: "module/api"},
+		{name: "file", path: "alias/api/item.proto", want: "module/api/item.proto"},
+		{name: "deleted file", path: "alias/api/deleted.proto", want: "module/api/deleted.proto"},
+		{name: "deleted subtree", path: "alias/deleted/item.proto", want: "module/deleted/item.proto"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			got, err := baselineRepositoryRelative(root, filepath.Join(root, tt.path))
+			require.NoError(t, err)
+			assert.Equal(t, filepath.FromSlash(tt.want), got)
+		})
+	}
+}
+
+func TestBaselineRepositoryAliasEscape(t *testing.T) {
+	t.Parallel()
+	root, outside := t.TempDir(), t.TempDir()
+	require.NoError(t, os.Symlink(outside, filepath.Join(root, "alias")))
+	got, err := baselineRepositoryRelative(root, filepath.Join(root, "alias/deleted.proto"))
+	require.NoError(t, err)
+	assert.False(t, filepath.IsLocal(got), got)
+}
+
+func TestBaselineRepositoryDeletedAliasTarget(t *testing.T) {
+	t.Parallel()
+	root := t.TempDir()
+	require.NoError(t, os.Symlink("deleted/module", filepath.Join(root, "alias")))
+	got, err := baselineRepositoryRelative(root, filepath.Join(root, "alias/api/item.proto"))
+	require.NoError(t, err)
+	assert.Equal(t, filepath.Join("deleted", "module", "api", "item.proto"), got)
 }
 
 func TestBreakingWalkerDoesNotLeakUnselectedRepositoryFiles(t *testing.T) {

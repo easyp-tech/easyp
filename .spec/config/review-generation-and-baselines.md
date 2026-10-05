@@ -9,11 +9,16 @@ modules such as `user.v1` and `order.v1` in distinct generated directories even
 when both contain `v1/*.proto` and use `paths=source_relative`. Single-segment
 packages and path markers retain their existing file path semantics.
 
-Source-relative Go output follows the final descriptor `go_package`, relative
+Source-relative Go output follows the plugin's effective `go_package`, relative
 to the configured prefix (the stable parent for marker templates). Disabled
 options and explicit overrides therefore keep imports and output directories
 consistent. Packages outside that prefix keep their plugin output paths.
 `paths=import` and the plugin's `module` option retain plugin-controlled layout.
+The last nonempty per-file `Mfile.proto=import/path` mapping takes precedence
+over descriptor options; alias-only and empty mappings preserve the effective
+import path. The marked generator header identifies the source even when proto
+comments contain `// source:`. Insertion responses reuse the producer's recorded
+output path in that output directory, independent of insertion plugin options.
 
 The internal GoPackageOnly runtime mode is not a new YAML setting. Empty
 options are not materialized in otherwise unchanged descriptors. Other
@@ -37,6 +42,8 @@ The selected paths are relative to the Git repository, so changing --root does
 not change the identity of an otherwise identical checked file. Explicit target
 paths take precedence over import aliases when building the checker input.
 Baseline-only files and deleted modules remain checkable, including via --path.
+Directory and file aliases are canonicalized before repository-relative selection;
+deleted targets retain their suffix below the nearest existing ancestor.
 
 Policy ownership is still determined from current configuration. Each effective
 policy uses its own baseline; dependencies are checked with the policy of the
@@ -63,7 +70,15 @@ breaking checks, including legacy/Buf metadata and nested modules. Their paths
 are excluded before reading their policies. Selecting a replacement explicitly
 through `--path` still validates its policy. Absolute in-repository targets are
 rebased into the baseline snapshot during source selection as well as import
-resolution. Unused replacements pointing to files cannot hide checked sources.
+resolution. Only reachable replacements own these import-only trees. Unused
+replacements pointing to files or directories cannot hide checked sources.
+
+Local Buf source includes/excludes remain attached to each import root. The
+same selection is applied to import resolution, descriptor compilation, explicit
+dependency generation and package selection, file listing, collision detection
+and vendoring. Nested module boundaries and physical aliases prevent a broad
+consumer root from reintroducing an excluded dependency file. Current and
+baseline contexts retain separate filters.
 
 ## X-24: a recorded version cannot silently change identity
 

@@ -21,6 +21,10 @@ import (
 
 type policyReadCache struct{ *gitmodules.Cache }
 
+// Expose only cached verification during discovery, without the repository's
+// version resolver promoted through policyReadCache's embedded Git cache.
+type policyDiscoveryCache struct{ modules.Cache }
+
 func (c policyReadCache) Install(ctx context.Context, lock v1.Lock) error {
 	return c.VerifyCached(ctx, lock)
 }
@@ -76,7 +80,14 @@ func policyReferenceValidator(ctx *cli.Context) func(string) ([]config.Validatio
 			if err != nil {
 				return nil, err
 			}
-			scopes, scanErr := selectedPolicyScopes(boundary, boundary, relative, true)
+			replacements := newPolicyReplacementSources(ctx.Context, boundary, boundary, func() (modules.Cache, error) {
+				cache, err := moduleCache(ctx)
+				if err != nil {
+					return nil, fmt.Errorf("moduleCache: %w", err)
+				}
+				return policyDiscoveryCache{policyReadCache{cache}}, nil
+			}, flags.IsFrozen(ctx))
+			scopes, scanErr := selectedPolicyScopes(replacements, relative, true)
 			if scanErr == nil {
 				var modules []string
 				for _, name := range slices.Sorted(maps.Keys(scopes)) {

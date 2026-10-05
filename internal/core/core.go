@@ -23,6 +23,7 @@ type Core struct {
 	pluginWorkDir         string
 	inputs                Inputs
 	importRoots           []string
+	importFileAllowed     func(string) bool
 	fileModules           map[string]string
 	managedMode           ManagedModeConfig
 	goPackageOutputPrefix string
@@ -44,16 +45,19 @@ var (
 
 // Options configures the lint, breaking, and generation engines.
 type Options struct {
-	Rules                   []Rule
-	Ignore                  []string
-	IgnoreOnly              map[string][]string
-	AllowCommentIgnores     bool
-	KnownLintRules          []string
-	Logger                  logger.Logger
-	Plugins                 []Plugin
-	PluginWorkDir           string
-	Inputs                  Inputs
-	ImportRoots             []string
+	Rules               []Rule
+	Ignore              []string
+	IgnoreOnly          map[string][]string
+	AllowCommentIgnores bool
+	KnownLintRules      []string
+	Logger              logger.Logger
+	Plugins             []Plugin
+	PluginWorkDir       string
+	Inputs              Inputs
+	ImportRoots         []string
+	// ImportFileAllowed restricts physical imports and module inputs to the
+	// files selected by dependency metadata. Nil permits every file.
+	ImportFileAllowed       func(string) bool
 	FileModules             map[string]string
 	CurrentProjectGitWalker CurrentProjectGitWalker
 	BreakingCheckConfig     BreakingCheckConfig
@@ -77,6 +81,7 @@ func New(options Options) *Core {
 		pluginWorkDir:           options.PluginWorkDir,
 		inputs:                  options.Inputs,
 		importRoots:             slices.Clone(options.ImportRoots),
+		importFileAllowed:       options.ImportFileAllowed,
 		fileModules:             maps.Clone(options.FileModules),
 		currentProjectGitWalker: options.CurrentProjectGitWalker,
 		breakingCheckConfig:     options.BreakingCheckConfig,

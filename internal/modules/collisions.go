@@ -5,19 +5,16 @@ import (
 	"path/filepath"
 )
 
-// CheckImportCollisions rejects different files with the same name from
-// the compiler's point of view. Every root contributes paths relative to that
-// root, regardless of which protobuf module owns the root.
-func CheckImportCollisions(moduleDir string, moduleRoots, dependencyRoots []string) error {
-	roots := make([]string, 0, len(moduleRoots)+len(dependencyRoots))
-	for _, root := range moduleRoots {
-		roots = append(roots, filepath.Join(moduleDir, root))
-	}
-	roots = append(roots, dependencyRoots...)
+// CheckSourceCollisions respects each module's source selection when comparing import names.
+func CheckSourceCollisions(roots SourceRoots) error {
 	seen := make(map[string]string)
+	allowed := roots.FileAllowed()
 	for _, root := range roots {
-		err := WalkProtoFiles(root, func(path string) error {
-			importPath, err := filepath.Rel(root, path)
+		err := root.Walk(func(path string) error {
+			if allowed != nil && !allowed(path) {
+				return nil
+			}
+			importPath, err := filepath.Rel(root.Path, path)
 			if err != nil {
 				return err
 			}

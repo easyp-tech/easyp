@@ -26,15 +26,42 @@ import (
 // Policies are selected from the current project; each baseline has its own
 // sources, manifests and locks, without checking out the caller's worktree.
 func (b BreakingCheck) checkV1Policies(ctx *cli.Context, log logger.Logger, configPath, projectRoot, scanRoot string) ([]core.IssueInfo, error) {
-	scanPath := filepath.Join(scanRoot, ctx.String(flagLintDirectoryPath.Name))
-	sources, err := discoverV1BreakingPolicySources(scanPath, projectRoot, configPath)
+	projectRoot, err := canonicalPolicyPath(projectRoot)
 	if err != nil {
-		return nil, fmt.Errorf("discoverV1BreakingPolicySources: %w", err)
+		return nil, fmt.Errorf("canonicalPolicyPath: %w", err)
 	}
+	configPath, err = canonicalPolicyPath(configPath)
+	if err != nil {
+		return nil, fmt.Errorf("canonicalPolicyPath: %w", err)
+	}
+	_, _, err = readV1PolicyFile(configPath)
+	if err != nil {
+		return nil, fmt.Errorf("readV1PolicyFile: %w", err)
+	}
+	repositoryRoot, err := gitadapter.RepositoryRoot(scanRoot)
+	if err != nil {
+		return nil, fmt.Errorf("RepositoryRoot: %w", err)
+	}
+	repositoryRoot, err = canonicalPolicyPath(repositoryRoot)
+	if err != nil {
+		return nil, fmt.Errorf("canonicalPolicyPath: %w", err)
+	}
+	scanPath := filepath.Join(scanRoot, ctx.String(flagLintDirectoryPath.Name))
+	relative, err := baselineRepositoryRelative(repositoryRoot, scanPath)
+	if err != nil || !filepath.IsLocal(relative) {
+		return nil, fmt.Errorf("%w: %s", core.ErrRootOutsideProject, scanPath)
+	}
+	scanPath = filepath.Join(repositoryRoot, relative)
 	cache, err := moduleCache(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("moduleCache: %w", err)
 	}
+	replacements := newPolicyReplacementSources(ctx.Context, projectRoot, projectRoot, func() (modules.Cache, error) { return cache, nil }, flags.IsFrozen(ctx))
+	sources, err := discoverV1BreakingPolicySources(replacements, scanPath, projectRoot, configPath)
+	if err != nil {
+		return nil, fmt.Errorf("discoverV1BreakingPolicySources: %w", err)
+	}
+	currentReplacements := newPolicyReplacementSources(ctx.Context, repositoryRoot, repositoryRoot, func() (modules.Cache, error) { return cache, nil }, flags.IsFrozen(ctx))
 	snapshots := make(map[string]*gitadapter.Snapshot)
 	defer func() {
 		for _, snapshot := range snapshots {
@@ -68,20 +95,16 @@ func (b BreakingCheck) checkV1Policies(ctx *cli.Context, log logger.Logger, conf
 			}
 			snapshots[cfg.AgainstGitRef] = snapshot
 		}
-		repositoryRoot := snapshot.RepositoryRoot
 		ignorePaths, err := breakingIgnorePaths(repositoryRoot, filepath.Dir(source), cfg.Ignore)
 		if err != nil {
 			return nil, fmt.Errorf("breakingIgnorePaths: %w", err)
 		}
-		relative, err := filepath.Rel(repositoryRoot, scanPath)
-		if err != nil || !filepath.IsLocal(relative) {
-			return nil, fmt.Errorf("%w: %s", core.ErrRootOutsideProject, scanPath)
-		}
-		current, err := selectedPolicyScopes(repositoryRoot, repositoryRoot, relative, flags.IsFrozen(ctx))
+		current, err := selectedPolicyScopes(currentReplacements, relative, flags.IsFrozen(ctx))
 		if err != nil {
 			return nil, fmt.Errorf("discoverBreakingScopes current: %w", err)
 		}
-		baseline, err := selectedPolicyScopes(snapshot.Root, snapshot.RepositoryRoot, relative, flags.IsFrozen(ctx))
+		baselineReplacements := newPolicyReplacementSources(ctx.Context, snapshot.Root, snapshot.RepositoryRoot, func() (modules.Cache, error) { return cache, nil }, flags.IsFrozen(ctx))
+		baseline, err := selectedPolicyScopes(baselineReplacements, relative, flags.IsFrozen(ctx))
 		if err != nil {
 			return nil, fmt.Errorf("discoverBreakingScopes baseline: %w", err)
 		}
@@ -119,13 +142,13 @@ func (b BreakingCheck) checkV1Policies(ctx *cli.Context, log logger.Logger, conf
 			if err != nil {
 				return nil, fmt.Errorf("baseline %s module %s: %w", cfg.AgainstGitRef, module, err)
 			}
-			app := core.New(core.Options{Logger: log, ImportRoots: currentImports, BreakingCheckConfig: core.BreakingCheckConfig{
+			app := core.New(core.Options{Logger: log, ImportRoots: currentImports.Paths(), ImportFileAllowed: currentImports.FileAllowed(), BreakingCheckConfig: core.BreakingCheckConfig{
 				IgnoreDirs: append(append([]string(nil), ignorePaths...), defaultVendorDir), AgainstGitRef: cfg.AgainstGitRef,
 				FilesCheck:     slices.Contains(cfg.Use, core.BreakingCheckFilesCheck),
 				Categories:     cfg.Categories,
 				IgnoreUnstable: cfg.IgnoreUnstable,
 			}})
-			found, err := app.CompareBreaking(ctx.Context, newBreakingWalker(repositoryRoot, currentFiles), newBreakingWalker(snapshot.Root, baselineFiles), baselineImports)
+			found, err := app.CompareBreakingWithImports(ctx.Context, newBreakingWalker(repositoryRoot, currentFiles), newBreakingWalker(snapshot.Root, baselineFiles), baselineImports.Paths(), baselineImports.FileAllowed())
 			if err != nil {
 				return nil, fmt.Errorf("CompareBreaking module %s against %s: %w", module, cfg.AgainstGitRef, err)
 			}
@@ -173,7 +196,7 @@ func breakingScopeUsesPolicy(repositoryRoot string, files []string, projectRoot,
 	return false, nil
 }
 
-func discoverV1BreakingPolicySources(scanPath, projectRoot, configPath string) ([]string, error) {
+func discoverV1BreakingPolicySources(replacements *policyReplacementSources, scanPath, projectRoot, configPath string) ([]string, error) {
 	sources := map[string]struct{}{}
 	policyDirectory := scanPath
 	info, statErr := os.Stat(scanPath)
@@ -205,7 +228,7 @@ func discoverV1BreakingPolicySources(scanPath, projectRoot, configPath string) (
 		if entry.IsDir() || entry.Name() != v1.PolicyFile || path == configPath {
 			return nil
 		}
-		unselectedReplacement, err := isUnselectedReplacementSource(projectRoot, projectRoot, scanPath, path)
+		unselectedReplacement, err := replacements.isUnselectedReplacementSource(scanPath, path)
 		if err != nil {
 			return fmt.Errorf("isUnselectedReplacementSource: %w", err)
 		}
@@ -274,18 +297,23 @@ func (b BreakingCheck) checkV1ExtendedBreakingSource(
 	if err != nil {
 		return nil, fmt.Errorf("RepositoryRoot: %w", err)
 	}
-	relative, err := filepath.Rel(repositoryRoot, scanPath)
+	repositoryRoot, err = canonicalPolicyPath(repositoryRoot)
+	if err != nil {
+		return nil, fmt.Errorf("canonicalPolicyPath: %w", err)
+	}
+	relative, err := baselineRepositoryRelative(repositoryRoot, scanPath)
 	if err != nil || !filepath.IsLocal(relative) {
 		return nil, fmt.Errorf("%w: %s", core.ErrRootOutsideProject, scanPath)
 	}
-	current, err := selectedPolicyScopes(repositoryRoot, repositoryRoot, relative, flags.IsFrozen(ctx))
+	replacements := newPolicyReplacementSources(ctx.Context, repositoryRoot, repositoryRoot, func() (modules.Cache, error) { return cache, nil }, flags.IsFrozen(ctx))
+	current, err := selectedPolicyScopes(replacements, relative, flags.IsFrozen(ctx))
 	if err != nil {
 		return nil, fmt.Errorf("selectedPolicyScopes: %w", err)
 	}
 	// Retain a native module after deletion of its last proto file, even in
 	// normal mode. Frozen's additional empty-scope checks remain mandatory.
 	if !flags.IsFrozen(ctx) {
-		expanded, expandErr := selectedPolicyScopes(repositoryRoot, repositoryRoot, relative, true)
+		expanded, expandErr := selectedPolicyScopes(replacements, relative, true)
 		if expandErr == nil {
 			current = expanded
 		}
@@ -344,7 +372,8 @@ func (b BreakingCheck) checkV1ExtendedBreakingSource(
 		scopes, known := baselineScopes[ref]
 		if !known {
 			var err error
-			scopes, err = selectedPolicyScopes(snapshot.Root, snapshot.RepositoryRoot, relative, flags.IsFrozen(ctx))
+			baselineReplacements := newPolicyReplacementSources(ctx.Context, snapshot.Root, snapshot.RepositoryRoot, func() (modules.Cache, error) { return cache, nil }, flags.IsFrozen(ctx))
+			scopes, err = selectedPolicyScopes(baselineReplacements, relative, flags.IsFrozen(ctx))
 			if err != nil {
 				return nil, nil, fmt.Errorf("selectedPolicyScopes: %w", err)
 			}
@@ -430,11 +459,11 @@ func (b BreakingCheck) checkV1ExtendedBreakingSource(
 		if err != nil {
 			return nil, fmt.Errorf("baseline %s module %s: %w", cfg.AgainstGitRef, module, err)
 		}
-		app := core.New(core.Options{Logger: log, ImportRoots: currentImports, BreakingCheckConfig: core.BreakingCheckConfig{
+		app := core.New(core.Options{Logger: log, ImportRoots: currentImports.Paths(), ImportFileAllowed: currentImports.FileAllowed(), BreakingCheckConfig: core.BreakingCheckConfig{
 			IgnoreDirs: append(append([]string(nil), ignorePaths...), defaultVendorDir), AgainstGitRef: cfg.AgainstGitRef,
 			FilesCheck: slices.Contains(cfg.Use, core.BreakingCheckFilesCheck), Categories: cfg.Categories, IgnoreUnstable: cfg.IgnoreUnstable,
 		}})
-		findings, err := app.CompareBreaking(ctx.Context, newBreakingWalker(repositoryRoot, currentFiles), newBreakingWalker(snapshot.Root, baselineFiles), baselineImports)
+		findings, err := app.CompareBreakingWithImports(ctx.Context, newBreakingWalker(repositoryRoot, currentFiles), newBreakingWalker(snapshot.Root, baselineFiles), baselineImports.Paths(), baselineImports.FileAllowed())
 		if err != nil {
 			return nil, fmt.Errorf("CompareBreaking module %s against %s: %w", module, cfg.AgainstGitRef, err)
 		}

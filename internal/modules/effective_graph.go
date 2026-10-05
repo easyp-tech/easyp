@@ -139,12 +139,16 @@ func validateLocalOverlay(ctx context.Context, root string, module v1.Module, ca
 	if err != nil {
 		return fmt.Errorf("ensureEffectiveGraph: %w", err)
 	}
-	if err := CheckImportCollisions(root, module.Roots, graph.Sources.Paths()); err != nil {
-		return fmt.Errorf("CheckImportCollisions: %w", err)
-	}
-	unresolved, err := findUnresolvedV1Imports(root, module.Roots, graph.Sources.Paths())
+	own, err := ModuleSources(root, module)
 	if err != nil {
-		return fmt.Errorf("findUnresolvedV1Imports: %w", err)
+		return fmt.Errorf("ModuleSources: %w", err)
+	}
+	if err := CheckSourceCollisions(append(own, graph.Sources...)); err != nil {
+		return fmt.Errorf("CheckSourceCollisions: %w", err)
+	}
+	unresolved, err := findUnresolvedV1ImportsWithSources(root, module.Roots, graph.Sources)
+	if err != nil {
+		return fmt.Errorf("findUnresolvedV1ImportsWithSources: %w", err)
 	}
 	if len(unresolved) > 0 {
 		return fmt.Errorf("module %s: cannot resolve imports %v", module.Name, unresolved)

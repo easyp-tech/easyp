@@ -81,14 +81,6 @@ func ReadLock(path string) (v1.Lock, error) {
 	return lock, nil
 }
 
-func cachedRoots(lock v1.Lock, repository Cache) ([]string, error) {
-	roots, err := CachedSources(lock, repository)
-	if err != nil {
-		return nil, err
-	}
-	return roots.Paths(), nil
-}
-
 // CachedSources reads installed module roots and validates their transitive requirements.
 // It does not install or verify cached contents; call Install first.
 func CachedSources(lock v1.Lock, repository Cache) (SourceRoots, error) {
