@@ -631,17 +631,67 @@
           "additionalProperties": false
         },
         "modules": {
+          "description": "Modules selected for generation. A string selects all sources; a module object adds its own paths/packages, intersected with global filters. Omitted selects the module containing this generator. Identical repeated selections are idempotent; conflicting filters for one module are rejected.",
           "type": "array",
           "items": {
-            "type": "string"
+            "oneOf": [
+              {
+                "type": "string",
+                "minLength": 1
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "module": {
+                    "description": "Module identity, workspace-relative module directory, or declared dependency selected through the consumer manifest and lock.",
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "packages": {
+                    "description": "Exact protobuf packages generated from this module, intersected with its paths and the project's global paths/packages. Omitted or empty means all packages. Each selector must match a resulting source in this module.",
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "pattern": "^[A-Za-z_][A-Za-z0-9_]*(\\.[A-Za-z_][A-Za-z0-9_]*)*$"
+                    }
+                  },
+                  "paths": {
+                    "description": "Literal files or directory subtrees relative to the selected module directory, not its protobuf import roots or the generator file. Empty or omitted means all module sources; . selects the whole module. Paths are intersected with generate.packages and module-local filters, must be canonical portable relative names, and never change import roots or required imports. Distinct from plugins.opts.paths, which controls plugin output layout. Each selector must match a resulting source in this module.",
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "not": {
+                        "pattern": "[\\\\:*?\\[\\]\"\u003c\u003e|\\x00-\\x20\\x7f-\\x9f   - \u2028\u2029  　﻿]"
+                      },
+                      "pattern": "^(\\.|([^/.\\\\:*?\\[\\]\"\u003c\u003e|\\x00-\\x20\\x7f-\\x9f   - \u2028\u2029  　﻿]|\\.[^/.\\\\:*?\\[\\]\"\u003c\u003e|\\x00-\\x20\\x7f-\\x9f   - \u2028\u2029  　﻿]|\\.\\.[^/\\\\:*?\\[\\]\"\u003c\u003e|\\x00-\\x20\\x7f-\\x9f   - \u2028\u2029  　﻿])[^/\\\\:*?\\[\\]\"\u003c\u003e|\\x00-\\x20\\x7f-\\x9f   - \u2028\u2029  　﻿]*(/([^/.\\\\:*?\\[\\]\"\u003c\u003e|\\x00-\\x20\\x7f-\\x9f   - \u2028\u2029  　﻿]|\\.[^/.\\\\:*?\\[\\]\"\u003c\u003e|\\x00-\\x20\\x7f-\\x9f   - \u2028\u2029  　﻿]|\\.\\.[^/\\\\:*?\\[\\]\"\u003c\u003e|\\x00-\\x20\\x7f-\\x9f   - \u2028\u2029  　﻿])[^/\\\\:*?\\[\\]\"\u003c\u003e|\\x00-\\x20\\x7f-\\x9f   - \u2028\u2029  　﻿]*)*)$"
+                    }
+                  }
+                },
+                "additionalProperties": false,
+                "required": [
+                  "module"
+                ]
+              }
+            ]
           }
         },
         "packages": {
-          "description": "Exact protobuf packages among selected modules. Empty means all source files. Imports remain available for compilation; with_imports separately controls dependency generation.",
+          "description": "Exact protobuf packages among selected modules, intersected with global paths and each module's paths/packages. Omitted or empty means all packages. Each selector must match a resulting source in at least one selected module. Imports remain available for compilation; with_imports separately controls dependency generation.",
           "type": "array",
           "items": {
             "type": "string",
             "pattern": "^[A-Za-z_][A-Za-z0-9_]*(\\.[A-Za-z_][A-Za-z0-9_]*)*$"
+          }
+        },
+        "paths": {
+          "description": "Literal files or directory subtrees relative to the selected module directory, not its protobuf import roots or the generator file. Empty or omitted means all module sources; . selects the whole module. Paths are intersected with generate.packages and module-local filters, must be canonical portable relative names, and never change import roots or required imports. Distinct from plugins.opts.paths, which controls plugin output layout. Each selector must match a resulting source across selected modules; module-local filters apply too. These filters can be used without generate.modules.",
+          "type": "array",
+          "items": {
+            "type": "string",
+            "not": {
+              "pattern": "[\\\\:*?\\[\\]\"\u003c\u003e|\\x00-\\x20\\x7f-\\x9f   - \u2028\u2029  　﻿]"
+            },
+            "pattern": "^(\\.|([^/.\\\\:*?\\[\\]\"\u003c\u003e|\\x00-\\x20\\x7f-\\x9f   - \u2028\u2029  　﻿]|\\.[^/.\\\\:*?\\[\\]\"\u003c\u003e|\\x00-\\x20\\x7f-\\x9f   - \u2028\u2029  　﻿]|\\.\\.[^/\\\\:*?\\[\\]\"\u003c\u003e|\\x00-\\x20\\x7f-\\x9f   - \u2028\u2029  　﻿])[^/\\\\:*?\\[\\]\"\u003c\u003e|\\x00-\\x20\\x7f-\\x9f   - \u2028\u2029  　﻿]*(/([^/.\\\\:*?\\[\\]\"\u003c\u003e|\\x00-\\x20\\x7f-\\x9f   - \u2028\u2029  　﻿]|\\.[^/.\\\\:*?\\[\\]\"\u003c\u003e|\\x00-\\x20\\x7f-\\x9f   - \u2028\u2029  　﻿]|\\.\\.[^/\\\\:*?\\[\\]\"\u003c\u003e|\\x00-\\x20\\x7f-\\x9f   - \u2028\u2029  　﻿])[^/\\\\:*?\\[\\]\"\u003c\u003e|\\x00-\\x20\\x7f-\\x9f   - \u2028\u2029  　﻿]*)*)$"
           }
         }
       },
@@ -654,7 +704,7 @@
           "type": "object",
           "properties": {
             "package_prefix": {
-              "description": "Sets go_package without enabling managed defaults for other languages; full managed mode requires generate.managed.enabled.",
+              "description": "Optional Go prefix. Omitted allows inheritance; explicit empty blocks prefix inheritance. A nonempty value sets go_package without enabling managed defaults for other languages; full managed mode requires generate.managed.enabled. Migration does not create this setting.",
               "type": "string"
             }
           },

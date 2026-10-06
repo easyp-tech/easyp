@@ -56,13 +56,11 @@ func generateV1DescriptorSet(ctx context.Context, log logger.Logger, cache modul
 
 func prepareDescriptorTargets(ctx context.Context, log logger.Logger, cache modules.Cache, request Request, targets []generationTarget) ([]preparedDescriptorTarget, error) {
 	prepared := make([]preparedDescriptorTarget, 0, len(targets))
-	seen := make(map[string]bool)
-	requested := make(map[string][]string)
-	matched := make(map[string]map[string]bool)
+	seen := make(map[string]v1ModuleSelection)
+	requested := make(map[string]*sourceSelectorMatches)
 	for _, target := range targets {
-		if len(target.config.Generate.Packages) > 0 {
-			requested[target.configPath] = target.config.Generate.Packages
-			matched[target.configPath] = make(map[string]bool)
+		if target.config.Generate.HasSourceSelectors() {
+			requested[target.configPath] = newSourceSelectorMatches(target.config.Generate.Packages, target.config.Generate.Paths)
 		}
 	}
 	for _, target := range targets {
@@ -73,24 +71,29 @@ func prepareDescriptorTargets(ctx context.Context, log logger.Logger, cache modu
 		if err != nil {
 			return nil, fmt.Errorf("resolveV1GenerationModule for %s: %w", target.configPath, err)
 		}
+		key := filepath.Clean(target.configPath) + "\x00" + filepath.Clean(selected.directory)
+		if previous, exists := seen[key]; exists {
+			if !sameSourceSelectors(previous.packages, target.module.packages) || !sameSourceSelectors(previous.paths, target.module.paths) {
+				return nil, fmt.Errorf("%s: generate.modules[%d] and generate.modules[%d] select module %q with conflicting filters", target.configPath, previous.index, target.module.index, selected.module.Name)
+			}
+			continue
+		}
+		seen[key] = target.module
+		moduleSelectors := newSourceSelectorMatches(target.module.packages, target.module.paths)
 		// Options-only selections still validate their graph in frozen mode, but
 		// have no generation work unless descriptor export was requested.
-		if len(target.config.Plugins) == 0 && len(target.config.Generate.Packages) == 0 && request.DescriptorSetOut == "" && request.DescriptorSetOutDir == "" {
+		if len(target.config.Plugins) == 0 && !target.config.Generate.HasSourceSelectors() && request.DescriptorSetOut == "" && request.DescriptorSetOutDir == "" {
 			continue
 		}
-		key := filepath.Clean(target.configPath) + "\x00" + filepath.Clean(selected.directory)
-		if seen[key] {
-			continue
-		}
-		seen[key] = true
 		var files []string
-		if len(target.config.Generate.Packages) > 0 {
-			var matches map[string]bool
-			files, matches, err = selectedPackageFiles(ctx, selected, target.config.Generate.Packages)
+		if selectors, filtered := requested[target.configPath]; filtered {
+			files, err = selectedSourceFiles(ctx, selected, selectors, moduleSelectors)
 			if err != nil {
-				return nil, fmt.Errorf("package selection in %s: %w", target.configPath, err)
+				return nil, fmt.Errorf("selectedSourceFiles for %s: %w", target.configPath, err)
 			}
-			maps.Copy(matched[target.configPath], matches)
+			if err := moduleSelectors.validateMatches(fmt.Sprintf("generate.modules[%d]", target.module.index)); err != nil {
+				return nil, fmt.Errorf("%s: %w", target.configPath, err)
+			}
 			if len(files) == 0 {
 				continue
 			}
@@ -126,17 +129,29 @@ func prepareDescriptorTargets(ctx context.Context, log logger.Logger, cache modu
 		prepared = append(prepared, preparedDescriptorTarget{target: target, selected: selected, plan: plan, full: full, owners: owners, versions: versions, label: label})
 	}
 	for _, path := range slices.Sorted(maps.Keys(requested)) {
-		var unknown []string
-		for _, name := range requested[path] {
-			if !matched[path][name] && !slices.Contains(unknown, name) {
-				unknown = append(unknown, name)
-			}
-		}
-		if len(unknown) > 0 {
-			return nil, fmt.Errorf("%s: generate.packages did not match any selected module source files: %s", path, strings.Join(unknown, ", "))
+		selectors := requested[path]
+		if err := selectors.validateMatches("generate"); err != nil {
+			return nil, fmt.Errorf("%s: %w", path, err)
 		}
 	}
 	return prepared, nil
+}
+
+func sameSourceSelectors(first, second []string) bool {
+	a, b := slices.Clone(first), slices.Clone(second)
+	slices.Sort(a)
+	slices.Sort(b)
+	return slices.Equal(slices.Compact(a), slices.Compact(b))
+}
+
+func unmatchedSourceSelectors(requested []string, matched map[string]bool) []string {
+	var unknown []string
+	for _, name := range requested {
+		if !matched[name] && !slices.Contains(unknown, name) {
+			unknown = append(unknown, name)
+		}
+	}
+	return unknown
 }
 
 func combineDescriptorTargets(targets []preparedDescriptorTarget, includeImports bool) (*descriptorpb.FileDescriptorSet, error) {

@@ -1,52 +1,102 @@
 package generation
 
 import (
-	"bytes"
 	"context"
 	"fmt"
-	"os"
 	"path/filepath"
 	"slices"
 	"strings"
-	"text/scanner"
 
+	v1 "github.com/easyp-tech/easyp/internal/config/v1"
 	"github.com/easyp-tech/easyp/internal/modules"
+	"github.com/easyp-tech/easyp/internal/protosource"
 )
 
-// selectedPackageFiles reads package declarations without compiling unrelated
-// files. Malformed selected files and required imports are rejected by the real
-// compiler later; an unrelated broken declaration is not a generation target.
-func selectedPackageFiles(ctx context.Context, selected v1GenerationModule, packages []string) ([]string, map[string]bool, error) {
+type sourceSelectorMatches struct {
+	packages       []string
+	paths          []string
+	packageMatches map[string]bool
+	pathMatches    map[string]bool
+}
+
+func newSourceSelectorMatches(packages, paths []string) *sourceSelectorMatches {
+	return &sourceSelectorMatches{packages: packages, paths: paths, packageMatches: make(map[string]bool), pathMatches: make(map[string]bool)}
+}
+
+func (s *sourceSelectorMatches) matchesPath(name string) bool {
+	return len(s.paths) == 0 || slices.ContainsFunc(s.paths, func(selector string) bool { return v1.PathSelectorMatches(selector, name) })
+}
+
+func (s *sourceSelectorMatches) matchesPackage(name string) bool {
+	return len(s.packages) == 0 || slices.Contains(s.packages, name)
+}
+
+func (s *sourceSelectorMatches) recordMatches(packageName, path string) {
+	if len(s.packages) > 0 {
+		s.packageMatches[packageName] = true
+	}
+	for _, selector := range s.paths {
+		if v1.PathSelectorMatches(selector, path) {
+			s.pathMatches[selector] = true
+		}
+	}
+}
+
+func (s *sourceSelectorMatches) validateMatches(section string) error {
+	if unknown := unmatchedSourceSelectors(s.packages, s.packageMatches); len(unknown) > 0 {
+		return fmt.Errorf("%s.packages did not match any selected module source files: %s", section, strings.Join(unknown, ", "))
+	}
+	if unknown := unmatchedSourceSelectors(s.paths, s.pathMatches); len(unknown) > 0 {
+		return fmt.Errorf("%s.paths did not match any selected module source files: %s", section, strings.Join(unknown, ", "))
+	}
+	return nil
+}
+
+// selectedSourceFiles intersects literal module-relative paths and exact package
+// names without compiling unrelated files. Package declarations are read only
+// when needed and after the path filter; required imports are compiled later.
+func selectedSourceFiles(ctx context.Context, selected v1GenerationModule, project, module *sourceSelectorMatches) ([]string, error) {
 	roots, err := modules.ModuleSources(selected.directory, selected.module)
 	if err != nil {
-		return nil, nil, fmt.Errorf("ModuleSources: %w", err)
+		return nil, fmt.Errorf("ModuleSources: %w", err)
 	}
-	requested := make(map[string]bool, len(packages))
-	for _, name := range packages {
-		requested[name] = true
-	}
-	matched := make(map[string]bool)
+	allRoots := append(append(modules.SourceRoots(nil), roots...), selected.dependencies...)
 	seen := make(map[string]bool)
 	var files []string
 	for _, root := range roots {
-		err := root.Walk(func(path string) error {
+		err := allRoots.WalkSelected(root, func(path string) bool {
+			relative, err := filepath.Rel(selected.directory, path)
+			return err == nil && project.matchesPath(filepath.ToSlash(relative)) && module.matchesPath(filepath.ToSlash(relative))
+		}, func(path string) error {
 			if err := ctx.Err(); err != nil {
 				return fmt.Errorf("Err: %w", err)
 			}
-			raw, err := os.ReadFile(path)
+			modulePath, err := filepath.Rel(selected.directory, path)
 			if err != nil {
-				return fmt.Errorf("ReadFile: %w", err)
+				return fmt.Errorf("Rel: %w", err)
 			}
-			name := sourcePackage(raw)
-			if !requested[name] {
+			modulePath = filepath.ToSlash(modulePath)
+			if !project.matchesPath(modulePath) || !module.matchesPath(modulePath) {
 				return nil
 			}
+			packageName := ""
+			if len(project.packages) > 0 || len(module.packages) > 0 {
+				raw, err := allRoots.ReadSourceFile(path)
+				if err != nil {
+					return fmt.Errorf("ReadFile: %w", err)
+				}
+				packageName = protosource.Package(raw)
+				if !project.matchesPackage(packageName) || !module.matchesPackage(packageName) {
+					return nil
+				}
+			}
+			project.recordMatches(packageName, modulePath)
+			module.recordMatches(packageName, modulePath)
 			relative, err := filepath.Rel(root.Path, path)
 			if err != nil {
 				return fmt.Errorf("Rel: %w", err)
 			}
 			relative = filepath.ToSlash(relative)
-			matched[name] = true
 			if !seen[relative] {
 				seen[relative] = true
 				files = append(files, relative)
@@ -54,59 +104,9 @@ func selectedPackageFiles(ctx context.Context, selected v1GenerationModule, pack
 			return nil
 		})
 		if err != nil {
-			return nil, nil, fmt.Errorf("WalkProtoFiles: %w", err)
+			return nil, fmt.Errorf("Walk: %w", err)
 		}
 	}
 	slices.Sort(files)
-	return files, matched, nil
-}
-
-// sourcePackage lexes only top-level package declarations. Scanner tokens keep
-// strings and comments opaque, so an option containing "package" cannot select
-// a file. It intentionally does not validate unrelated message definitions.
-func sourcePackage(raw []byte) string {
-	var lex scanner.Scanner
-	lex.Init(bytes.NewReader(raw))
-	lex.Mode = scanner.ScanIdents | scanner.ScanStrings | scanner.ScanChars | scanner.ScanComments | scanner.SkipComments
-	lex.Error = func(*scanner.Scanner, string) {}
-	depth := 0
-	start := true
-	for token := lex.Scan(); token != scanner.EOF; token = lex.Scan() {
-		if depth == 0 && start && token == scanner.Ident && lex.TokenText() == "package" {
-			var parts []string
-			for {
-				if lex.Scan() != scanner.Ident {
-					return ""
-				}
-				parts = append(parts, lex.TokenText())
-				switch lex.Scan() {
-				case ';':
-					return strings.Join(parts, ".")
-				case '.':
-					continue
-				default:
-					return ""
-				}
-			}
-		}
-		switch token {
-		case '{', '(', '[':
-			depth++
-			start = false
-		case '}', ')', ']':
-			if depth > 0 {
-				depth--
-			}
-			start = depth == 0
-		case ';':
-			if depth == 0 {
-				start = true
-			}
-		default:
-			if depth == 0 {
-				start = false
-			}
-		}
-	}
-	return ""
+	return files, nil
 }

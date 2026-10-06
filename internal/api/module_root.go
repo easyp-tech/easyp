@@ -17,7 +17,7 @@ func moduleWorkingDir() (string, error) {
 	if err != nil {
 		policy, lookupErr := workspace.Policy(cwd)
 		if lookupErr == nil {
-			raw, readErr := os.ReadFile(policy)
+			raw, readErr := workspace.ReadFileAt(policy)
 			if readErr == nil && v1.LegacyPolicy(raw) {
 				return "", v1.ErrLegacyConfiguration
 			}

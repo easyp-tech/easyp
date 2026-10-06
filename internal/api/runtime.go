@@ -75,6 +75,7 @@ func buildCore(log logger.Logger, cfg config.Config, importRoots modules.SourceR
 		Logger:                  log,
 		ImportRoots:             importRoots.Paths(),
 		ImportFileAllowed:       importRoots.FileAllowed(),
+		OpenSourceFile:          importRoots.OpenSourceFile,
 		CurrentProjectGitWalker: go_git.New(),
 		BreakingCheckConfig: core.BreakingCheckConfig{
 			IgnoreDirs:     append(append([]string(nil), cfg.BreakingCheck.Ignore...), defaultVendorDir),

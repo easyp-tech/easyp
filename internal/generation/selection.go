@@ -13,6 +13,7 @@ import (
 	v1 "github.com/easyp-tech/easyp/internal/config/v1"
 	"github.com/easyp-tech/easyp/internal/logger"
 	"github.com/easyp-tech/easyp/internal/modules"
+	"github.com/easyp-tech/easyp/internal/sourceview"
 	"github.com/easyp-tech/easyp/internal/workspace"
 )
 
@@ -21,20 +22,25 @@ import (
 type v1ModuleSelection struct {
 	directory string
 	source    string
+	index     int
+	packages  []string
+	paths     []string
 }
 
-func selectV1Modules(repoRoot, configDir string, names []string) ([]v1ModuleSelection, error) {
-	if len(names) == 0 {
+func selectV1Modules(repoRoot, configDir string, entries []v1.GenerateModule) ([]v1ModuleSelection, error) {
+	if len(entries) == 0 {
 		dir, err := generatorV1ModuleDir(repoRoot, configDir)
 		if err != nil {
 			return nil, fmt.Errorf("generatorV1ModuleDir: %w", err)
 		}
 		return []v1ModuleSelection{{directory: dir}}, nil
 	}
-	result := make([]v1ModuleSelection, 0, len(names))
-	for _, name := range names {
+	result := make([]v1ModuleSelection, 0, len(entries))
+	for i, entry := range entries {
+		name := entry.Module
+		selection := v1ModuleSelection{source: name, index: i, packages: entry.Packages, paths: entry.Paths}
 		if filepath.IsAbs(name) {
-			result = append(result, v1ModuleSelection{source: name})
+			result = append(result, selection)
 			continue
 		}
 		path := filepath.Clean(filepath.Join(repoRoot, name))
@@ -45,18 +51,19 @@ func selectV1Modules(repoRoot, configDir string, names []string) ([]v1ModuleSele
 		if !filepath.IsLocal(rel) {
 			return nil, fmt.Errorf("module path %q leaves repository", name)
 		}
-		_, err = os.Stat(filepath.Join(path, v1.ModuleFile))
+		_, err = sourceview.ResolveLocal(context.Background(), repoRoot, filepath.Join(rel, v1.ModuleFile))
 		if errors.Is(err, os.ErrNotExist) {
 			if name == "." || name == ".." || strings.HasPrefix(name, "./") || strings.HasPrefix(name, "../") {
 				return nil, fmt.Errorf("generate.modules entry %q is a local path, but %s has no %s; point to a workspace module directory containing %s, use its module identity, or omit generate.modules to select the module containing this generator", name, path, v1.ModuleFile, v1.ModuleFile)
 			}
-			result = append(result, v1ModuleSelection{source: name})
+			result = append(result, selection)
 			continue
 		}
 		if err != nil {
 			return nil, fmt.Errorf("Stat: %w", err)
 		}
-		result = append(result, v1ModuleSelection{directory: path})
+		selection.directory, selection.source = path, ""
+		result = append(result, selection)
 	}
 	return result, nil
 }
@@ -195,8 +202,12 @@ func readV1GenerationModule(ctx context.Context, cache modules.Cache, directory 
 
 func findV1LocalModuleByName(repoRoot, name string) (string, error) {
 	var found string
-	err := filepath.WalkDir(repoRoot, func(path string, entry fs.DirEntry, walkErr error) error {
+	err := workspace.Walk(repoRoot, func(path string, entry fs.DirEntry, walkErr error) error {
 		if walkErr != nil {
+			// Module lookup reads declarations; source aliases are validated after selection.
+			if filepath.Base(path) != v1.ModuleFile {
+				return nil
+			}
 			return walkErr
 		}
 		if entry.IsDir() {
@@ -208,7 +219,7 @@ func findV1LocalModuleByName(repoRoot, name string) (string, error) {
 		if entry.Name() != v1.ModuleFile {
 			return nil
 		}
-		manifest, err := os.ReadFile(path)
+		manifest, err := workspace.ReadFile(repoRoot, path)
 		if err != nil {
 			return fmt.Errorf("ReadFile: %w", err)
 		}

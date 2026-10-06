@@ -27,6 +27,7 @@ func TestDescribeV1Files(t *testing.T) {
 	}{
 		{name: "default policy", input: DescribeInput{Path: "$.linters.default"}, wantFile: v1.PolicyFile, wantPath: "linters.default", wantField: "linters.default", wantSchema: true},
 		{name: "generator plugin", input: DescribeInput{File: v1.GenerateFile, Path: "plugins[3].out"}, wantFile: v1.GenerateFile, wantPath: "plugins[].out", wantField: "plugins[].out", wantSchema: true},
+		{name: "generation source paths", input: DescribeInput{File: v1.GenerateFile, Path: "generate.paths"}, wantFile: v1.GenerateFile, wantPath: "generate.paths", wantField: "generate.paths", wantSchema: true},
 		{name: "plugin binary path", input: DescribeInput{File: v1.GenerateFile, Path: "plugins[0].path"}, wantFile: v1.GenerateFile, wantPath: "plugins[].path", wantField: "plugins[].path", wantSchema: true},
 		{name: "custom plugin command", input: DescribeInput{File: v1.GenerateFile, Path: "plugins[0].command"}, wantFile: v1.GenerateFile, wantPath: "plugins[].command", wantField: "plugins[].command", wantSchema: true},
 	}
@@ -89,6 +90,7 @@ func TestDescribeNotesForReservedFields(t *testing.T) {
 		want string
 	}{
 		{name: "package filter", file: v1.GenerateFile, path: "generate.packages", want: "exact protobuf packages"},
+		{name: "path filter", file: v1.GenerateFile, path: "generate.paths", want: "literal module-relative"},
 		{name: "linter inheritance", file: v1.PolicyFile, path: "linters.extends", want: "declared-module#policy-path"},
 		{name: "issue path matching", file: v1.PolicyFile, path: "issues.exclude-rules[0].path", want: "relative to the easyp.yaml"},
 		{name: "breaking unstable", file: v1.PolicyFile, path: "breaking.ignore_unstable", want: "both comparison revisions"},
@@ -108,6 +110,34 @@ func TestDescribeNotesForReservedFields(t *testing.T) {
 			assert.Contains(t, strings.Join(got.Fields[0].Notes, " "), tt.want)
 		})
 	}
+}
+
+func TestDescribeGenerationPathsExplainsSelectionAndPluginOptions(t *testing.T) {
+	t.Parallel()
+
+	got, err := Describe(DescribeInput{File: v1.GenerateFile, Path: "generate.paths"})
+
+	require.NoError(t, err)
+	require.Len(t, got.Fields, 1)
+	assert.Contains(t, got.Fields[0].Description, "intersected with generate.packages")
+	notes := strings.Join(got.Notes, " ")
+	for _, contract := range []string{"component-bounded", "even without plugins", "Module roots", "imports", "plugins.opts.paths"} {
+		assert.Contains(t, notes, contract)
+	}
+	require.NotEmpty(t, got.Examples)
+	assert.Contains(t, got.Examples[0].YAML, "paths: [mcp]")
+	assert.Contains(t, got.Examples[0].YAML, "paths=source_relative")
+}
+
+func TestDescribeModuleScopedSourceSelectors(t *testing.T) {
+	t.Parallel()
+	got, err := Describe(DescribeInput{File: v1.GenerateFile, Path: "generate.modules[0].paths"})
+	require.NoError(t, err)
+	assert.Equal(t, "generate.modules[].paths", got.SelectedPath)
+	require.Len(t, got.Fields, 1)
+	assert.Contains(t, got.Fields[0].Description, "relative to the selected module directory")
+	assert.Contains(t, got.Fields[0].Description, "in this module")
+	assert.Equal(t, "array", got.Schema["type"])
 }
 
 func TestDescribeUsesGeneratedSchema(t *testing.T) {

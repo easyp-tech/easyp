@@ -56,6 +56,8 @@ type Plan struct {
 	alreadyV1 bool
 	inputs    []legacyDirectory
 	roots     []string
+	packages  []string
+	paths     []string
 	sources   map[string]string
 }
 
@@ -116,11 +118,11 @@ func (p *Plan) Apply() error {
 
 func (p *Plan) verifySourceSelection() error {
 	if len(p.inputs) > 0 {
-		sources, err := proveLocalSelection(p.tx.root, p.inputs, p.roots)
+		selection, err := proveLocalSelection(p.tx.requestedRoot, p.inputs, p.roots)
 		if err != nil {
 			return fmt.Errorf("proveLocalSelection: %w", err)
 		}
-		if !maps.Equal(sources, p.sources) {
+		if !maps.Equal(selection.files, p.sources) || !slices.Equal(selection.packages, p.packages) || !slices.Equal(selection.paths, p.paths) {
 			return fmt.Errorf("local .proto source selection changed since planning; preview again")
 		}
 	}
@@ -142,7 +144,11 @@ func Build(ctx context.Context, options Options) (*Plan, error) {
 	}
 	p := &Plan{tx: tx}
 	for _, name := range []string{v1.PolicyFile, v1.GenerateFile, v1.ModuleFile, v1.LockFile, "easyp.lock", "easyp.yaml.v0.bak", "protobuf.mod.v0.bak"} {
-		if _, err := tx.capture(name); err != nil {
+		capture := tx.captureInput
+		if strings.HasSuffix(name, ".v0.bak") {
+			capture = tx.capture
+		}
+		if _, err := capture(name); err != nil {
 			return nil, fmt.Errorf("capture: %w", err)
 		}
 	}
@@ -176,12 +182,25 @@ func Build(ctx context.Context, options Options) (*Plan, error) {
 	if err := checkManagedLocal(cfg, options.Module, len(inputs) > 0); err != nil {
 		return nil, fmt.Errorf("checkManagedLocal: %w", err)
 	}
-	p.sources, err = proveLocalSelection(tx.root, inputs, roots)
+	selection, err := proveLocalSelection(tx.requestedRoot, inputs, roots)
 	if err != nil {
 		return nil, fmt.Errorf("proveLocalSelection: %w", err)
 	}
+	p.sources, p.packages, p.paths = selection.files, selection.packages, selection.paths
+	if len(p.packages) > 0 || len(p.paths) > 0 {
+		for _, input := range cfg.Generate.Inputs {
+			if input.GitRepo != nil {
+				return nil, fmt.Errorf("inferred local selectors would change the generation scope of whole-module Git inputs; migrate separate generation projects manually")
+			}
+		}
+		if len(p.paths) > 0 {
+			p.warnings = append(p.warnings, "Legacy directory selection is preserved through literal generate.paths selectors relative to the module directory. Import roots and source paths stay unchanged; files outside these paths do not become targets even when they declare the same package.")
+		} else {
+			p.warnings = append(p.warnings, "Legacy directory selection is preserved through exact generate.packages selectors. Import roots and source paths stay unchanged; future files declaring those packages also participate in generation.")
+		}
+	}
 	for _, source := range p.sources {
-		if _, err := tx.capture(source); err != nil {
+		if _, err := tx.captureInput(source); err != nil {
 			return nil, fmt.Errorf("capture: %w", err)
 		}
 	}
@@ -210,6 +229,11 @@ func Build(ctx context.Context, options Options) (*Plan, error) {
 		if !slices.Contains(selected, name) {
 			selected = append(selected, name)
 		}
+	}
+	// The generator already belongs to this module. Keep explicit selections
+	// only when legacy Git inputs add other generation modules.
+	if len(inputs) > 0 && len(selected) == 1 && selected[0] == options.Module {
+		selected = nil
 	}
 	manifest := tx.expected[v1.ModuleFile]
 	nativeManifest := manifest.exists && v1.IsModuleManifest(manifest.data)
@@ -241,7 +265,7 @@ func Build(ctx context.Context, options Options) (*Plan, error) {
 	if err != nil {
 		return nil, fmt.Errorf("convertPolicy: %w", err)
 	}
-	generateBytes, err := convertGenerate(cfg, selected)
+	generateBytes, err := convertGenerate(cfg, selected, p.packages, p.paths)
 	if err != nil {
 		return nil, fmt.Errorf("convertGenerate: %w", err)
 	}
@@ -322,6 +346,9 @@ func (p *Plan) addOutput(name string, content []byte, replaceLegacy bool) error 
 	current, err := p.tx.capture(name)
 	if err != nil {
 		return fmt.Errorf("capture: %w", err)
+	}
+	if len(current.links) > 0 && !replaceLegacy && !bytes.Equal(current.data, content) {
+		return fmt.Errorf("destination %q must be a regular file", name)
 	}
 	mode := os.FileMode(0o644)
 	if current.exists {

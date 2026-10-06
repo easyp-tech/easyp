@@ -3,6 +3,7 @@ package core
 
 import (
 	"errors"
+	"io"
 	"maps"
 	"slices"
 
@@ -24,6 +25,8 @@ type Core struct {
 	inputs                Inputs
 	importRoots           []string
 	importFileAllowed     func(string) bool
+	sourceFileOpen        func(string) (io.ReadCloser, error)
+	sourceBoundary        string
 	fileModules           map[string]string
 	managedMode           ManagedModeConfig
 	goPackageOutputPrefix string
@@ -57,7 +60,9 @@ type Options struct {
 	ImportRoots         []string
 	// ImportFileAllowed restricts physical imports and module inputs to the
 	// files selected by dependency metadata. Nil permits every file.
-	ImportFileAllowed       func(string) bool
+	ImportFileAllowed func(string) bool
+	// OpenSourceFile opens logical sources within their owning bounded roots.
+	OpenSourceFile          func(string) (io.ReadCloser, error)
 	FileModules             map[string]string
 	CurrentProjectGitWalker CurrentProjectGitWalker
 	BreakingCheckConfig     BreakingCheckConfig
@@ -82,6 +87,7 @@ func New(options Options) *Core {
 		inputs:                  options.Inputs,
 		importRoots:             slices.Clone(options.ImportRoots),
 		importFileAllowed:       options.ImportFileAllowed,
+		sourceFileOpen:          options.OpenSourceFile,
 		fileModules:             maps.Clone(options.FileModules),
 		currentProjectGitWalker: options.CurrentProjectGitWalker,
 		breakingCheckConfig:     options.BreakingCheckConfig,

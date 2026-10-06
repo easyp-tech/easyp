@@ -3,6 +3,7 @@ package api
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	iofs "io/fs"
 	"os"
@@ -20,11 +21,12 @@ import (
 	"github.com/easyp-tech/easyp/internal/modules"
 	policyresolver "github.com/easyp-tech/easyp/internal/policy"
 	"github.com/easyp-tech/easyp/internal/rules"
+	"github.com/easyp-tech/easyp/internal/sourceview"
 	"github.com/easyp-tech/easyp/internal/workspace"
 )
 
 func (l Lint) actionV1(ctx *cli.Context, log logger.Logger, configPath, projectRoot, lintRoot string) error {
-	raw, err := os.ReadFile(configPath)
+	raw, err := workspace.ReadFile(projectRoot, configPath)
 	if err != nil {
 		return fmt.Errorf("ReadFile: %w", err)
 	}
@@ -34,7 +36,11 @@ func (l Lint) actionV1(ctx *cli.Context, log logger.Logger, configPath, projectR
 	}
 	searchDir := filepath.Join(lintRoot, ctx.String(flagLintDirectoryPath.Name))
 	var files []string
-	err = filepath.WalkDir(searchDir, func(path string, entry iofs.DirEntry, walkErr error) error {
+	err = workspace.WalkAt(projectRoot, searchDir, func(path string, entry iofs.DirEntry, walkErr error) error {
+		if errors.Is(walkErr, sourceview.ErrNestedRepository) && filepath.Ext(path) == ".proto" && !policySourceExcluded(projectRoot, path) {
+			files = append(files, path)
+			return nil
+		}
 		if walkErr != nil {
 			return walkErr
 		}

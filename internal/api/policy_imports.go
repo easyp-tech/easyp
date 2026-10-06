@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/easyp-tech/easyp/internal/workspace"
 	"os"
 	"path/filepath"
 
@@ -160,7 +161,7 @@ func (s *policyReplacementSources) replacementManifest(directory string) (v1.Mod
 	if module, known := s.manifests[directory]; known {
 		return module, nil
 	}
-	raw, err := os.ReadFile(filepath.Join(directory, v1.ModuleFile))
+	raw, err := workspace.ReadFileAt(filepath.Join(directory, v1.ModuleFile))
 	if err != nil && !errors.Is(err, os.ErrNotExist) {
 		return v1.Module{}, fmt.Errorf("ReadFile: %w", err)
 	}

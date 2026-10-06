@@ -3,6 +3,7 @@ package core
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	stdfs "io/fs"
 	"log/slog"
@@ -25,6 +26,7 @@ import (
 	pluginexecutor "github.com/easyp-tech/easyp/internal/adapters/plugin"
 	"github.com/easyp-tech/easyp/internal/core/path_helpers"
 	"github.com/easyp-tech/easyp/internal/fs/fs"
+	"github.com/easyp-tech/easyp/internal/sourceview"
 	"github.com/easyp-tech/easyp/internal/version"
 )
 
@@ -73,6 +75,7 @@ func (c *Core) PrepareGenerationFiles(ctx context.Context, root string, files []
 
 func (c *Core) prepareGeneration(ctx context.Context, root string, selected []string) (*GenerationPlan, error) {
 	c.logger.Info(ctx, "preparing code generation", slog.String("root", root))
+	c.sourceBoundary = root
 	imports := append([]string{}, c.importRoots...)
 	var files []string
 	selection := make(map[string]bool, len(selected))
@@ -90,6 +93,16 @@ func (c *Core) prepareGeneration(ctx context.Context, root string, selected []st
 		}
 
 		err := fsWalker.WalkDir(func(walkPath string, err error) error {
+			addedFile := stripPrefix(walkPath, inputFilesDir.Root)
+			if selected != nil && filepath.Ext(walkPath) == ".proto" && !selection[addedFile] {
+				return nil
+			}
+			if c.importFileAllowed != nil && !c.importFileAllowed(filepath.Join(root, walkPath)) {
+				return nil
+			}
+			if errors.Is(err, sourceview.ErrNestedRepository) && c.sourceFileOpen != nil && c.importFileAllowed != nil && c.importFileAllowed(filepath.Join(root, walkPath)) {
+				err = nil
+			}
 			switch {
 			case err != nil:
 				return err
@@ -105,7 +118,7 @@ func (c *Core) prepareGeneration(ctx context.Context, root string, selected []st
 			}
 
 			// Convert to relative path matching proto import format
-			addedFile := stripPrefix(walkPath, inputFilesDir.Root)
+			addedFile = stripPrefix(walkPath, inputFilesDir.Root)
 			if selected != nil && !selection[addedFile] {
 				return nil
 			}

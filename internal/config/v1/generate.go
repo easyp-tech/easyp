@@ -20,16 +20,31 @@ type Generate struct {
 	Options                  GenerateOptions `yaml:"options"`
 }
 
-// GenerateTargets selects modules and their managed descriptor options.
+// GenerateTargets selects module sources and their managed descriptor options.
 type GenerateTargets struct {
-	Modules  []string           `yaml:"modules"`
+	Modules  []GenerateModule   `yaml:"modules"`
 	Packages []string           `yaml:"packages"`
+	Paths    []string           `yaml:"paths"`
 	Managed  config.ManagedMode `yaml:"managed"`
 }
 
 // GenerateOptions contains language-specific generation settings.
 type GenerateOptions struct {
 	Go GoOptions `yaml:"go"`
+}
+
+// HasSourceSelectors reports whether either the project or a selected module
+// restricts generated sources.
+func (g GenerateTargets) HasSourceSelectors() bool {
+	if len(g.Packages) > 0 || len(g.Paths) > 0 {
+		return true
+	}
+	for _, module := range g.Modules {
+		if module.HasSourceSelectors() {
+			return true
+		}
+	}
+	return false
 }
 
 // GoOptions controls the Go package prefix. A nil prefix allows inheritance.
@@ -58,7 +73,15 @@ func ParseGenerate(r io.Reader) (Generate, error) {
 	if result.Version != "v1" {
 		return Generate{}, fmt.Errorf("easyp.gen.yaml version must be v1")
 	}
+	for i, module := range result.Generate.Modules {
+		if err := module.Validate(); err != nil {
+			return Generate{}, fmt.Errorf("generate.modules[%d]: %w", i, err)
+		}
+	}
 	if err := ValidatePackageSelectors(result.Generate.Packages); err != nil {
+		return Generate{}, err
+	}
+	if err := ValidatePathSelectors(result.Generate.Paths); err != nil {
 		return Generate{}, err
 	}
 	if err := result.Generate.Managed.Validate(); err != nil {

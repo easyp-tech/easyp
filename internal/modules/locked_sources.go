@@ -3,6 +3,7 @@ package modules
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -11,6 +12,7 @@ import (
 	"golang.org/x/mod/semver"
 
 	v1 "github.com/easyp-tech/easyp/internal/config/v1"
+	"github.com/easyp-tech/easyp/internal/sourceview"
 )
 
 // EnsureLockedSources loads import roots from verified cached modules
@@ -65,8 +67,8 @@ func unreplacedRequirements(requirements []v1.Requirement, replaced map[string]b
 
 // ReadLock parses a lockfile without installing or changing dependencies.
 func ReadLock(path string) (v1.Lock, error) {
-	raw, err := os.ReadFile(path)
-	if os.IsNotExist(err) {
+	raw, err := sourceview.ReadLocal(context.Background(), filepath.Dir(path), filepath.Base(path))
+	if errors.Is(err, os.ErrNotExist) {
 		if _, legacyErr := os.Stat(filepath.Join(filepath.Dir(path), "easyp.lock")); legacyErr == nil {
 			return v1.Lock{}, fmt.Errorf("%w: easyp.lock needs verified conversion, not renaming", v1.ErrLegacyConfiguration)
 		}
