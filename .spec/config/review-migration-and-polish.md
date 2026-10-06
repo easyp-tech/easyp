@@ -37,6 +37,14 @@ archive hash proves historical contents; the native regular-file tree hash is
 computed separately. Archive path/content equivalence is checked even for an
 initial migration without a historical lock.
 
+Git index framing, stage and local-path validation live in the pure
+internal/adapters/gitindex parser. Snapshot selection and metadata preflight
+apply their own mode policies. Migration reads one index, records the selected
+regular files and omitted auxiliary links, then verifies historical contents
+in migration_integrity.go. FetchMigration keeps source equivalence and native
+hash calculation as separate steps; no-link whole-tree proof and archive-only
+proof after omitted links remain distinct.
+
 The application transaction stages all results and .v0.bak recovery copies,
 checks observed contents/permissions/source scope again, and rolls back ordinary
 failures. Conflicting existing files and unsafe symlink destinations are refused.
