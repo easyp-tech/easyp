@@ -25,7 +25,7 @@ FROM alpine:3.22
 
 # Keep package pins aligned with the Alpine release; override for verified updates.
 ARG CA_CERTIFICATES_VERSION=20260909-r0
-ARG TZDATA_VERSION=2026d-r0
+ARG TZDATA_VERSION=2026e-r0
 ARG GIT_VERSION=2.49.1-r0
 ARG BASH_VERSION=5.2.37-r0
 
