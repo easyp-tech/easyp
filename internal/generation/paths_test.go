@@ -29,7 +29,7 @@ func TestRunPathSelectionKeepsRequiredImports(t *testing.T) {
 			root := t.TempDir()
 			files := map[string]string{
 				"protobuf.mod":             "module example.com/app\nroots proto\n",
-				"easyp.gen.yaml":           "version: v1\ngenerate:\n  paths: [api]\n  packages: [api.v1]\n",
+				"easyp.gen.yaml":           "version: v1\ngenerate:\n  paths: [proto/api]\n  packages: [api.v1]\n",
 				"proto/api/service.proto":  "syntax = \"proto3\"; package api.v1; import \"common/types.proto\"; message Service { common.v1.Type type = 1; }",
 				"proto/common/types.proto": "syntax = \"proto3\"; package common.v1; message Type {}",
 				"proto/api-copy/bad.proto": "syntax = \"proto3\"; package api.v1; message Broken {",
@@ -63,10 +63,10 @@ func TestRunSourceSelectorsMatchAcrossModules(t *testing.T) {
 		want     []string
 		wantErr  string
 	}{
-		{name: "aggregate_each_selector_across_modules", packages: []string{"first.v1", "second.v1"}, paths: []string{"api/first.proto", "api/second.proto"}, want: []string{"api/first.proto", "api/second.proto"}},
-		{name: "skip_module_without_combined_match", packages: []string{"first.v1"}, paths: []string{"api"}, want: []string{"api/first.proto"}},
-		{name: "unmatched_package_after_path_filter", packages: []string{"first.v1", "second.v1"}, paths: []string{"api/first.proto"}, wantErr: "generate.packages did not match any selected module source files: second.v1"},
-		{name: "unmatched_path_after_package_filter", packages: []string{"first.v1"}, paths: []string{"api/first.proto", "api/second.proto"}, wantErr: "generate.paths did not match any selected module source files: api/second.proto"},
+		{name: "aggregate_each_selector_across_modules", packages: []string{"first.v1", "second.v1"}, paths: []string{"proto/api/first.proto", "proto/api/second.proto"}, want: []string{"api/first.proto", "api/second.proto"}},
+		{name: "skip_module_without_combined_match", packages: []string{"first.v1"}, paths: []string{"proto/api"}, want: []string{"api/first.proto"}},
+		{name: "unmatched_package_after_path_filter", packages: []string{"first.v1", "second.v1"}, paths: []string{"proto/api/first.proto"}, wantErr: "generate.packages did not match any selected module source files: second.v1"},
+		{name: "unmatched_path_after_package_filter", packages: []string{"first.v1"}, paths: []string{"proto/api/first.proto", "proto/api/second.proto"}, wantErr: "generate.paths did not match any selected module source files: proto/api/second.proto"},
 		{name: "dot_with_package_filter", packages: []string{"first.v1"}, paths: []string{"."}, want: []string{"api/first.proto"}},
 	}
 	for _, tt := range tests {
@@ -161,12 +161,13 @@ func TestSelectedSourceFilesSkipsReadingPathExcludedFiles(t *testing.T) {
 	require.NoError(t, os.Symlink(filepath.Join(root, "absent.proto"), filepath.Join(root, "unreadable.proto")))
 	selected := v1GenerationModule{directory: root, module: v1.Module{Name: "example.com/app", Roots: []string{"."}}}
 
-	files, packages, paths, err := selectedSourceFiles(t.Context(), selected, []string{"item.v1"}, []string{"api"})
+	selectors := newSourceSelectorMatches([]string{"item.v1"}, []string{"api"})
+	files, err := selectedSourceFiles(t.Context(), selected, selectors, newSourceSelectorMatches(nil, nil))
 
 	require.NoError(t, err)
 	assert.Equal(t, []string{"api/item.proto"}, files)
-	assert.Equal(t, map[string]bool{"item.v1": true}, packages)
-	assert.Equal(t, map[string]bool{"api": true}, paths)
+	assert.Equal(t, map[string]bool{"item.v1": true}, selectors.packageMatches)
+	assert.Equal(t, map[string]bool{"api": true}, selectors.pathMatches)
 }
 
 func TestSelectedSourceFilesKeepsSourceBoundaries(t *testing.T) {
@@ -178,10 +179,11 @@ func TestSelectedSourceFilesKeepsSourceBoundaries(t *testing.T) {
 	writeV1GenerateFixture(t, root, "nested/nested.proto", "syntax = \"proto3\"; package item.v1; message Nested {}")
 	selected := v1GenerationModule{directory: root, module: v1.Module{Name: "example.com/app", Roots: []string{"."}}}
 
-	files, packages, paths, err := selectedSourceFiles(t.Context(), selected, []string{"item.v1"}, []string{".", ".sources", "nested"})
+	selectors := newSourceSelectorMatches([]string{"item.v1"}, []string{".", ".sources", "nested"})
+	files, err := selectedSourceFiles(t.Context(), selected, selectors, newSourceSelectorMatches(nil, nil))
 
 	require.NoError(t, err)
 	assert.Equal(t, []string{"api/item.proto"}, files)
-	assert.Equal(t, map[string]bool{"item.v1": true}, packages)
-	assert.Equal(t, map[string]bool{".": true}, paths)
+	assert.Equal(t, map[string]bool{"item.v1": true}, selectors.packageMatches)
+	assert.Equal(t, map[string]bool{".": true}, selectors.pathMatches)
 }

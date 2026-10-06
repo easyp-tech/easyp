@@ -216,7 +216,8 @@ Flag-only invocation previews without file writes unless <code>--write</code> is
 
 Local directory selection may become literal <code>generate.paths</code> selectors
 without moving sources. The plan compares whole roots, then the original
-import-relative paths, then complete protobuf packages for mixed-root cases.
+module-directory-relative paths, then complete protobuf packages for cases
+that cannot be represented by literal paths.
 Each candidate must preserve the exact import-name-to-physical-source map.
 Omitted or empty legacy roots keep <code>.</code>; native manifests with no
 <code>roots</code> use that same default. Same-package files outside selected

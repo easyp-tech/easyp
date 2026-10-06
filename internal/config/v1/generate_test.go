@@ -21,7 +21,7 @@ options:
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got.Generate.Modules[0] != "proto/user" || got.Plugins[0].Name != "go" || got.Options.Go.PackagePrefix == nil || *got.Options.Go.PackagePrefix != "github.com/acme/gen/go" {
+	if got.Generate.Modules[0].Module != "proto/user" || got.Plugins[0].Name != "go" || got.Options.Go.PackagePrefix == nil || *got.Options.Go.PackagePrefix != "github.com/acme/gen/go" {
 		t.Fatalf("unexpected generator: %#v", got)
 	}
 }

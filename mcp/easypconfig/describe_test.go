@@ -90,7 +90,7 @@ func TestDescribeNotesForReservedFields(t *testing.T) {
 		want string
 	}{
 		{name: "package filter", file: v1.GenerateFile, path: "generate.packages", want: "exact protobuf packages"},
-		{name: "path filter", file: v1.GenerateFile, path: "generate.paths", want: "literal proto import-relative"},
+		{name: "path filter", file: v1.GenerateFile, path: "generate.paths", want: "literal module-relative"},
 		{name: "linter inheritance", file: v1.PolicyFile, path: "linters.extends", want: "declared-module#policy-path"},
 		{name: "issue path matching", file: v1.PolicyFile, path: "issues.exclude-rules[0].path", want: "relative to the easyp.yaml"},
 		{name: "breaking unstable", file: v1.PolicyFile, path: "breaking.ignore_unstable", want: "both comparison revisions"},
@@ -127,6 +127,17 @@ func TestDescribeGenerationPathsExplainsSelectionAndPluginOptions(t *testing.T) 
 	require.NotEmpty(t, got.Examples)
 	assert.Contains(t, got.Examples[0].YAML, "paths: [mcp]")
 	assert.Contains(t, got.Examples[0].YAML, "paths=source_relative")
+}
+
+func TestDescribeModuleScopedSourceSelectors(t *testing.T) {
+	t.Parallel()
+	got, err := Describe(DescribeInput{File: v1.GenerateFile, Path: "generate.modules[0].paths"})
+	require.NoError(t, err)
+	assert.Equal(t, "generate.modules[].paths", got.SelectedPath)
+	require.Len(t, got.Fields, 1)
+	assert.Contains(t, got.Fields[0].Description, "relative to the selected module directory")
+	assert.Contains(t, got.Fields[0].Description, "in this module")
+	assert.Equal(t, "array", got.Schema["type"])
 }
 
 func TestDescribeUsesGeneratedSchema(t *testing.T) {

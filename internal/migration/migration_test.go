@@ -129,7 +129,7 @@ generate:
 	assert.Equal(t, "v1.2.3", gen.Plugins[1].Version)
 	assert.Equal(t, "${GO_PREFIX}", gen.Generate.Managed.Override[0].Value)
 	assert.Equal(t, "foo", gen.Generate.Managed.Override[0].Path)
-	assert.Equal(t, []string{"example.com/acme/api"}, gen.Generate.Modules)
+	assert.Empty(t, gen.Generate.Modules)
 	module, err := v1.ParseModule(bytes.NewReader(outputContent(t, plan, "protobuf.mod")))
 	require.NoError(t, err)
 	assert.Equal(t, []string{"proto"}, module.Roots)

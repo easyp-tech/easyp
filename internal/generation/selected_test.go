@@ -210,7 +210,7 @@ func TestSelectV1ModulesExplainsMissingLocalModule(t *testing.T) {
 	configDir := filepath.Join(root, "backend")
 	require.NoError(t, os.MkdirAll(configDir, 0o755))
 
-	_, err := selectV1Modules(root, configDir, []string{"."})
+	_, err := selectV1Modules(root, configDir, []v1.GenerateModule{{Module: "."}})
 
 	require.ErrorContains(t, err, "generate.modules entry \".\" is a local path")
 	require.ErrorContains(t, err, "protobuf.mod")

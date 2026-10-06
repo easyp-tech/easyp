@@ -44,12 +44,23 @@ the selected module graph; local replacements remain forbidden in frozen mode.
 
 ## Literal paths
 
-<code>generate.paths</code> selects exact proto import-relative files or directory
+<code>generate.paths</code> selects exact module-relative files or directory
 subtrees across the project's selected modules. Empty means all module sources;
 <code>.</code> explicitly selects all. Matching is component-bounded: <code>mcp</code>
 does not select <code>mcp-copy</code>. Canonical relative paths are required;
 absolute paths, traversal, backslashes and globs are rejected. These selectors
 are separate from plugin <code>opts.paths</code>, which controls output layout.
+The base is each selected module's directory, not its import roots or the
+generator file. For roots <code>api</code>, <code>api/easyp</code> selects files
+whose compiler import names start with <code>easyp/</code>.
+
+Module entries may be strings or objects with <code>module</code>, optional
+<code>paths</code> and optional <code>packages</code>. Module filters intersect the
+global filters. Global selectors must match across selected modules; scoped
+selectors must match their own module's final sources. Identical repeated
+selections are idempotent (selector order and repetition do not matter);
+conflicting selectors for one resolved module in a project fail before plugins.
+Global filters remain available without listing a module.
 
 ~~~yaml
 version: v1
@@ -76,6 +87,9 @@ selection, alias/boundary changes and local filters combined with whole-module
 Git generation inputs remain rejected. Future same-package build copies outside
 a selected directory do not widen that directory's targets. Package fallback
 previews still warn that future files declaring selected packages participate.
+The sole local module is inferred from the generator's location rather than
+repeated in <code>generate.modules</code>. Migration does not add an unconfigured
+<code>options.go.package_prefix</code>; omitted values retain normal inheritance.
 
 Regressions verify exact/prefix distinction, multiple files, multiple modules,
 no-plugin failures, invalid unselected/required sources, custom options, per-

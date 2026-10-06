@@ -101,7 +101,7 @@ func proveLocalSelection(root string, inputs []legacyDirectory, roots []string) 
 			return localSourceSelection{}, fmt.Errorf("%s", localSelectionScopeError)
 		}
 	}
-	if selection, ok := tryLocalPathSelection(inputs, legacy, current, allRoots); ok {
+	if selection, ok := tryLocalPathSelection(inputs, legacy, current); ok {
 		return selection, nil
 	}
 	selection, err := proveLocalPackageSelection(root, legacy, current)
@@ -111,10 +111,10 @@ func proveLocalSelection(root string, inputs []legacyDirectory, roots []string) 
 	return selection, nil
 }
 
-func tryLocalPathSelection(inputs []legacyDirectory, legacy, current map[string]string, allRoots bool) (localSourceSelection, bool) {
+func tryLocalPathSelection(inputs []legacyDirectory, legacy, current map[string]string) (localSourceSelection, bool) {
 	pathSet := make(map[string]bool)
 	for _, input := range inputs {
-		pathSet[filepath.ToSlash(input.Path)] = true
+		pathSet[filepath.ToSlash(filepath.Join(input.Root, input.Path))] = true
 	}
 	paths := slices.Sorted(maps.Keys(pathSet))
 	// Invalid optional path syntax does not invalidate a previously supported
@@ -124,17 +124,15 @@ func tryLocalPathSelection(inputs []legacyDirectory, legacy, current map[string]
 	}
 	byPath := make(map[string]string)
 	matchedPaths := make(map[string]bool)
-	for name, physical := range current {
+	for name, modulePath := range current {
 		for _, selector := range paths {
-			if v1.PathSelectorMatches(selector, name) {
-				byPath[name] = physical
+			if v1.PathSelectorMatches(selector, filepath.ToSlash(modulePath)) {
+				byPath[name] = modulePath
 				matchedPaths[selector] = true
 			}
 		}
 	}
-	// A dot selector applies to every root. It cannot preserve a whole input
-	// in one root combined with a narrower input in another root over time.
-	if (!pathSet["."] || allRoots) && len(matchedPaths) == len(paths) && maps.Equal(legacy, byPath) {
+	if len(matchedPaths) == len(paths) && maps.Equal(legacy, byPath) {
 		return localSourceSelection{files: byPath, paths: paths}, true
 	}
 	return localSourceSelection{}, false
