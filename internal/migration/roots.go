@@ -55,6 +55,8 @@ type localSourceSelection struct {
 	paths    []string
 }
 
+const localSelectionScopeError = "v1 roots would change generation scope or .proto import names (including hidden/vendor/nested modules); whole roots, exact paths and complete protobuf packages cannot preserve this configuration; split the module or migrate separate generation projects manually"
+
 // proveLocalSelection compares both the physical files and their import names.
 // Paths preserve literal directory inputs, including future files in those
 // directories. Complete packages are a fallback for mixed-root selections.
@@ -88,16 +90,26 @@ func proveLocalSelection(root string, inputs []legacyDirectory, roots []string) 
 	if maps.Equal(legacy, current) && (allRoots || len(legacy) == 0) {
 		return localSourceSelection{files: current}, nil
 	}
-	const scopeError = "v1 roots would change generation scope or .proto import names (including hidden/vendor/nested modules); whole roots, exact paths and complete protobuf packages cannot preserve this configuration; split the module or migrate separate generation projects manually"
 	// Empty selector lists mean all files at runtime, never no files.
 	if len(legacy) == 0 {
-		return localSourceSelection{}, fmt.Errorf("%s", scopeError)
+		return localSourceSelection{}, fmt.Errorf("%s", localSelectionScopeError)
 	}
 	for name, physical := range legacy {
 		if current[name] != physical {
-			return localSourceSelection{}, fmt.Errorf("%s", scopeError)
+			return localSourceSelection{}, fmt.Errorf("%s", localSelectionScopeError)
 		}
 	}
+	if selection, ok := tryLocalPathSelection(inputs, legacy, current, allRoots); ok {
+		return selection, nil
+	}
+	selection, err := proveLocalPackageSelection(root, legacy, current)
+	if err != nil {
+		return localSourceSelection{}, fmt.Errorf("proveLocalPackageSelection: %w", err)
+	}
+	return selection, nil
+}
+
+func tryLocalPathSelection(inputs []legacyDirectory, legacy, current map[string]string, allRoots bool) (localSourceSelection, bool) {
 	pathSet := make(map[string]bool)
 	for _, input := range inputs {
 		pathSet[filepath.ToSlash(input.Path)] = true
@@ -105,23 +117,28 @@ func proveLocalSelection(root string, inputs []legacyDirectory, roots []string) 
 	paths := slices.Sorted(maps.Keys(pathSet))
 	// Invalid optional path syntax does not invalidate a previously supported
 	// package proof. Public generate.paths validation remains strict.
-	if v1.ValidatePathSelectors(paths) == nil {
-		byPath := make(map[string]string)
-		matchedPaths := make(map[string]bool)
-		for name, physical := range current {
-			for _, selector := range paths {
-				if v1.PathSelectorMatches(selector, name) {
-					byPath[name] = physical
-					matchedPaths[selector] = true
-				}
+	if v1.ValidatePathSelectors(paths) != nil {
+		return localSourceSelection{}, false
+	}
+	byPath := make(map[string]string)
+	matchedPaths := make(map[string]bool)
+	for name, physical := range current {
+		for _, selector := range paths {
+			if v1.PathSelectorMatches(selector, name) {
+				byPath[name] = physical
+				matchedPaths[selector] = true
 			}
 		}
-		// A dot selector applies to every root. It cannot preserve a whole input
-		// in one root combined with a narrower input in another root over time.
-		if (!pathSet["."] || allRoots) && len(matchedPaths) == len(paths) && maps.Equal(legacy, byPath) {
-			return localSourceSelection{files: byPath, paths: paths}, nil
-		}
 	}
+	// A dot selector applies to every root. It cannot preserve a whole input
+	// in one root combined with a narrower input in another root over time.
+	if (!pathSet["."] || allRoots) && len(matchedPaths) == len(paths) && maps.Equal(legacy, byPath) {
+		return localSourceSelection{files: byPath, paths: paths}, true
+	}
+	return localSourceSelection{}, false
+}
+
+func proveLocalPackageSelection(root string, legacy, current map[string]string) (localSourceSelection, error) {
 	packages := make(map[string]bool)
 	for _, name := range slices.Sorted(maps.Keys(legacy)) {
 		physical := legacy[name]
@@ -130,7 +147,7 @@ func proveLocalSelection(root string, inputs []legacyDirectory, roots []string) 
 			return localSourceSelection{}, fmt.Errorf("readSourcePackage: %w", err)
 		}
 		if declared == "" {
-			return localSourceSelection{}, fmt.Errorf("%s", scopeError)
+			return localSourceSelection{}, fmt.Errorf("%s", localSelectionScopeError)
 		}
 		if err := v1.ValidatePackageSelectors([]string{declared}); err != nil {
 			return localSourceSelection{}, fmt.Errorf("ValidatePackageSelectors: %w", err)
@@ -149,7 +166,7 @@ func proveLocalSelection(root string, inputs []legacyDirectory, roots []string) 
 		}
 	}
 	if !maps.Equal(legacy, selected) {
-		return localSourceSelection{}, fmt.Errorf("%s", scopeError)
+		return localSourceSelection{}, fmt.Errorf("%s", localSelectionScopeError)
 	}
 	return localSourceSelection{files: selected, packages: slices.Sorted(maps.Keys(packages))}, nil
 }

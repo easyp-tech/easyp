@@ -174,14 +174,14 @@ func TestMigrationTrackedFilesHandlesMaterializedSymlinks(t *testing.T) {
 			info, err := os.Lstat(filepath.Join(checkout, filepath.FromSlash(tt.link)))
 			require.NoError(t, err)
 			require.True(t, info.Mode().IsRegular())
-			files, auxiliarySymlinks, err := migrationTrackedFiles(t.Context(), checkout, tt.root)
+			tracked, err := migrationTrackedFiles(t.Context(), checkout, tt.root)
 			if tt.wantErr {
 				require.ErrorContains(t, err, "non-regular")
 				return
 			}
 			require.NoError(t, err)
-			assert.True(t, auxiliarySymlinks)
-			assert.ElementsMatch(t, []string{"real/file.proto", "README"}, files)
+			assert.True(t, tracked.omittedAuxiliarySymlinks)
+			assert.ElementsMatch(t, []string{"real/file.proto", "README"}, tracked.regularFiles)
 		})
 	}
 }

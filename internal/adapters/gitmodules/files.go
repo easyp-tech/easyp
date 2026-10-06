@@ -10,6 +10,7 @@ import (
 
 	"golang.org/x/mod/sumdb/dirhash"
 
+	"github.com/easyp-tech/easyp/internal/adapters/gitindex"
 	moduleconfig "github.com/easyp-tech/easyp/internal/adapters/module_config"
 	v1 "github.com/easyp-tech/easyp/internal/config/v1"
 )
@@ -17,37 +18,48 @@ import (
 // trackedV1Files selects regular Git files, including those outside import roots.
 // Symlinks and submodules are omitted, matching Go module archive behavior.
 func trackedV1Files(ctx context.Context, checkout string) ([]string, error) {
+	entries, err := readV1GitIndex(ctx, checkout)
+	if err != nil {
+		return nil, fmt.Errorf("readV1GitIndex: %w", err)
+	}
+	files, err := regularTrackedV1Files(checkout, entries)
+	if err != nil {
+		return nil, fmt.Errorf("regularTrackedV1Files: %w", err)
+	}
+	return files, nil
+}
+
+func readV1GitIndex(ctx context.Context, checkout string) ([]gitindex.Entry, error) {
 	raw, err := gitV1(ctx, checkout, "ls-files", "--stage", "-z")
 	if err != nil {
 		return nil, fmt.Errorf("gitV1: %w", err)
 	}
+	entries, err := gitindex.Parse(raw)
+	if err != nil {
+		return nil, fmt.Errorf("Parse: %w", err)
+	}
+	return entries, nil
+}
+
+// Snapshot hashes and installation use the same regular-file selection.
+// Policy checks use Git modes even when symlinks are materialized as text.
+func regularTrackedV1Files(checkout string, entries []gitindex.Entry) ([]string, error) {
 	var files []string
-	for _, entry := range strings.Split(raw, "\x00") {
-		if entry == "" {
-			continue
-		}
-		metadata, name, ok := strings.Cut(entry, "\t")
-		fields := strings.Fields(metadata)
-		if !ok || len(fields) != 3 || fields[2] != "0" {
-			return nil, fmt.Errorf("invalid Git index entry %q", entry)
-		}
-		if !filepath.IsLocal(filepath.FromSlash(name)) {
-			return nil, fmt.Errorf("invalid tracked file path %q", name)
-		}
-		switch fields[0] {
-		case "120000", "160000":
-			if fields[0] == "120000" && moduleconfig.IsGitDependencyConfigFile(filepath.Base(name)) {
-				return nil, fmt.Errorf("non-regular dependency config %q in Git index", name)
+	for _, entry := range entries {
+		switch entry.Mode {
+		case gitindex.Symlink, gitindex.Gitlink:
+			if entry.Mode == gitindex.Symlink && moduleconfig.IsGitDependencyConfigFile(filepath.Base(entry.Path)) {
+				return nil, fmt.Errorf("non-regular dependency config %q in Git index", entry.Path)
 			}
 			continue
-		case "100644", "100755":
+		case gitindex.RegularFile, gitindex.ExecutableFile:
 		default:
-			return nil, fmt.Errorf("unsupported Git file mode %q for %q", fields[0], name)
+			return nil, fmt.Errorf("unsupported Git file mode %q for %q", entry.Mode, entry.Path)
 		}
-		if _, err := regularV1File(filepath.Join(checkout, filepath.FromSlash(name))); err != nil {
+		if _, err := regularV1File(filepath.Join(checkout, filepath.FromSlash(entry.Path))); err != nil {
 			return nil, fmt.Errorf("regularV1File: %w", err)
 		}
-		files = append(files, name)
+		files = append(files, entry.Path)
 	}
 	return files, nil
 }

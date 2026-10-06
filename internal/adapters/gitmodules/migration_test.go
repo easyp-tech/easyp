@@ -236,7 +236,7 @@ func TestMigrationTrackedFilesRejectsMaterializedProtoSymlink(t *testing.T) {
 	// A checkout with core.symlinks=false materializes a Git symlink as a
 	// regular file. The index mode must still prevent legacy verification.
 	runTestGit(t, repository, "update-index", "--cacheinfo", "120000,"+blob+",link.proto")
-	_, _, err := migrationTrackedFiles(t.Context(), repository)
+	_, err := migrationTrackedFiles(t.Context(), repository)
 	require.ErrorContains(t, err, "non-regular Git mode")
 }
 

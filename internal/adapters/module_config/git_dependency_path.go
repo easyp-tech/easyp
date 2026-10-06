@@ -7,6 +7,8 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+
+	"github.com/easyp-tech/easyp/internal/adapters/gitindex"
 )
 
 // Git can materialize a symlink as a regular file with core.symlinks=false.
@@ -25,20 +27,13 @@ func validateGitDependencyIndex(checkout string) error {
 	if err != nil {
 		return fmt.Errorf("Output: %w", err)
 	}
-	for _, entry := range strings.Split(string(raw), "\x00") {
-		if entry == "" {
-			continue
-		}
-		metadata, name, ok := strings.Cut(entry, "\t")
-		fields := strings.Fields(metadata)
-		if !ok || len(fields) != 3 || fields[2] != "0" {
-			return fmt.Errorf("invalid Git index entry %q", entry)
-		}
-		if !filepath.IsLocal(filepath.FromSlash(name)) {
-			return fmt.Errorf("invalid tracked file path %q", name)
-		}
-		if IsGitDependencyConfigFile(filepath.Base(name)) && fields[0] != "100644" && fields[0] != "100755" {
-			return fmt.Errorf("non-regular dependency config %q in Git index", name)
+	entries, err := gitindex.Parse(string(raw))
+	if err != nil {
+		return fmt.Errorf("Parse: %w", err)
+	}
+	for _, entry := range entries {
+		if IsGitDependencyConfigFile(filepath.Base(entry.Path)) && !entry.IsRegular() {
+			return fmt.Errorf("non-regular dependency config %q in Git index", entry.Path)
 		}
 	}
 	return nil
