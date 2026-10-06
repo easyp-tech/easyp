@@ -1,6 +1,7 @@
 package migration
 
 import (
+	"bytes"
 	"fmt"
 	"strings"
 
@@ -59,12 +60,9 @@ func validateGenerate(raw []byte) error {
 }
 
 func validateNativeLock(raw []byte) (v1.Lock, error) {
-	var lock v1.Lock
-	if err := decodeStrict(raw, &lock); err != nil {
-		return v1.Lock{}, fmt.Errorf("decodeStrict: %w", err)
-	}
-	if err := lock.Validate(); err != nil {
-		return v1.Lock{}, fmt.Errorf("Validate: %w", err)
+	lock, err := v1.ParseLock(bytes.NewReader(raw))
+	if err != nil {
+		return v1.Lock{}, fmt.Errorf("ParseLock: %w", err)
 	}
 	return lock, nil
 }
