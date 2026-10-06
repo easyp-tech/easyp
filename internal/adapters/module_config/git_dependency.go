@@ -251,8 +251,8 @@ func ReadGitDependencyAt(checkout, source, subdir string) (v1.Module, error) {
 	return v1.Module{}, fmt.Errorf("module %s requires a protobuf.mod declaring its exact identity in %v", source, locations)
 }
 
-// A symlink would be omitted from the installed snapshot, so reading it here
-// could give a downloaded module different roots or requirements from its cache.
+// Metadata readers consume regular materialized snapshots. Pointer resolution
+// belongs to the bounded source view before these format-specific readers run.
 func readGitDependencyConfig(path string) ([]byte, error) {
 	info, err := os.Lstat(path)
 	if err != nil {

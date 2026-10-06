@@ -20,8 +20,8 @@ easyp generate --all
 The all and project flags are mutually exclusive. Recursive discovery skips
 hidden directories, easyp_vendor, node_modules and nested Git repositories.
 A project in a skipped directory can still be deliberately selected with
-project. Automatic selection refuses a symlink configuration file; explicit
-project selection is required to use it. No name-based directory denylist is
+project. Internal configuration aliases are resolved within the workspace
+boundary for both automatic and explicit selection. No name-based directory denylist is
 claimed to establish a trust boundary: choosing all explicitly authorizes
 recursive generation, including command plugins in the selected tree.
 

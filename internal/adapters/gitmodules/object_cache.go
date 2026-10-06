@@ -8,7 +8,6 @@ import (
 	"strings"
 	"time"
 
-	moduleconfig "github.com/easyp-tech/easyp/internal/adapters/module_config"
 	v1 "github.com/easyp-tech/easyp/internal/config/v1"
 )
 
@@ -27,7 +26,12 @@ func checkoutCachedCommit(ctx context.Context, checkout string, entry v1.LockedM
 	}
 	defer unlock()
 	if _, err := os.Stat(filepath.Join(repository, "HEAD")); os.IsNotExist(err) {
-		if _, err := gitV1(ctx, "", "init", "--quiet", "--bare", repository); err != nil {
+		args := []string{"init", "--quiet", "--bare"}
+		if len(entry.Commit) == 64 {
+			args = append(args, "--object-format=sha256")
+		}
+		args = append(args, repository)
+		if _, err := gitV1(ctx, "", args...); err != nil {
 			return false, err
 		}
 		if _, err := gitV1(ctx, repository, "config", "gc.auto", "0"); err != nil {
@@ -76,10 +80,7 @@ func checkoutCachedCommit(ctx context.Context, checkout string, entry v1.LockedM
 	if _, err := gitV1(ctx, "", "clone", "--quiet", "--shared", "--no-checkout", "--", repository, checkout); err != nil {
 		return true, fmt.Errorf("clone cached objects: %w", err)
 	}
-	if _, err := gitV1(ctx, checkout, "checkout", "--quiet", "--detach", commit); err != nil {
-		return true, err
-	}
-	if _, err := moduleconfig.ReadGitDependencyAt(checkout, entry.Source, candidate.subdir); err != nil {
+	if _, err := gitV1(ctx, checkout, "read-tree", commit); err != nil {
 		return true, err
 	}
 	return true, nil

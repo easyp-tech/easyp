@@ -2,6 +2,7 @@ package modules
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -11,11 +12,12 @@ import (
 
 	v1 "github.com/easyp-tech/easyp/internal/config/v1"
 	disk "github.com/easyp-tech/easyp/internal/fs/fs"
+	"github.com/easyp-tech/easyp/internal/sourceview"
 )
 
 // ReadManifest returns parsed metadata and the original bytes for comment-preserving edits.
 func ReadManifest(root string) ([]byte, v1.Module, error) {
-	original, err := os.ReadFile(filepath.Join(root, v1.ModuleFile))
+	original, err := sourceview.ReadLocal(context.Background(), root, v1.ModuleFile)
 	if err != nil {
 		return nil, v1.Module{}, fmt.Errorf("ReadFile: %w", err)
 	}

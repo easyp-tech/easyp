@@ -20,6 +20,7 @@ import (
 	"github.com/easyp-tech/easyp/internal/logger"
 	"github.com/easyp-tech/easyp/internal/modules"
 	policyresolver "github.com/easyp-tech/easyp/internal/policy"
+	"github.com/easyp-tech/easyp/internal/workspace"
 )
 
 // checkV1Policies compares each module in an independent dependency context.
@@ -142,13 +143,13 @@ func (b BreakingCheck) checkV1Policies(ctx *cli.Context, log logger.Logger, conf
 			if err != nil {
 				return nil, fmt.Errorf("baseline %s module %s: %w", cfg.AgainstGitRef, module, err)
 			}
-			app := core.New(core.Options{Logger: log, ImportRoots: currentImports.Paths(), ImportFileAllowed: currentImports.FileAllowed(), BreakingCheckConfig: core.BreakingCheckConfig{
+			app := core.New(core.Options{Logger: log, ImportRoots: currentImports.Paths(), ImportFileAllowed: currentImports.FileAllowed(), OpenSourceFile: currentImports.OpenSourceFile, BreakingCheckConfig: core.BreakingCheckConfig{
 				IgnoreDirs: append(append([]string(nil), ignorePaths...), defaultVendorDir), AgainstGitRef: cfg.AgainstGitRef,
 				FilesCheck:     slices.Contains(cfg.Use, core.BreakingCheckFilesCheck),
 				Categories:     cfg.Categories,
 				IgnoreUnstable: cfg.IgnoreUnstable,
 			}})
-			found, err := app.CompareBreakingWithImports(ctx.Context, newBreakingWalker(repositoryRoot, currentFiles), newBreakingWalker(snapshot.Root, baselineFiles), baselineImports.Paths(), baselineImports.FileAllowed())
+			found, err := app.CompareBreakingWithImports(ctx.Context, newBreakingWalker(repositoryRoot, currentFiles), newBreakingWalker(snapshot.Root, baselineFiles), core.BreakingImports{Paths: baselineImports.Paths(), FileAllowed: baselineImports.FileAllowed(), Open: baselineImports.OpenSourceFile})
 			if err != nil {
 				return nil, fmt.Errorf("CompareBreaking module %s against %s: %w", module, cfg.AgainstGitRef, err)
 			}
@@ -215,7 +216,7 @@ func discoverV1BreakingPolicySources(replacements *policyReplacementSources, sca
 	if missing {
 		return []string{owner}, nil
 	}
-	err = filepath.WalkDir(scanPath, func(path string, entry fs.DirEntry, walkErr error) error {
+	err = workspace.WalkAt(projectRoot, scanPath, func(path string, entry fs.DirEntry, walkErr error) error {
 		if walkErr != nil {
 			return walkErr
 		}
@@ -459,11 +460,11 @@ func (b BreakingCheck) checkV1ExtendedBreakingSource(
 		if err != nil {
 			return nil, fmt.Errorf("baseline %s module %s: %w", cfg.AgainstGitRef, module, err)
 		}
-		app := core.New(core.Options{Logger: log, ImportRoots: currentImports.Paths(), ImportFileAllowed: currentImports.FileAllowed(), BreakingCheckConfig: core.BreakingCheckConfig{
+		app := core.New(core.Options{Logger: log, ImportRoots: currentImports.Paths(), ImportFileAllowed: currentImports.FileAllowed(), OpenSourceFile: currentImports.OpenSourceFile, BreakingCheckConfig: core.BreakingCheckConfig{
 			IgnoreDirs: append(append([]string(nil), ignorePaths...), defaultVendorDir), AgainstGitRef: cfg.AgainstGitRef,
 			FilesCheck: slices.Contains(cfg.Use, core.BreakingCheckFilesCheck), Categories: cfg.Categories, IgnoreUnstable: cfg.IgnoreUnstable,
 		}})
-		findings, err := app.CompareBreakingWithImports(ctx.Context, newBreakingWalker(repositoryRoot, currentFiles), newBreakingWalker(snapshot.Root, baselineFiles), baselineImports.Paths(), baselineImports.FileAllowed())
+		findings, err := app.CompareBreakingWithImports(ctx.Context, newBreakingWalker(repositoryRoot, currentFiles), newBreakingWalker(snapshot.Root, baselineFiles), core.BreakingImports{Paths: baselineImports.Paths(), FileAllowed: baselineImports.FileAllowed(), Open: baselineImports.OpenSourceFile})
 		if err != nil {
 			return nil, fmt.Errorf("CompareBreaking module %s against %s: %w", module, cfg.AgainstGitRef, err)
 		}

@@ -12,6 +12,7 @@ import (
 	"github.com/easyp-tech/easyp/internal/core/path_helpers"
 	"github.com/easyp-tech/easyp/internal/logger"
 	"github.com/easyp-tech/easyp/internal/modules"
+	"github.com/easyp-tech/easyp/internal/sourceview"
 	"github.com/easyp-tech/easyp/internal/workspace"
 )
 
@@ -221,7 +222,7 @@ func isOptionsOnlyParent(configPath string, gen v1.Generate, configs []string) (
 	}
 
 	hasOwnProto := false
-	err := filepath.WalkDir(dir, func(path string, entry fs.DirEntry, walkErr error) error {
+	err := workspace.Walk(dir, func(path string, entry fs.DirEntry, walkErr error) error {
 		if walkErr != nil {
 			return walkErr
 		}
@@ -246,14 +247,26 @@ func discoverV1GenerateConfigs(root, project string) ([]string, error) {
 			project = filepath.Join(root, project)
 		}
 		path := filepath.Join(project, v1.GenerateFile)
-		if _, err := os.Stat(path); err != nil {
+		boundary := root
+		relative, err := filepath.Rel(boundary, path)
+		if err != nil {
+			return nil, fmt.Errorf("Rel: %w", err)
+		}
+		if !filepath.IsLocal(relative) {
+			boundary = project
+			relative = v1.GenerateFile
+		}
+		if _, err := sourceview.ResolveLocal(context.Background(), boundary, relative); err != nil {
 			return nil, fmt.Errorf("find project generator %s: %w", path, err)
 		}
 		return []string{path}, nil
 	}
 	var paths []string
-	err := filepath.WalkDir(root, func(path string, entry fs.DirEntry, walkErr error) error {
+	err := workspace.Walk(root, func(path string, entry fs.DirEntry, walkErr error) error {
 		if walkErr != nil {
+			if filepath.Base(path) != v1.GenerateFile {
+				return nil
+			}
 			return walkErr
 		}
 		if entry.IsDir() {
@@ -271,7 +284,7 @@ func discoverV1GenerateConfigs(root, project string) ([]string, error) {
 }
 
 func readV1GenerateConfig(path string) (v1.Generate, error) {
-	raw, err := os.ReadFile(path)
+	raw, err := workspace.ReadFileAt(path)
 	if err != nil {
 		return v1.Generate{}, fmt.Errorf("ReadFile: %w", err)
 	}

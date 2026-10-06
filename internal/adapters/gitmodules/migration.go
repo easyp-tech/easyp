@@ -14,7 +14,7 @@ import (
 )
 
 // FetchMigration verifies a legacy installed-tree hash before calculating the
-// v1 tracked-checkout hash. Legacy repositories must preserve their proto source
+// v1 logical snapshot hash. Legacy repositories must preserve their proto source
 // selection and import names. An empty version requires an empty legacyHash and
 // permits initial resolution; native v1 repositories need no legacy comparison.
 func (c *Cache) FetchMigration(ctx context.Context, source, version, legacyHash string) (fetched modules.Fetched, err error) {
@@ -26,38 +26,44 @@ func (c *Cache) FetchMigration(ctx context.Context, source, version, legacyHash 
 		return modules.Fetched{}, fmt.Errorf("checkoutV1Module: %w", err)
 	}
 	defer func() {
-		removeErr := os.RemoveAll(checkout.dir)
-		if removeErr != nil {
-			fetched = modules.Fetched{}
-			err = errors.Join(err, fmt.Errorf("RemoveAll: %w", removeErr))
+		for _, directory := range []string{checkout.snapshot, checkout.dir} {
+			removeErr := os.RemoveAll(directory)
+			if removeErr != nil {
+				fetched = modules.Fetched{}
+				err = errors.Join(err, fmt.Errorf("RemoveAll: %w", removeErr))
+			}
 		}
 	}()
-	if err := moduleconfig.ValidateLegacyMajor(checkout.dir, source, version); err != nil {
+	if err := moduleconfig.ValidateLegacyMajor(checkout.snapshot, source, version); err != nil {
 		return modules.Fetched{}, fmt.Errorf("ValidateLegacyMajor: %w", err)
 	}
-	tracked, err := migrationTrackedFiles(ctx, checkout.dir, checkout.module.Roots...)
+	tracked, err := migrationTrackedFiles(ctx, checkout.dir)
 	if err != nil {
 		return modules.Fetched{}, fmt.Errorf("migrationTrackedFiles: %w", err)
 	}
-	if err := validateMigrationLegacyReplacements(checkout.dir, tracked.regularFiles); err != nil {
+	files, err := snapshotV1Files(checkout.snapshot)
+	if err != nil {
+		return modules.Fetched{}, fmt.Errorf("snapshotV1Files: %w", err)
+	}
+	if err := validateMigrationLegacyReplacements(checkout.snapshot, files); err != nil {
 		return modules.Fetched{}, fmt.Errorf("validateMigrationLegacyReplacements: %w", err)
 	}
-	native, err := hasNativeMigrationModule(checkout.dir, tracked.regularFiles, source)
+	native, err := hasNativeMigrationModule(checkout.snapshot, files, source)
 	if err != nil {
 		return modules.Fetched{}, fmt.Errorf("hasNativeMigrationModule: %w", err)
+	}
+	_, err = migrationSelectedFiles(checkout.snapshot, checkout.module)
+	if err != nil {
+		return modules.Fetched{}, fmt.Errorf("migrationSelectedFiles: %w", err)
 	}
 	if !native || legacyHash != "" {
 		if err := verifyMigrationLegacyHash(ctx, checkout, source, legacyHash, tracked); err != nil {
 			return modules.Fetched{}, fmt.Errorf("verifyMigrationLegacyHash: %w", err)
 		}
-		if err := validateMigrationSelection(checkout.dir, tracked.regularFiles, checkout.module); err != nil {
-			return modules.Fetched{}, fmt.Errorf("validateMigrationSelection: %w", err)
-		}
 	}
-	files := selectV1ProtoFiles(tracked.regularFiles, checkout.module.ProtoFilters)
-	hash, err := hashV1Files(checkout.dir, files)
+	hash, err := hashSnapshotV1Files(checkout.snapshot)
 	if err != nil {
-		return modules.Fetched{}, fmt.Errorf("hashV1Files: %w", err)
+		return modules.Fetched{}, fmt.Errorf("hashSnapshotV1Files: %w", err)
 	}
 	if version == "" {
 		version = checkout.commit

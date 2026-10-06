@@ -2,6 +2,7 @@ package modules
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"io/fs"
@@ -14,12 +15,22 @@ import (
 	"github.com/bufbuild/protocompile/parser"
 	"github.com/bufbuild/protocompile/reporter"
 
+	"github.com/easyp-tech/easyp/internal/sourceview"
+	"github.com/easyp-tech/easyp/internal/workspace"
 	"github.com/easyp-tech/easyp/wellknownimports"
 )
 
 // ReadProtoImports reads and parses import declarations in a proto file.
 func ReadProtoImports(path string) ([]string, error) {
-	raw, err := os.ReadFile(path)
+	boundary, err := workspace.Boundary(filepath.Dir(path))
+	if err != nil {
+		return nil, fmt.Errorf("Boundary: %w", err)
+	}
+	relative, err := filepath.Rel(boundary, path)
+	if err != nil {
+		return nil, fmt.Errorf("Rel: %w", err)
+	}
+	raw, err := sourceview.ReadLocal(context.Background(), boundary, relative)
 	if err != nil {
 		return nil, fmt.Errorf("ReadFile: %w", err)
 	}
@@ -82,9 +93,13 @@ type v1ImportSource struct {
 	builtin bool
 }
 
-func (s v1ImportSource) imports() ([]string, error) {
+func (s v1ImportSource) imports(roots SourceRoots) ([]string, error) {
 	if !s.builtin {
-		return ReadProtoImports(s.path)
+		raw, err := roots.ReadSourceFile(s.path)
+		if err != nil {
+			return nil, fmt.Errorf("ReadSourceFile: %w", err)
+		}
+		return ParseProtoImports(s.path, raw)
 	}
 	raw, err := wellknownimports.Content.ReadFile(s.path)
 	if err != nil {
@@ -106,14 +121,14 @@ func findUnresolvedV1Imports(moduleDir string, roots, dependencyRoots []string) 
 func findUnresolvedV1ImportsWithSources(moduleDir string, roots []string, dependencyRoots SourceRoots) ([]v1UnresolvedImport, error) {
 	allRoots := make(SourceRoots, 0, len(roots)+len(dependencyRoots))
 	for _, root := range roots {
-		allRoots = append(allRoots, SourceRoot{Path: filepath.Join(moduleDir, root)})
+		allRoots = append(allRoots, SourceRoot{Path: filepath.Join(moduleDir, root), directory: moduleDir})
 	}
 	allRoots = append(allRoots, dependencyRoots...)
 	allowed := allRoots.FileAllowed()
 	var queue []v1ImportSource
 	seen := make(map[v1ImportSource]bool)
 	for _, sourceRoot := range allRoots[:len(roots)] {
-		err := sourceRoot.Walk(func(path string) error {
+		err := allRoots.WalkSelected(sourceRoot, allowed, func(path string) error {
 			if allowed != nil && !allowed(path) {
 				return nil
 			}
@@ -132,7 +147,7 @@ func findUnresolvedV1ImportsWithSources(moduleDir string, roots []string, depend
 	for len(queue) > 0 {
 		source := queue[0]
 		queue = queue[1:]
-		imports, err := source.imports()
+		imports, err := source.imports(allRoots)
 		if err != nil {
 			return nil, fmt.Errorf("imports: %w", err)
 		}
@@ -174,7 +189,15 @@ func resolveV1ImportSource(importPath string, roots SourceRoots, allowed func(st
 		} else if !root.allows(candidate, root.Path) {
 			continue
 		}
-		info, err := os.Stat(candidate)
+		relative, err := filepath.Rel(root.boundary(), candidate)
+		if err != nil {
+			return v1ImportSource{}, fmt.Errorf("Rel: %w", err)
+		}
+		resolved, err := sourceview.ResolveLocal(context.Background(), root.boundary(), relative)
+		info := resolved.Info
+		if errors.Is(err, sourceview.ErrNestedRepository) && roots.ownsSelectedPhysical(filepath.Join(physicalSourcePath(root.boundary()), filepath.FromSlash(resolved.Path))) {
+			err = nil
+		}
 		if errors.Is(err, os.ErrNotExist) {
 			continue
 		}

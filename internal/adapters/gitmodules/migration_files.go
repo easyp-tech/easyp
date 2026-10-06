@@ -12,36 +12,30 @@ import (
 
 // migrationFiles records the snapshot and the historical proof it requires.
 type migrationFiles struct {
-	regularFiles             []string
-	omittedAuxiliarySymlinks bool
+	regularFiles []string
+	trackedFiles []string
+	symlinks     []string
+	hasSymlinks  bool
 }
 
-// Migration uses native regular-file selection, but additionally refuses links
-// that could change legacy proto import names or configured root boundaries.
-func migrationTrackedFiles(ctx context.Context, checkout string, roots ...string) (migrationFiles, error) {
+// migrationTrackedFiles records immutable Git modes for historical proofs.
+// The current logical snapshot independently validates relevant alias targets.
+func migrationTrackedFiles(ctx context.Context, checkout string) (migrationFiles, error) {
 	entries, err := readV1GitIndex(ctx, checkout)
 	if err != nil {
 		return migrationFiles{}, fmt.Errorf("readV1GitIndex: %w", err)
 	}
-	files, err := regularTrackedV1Files(checkout, entries)
-	if err != nil {
-		return migrationFiles{}, fmt.Errorf("regularTrackedV1Files: %w", err)
-	}
-	tracked := migrationFiles{regularFiles: files}
+	tracked := migrationFiles{}
 	for _, entry := range entries {
+		tracked.trackedFiles = append(tracked.trackedFiles, entry.Path)
 		switch entry.Mode {
 		case gitindex.RegularFile, gitindex.ExecutableFile:
+			tracked.regularFiles = append(tracked.regularFiles, entry.Path)
 			continue
 		case gitindex.Symlink:
-			if path.Ext(entry.Path) == ".proto" {
-				return migrationFiles{}, fmt.Errorf("unsupported non-regular Git mode in %q", entry.Raw)
-			}
-			if root, found := migrationRootThroughSymlink(entry.Path, roots); found {
-				return migrationFiles{}, fmt.Errorf("unsupported non-regular Git mode in %q used by root %q", entry.Raw, root)
-			}
-			// Metadata links were rejected during regular-file selection.
-			// Auxiliary target bytes never enter the snapshot or its digest.
-			tracked.omittedAuxiliarySymlinks = true
+			tracked.symlinks = append(tracked.symlinks, entry.Path)
+			// A regular-only subset cannot prove an old whole installed tree.
+			tracked.hasSymlinks = true
 		default:
 			// Native snapshots omit submodules, but migration cannot prove
 			// their legacy contracts from this repository's regular files.

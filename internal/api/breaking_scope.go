@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"io/fs"
@@ -14,6 +15,8 @@ import (
 	"github.com/easyp-tech/easyp/internal/core/path_helpers"
 	disk "github.com/easyp-tech/easyp/internal/fs/fs"
 	"github.com/easyp-tech/easyp/internal/modules"
+	"github.com/easyp-tech/easyp/internal/sourceview"
+	"github.com/easyp-tech/easyp/internal/workspace"
 )
 
 type breakingScope struct{ files []string }
@@ -31,7 +34,10 @@ func discoverBreakingScopes(replacements *policyReplacementSources, scanRelative
 		return nil, fmt.Errorf("Stat: %w", err)
 	}
 	manifests := make(map[string]v1.Module)
-	err := filepath.WalkDir(scan, func(path string, entry fs.DirEntry, walkErr error) error {
+	err := workspace.WalkAt(root, scan, func(path string, entry fs.DirEntry, walkErr error) error {
+		if errors.Is(walkErr, sourceview.ErrNestedRepository) && filepath.Ext(path) == ".proto" {
+			walkErr = nil
+		}
 		if walkErr != nil {
 			return walkErr
 		}

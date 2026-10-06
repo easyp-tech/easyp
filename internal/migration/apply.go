@@ -1,6 +1,7 @@
 package migration
 
 import (
+	"context"
 	"crypto/rand"
 	"crypto/sha256"
 	"errors"
@@ -11,14 +12,20 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
+
+	"github.com/easyp-tech/easyp/internal/sourceview"
 )
 
 type snapshot struct {
-	name   string
-	data   []byte
-	mode   os.FileMode
-	exists bool
-	info   os.FileInfo
+	name     string
+	data     []byte
+	mode     os.FileMode
+	exists   bool
+	info     os.FileInfo
+	input    bool
+	resolved string
+	links    []sourceview.Link
+	pointer  string
 }
 
 type fileChange struct {
@@ -114,7 +121,7 @@ func (t *transaction) openRoot() (_ *os.Root, resultErr error) {
 	if err != nil {
 		return nil, fmt.Errorf("checkRoot: %w", err)
 	}
-	root, err := os.OpenRoot(t.root)
+	root, err := os.OpenRoot(t.requestedRoot)
 	if err != nil {
 		return nil, fmt.Errorf("OpenRoot: %w", err)
 	}
@@ -134,6 +141,9 @@ func (t *transaction) openRoot() (_ *os.Root, resultErr error) {
 }
 
 func (t *transaction) capture(name string) (_ snapshot, resultErr error) {
+	if previous, ok := t.expected[name]; ok && previous.input {
+		return t.captureInput(name)
+	}
 	root, err := t.openRoot()
 	if err != nil {
 		return snapshot{}, fmt.Errorf("openRoot: %w", err)
@@ -151,6 +161,92 @@ func (t *transaction) capture(name string) (_ snapshot, resultErr error) {
 	}
 	t.expected[name] = current
 	return current, nil
+}
+
+func (t *transaction) captureInput(name string) (_ snapshot, resultErr error) {
+	root, err := t.openRoot()
+	if err != nil {
+		return snapshot{}, fmt.Errorf("openRoot: %w", err)
+	}
+	defer func() { resultErr = errors.Join(resultErr, closeRoot(root)) }()
+	current, err := readInputSnapshot(root, name)
+	if err != nil {
+		return snapshot{}, fmt.Errorf("readInputSnapshot: %w", err)
+	}
+	if previous, ok := t.expected[name]; ok {
+		if !sameSnapshot(previous, current) {
+			return snapshot{}, fmt.Errorf("file %q changed since planning", name)
+		}
+		return previous, nil
+	}
+	t.expected[name] = current
+	return current, nil
+}
+
+func readInputSnapshot(root *os.Root, name string) (_ snapshot, resultErr error) {
+	if err := checkRelativeName(name); err != nil {
+		return snapshot{}, fmt.Errorf("checkRelativeName: %w", err)
+	}
+	canonical, err := filepath.EvalSymlinks(root.Name())
+	if err != nil {
+		return snapshot{}, fmt.Errorf("EvalSymlinks: %w", err)
+	}
+	view, err := sourceview.NewLocal(root.FS(), canonical, root.Name())
+	if err != nil {
+		return snapshot{}, fmt.Errorf("NewLocal: %w", err)
+	}
+	resolved, err := view.Resolve(context.Background(), filepath.ToSlash(name))
+	if errors.Is(err, os.ErrNotExist) && len(resolved.Links) == 0 {
+		return snapshot{name: name, input: true}, nil
+	}
+	if err != nil {
+		return snapshot{}, fmt.Errorf("Resolve: %w", err)
+	}
+	if err := sourceview.CheckLocalResolution(root, resolved); err != nil {
+		return snapshot{}, fmt.Errorf("CheckLocalResolution: %w", err)
+	}
+	if !resolved.Info.Mode().IsRegular() {
+		return snapshot{}, fmt.Errorf("input %q must resolve to a regular file", name)
+	}
+	current, err := readSnapshot(root, filepath.FromSlash(resolved.Path))
+	if err != nil {
+		return snapshot{}, fmt.Errorf("readSnapshot: %w", err)
+	}
+	current.name, current.input, current.resolved, current.links = name, true, resolved.Path, resolved.Links
+	leaf, err := root.Lstat(name)
+	if err != nil {
+		return snapshot{}, fmt.Errorf("Lstat: %w", err)
+	}
+	if leaf.Mode()&os.ModeSymlink != 0 {
+		current.pointer, err = root.Readlink(name)
+		if err != nil {
+			return snapshot{}, fmt.Errorf("Readlink: %w", err)
+		}
+	}
+	after, err := view.Resolve(context.Background(), filepath.ToSlash(name))
+	if err != nil {
+		return snapshot{}, fmt.Errorf("Resolve: %w", err)
+	}
+	if !sameResolution(resolved, after) {
+		return snapshot{}, fmt.Errorf("input %q changed while reading", name)
+	}
+	return current, nil
+}
+
+func sameResolution(before, after sourceview.Resolution) bool {
+	if before.Path != after.Path || len(before.Links) != len(after.Links) {
+		return false
+	}
+	if !sameFileState(before.Info, after.Info) {
+		return false
+	}
+	for i, link := range before.Links {
+		other := after.Links[i]
+		if link.Path != other.Path || link.Target != other.Target || !sameFileState(link.Info, other.Info) {
+			return false
+		}
+	}
+	return true
 }
 
 func readSnapshot(root *os.Root, name string) (_ snapshot, resultErr error) {
@@ -216,6 +312,15 @@ func sameSnapshot(before, after snapshot) bool {
 	if before.exists != after.exists {
 		return false
 	}
+	if before.resolved != after.resolved || before.pointer != after.pointer || len(before.links) != len(after.links) {
+		return false
+	}
+	for i, link := range before.links {
+		other := after.links[i]
+		if link.Path != other.Path || link.Target != other.Target || !sameFileState(link.Info, other.Info) {
+			return false
+		}
+	}
 	return !before.exists || (os.SameFile(before.info, after.info) && before.mode == after.mode &&
 		sha256.Sum256(before.data) == sha256.Sum256(after.data))
 }
@@ -261,7 +366,13 @@ func (t *transaction) verify(root *os.Root) error {
 }
 
 func recheckSnapshot(root *os.Root, expected snapshot) error {
-	current, err := readSnapshot(root, expected.name)
+	var current snapshot
+	var err error
+	if expected.input {
+		current, err = readInputSnapshot(root, expected.name)
+	} else {
+		current, err = readSnapshot(root, expected.name)
+	}
 	if err != nil {
 		return fmt.Errorf("readSnapshot: %w", err)
 	}
@@ -348,6 +459,16 @@ func (t *transaction) validateChanges() error {
 		if _, ok := t.expected[change.name]; !ok {
 			return fmt.Errorf("destination %q was not captured during planning", change.name)
 		}
+		for _, input := range t.expected {
+			if len(input.links) > 0 && input.resolved == filepath.ToSlash(change.name) {
+				return fmt.Errorf("destination %q overlaps linked input target", change.name)
+			}
+			for _, link := range input.links {
+				if link.Path == filepath.ToSlash(change.name) && input.name != change.name {
+					return fmt.Errorf("destination %q overlaps linked input hop for %q", change.name, input.name)
+				}
+			}
+		}
 		if seen[change.name] {
 			return fmt.Errorf("duplicate destination %q", change.name)
 		}
@@ -378,7 +499,11 @@ func (t *transaction) stageChanges(root *os.Root, temporary string) ([]stagedCha
 		item.installed = snapshot{name: change.name, data: change.content, mode: change.mode, exists: true, info: info}
 		before := t.expected[change.name]
 		if before.exists {
-			err = t.stage(root, item.rollback, before.data, before.mode)
+			if before.pointer != "" {
+				err = root.Symlink(before.pointer, item.rollback)
+			} else {
+				err = t.stage(root, item.rollback, before.data, before.mode)
+			}
 			if err != nil {
 				return nil, fmt.Errorf("stage: %w", err)
 			}

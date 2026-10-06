@@ -9,7 +9,7 @@ var descriptions = map[string]map[string]string{
 		"modules[].source":                     "Exact module identity; separate v2+ lines use their matching /vN suffix.",
 		"modules[].version":                    "Selected semantic version or a full commit. A commit-valued version must equal commit; major suffix and legacy +incompatible provenance are checked.",
 		"modules[].commit":                     "Full 40- or 64-character hexadecimal Git commit. Tags and short SHAs are not commit pins.",
-		"modules[].hash":                       "h1: followed by standard base64 encoding of a 32-byte SHA-256 content digest. Fetch/install verify tracked contents; a sample hash is not proof of a real repository.",
+		"modules[].hash":                       "h1: followed by standard base64 encoding of a 32-byte SHA-256 content digest. Fetch/install verify the materialized logical snapshot from the pinned Git tree, including resolved internal aliases; a sample hash is not proof of a real repository.",
 		"modules[].bsr":                        "BSR requests declared by this Git dependency and their recorded Git targets; frozen commands replay these bindings without calling a resolver.",
 		"modules[].bsr[].dependency.module":    "Original BSR identity, separate from the selected Git source.",
 		"modules[].bsr[].dependency.reference": "Requested Buf label or BSR commit; preserved even when a compatibility snapshot cannot prove equivalence.",

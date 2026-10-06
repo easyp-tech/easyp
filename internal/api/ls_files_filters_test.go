@@ -78,3 +78,20 @@ func TestListV1FilesRejectsLexicallyExcludedAlias(t *testing.T) {
 		})
 	}
 }
+
+func TestListV1FilesAllowsDeclaredDependencyAliasAcrossNestedRepository(t *testing.T) {
+	t.Parallel()
+	root := t.TempDir()
+	writeV1GenerateFixture(t, root, "protobuf.mod", "module example.test/app\nroots .\nrequire example.test/dep\nreplace example.test/dep => ./dep\n")
+	writeV1GenerateFixture(t, root, "dep/.git", "gitdir: /unused\n")
+	writeV1GenerateFixture(t, root, "dep/buf.yaml", "version: v2\nmodules:\n  - path: .\n    includes: [selected]\n")
+	writeV1GenerateFixture(t, root, "dep/selected/model.proto", "syntax = \"proto3\";\n")
+	writeV1GenerateFixture(t, root, "client.proto", "syntax = \"proto3\"; import \"alias.proto\";\n")
+	require.NoError(t, os.Symlink("dep/selected/model.proto", filepath.Join(root, "alias.proto")))
+	_, module, err := modules.ReadManifest(root)
+	require.NoError(t, err)
+	result, err := listV1Files(t.Context(), root, module, true, nil)
+	require.NoError(t, err)
+	require.Empty(t, result.Errors)
+	require.Contains(t, result.Files, v1ListedFile{AbsPath: filepath.ToSlash(filepath.Join(root, "alias.proto")), ImportPath: "alias.proto", Source: "workspace", Root: filepath.ToSlash(root)})
+}

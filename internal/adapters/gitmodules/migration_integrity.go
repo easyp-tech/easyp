@@ -17,19 +17,20 @@ import (
 // A historical lock can describe a whole installed tree or released v0's proto
 // archive. Each proof must match independently at the same pinned checkout.
 func verifyMigrationLegacyHash(ctx context.Context, checkout v1ModuleCheckout, source, expectedHash string, tracked migrationFiles) error {
+	if expectedHash == "" {
+		return validateMigrationInitialSelection(ctx, checkout, tracked)
+	}
 	var treeHash string
 	var treeErr error
-	if !tracked.omittedAuxiliarySymlinks {
-		treeHash, treeErr = hashMigrationLegacyFiles(checkout.dir, tracked.regularFiles)
+	if !tracked.hasSymlinks {
+		// Raw committed bytes are only a whole-tree proof when their recorded
+		// digest matches; no host checkout/filter representation is assumed.
+		treeHash, treeErr = hashMigrationLegacyFiles(checkout.snapshot, tracked.regularFiles)
 		if treeErr != nil {
 			treeErr = fmt.Errorf("hashMigrationLegacyFiles: %w", treeErr)
 		}
-		// Initial resolution still validates the legacy whole-tree layout.
-		if expectedHash == "" {
-			return treeErr
-		}
 		if treeErr == nil && treeHash == expectedHash {
-			return nil
+			return validateMigrationSelection(checkout.snapshot, tracked.regularFiles, checkout.module)
 		}
 	}
 
@@ -37,20 +38,63 @@ func verifyMigrationLegacyHash(ctx context.Context, checkout v1ModuleCheckout, s
 	// checks proto path/content equivalence when there is no historical pin.
 	// A pinned archive may independently succeed despite non-proto collisions
 	// in the alternate whole-tree representation.
-	archiveHash, err := hashMigrationProtoArchive(ctx, checkout.dir, tracked.regularFiles)
+	files, err := snapshotV1Files(checkout.snapshot)
 	if err != nil {
-		return errors.Join(treeErr, fmt.Errorf("hashMigrationProtoArchive: %w", err))
+		return errors.Join(treeErr, fmt.Errorf("snapshotV1Files: %w", err))
 	}
-	if expectedHash == "" || archiveHash == expectedHash {
+	roots, err := readMigrationLegacyRoots(checkout.snapshot, files)
+	if err != nil {
+		return errors.Join(treeErr, fmt.Errorf("readMigrationLegacyRoots: %w", err))
+	}
+	selected, err := migrationSelectedFiles(checkout.snapshot, checkout.module)
+	if err != nil {
+		return errors.Join(treeErr, fmt.Errorf("migrationSelectedFiles: %w", err))
+	}
+	nodes, err := readMigrationProtoArchive(ctx, checkout.dir, checkout.commit, tracked.trackedFiles)
+	if err != nil {
+		return errors.Join(treeErr, fmt.Errorf("readMigrationProtoArchive: %w", err))
+	}
+	hashes, err := migrationArchiveHashes(ctx, nodes, roots, selected)
+	if err != nil {
+		return errors.Join(treeErr, fmt.Errorf("migrationArchiveHashes: %w", err))
+	}
+	if slices.Contains(hashes, expectedHash) {
 		return nil
 	}
 
-	candidates := "archive " + archiveHash
-	if !tracked.omittedAuxiliarySymlinks {
+	candidates := "archive " + strings.Join(hashes, " or archive ")
+	if !tracked.hasSymlinks {
 		candidates += " or whole-tree " + treeHash
 	}
 	mismatch := fmt.Errorf("legacy hash mismatch for %s at %s: got %s, want %s", source, checkout.commit, candidates, expectedHash)
 	return errors.Join(treeErr, mismatch)
+}
+
+func validateMigrationInitialSelection(ctx context.Context, checkout v1ModuleCheckout, tracked migrationFiles) error {
+	if migrationUsesLogicalAliases(checkout, tracked) {
+		err := validateMigrationLogicalOwnership(ctx, checkout, tracked)
+		if err != nil {
+			return fmt.Errorf("validateMigrationLogicalOwnership: %w", err)
+		}
+	} else {
+		_, err := hashMigrationLegacyFiles(checkout.snapshot, tracked.regularFiles)
+		if err != nil {
+			return fmt.Errorf("hashMigrationLegacyFiles: %w", err)
+		}
+		err = validateMigrationSelection(checkout.snapshot, tracked.regularFiles, checkout.module)
+		if err != nil {
+			return fmt.Errorf("validateMigrationSelection: %w", err)
+		}
+	}
+	nodes, err := readMigrationProtoArchive(ctx, checkout.dir, checkout.commit, tracked.trackedFiles)
+	if err != nil {
+		return fmt.Errorf("readMigrationProtoArchive: %w", err)
+	}
+	err = validateMigrationArchiveRegularSources(nodes, checkout.snapshot, tracked.regularFiles)
+	if err != nil {
+		return fmt.Errorf("validateMigrationArchiveRegularSources: %w", err)
+	}
+	return nil
 }
 
 // hashMigrationLegacyFiles calculates the whole-tree legacy hash without
