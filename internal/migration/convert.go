@@ -47,7 +47,7 @@ type generateOutput struct {
 	Version  string             `yaml:"version"`
 	Generate targetsOutput      `yaml:"generate"`
 	Plugins  []pluginOutput     `yaml:"plugins"`
-	Options  v1.GenerateOptions `yaml:"options"`
+	Options  v1.GenerateOptions `yaml:"options,omitempty"`
 }
 type targetsOutput struct {
 	Modules  []string           `yaml:"modules,omitempty"`
@@ -233,11 +233,9 @@ func prefixExclusionPaths(value string) ([]string, error) {
 }
 
 func convertGenerate(cfg legacyConfig, selected, packages, paths []string) ([]byte, error) {
-	// Empty explicitly disables v1 inheritance of a parent's Go package prefix.
-	emptyPrefix := ""
 	output := generateOutput{
 		Version: "v1", Generate: targetsOutput{Modules: selected, Packages: packages, Paths: paths, Managed: cfg.Generate.Managed},
-		Plugins: []pluginOutput{}, Options: v1.GenerateOptions{Go: v1.GoOptions{PackagePrefix: &emptyPrefix}},
+		Plugins: []pluginOutput{},
 	}
 	for i, plugin := range cfg.Generate.Plugins {
 		converted := pluginOutput{Name: plugin.Name, Path: plugin.Path, Command: plugin.Command,

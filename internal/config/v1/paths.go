@@ -19,7 +19,7 @@ const pathSelectorForbiddenPattern = `[` + pathSelectorExcluded + `]`
 // A segment can start with dots but cannot be exactly "." or "..".
 const pathSelectorSegment = `(` + pathSelectorNonDotCharacter + `|\.` + pathSelectorNonDotCharacter + `|\.\.` + pathSelectorCharacter + `)` + pathSelectorCharacter + `*`
 
-// PathSelectorPattern is the grammar of a canonical, portable import-relative
+// PathSelectorPattern is the grammar of a canonical, portable module-relative
 // file or subtree selector. A single dot selects the whole source namespace.
 const PathSelectorPattern = `^(\.|` + pathSelectorSegment + `(/` + pathSelectorSegment + `)*)$`
 
@@ -29,13 +29,13 @@ var pathSelector = regexp.MustCompile(PathSelectorPattern)
 func ValidatePathSelectors(paths []string) error {
 	for index, name := range paths {
 		if !utf8.ValidString(name) || !pathSelector.MatchString(name) {
-			return fmt.Errorf("generate.paths[%d]: %q is not a canonical portable import-relative file or directory path", index, name)
+			return fmt.Errorf("generate.paths[%d]: %q is not a canonical portable module-relative file or directory path", index, name)
 		}
 	}
 	return nil
 }
 
-// PathSelectorMatches reports whether a source import name equals a validated
+// PathSelectorMatches reports whether a module-relative source path equals a validated
 // selector or lies in its subtree. Matching is bounded by path components.
 func PathSelectorMatches(selector, name string) bool {
 	return selector == "." || name == selector || strings.HasPrefix(name, selector+"/")

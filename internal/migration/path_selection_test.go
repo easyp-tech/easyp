@@ -83,7 +83,7 @@ func TestMigrationPathsPreservePartialOrUndeclaredPackages(t *testing.T) {
 	}
 }
 
-func TestMigrationPackageFallbackPreservesMixedRootSelection(t *testing.T) {
+func TestMigrationPathsPreserveMixedRootSelection(t *testing.T) {
 	t.Parallel()
 	root := t.TempDir()
 	writeFixture(t, root, "easyp.yaml", "generate:\n  inputs: [{directory: {path: ., root: a}}, {directory: {path: selected, root: b}}]\n")
@@ -92,8 +92,8 @@ func TestMigrationPackageFallbackPreservesMixedRootSelection(t *testing.T) {
 	writeFixture(t, root, "b/outside/other.proto", "package other.v1;")
 	plan, err := Build(t.Context(), Options{Dir: root, Module: "example.test/api"})
 	require.NoError(t, err)
-	assert.Empty(t, plan.paths, "dot paths would include unselected files in the second root")
-	assert.Equal(t, []string{"first.v1", "second.v1"}, plan.packages)
+	assert.Equal(t, []string{"a", "b/selected"}, plan.paths)
+	assert.Empty(t, plan.packages, "module-relative paths retain each root's directory selection")
 	assert.Equal(t, map[string]string{"first.proto": "a/first.proto", "selected/second.proto": "b/selected/second.proto"}, plan.sources)
 	require.NoError(t, plan.Apply())
 }

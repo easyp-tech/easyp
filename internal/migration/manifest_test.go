@@ -32,7 +32,7 @@ func TestManifestBackupAndCombinedDependencies(t *testing.T) {
 	require.NoError(t, err)
 	var generation v1.Generate
 	require.NoError(t, yaml.Unmarshal(outputContent(t, plan, "easyp.gen.yaml"), &generation))
-	assert.Equal(t, []string{"example.com/acme/c"}, generation.Generate.Modules)
+	assert.Equal(t, []v1.GenerateModule{{Module: "example.com/acme/c"}}, generation.Generate.Modules)
 	candidate := string(outputContent(t, plan, "protobuf.mod"))
 	assert.Contains(t, candidate, "require example.com/acme/a v1.0.0")
 	assert.Contains(t, candidate, "require example.com/acme/b v1.0.0 // indirect")
@@ -73,7 +73,7 @@ func TestDirectoryPathIsRelativeToRoot(t *testing.T) {
 			require.NoError(t, err)
 			assert.Equal(t, map[string]string{"api/a.proto": filepath.Join("proto", "api", "a.proto")}, plan.sources)
 			assert.Equal(t, []string{"proto"}, plan.roots)
-			assert.Equal(t, []string{"api"}, plan.paths)
+			assert.Equal(t, []string{"proto/api"}, plan.paths)
 		})
 	}
 }

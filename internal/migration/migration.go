@@ -194,7 +194,7 @@ func Build(ctx context.Context, options Options) (*Plan, error) {
 			}
 		}
 		if len(p.paths) > 0 {
-			p.warnings = append(p.warnings, "Legacy directory selection is preserved through literal generate.paths selectors. Import roots and source paths stay unchanged; files outside these paths do not become targets even when they declare the same package.")
+			p.warnings = append(p.warnings, "Legacy directory selection is preserved through literal generate.paths selectors relative to the module directory. Import roots and source paths stay unchanged; files outside these paths do not become targets even when they declare the same package.")
 		} else {
 			p.warnings = append(p.warnings, "Legacy directory selection is preserved through exact generate.packages selectors. Import roots and source paths stay unchanged; future files declaring those packages also participate in generation.")
 		}
@@ -229,6 +229,11 @@ func Build(ctx context.Context, options Options) (*Plan, error) {
 		if !slices.Contains(selected, name) {
 			selected = append(selected, name)
 		}
+	}
+	// The generator already belongs to this module. Keep explicit selections
+	// only when legacy Git inputs add other generation modules.
+	if len(inputs) > 0 && len(selected) == 1 && selected[0] == options.Module {
+		selected = nil
 	}
 	manifest := tx.expected[v1.ModuleFile]
 	nativeManifest := manifest.exists && v1.IsModuleManifest(manifest.data)

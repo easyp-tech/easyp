@@ -96,14 +96,26 @@ func documents() map[string]*schema {
 
 	generate := fromType(reflect.TypeFor[Generate]())
 	generate.Properties["version"] = &schema{Type: "string", Const: "v1"}
-	generate.Properties["generate"].Properties["packages"].Description = "Exact protobuf packages among selected modules, intersected with generate.paths. Empty means all packages. Each selector must match a selected output source. Imports remain available for compilation; with_imports separately controls dependency generation."
+	module := fromType(reflect.TypeFor[GenerateModule]())
+	module.Required = []string{"module"}
+	module.Properties["module"].MinLength = 1
+	module.Properties["module"].Description = "Module identity, workspace-relative module directory, or declared dependency selected through the consumer manifest and lock."
+	module.Properties["packages"].Description = "Exact protobuf packages generated from this module, intersected with its paths and the project's global paths/packages. Omitted or empty means all packages. Each selector must match a resulting source in this module."
+	module.Properties["packages"].Items.Pattern = PackageSelectorPattern
+	pathDescription := "Literal files or directory subtrees relative to the selected module directory, not its protobuf import roots or the generator file. Empty or omitted means all module sources; . selects the whole module. Paths are intersected with generate.packages and module-local filters, must be canonical portable relative names, and never change import roots or required imports. Distinct from plugins.opts.paths, which controls plugin output layout."
+	module.Properties["paths"].Description = pathDescription + " Each selector must match a resulting source in this module."
+	module.Properties["paths"].Items.Pattern = PathSelectorPattern
+	module.Properties["paths"].Items.Not = &schema{Pattern: pathSelectorForbiddenPattern}
+	generate.Properties["generate"].Properties["modules"].Items = &schema{OneOf: []*schema{{Type: "string", MinLength: 1}, module}}
+	generate.Properties["generate"].Properties["modules"].Description = "Modules selected for generation. A string selects all sources; a module object adds its own paths/packages, intersected with global filters. Omitted selects the module containing this generator. Identical repeated selections are idempotent; conflicting filters for one module are rejected."
+	generate.Properties["generate"].Properties["packages"].Description = "Exact protobuf packages among selected modules, intersected with global paths and each module's paths/packages. Omitted or empty means all packages. Each selector must match a resulting source in at least one selected module. Imports remain available for compilation; with_imports separately controls dependency generation."
 	generate.Properties["generate"].Properties["packages"].Items.Pattern = PackageSelectorPattern
-	generate.Properties["generate"].Properties["paths"].Description = "Literal proto import-relative files or directory subtrees across selected modules, intersected with generate.packages. Empty or omitted means all paths; . selects the whole namespace. Paths must be canonical portable relative names without whitespace, dot segments, absolute paths, backslashes or globs. Each selector must match a selected output source. Module roots and required imports remain unchanged. Distinct from plugins.opts.paths, which controls plugin output layout."
+	generate.Properties["generate"].Properties["paths"].Description = pathDescription + " Each selector must match a resulting source across selected modules; module-local filters apply too. These filters can be used without generate.modules."
 	generate.Properties["generate"].Properties["paths"].Items.Pattern = PathSelectorPattern
 	// Some schema validators allow a final newline before the regex end anchor.
 	// Reject forbidden characters independently so they agree with CLI parsing.
 	generate.Properties["generate"].Properties["paths"].Items.Not = &schema{Pattern: pathSelectorForbiddenPattern}
-	generate.Properties["options"].Properties["go"].Properties["package_prefix"].Description = "Sets go_package without enabling managed defaults for other languages; full managed mode requires generate.managed.enabled."
+	generate.Properties["options"].Properties["go"].Properties["package_prefix"].Description = "Optional Go prefix. Omitted allows inheritance; explicit empty blocks prefix inheritance. A nonempty value sets go_package without enabling managed defaults for other languages; full managed mode requires generate.managed.enabled. Migration does not create this setting."
 	plugin := generate.Properties["plugins"].Items
 	plugin.Required = []string{"out"}
 	plugin.Properties["with_imports"].Description = "Generate code for transitive imports with this plugin only; defaults to false. Independent from descriptor --include_imports."

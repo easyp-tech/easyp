@@ -48,6 +48,17 @@ func validateGenerate(raw []byte) error {
 	if gen.Version != "" && gen.Version != "v1" {
 		return fmt.Errorf("unsupported generation version %q", gen.Version)
 	}
+	for i, module := range gen.Generate.Modules {
+		if err := module.Validate(); err != nil {
+			return fmt.Errorf("generate.modules[%d]: %w", i, err)
+		}
+	}
+	if err := v1.ValidatePackageSelectors(gen.Generate.Packages); err != nil {
+		return fmt.Errorf("ValidatePackageSelectors: %w", err)
+	}
+	if err := v1.ValidatePathSelectors(gen.Generate.Paths); err != nil {
+		return fmt.Errorf("ValidatePathSelectors: %w", err)
+	}
 	if err := gen.Generate.Managed.Validate(); err != nil {
 		return fmt.Errorf("Validate: %w", err)
 	}
