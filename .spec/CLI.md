@@ -214,6 +214,36 @@ easyp migrate --dir . --module github.com/acme/contracts --resolve-lock --write
 
 Flag-only invocation previews without file writes unless <code>--write</code> is supplied. If dependency integrity checks are required, application remains blocked until <code>--resolve-lock</code> authorizes them. Existing native outputs are not overwritten with conflicting candidates; legacy replaced files receive <code>.v0.bak</code> backups and <code>easyp.lock</code> is retained unchanged. Legacy <code>version</code> metadata such as <code>v1alpha</code> is accepted and omitted with a warning; <code>deps: null</code> means an empty dependency list. Keys that the v0 parser ignored are also omitted with source-path warnings instead of being assigned invented v1 semantics, while the byte-identical v0 backup preserves them. Known fields with invalid or ambiguous values still block migration. The plan rechecks observed files before applying and rolls back ordinary write failures, but multiple replacements are not process-crash atomic. See [internal/migration/migration.go](../internal/migration/migration.go), [apply.go](../internal/migration/apply.go), and [migration review context](config/review-migration-and-polish.md).
 
+Local directory selection may become literal <code>generate.paths</code> selectors
+without moving sources. The plan compares whole roots, then the original
+module-directory-relative paths, then complete protobuf packages for cases
+that cannot be represented by literal paths.
+Each candidate must preserve the exact import-name-to-physical-source map.
+Omitted or empty legacy roots keep <code>.</code>; native manifests with no
+<code>roots</code> use that same default. Same-package files outside selected
+paths do not become generation targets, including ignored Gradle build copies.
+Changed import names, hidden/vendor/nested-module boundary changes and inferred
+local filters mixed with whole-module Git inputs stay blocked. The plan rechecks
+sources, paths and packages before applying. See [source selection](config/package-selection.md).
+
+Historical <code>easyp.lock</code> entries may use a full SemVer tag followed by
+Git's peeled-ref suffix <code>^{}</code>. Migration verifies the corresponding
+tag and legacy content hash before writing the native lock; it never rewrites
+the historical lock or switches to HEAD. Peeled branches, abbreviated refs,
+repeated suffixes and pseudo-version-shaped peeled tags are rejected.
+Released v0 lock hashes cover the installed <code>git archive '*.proto'</code>
+contents after legacy root rewrites, while the new lock covers the materialized v1
+snapshot. Migration verifies either the historical archive hash or the existing
+whole-tree hash at the pinned revision. It rejects archive attributes that omit
+or alter proto sources rather than silently changing their contracts.
+Internal file, directory, import-root and metadata symlinks are supported.
+Logical paths keep their protobuf import names. Git targets resolve only from
+the pinned tree; installed snapshots contain regular resolved bytes and work
+with <code>core.symlinks=false</code>. Selected inputs cannot escape their owner,
+cross undeclared nested repositories/submodules or form cycles. Invalid unused
+auxiliary links are omitted. Migration verifies historical archive contents
+separately; it never substitutes the new snapshot hash for a v0 input hash.
+
 ### <code>easyp ls-files [flags]</code>
 
 Lists sources from the working directory's native manifest, or a default local <code>.</code> root if that directory has no manifest. Unlike <code>mod</code>/<code>get</code>, this handler does not search upward for a module. The global config flag does not choose its root.

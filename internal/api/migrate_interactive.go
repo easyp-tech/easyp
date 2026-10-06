@@ -13,6 +13,7 @@ import (
 	"github.com/easyp-tech/easyp/internal/adapters/gitmodules"
 	v1 "github.com/easyp-tech/easyp/internal/config/v1"
 	"github.com/easyp-tech/easyp/internal/migration"
+	"github.com/easyp-tech/easyp/internal/workspace"
 )
 
 type migrationWizard struct {
@@ -168,7 +169,7 @@ func (w migrationWizard) identity(ctx context.Context, root, value string, expli
 
 func migrationSuggestedIdentity(ctx context.Context, root string) string {
 	var identity string
-	raw, err := os.ReadFile(filepath.Join(root, v1.ModuleFile))
+	raw, err := workspace.ReadFile(root, filepath.Join(root, v1.ModuleFile))
 	if err == nil {
 		module, err := v1.ParseModule(bytes.NewReader(raw))
 		if err == nil {

@@ -2,6 +2,8 @@ package modules
 
 import (
 	"bytes"
+	"context"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -9,6 +11,7 @@ import (
 
 	moduleconfig "github.com/easyp-tech/easyp/internal/adapters/module_config"
 	v1 "github.com/easyp-tech/easyp/internal/config/v1"
+	"github.com/easyp-tech/easyp/internal/sourceview"
 )
 
 type localReplacements struct {
@@ -77,8 +80,8 @@ func readLocalReplacement(directory, name string) (EffectiveModule, error) {
 	if !info.IsDir() {
 		return EffectiveModule{}, fmt.Errorf("%s is not a directory", directory)
 	}
-	raw, err := os.ReadFile(filepath.Join(directory, v1.ModuleFile))
-	if err != nil && !os.IsNotExist(err) {
+	raw, err := sourceview.ReadLocal(context.Background(), directory, v1.ModuleFile)
+	if err != nil && !errors.Is(err, os.ErrNotExist) {
 		return EffectiveModule{}, fmt.Errorf("ReadFile: %w", err)
 	}
 	var module v1.Module
@@ -92,7 +95,7 @@ func readLocalReplacement(directory, name string) (EffectiveModule, error) {
 		}
 	} else {
 		// Compatibility reads only roots/requirements, never dependency plugins.
-		module, err = moduleconfig.ReadGitDependency(directory, name)
+		module, err = moduleconfig.ReadLocalDependency(directory, name)
 		if err != nil {
 			return EffectiveModule{}, fmt.Errorf("ReadGitDependency: %w", err)
 		}

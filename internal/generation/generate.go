@@ -12,6 +12,7 @@ import (
 	"github.com/easyp-tech/easyp/internal/core/path_helpers"
 	"github.com/easyp-tech/easyp/internal/logger"
 	"github.com/easyp-tech/easyp/internal/modules"
+	"github.com/easyp-tech/easyp/internal/sourceview"
 	"github.com/easyp-tech/easyp/internal/workspace"
 )
 
@@ -84,14 +85,11 @@ func Run(ctx context.Context, log logger.Logger, cache modules.Cache, request Re
 		if err := inheritV1GenerateOptions(request.WorkspaceRoot, configPath, &gen); err != nil {
 			return fmt.Errorf("inheritV1GenerateOptions: %w", err)
 		}
-		if len(gen.Plugins) == 0 && len(gen.Generate.Packages) == 0 && !exportDescriptors && !request.Frozen {
+		if len(gen.Plugins) == 0 && !gen.Generate.HasSourceSelectors() && !exportDescriptors && !request.Frozen {
 			continue
 		}
 		modules, err := selectV1Modules(request.WorkspaceRoot, filepath.Dir(configPath), gen.Generate.Modules)
 		if err != nil {
-			return fmt.Errorf("%s: %w", configPath, err)
-		}
-		if err := v1.ValidatePackageSelectors(gen.Generate.Packages); err != nil {
 			return fmt.Errorf("%s: %w", configPath, err)
 		}
 		for _, module := range modules {
@@ -101,7 +99,8 @@ func Run(ctx context.Context, log logger.Logger, cache modules.Cache, request Re
 	if request.AllProjects {
 		selected := descriptorTargets[:0]
 		for _, target := range descriptorTargets {
-			if len(target.config.Plugins) == 0 && len(target.config.Generate.Modules) == 0 {
+			if len(target.config.Plugins) == 0 && len(target.config.Generate.Modules) == 0 &&
+				!target.config.Generate.HasSourceSelectors() {
 				inherited, err := isOptionsOnlyParent(target.configPath, target.config, configs)
 				if err != nil {
 					return fmt.Errorf("isOptionsOnlyParent: %w", err)
@@ -217,7 +216,7 @@ func isOptionsOnlyParent(configPath string, gen v1.Generate, configs []string) (
 	}
 
 	hasOwnProto := false
-	err := filepath.WalkDir(dir, func(path string, entry fs.DirEntry, walkErr error) error {
+	err := workspace.Walk(dir, func(path string, entry fs.DirEntry, walkErr error) error {
 		if walkErr != nil {
 			return walkErr
 		}
@@ -242,14 +241,26 @@ func discoverV1GenerateConfigs(root, project string) ([]string, error) {
 			project = filepath.Join(root, project)
 		}
 		path := filepath.Join(project, v1.GenerateFile)
-		if _, err := os.Stat(path); err != nil {
+		boundary := root
+		relative, err := filepath.Rel(boundary, path)
+		if err != nil {
+			return nil, fmt.Errorf("Rel: %w", err)
+		}
+		if !filepath.IsLocal(relative) {
+			boundary = project
+			relative = v1.GenerateFile
+		}
+		if _, err := sourceview.ResolveLocal(context.Background(), boundary, relative); err != nil {
 			return nil, fmt.Errorf("find project generator %s: %w", path, err)
 		}
 		return []string{path}, nil
 	}
 	var paths []string
-	err := filepath.WalkDir(root, func(path string, entry fs.DirEntry, walkErr error) error {
+	err := workspace.Walk(root, func(path string, entry fs.DirEntry, walkErr error) error {
 		if walkErr != nil {
+			if filepath.Base(path) != v1.GenerateFile {
+				return nil
+			}
 			return walkErr
 		}
 		if entry.IsDir() {
@@ -267,7 +278,7 @@ func discoverV1GenerateConfigs(root, project string) ([]string, error) {
 }
 
 func readV1GenerateConfig(path string) (v1.Generate, error) {
-	raw, err := os.ReadFile(path)
+	raw, err := workspace.ReadFileAt(path)
 	if err != nil {
 		return v1.Generate{}, fmt.Errorf("ReadFile: %w", err)
 	}

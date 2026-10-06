@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 
 	v1 "github.com/easyp-tech/easyp/internal/config/v1"
+	"github.com/easyp-tech/easyp/internal/workspace"
 )
 
 // inheritV1GenerateOptions reads only options from ancestor generator files.
@@ -46,7 +47,7 @@ func inheritV1GenerateOptions(repoRoot, configPath string, gen *v1.Generate) err
 }
 
 func readOptionalFile(path string) ([]byte, bool, error) {
-	raw, err := os.ReadFile(path)
+	raw, err := workspace.ReadFileAt(path)
 	if errors.Is(err, os.ErrNotExist) {
 		return nil, false, nil
 	}

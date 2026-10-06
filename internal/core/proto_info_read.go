@@ -15,7 +15,7 @@ import (
 )
 
 func (c *Core) protoInfoRead(ctx context.Context, fs FS, path string) (ProtoInfo, error) {
-	f, err := fs.Open(path)
+	f, err := c.openDiskSource(fs, path)
 	if err != nil {
 		return ProtoInfo{}, fmt.Errorf("Open: %w", err)
 	}
@@ -98,7 +98,7 @@ func (c *Core) openImportFile(disk FS, importName string) (io.ReadCloser, error)
 		allowed = c.importFileAllowed(filepath.Join(rooted.RootPath(), importName))
 	}
 	if allowed {
-		f, err = disk.Open(importName)
+		f, err = c.openDiskSource(disk, importName)
 	} else {
 		err = os.ErrNotExist
 	}
@@ -151,4 +151,18 @@ func (c *Core) sourceImportPath(disk FS, name string) string {
 		}
 	}
 	return filepath.ToSlash(best)
+}
+
+func (c *Core) openDiskSource(disk FS, name string) (io.ReadCloser, error) {
+	if rooted, ok := disk.(interface{ RootPath() string }); ok && c.sourceFileOpen != nil {
+		full := filepath.Join(rooted.RootPath(), filepath.FromSlash(name))
+		if c.importFileAllowed != nil && !c.importFileAllowed(full) {
+			return nil, &os.PathError{Op: "open", Path: name, Err: os.ErrNotExist}
+		}
+		file, err := c.sourceFileOpen(full)
+		if err == nil || !errors.Is(err, os.ErrNotExist) {
+			return file, err
+		}
+	}
+	return disk.Open(name)
 }

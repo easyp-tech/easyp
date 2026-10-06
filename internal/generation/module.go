@@ -38,6 +38,7 @@ func prepareV1ModuleCore(log logger.Logger, request Request, configPath, moduleD
 	options.PluginWorkDir = request.WorkDir
 	options.ImportRoots = importRoots.Paths()
 	options.ImportFileAllowed = allSources.FileAllowed()
+	options.OpenSourceFile = allSources.OpenSourceFile
 	if options.ManagedModeConfig.Enabled || options.ManagedModeConfig.GoPackageOnly {
 		roots := append(modules.SourceRoots(nil), importRoots...)
 		roots = append(roots, sources...)

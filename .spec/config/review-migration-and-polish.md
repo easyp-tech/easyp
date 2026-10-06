@@ -23,10 +23,26 @@ physical files and protobuf import names must remain equivalent.
 
 Legacy direct/indirect directives become require. Old full-SHA/pseudo-version
 pins retain their commit. A tag-only pin is accepted only after verifying the
-legacy installed-tree hash. The new full tracked-repository hash is calculated
+legacy installed-tree hash. The new materialized snapshot hash is calculated
 independently. Missing historical pins, retags and hash mismatches fail. The old
 easyp.lock remains byte-identical. Empty projects receive a native empty lock,
 so the retained old lock cannot block later normal module commands.
+
+Internal file, directory, import-root and metadata symlinks are supported.
+Logical paths keep their protobuf import names. Git targets resolve only from
+the pinned tree; installed snapshots contain regular resolved bytes and work
+with <code>core.symlinks=false</code>. Selected inputs cannot escape their owner,
+cross undeclared nested repositories/submodules or form cycles. Invalid unused
+auxiliary links are omitted. Migration verifies historical archive contents
+separately; it never substitutes the new snapshot hash for a v0 input hash.
+
+Git index framing, stage and local-path validation live in the pure
+internal/adapters/gitindex parser. Snapshot selection and metadata preflight
+apply their own mode policies. Migration reads one index, records the selected
+regular files and omitted auxiliary links, then verifies historical contents
+in migration_integrity.go. FetchMigration keeps source equivalence and native
+hash calculation as separate steps; no-link whole-tree proof and archive-only
+proof after omitted links remain distinct.
 
 The application transaction stages all results and .v0.bak recovery copies,
 checks observed contents/permissions/source scope again, and rolls back ordinary

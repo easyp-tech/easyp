@@ -1,6 +1,7 @@
 package migration
 
 import (
+	"bytes"
 	"fmt"
 	"strings"
 
@@ -47,6 +48,17 @@ func validateGenerate(raw []byte) error {
 	if gen.Version != "" && gen.Version != "v1" {
 		return fmt.Errorf("unsupported generation version %q", gen.Version)
 	}
+	for i, module := range gen.Generate.Modules {
+		if err := module.Validate(); err != nil {
+			return fmt.Errorf("generate.modules[%d]: %w", i, err)
+		}
+	}
+	if err := v1.ValidatePackageSelectors(gen.Generate.Packages); err != nil {
+		return fmt.Errorf("ValidatePackageSelectors: %w", err)
+	}
+	if err := v1.ValidatePathSelectors(gen.Generate.Paths); err != nil {
+		return fmt.Errorf("ValidatePathSelectors: %w", err)
+	}
 	if err := gen.Generate.Managed.Validate(); err != nil {
 		return fmt.Errorf("Validate: %w", err)
 	}
@@ -59,12 +71,9 @@ func validateGenerate(raw []byte) error {
 }
 
 func validateNativeLock(raw []byte) (v1.Lock, error) {
-	var lock v1.Lock
-	if err := decodeStrict(raw, &lock); err != nil {
-		return v1.Lock{}, fmt.Errorf("decodeStrict: %w", err)
-	}
-	if err := lock.Validate(); err != nil {
-		return v1.Lock{}, fmt.Errorf("Validate: %w", err)
+	lock, err := v1.ParseLock(bytes.NewReader(raw))
+	if err != nil {
+		return v1.Lock{}, fmt.Errorf("ParseLock: %w", err)
 	}
 	return lock, nil
 }

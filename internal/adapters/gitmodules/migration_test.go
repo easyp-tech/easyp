@@ -196,15 +196,16 @@ func TestReadMigrationLegacyRootsRejectsAmbiguity(t *testing.T) {
 	}
 }
 
-func TestFetchMigrationRejectsUnsafeNodes(t *testing.T) {
+func TestFetchMigrationRejectsGitlinksAndUnprovedAliasPins(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
 		name      string
 		submodule bool
+		wantError string
 	}{
-		{name: "symlink"},
-		{name: "submodule", submodule: true},
+		{name: "unproved file alias pin", wantError: "legacy hash mismatch"},
+		{name: "submodule", submodule: true, wantError: "unsupported non-regular Git mode"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -213,14 +214,14 @@ func TestFetchMigrationRejectsUnsafeNodes(t *testing.T) {
 			if tt.submodule {
 				runTestGit(t, repository, "update-index", "--add", "--cacheinfo", "160000,"+commit+",unsafe")
 			} else {
-				require.NoError(t, os.Symlink("file.proto", filepath.Join(repository, "unsafe")))
-				runTestGit(t, repository, "add", "unsafe")
+				require.NoError(t, os.Symlink("file.proto", filepath.Join(repository, "unsafe.proto")))
+				runTestGit(t, repository, "add", "unsafe.proto")
 			}
 			runTestGit(t, repository, "-c", "user.name=EasyP Test", "-c", "user.email=test@example.com", "commit", "-qm", "unsafe")
 			runTestGit(t, repository, "tag", "v1.0.0")
 			cacheDir := t.TempDir()
 			_, err := (&Cache{root: cacheDir}).FetchMigration(t.Context(), repository, "v1.0.0", "h1:untrusted")
-			require.ErrorContains(t, err, "non-regular")
+			require.ErrorContains(t, err, tt.wantError)
 			entries, err := os.ReadDir(cacheDir)
 			require.NoError(t, err)
 			assert.Empty(t, entries)
@@ -228,16 +229,20 @@ func TestFetchMigrationRejectsUnsafeNodes(t *testing.T) {
 	}
 }
 
-func TestMigrationTrackedFilesRejectsMaterializedSymlink(t *testing.T) {
+func TestMigrationTrackedFilesRecordsMaterializedProtoSymlinkAsPointer(t *testing.T) {
 	t.Parallel()
 
-	repository, _ := migrationTestRepository(t, map[string]string{"link": "target.proto"})
-	blob := strings.TrimSpace(runTestGit(t, repository, "rev-parse", "HEAD:link"))
+	repository, _ := migrationTestRepository(t, map[string]string{"link.proto": "target.proto"})
+	blob := strings.TrimSpace(runTestGit(t, repository, "rev-parse", "HEAD:link.proto"))
 	// A checkout with core.symlinks=false materializes a Git symlink as a
-	// regular file. The index mode must still prevent legacy verification.
-	runTestGit(t, repository, "update-index", "--cacheinfo", "120000,"+blob+",link")
-	_, err := migrationTrackedFiles(t.Context(), repository)
-	require.ErrorContains(t, err, "non-regular Git mode")
+	// regular file. The immutable mode must still exclude it from a regular
+	// whole-tree proof and retain it as a pointer for an independent ZIP proof.
+	runTestGit(t, repository, "update-index", "--cacheinfo", "120000,"+blob+",link.proto")
+	tracked, err := migrationTrackedFiles(t.Context(), repository)
+	require.NoError(t, err)
+	assert.Empty(t, tracked.regularFiles)
+	assert.Equal(t, []string{"link.proto"}, tracked.symlinks)
+	assert.True(t, tracked.hasSymlinks)
 }
 
 func TestFetchMigrationPinnedCommitIgnoresMovedTag(t *testing.T) {

@@ -190,6 +190,9 @@ func readGitDependencyManifest(path, source string) (v1.Module, bool, error) {
 
 // ReadGitDependencyAt verifies the candidate module directory before adapting repository-relative roots.
 func ReadGitDependencyAt(checkout, source, subdir string) (v1.Module, error) {
+	if err := validateGitDependencyIndex(checkout); err != nil {
+		return v1.Module{}, fmt.Errorf("validateGitDependencyIndex: %w", err)
+	}
 	major, err := v1.ModulePathMajor(source)
 	if err != nil {
 		return v1.Module{}, fmt.Errorf("ModulePathMajor: %w", err)
@@ -201,6 +204,9 @@ func ReadGitDependencyAt(checkout, source, subdir string) (v1.Module, error) {
 	var selected *v1.Module
 	var identityErr error
 	for _, location := range locations {
+		if err := validateGitDependencyDirectory(checkout, location); err != nil {
+			return v1.Module{}, fmt.Errorf("validateGitDependencyDirectory: %w", err)
+		}
 		manifestPath := filepath.Join(checkout, location, v1.ModuleFile)
 		raw, err := readGitDependencyConfig(manifestPath)
 		if errors.Is(err, os.ErrNotExist) {
@@ -245,8 +251,8 @@ func ReadGitDependencyAt(checkout, source, subdir string) (v1.Module, error) {
 	return v1.Module{}, fmt.Errorf("module %s requires a protobuf.mod declaring its exact identity in %v", source, locations)
 }
 
-// A symlink would be omitted from the installed snapshot, so reading it here
-// could give a downloaded module different roots or requirements from its cache.
+// Metadata readers consume regular materialized snapshots. Pointer resolution
+// belongs to the bounded source view before these format-specific readers run.
 func readGitDependencyConfig(path string) ([]byte, error) {
 	info, err := os.Lstat(path)
 	if err != nil {

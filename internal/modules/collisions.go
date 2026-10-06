@@ -10,7 +10,7 @@ func CheckSourceCollisions(roots SourceRoots) error {
 	seen := make(map[string]string)
 	allowed := roots.FileAllowed()
 	for _, root := range roots {
-		err := root.Walk(func(path string) error {
+		err := root.walk(allowed, true, roots.ownsSelectedPhysical, func(path string) error {
 			if allowed != nil && !allowed(path) {
 				return nil
 			}

@@ -194,7 +194,7 @@ func typedNode(node *yaml.Node, typ reflect.Type, path string, warnings *[]strin
 		}
 		return fmt.Errorf("null YAML value at line %d", node.Line)
 	}
-	if typ == reflect.TypeFor[legacyDirectory]() && node.Kind == yaml.ScalarNode && node.Tag == "!!str" {
+	if (typ == reflect.TypeFor[legacyDirectory]() || typ == reflect.TypeFor[v1.GenerateModule]()) && node.Kind == yaml.ScalarNode && node.Tag == "!!str" {
 		return nil
 	}
 	if typ == reflect.TypeFor[config.PluginOpts]() || typ == reflect.TypeFor[v1.PluginOptions]() {

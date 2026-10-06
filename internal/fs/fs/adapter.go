@@ -1,10 +1,13 @@
 package fs
 
 import (
+	"context"
 	"io"
 	"io/fs"
 	"os"
 	"path/filepath"
+
+	"github.com/easyp-tech/easyp/internal/sourceview"
 )
 
 type FSAdapter struct {
@@ -14,7 +17,7 @@ type FSAdapter struct {
 }
 
 func (a *FSAdapter) Open(name string) (io.ReadCloser, error) {
-	return a.FS.Open(name)
+	return sourceview.OpenLocal(context.Background(), a.rootDir, name)
 }
 
 func (a *FSAdapter) Create(name string) (io.WriteCloser, error) {

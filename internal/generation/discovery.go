@@ -2,7 +2,6 @@ package generation
 
 import (
 	"fmt"
-	"os"
 	"path/filepath"
 	"slices"
 
@@ -49,7 +48,7 @@ func selectGenerateConfigs(request Request) ([]string, error) {
 			return nil, lookupErr
 		}
 		if legacy != "" {
-			raw, readErr := os.ReadFile(legacy)
+			raw, readErr := workspace.ReadFile(request.WorkspaceRoot, legacy)
 			if readErr != nil {
 				return nil, readErr
 			}
@@ -58,13 +57,6 @@ func selectGenerateConfigs(request Request) ([]string, error) {
 			}
 		}
 		return nil, fmt.Errorf("no selected easyp.gen.yaml; choose --project <directory> (repeatable), or --all for recursive generation")
-	}
-	info, err := os.Lstat(path)
-	if err != nil {
-		return nil, err
-	}
-	if info.Mode()&os.ModeSymlink != 0 {
-		return nil, fmt.Errorf("automatic generation selection does not follow symlink config %s; select its project explicitly", path)
 	}
 	return []string{filepath.Clean(path)}, nil
 }

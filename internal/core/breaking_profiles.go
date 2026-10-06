@@ -2,7 +2,10 @@ package core
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"io"
+	"os"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -17,6 +20,7 @@ import (
 
 	"github.com/easyp-tech/easyp/internal/config"
 	"github.com/easyp-tech/easyp/internal/core/path_helpers"
+	"github.com/easyp-tech/easyp/internal/sourceview"
 )
 
 type breakingGraph struct {
@@ -81,7 +85,7 @@ func (c *Core) compileBreakingGraph(ctx context.Context, walker DirWalker) (*bre
 	root := rooted.RootPath()
 	targets := make([]string, 0)
 	targetPaths := make(map[string]string)
-	physical := make(map[string]bool)
+	seen := make(map[string]bool)
 	err := walker.WalkDir(func(path string, walkErr error) error {
 		if walkErr != nil {
 			return walkErr
@@ -93,16 +97,12 @@ func (c *Core) compileBreakingGraph(ctx context.Context, walker DirWalker) (*bre
 		if err != nil {
 			return err
 		}
-		physicalPath := filepath.Join(root, filepath.FromSlash(path))
-		resolvedPath, err := filepath.EvalSymlinks(physicalPath)
-		if err == nil {
-			physicalPath = resolvedPath
-		}
-		physicalPath = filepath.Clean(physicalPath)
-		if physical[physicalPath] {
+		// An alias has its own FILE identity even when its bytes come from the
+		// same target. Duplicate declarations remain a compiler error.
+		if seen[canonicalPath] {
 			return nil
 		}
-		physical[physicalPath] = true
+		seen[canonicalPath] = true
 		targets = append(targets, canonicalPath)
 		targetPaths[canonicalPath] = filepath.ToSlash(path)
 		return nil
@@ -114,12 +114,12 @@ func (c *Core) compileBreakingGraph(ctx context.Context, walker DirWalker) (*bre
 	if len(targets) == 0 {
 		return newBreakingGraph(), nil
 	}
-	imports := uniquePhysicalRoots(importRoots)
+	imports := uniqueLogicalRoots(importRoots)
 	if len(imports) == 0 {
 		imports = []string{root}
 	}
 	compiler := protocompile.Compiler{
-		Resolver:       wellknownimports.WithStandardImports(&protocompile.SourceResolver{ImportPaths: imports, Accessor: c.openSourceFile}),
+		Resolver:       wellknownimports.WithStandardImports(&protocompile.SourceResolver{ImportPaths: imports, Accessor: c.breakingSourceAccessor(ctx, root)}),
 		SourceInfoMode: protocompile.SourceInfoStandard,
 	}
 	compiled, err := compiler.Compile(ctx, targets...)
@@ -127,6 +127,27 @@ func (c *Core) compileBreakingGraph(ctx context.Context, walker DirWalker) (*bre
 		return nil, fmt.Errorf("Compile: %w", err)
 	}
 	return buildBreakingGraph(compiled, targetPaths), nil
+}
+
+// Current and baseline walkers own different physical trees. Declared source
+// hooks may open imports, while the walker tree remains a bounded local source.
+func (c *Core) breakingSourceAccessor(ctx context.Context, root string) func(string) (io.ReadCloser, error) {
+	return func(filename string) (io.ReadCloser, error) {
+		if c.importFileAllowed != nil && !c.importFileAllowed(filename) {
+			return nil, &os.PathError{Op: "open", Path: filename, Err: os.ErrNotExist}
+		}
+		if c.sourceFileOpen != nil {
+			reader, err := c.sourceFileOpen(filename)
+			if err == nil || !errors.Is(err, os.ErrNotExist) {
+				return reader, err
+			}
+		}
+		relative, err := filepath.Rel(root, filename)
+		if err == nil && filepath.IsLocal(relative) {
+			return sourceview.OpenLocal(ctx, root, relative)
+		}
+		return c.openSourceFile(filename)
+	}
 }
 
 func canonicalBreakingPath(root, path string, importRoots []string) (string, error) {
@@ -140,14 +161,10 @@ func canonicalBreakingPath(root, path string, importRoots []string) (string, err
 	return filepath.ToSlash(path), nil
 }
 
-func uniquePhysicalRoots(roots []string) []string {
+func uniqueLogicalRoots(roots []string) []string {
 	result := make([]string, 0, len(roots))
 	seen := make(map[string]bool)
 	for _, root := range roots {
-		resolved, err := filepath.EvalSymlinks(root)
-		if err == nil {
-			root = resolved
-		}
 		root = filepath.Clean(root)
 		if !seen[root] {
 			seen[root] = true

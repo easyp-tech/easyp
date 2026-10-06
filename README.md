@@ -254,3 +254,25 @@ Run <code>easyp migrate</code> in a terminal for a guided migration, or add
 access and applying files require separate confirmations, both defaulting to no.
 Explicit <code>--module</code> without the wizard keeps the preview-first script
 interface; <code>--interactive=false</code> disables automatic prompting.
+
+Legacy directory inputs can migrate without moving sources through literal
+<code>generate.paths</code> selectors. Paths select files or directory subtrees
+relative to proto import roots; they do not change <code>protobuf.mod</code> roots
+or import access. Empty or omitted roots still mean <code>.</code>. For example,
+<code>paths: [mcp]</code> keeps Gradle copies of the same package outside the
+selected directory out of generation. Complete package selectors remain a
+fallback for representable mixed-root configurations. The wizard proves exact
+file/import equality and rechecks the fixed selection before applying it.
+Historical <code>easyp.lock</code> entries
+such as <code>v0.4.0^{}</code> are verified as the corresponding annotated Git tag,
+including the original content hash, while the old lock remains unchanged.
+The migration verifies released v0's proto archive hashes before calculating
+the native materialized-snapshot hash; Git archive attributes must preserve proto paths
+and contents.
+Internal file, directory, import-root and metadata symlinks are supported.
+Logical paths keep their protobuf import names. Git targets resolve only from
+the pinned tree; installed snapshots contain regular resolved bytes and work
+with <code>core.symlinks=false</code>. Selected inputs cannot escape their owner,
+cross undeclared nested repositories/submodules or form cycles. Invalid unused
+auxiliary links are omitted. Migration verifies historical archive contents
+separately; it never substitutes the new snapshot hash for a v0 input hash.

@@ -1,15 +1,19 @@
 package migration
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"io/fs"
 	"maps"
-	"os"
 	"path/filepath"
 	"slices"
 	"strings"
 
+	v1 "github.com/easyp-tech/easyp/internal/config/v1"
 	"github.com/easyp-tech/easyp/internal/core/path_helpers"
+	"github.com/easyp-tech/easyp/internal/protosource"
+	"github.com/easyp-tech/easyp/internal/sourceview"
 )
 
 func localRoots(cfg legacyConfig) ([]string, []legacyDirectory, error) {
@@ -47,83 +51,206 @@ func localRoots(cfg legacyConfig) ([]string, []legacyDirectory, error) {
 	return roots, inputs, nil
 }
 
+type localSourceSelection struct {
+	files    map[string]string
+	packages []string
+	paths    []string
+}
+
+const localSelectionScopeError = "v1 roots would change generation scope or .proto import names (including hidden/vendor/nested modules); whole roots, exact paths and complete protobuf packages cannot preserve this configuration; split the module or migrate separate generation projects manually"
+
 // proveLocalSelection compares both the physical files and their import names.
-// A subset can only migrate when whole v1 roots select exactly the same files.
-func proveLocalSelection(root string, inputs []legacyDirectory, roots []string) (map[string]string, error) {
+// Paths preserve literal directory inputs, including future files in those
+// directories. Complete packages are a fallback for mixed-root selections.
+func proveLocalSelection(root string, inputs []legacyDirectory, roots []string) (localSourceSelection, error) {
 	legacy, current := make(map[string]string), make(map[string]string)
 	for _, input := range inputs {
 		importRoot := filepath.Join(root, input.Root)
 		search := filepath.Join(importRoot, input.Path)
 		if err := collectProto(root, importRoot, search, false, legacy); err != nil {
-			return nil, fmt.Errorf("collectProto: %w", err)
+			return localSourceSelection{}, fmt.Errorf("collectProto: %w", err)
 		}
 	}
 	for _, moduleRoot := range roots {
 		importRoot := filepath.Join(root, moduleRoot)
 		if err := collectProto(root, importRoot, importRoot, true, current); err != nil {
-			return nil, fmt.Errorf("collectProto: %w", err)
+			return localSourceSelection{}, fmt.Errorf("collectProto: %w", err)
 		}
 	}
-	if !maps.Equal(legacy, current) {
-		return nil, fmt.Errorf("v1 roots would change generation scope or .proto import names (including hidden/vendor/nested modules); split the module or reorganize legacy inputs manually; no v1 directory selection syntax can preserve this configuration")
+	wholeRoots := make(map[string]bool)
+	for _, input := range inputs {
+		if input.Path == "." {
+			wholeRoots[input.Root] = true
+		}
 	}
-	return current, nil
+	allRoots := true
+	for _, moduleRoot := range roots {
+		allRoots = allRoots && wholeRoots[moduleRoot]
+	}
+	// A directory subset must retain its path even when no outside source
+	// exists yet; otherwise a later build copy would silently widen targets.
+	if maps.Equal(legacy, current) && (allRoots || len(legacy) == 0) {
+		return localSourceSelection{files: current}, nil
+	}
+	// Empty selector lists mean all files at runtime, never no files.
+	if len(legacy) == 0 {
+		return localSourceSelection{}, fmt.Errorf("%s", localSelectionScopeError)
+	}
+	for name, physical := range legacy {
+		if current[name] != physical {
+			return localSourceSelection{}, fmt.Errorf("%s", localSelectionScopeError)
+		}
+	}
+	if selection, ok := tryLocalPathSelection(inputs, legacy, current); ok {
+		return selection, nil
+	}
+	selection, err := proveLocalPackageSelection(root, legacy, current)
+	if err != nil {
+		return localSourceSelection{}, fmt.Errorf("proveLocalPackageSelection: %w", err)
+	}
+	return selection, nil
+}
+
+func tryLocalPathSelection(inputs []legacyDirectory, legacy, current map[string]string) (localSourceSelection, bool) {
+	pathSet := make(map[string]bool)
+	for _, input := range inputs {
+		pathSet[filepath.ToSlash(filepath.Join(input.Root, input.Path))] = true
+	}
+	paths := slices.Sorted(maps.Keys(pathSet))
+	// Invalid optional path syntax does not invalidate a previously supported
+	// package proof. Public generate.paths validation remains strict.
+	if v1.ValidatePathSelectors(paths) != nil {
+		return localSourceSelection{}, false
+	}
+	byPath := make(map[string]string)
+	matchedPaths := make(map[string]bool)
+	for name, modulePath := range current {
+		for _, selector := range paths {
+			if v1.PathSelectorMatches(selector, filepath.ToSlash(modulePath)) {
+				byPath[name] = modulePath
+				matchedPaths[selector] = true
+			}
+		}
+	}
+	if len(matchedPaths) == len(paths) && maps.Equal(legacy, byPath) {
+		return localSourceSelection{files: byPath, paths: paths}, true
+	}
+	return localSourceSelection{}, false
+}
+
+func proveLocalPackageSelection(root string, legacy, current map[string]string) (localSourceSelection, error) {
+	packages := make(map[string]bool)
+	for _, name := range slices.Sorted(maps.Keys(legacy)) {
+		physical := legacy[name]
+		declared, err := readSourcePackage(root, physical)
+		if err != nil {
+			return localSourceSelection{}, fmt.Errorf("readSourcePackage: %w", err)
+		}
+		if declared == "" {
+			return localSourceSelection{}, fmt.Errorf("%s", localSelectionScopeError)
+		}
+		if err := v1.ValidatePackageSelectors([]string{declared}); err != nil {
+			return localSourceSelection{}, fmt.Errorf("ValidatePackageSelectors: %w", err)
+		}
+		packages[declared] = true
+	}
+	selected := make(map[string]string)
+	for _, name := range slices.Sorted(maps.Keys(current)) {
+		physical := current[name]
+		declared, err := readSourcePackage(root, physical)
+		if err != nil {
+			return localSourceSelection{}, fmt.Errorf("readSourcePackage: %w", err)
+		}
+		if packages[declared] {
+			selected[name] = physical
+		}
+	}
+	if !maps.Equal(legacy, selected) {
+		return localSourceSelection{}, fmt.Errorf("%s", localSelectionScopeError)
+	}
+	return localSourceSelection{files: selected, packages: slices.Sorted(maps.Keys(packages))}, nil
+}
+
+func readSourcePackage(root, name string) (string, error) {
+	raw, err := sourceview.ReadLocal(context.Background(), root, name)
+	if err != nil {
+		return "", fmt.Errorf("ReadFile: %w", err)
+	}
+	return protosource.Package(raw), nil
 }
 
 func collectProto(root, importRoot, search string, native bool, files map[string]string) error {
-	// WalkDir does not follow links, but a linked starting directory/parent must
-	// also be rejected before traversal.
 	rel, err := filepath.Rel(root, search)
 	if err != nil {
 		return fmt.Errorf("Rel: %w", err)
 	}
-	part := root
-	for _, segment := range strings.Split(rel, string(filepath.Separator)) {
-		part = filepath.Join(part, segment)
-		info, err := os.Lstat(part)
-		if err != nil {
-			return fmt.Errorf("Lstat: %w", err)
-		}
-		if !info.IsDir() {
-			return fmt.Errorf("source %s is not a regular directory; manual migration required", part)
-		}
+	if !filepath.IsLocal(rel) {
+		return fmt.Errorf("source %q leaves migration root", search)
 	}
-	err = filepath.WalkDir(search, func(name string, entry fs.DirEntry, walkErr error) error {
-		if walkErr != nil {
+	rootRel, err := filepath.Rel(root, importRoot)
+	if err != nil {
+		return fmt.Errorf("Rel: %w", err)
+	}
+	rootResolution, err := sourceview.ResolveLocal(context.Background(), root, rootRel)
+	if err != nil {
+		return fmt.Errorf("ResolveLocal: %w", err)
+	}
+	physicalImportRoot := filepath.Join(root, filepath.FromSlash(rootResolution.Path))
+	return sourceview.WalkLocal(context.Background(), root, rel, func(logical string, resolved sourceview.Resolution, walkErr error) error {
+		name := filepath.Join(root, filepath.FromSlash(logical))
+		if errors.Is(walkErr, sourceview.ErrCycle) && resolved.Info != nil && resolved.Info.IsDir() {
+			if native && path_helpers.HiddenOrVendorSourcePath(importRoot, name) {
+				return nil
+			}
 			return walkErr
 		}
-		if entry.Type()&os.ModeSymlink != 0 {
-			return fmt.Errorf("source symlink %s prevents safe scope analysis", name)
+		if native && path_helpers.ShouldSkipV1SourceDir(importRoot, name) {
+			return fs.SkipDir
 		}
-		if entry.IsDir() {
-			if native && path_helpers.ShouldSkipV1SourceDir(importRoot, name) {
-				return filepath.SkipDir
+		if walkErr != nil {
+			if filepath.Ext(name) != ".proto" && logical != filepath.ToSlash(rel) {
+				return nil
+			}
+			return walkErr
+		}
+		physical := filepath.Join(root, filepath.FromSlash(resolved.Path))
+		if resolved.Info.IsDir() {
+			if native && path_helpers.ShouldSkipV1SourceDir(physicalImportRoot, physical) {
+				return fs.SkipDir
 			}
 			return nil
 		}
 		if filepath.Ext(name) != ".proto" {
 			return nil
 		}
-		if !entry.Type().IsRegular() {
+		if !resolved.Info.Mode().IsRegular() {
 			return fmt.Errorf("source %s is not a regular file", name)
+		}
+		if native {
+			for dir := filepath.Dir(physical); dir != root && sourceWithin(root, dir); dir = filepath.Dir(dir) {
+				if path_helpers.ShouldSkipV1SourceDir(physicalImportRoot, dir) {
+					return nil
+				}
+			}
 		}
 		importName, err := filepath.Rel(importRoot, name)
 		if err != nil {
 			return fmt.Errorf("Rel: %w", err)
 		}
-		physicalName, err := filepath.Rel(root, name)
+		logicalName, err := filepath.Rel(root, name)
 		if err != nil {
 			return fmt.Errorf("Rel: %w", err)
 		}
 		importName = filepath.ToSlash(importName)
-		if previous, ok := files[importName]; ok && previous != physicalName {
-			return fmt.Errorf("roots collide on import %s (%s and %s); manual migration required", importName, previous, physicalName)
+		if previous, ok := files[importName]; ok && previous != logicalName {
+			return fmt.Errorf("roots collide on import %s (%s and %s); manual migration required", importName, previous, logicalName)
 		}
-		files[importName] = physicalName
+		files[importName] = logicalName
 		return nil
 	})
-	if err != nil {
-		return fmt.Errorf("WalkDir: %w", err)
-	}
-	return nil
+}
+
+func sourceWithin(root, name string) bool {
+	rel, err := filepath.Rel(root, name)
+	return err == nil && filepath.IsLocal(rel)
 }
