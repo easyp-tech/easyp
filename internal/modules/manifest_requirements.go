@@ -101,9 +101,13 @@ func augmentV1ManifestRequirements(original []byte, root string, module v1.Modul
 func v1RootImports(moduleDir string, roots []string) (map[string]bool, error) {
 	imports := make(map[string]bool)
 	for _, root := range roots {
-		sourceRoot := filepath.Join(moduleDir, root)
-		err := WalkProtoFiles(sourceRoot, func(path string) error {
-			paths, err := ReadProtoImports(path)
+		sourceRoot := SourceRoot{Path: filepath.Join(moduleDir, root), directory: moduleDir}
+		err := sourceRoot.Walk(func(path string) error {
+			raw, err := (SourceRoots{sourceRoot}).ReadSourceFile(path)
+			if err != nil {
+				return fmt.Errorf("ReadSourceFile: %w", err)
+			}
+			paths, err := ParseProtoImports(path, raw)
 			if err != nil {
 				return fmt.Errorf("ReadProtoImports: %w", err)
 			}

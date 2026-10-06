@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 
 	v1 "github.com/easyp-tech/easyp/internal/config/v1"
+	"github.com/easyp-tech/easyp/internal/workspace"
 )
 
 // selectedPolicyScopes retains explicit empty modules in frozen mode, so
@@ -49,7 +50,7 @@ func selectedPolicyScopes(replacements *policyReplacementSources, relative strin
 		}
 	}
 	if info.IsDir() {
-		err := filepath.WalkDir(scan, func(path string, entry fs.DirEntry, walkErr error) error {
+		err := workspace.WalkAt(root, scan, func(path string, entry fs.DirEntry, walkErr error) error {
 			if walkErr != nil {
 				return walkErr
 			}

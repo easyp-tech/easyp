@@ -76,8 +76,16 @@ selected path stay out of generation. Complete packages remain a mixed-root
 fallback. Unknown selectors fail before plugins, including no-plugin parents
 selected with <code>--all</code>. Historical lock entries with annotated-tag spelling such as
 `v0.4.0^{}` retain their original hash verification and unchanged backup bytes.
-Released v0 proto archive hashes are verified before the native tracked-tree
+Released v0 proto archive hashes are verified before the native materialized-snapshot
 hash is calculated. Archive attributes that change proto paths or bytes block
 migration.
+
+Internal file, directory, import-root and metadata symlinks are supported.
+Logical paths keep their protobuf import names. Git targets resolve only from
+the pinned tree; installed snapshots contain regular resolved bytes and work
+with <code>core.symlinks=false</code>. Selected inputs cannot escape their owner,
+cross undeclared nested repositories/submodules or form cycles. Invalid unused
+auxiliary links are omitted. Migration verifies historical archive contents
+separately; it never substitutes the new snapshot hash for a v0 input hash.
 
 When reviewing v1.0, treat differences listed in this document as deliberate pre-release contract changes. A failing literal example from the earlier pilot RFC is not by itself a product defect if the current behavior matches this document and the linked `.spec` contract.

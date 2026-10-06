@@ -64,7 +64,14 @@ func TestFetchMigrationOmitsAuxiliarySymlinks(t *testing.T) {
 					assert.Equal(t, commit, fetched.Lock.Commit)
 					assert.Equal(t, commit, fetched.Lock.Version)
 					assert.Equal(t, []string{"proto"}, fetched.Module.Roots)
-					assert.Equal(t, migrationTestHash(t, files), fetched.Lock.Hash)
+					expectedSnapshot := make(map[string]string, len(files)+1)
+					for name, data := range files {
+						expectedSnapshot[name] = data
+					}
+					if target == "internal" {
+						expectedSnapshot["example-workspace/.bazelrc"] = files["proto/file.proto"]
+					}
+					assert.Equal(t, migrationTestHash(t, expectedSnapshot), fetched.Lock.Hash)
 					ordinary, err := (&Cache{root: t.TempDir()}).Fetch(t.Context(), repository, commit)
 					require.NoError(t, err)
 					assert.Equal(t, ordinary.Lock.Hash, fetched.Lock.Hash)
@@ -103,7 +110,7 @@ func TestFetchMigrationAuxiliarySymlinksRequireProtoArchiveHash(t *testing.T) {
 	}
 }
 
-func TestFetchMigrationRejectsSourceAndMetadataSymlinks(t *testing.T) {
+func TestFetchMigrationAcceptsInitialAliasesButRequiresHistoricalPinProof(t *testing.T) {
 	t.Parallel()
 
 	for _, tt := range []struct {
@@ -112,14 +119,15 @@ func TestFetchMigrationRejectsSourceAndMetadataSymlinks(t *testing.T) {
 		link   string
 		target string
 		root   string
+		pinErr string
 	}{
-		{name: "proto_link", files: map[string]string{"file.proto": "proto"}, link: "unsafe.proto", target: "file.proto"},
-		{name: "root_directory", files: map[string]string{"easyp.yaml": "generate:\n  inputs: [{directory: {path: proto, root: proto}}]\n", "real/file.proto": "proto"}, link: "proto", target: "real"},
-		{name: "root_ancestor", files: map[string]string{"easyp.yaml": "generate:\n  inputs: [{directory: {path: api/proto, root: api/proto}}]\n", "real/proto/file.proto": "proto"}, link: "api", target: "real"},
-		{name: "native_root_directory", files: map[string]string{"real/file.proto": "proto"}, link: "proto", target: "real", root: "proto"},
-		{name: "native_root_ancestor", files: map[string]string{"real/proto/file.proto": "proto"}, link: "api", target: "real", root: "api/proto"},
-		{name: "root_metadata", files: map[string]string{"config.yaml": "generate: {}\n", "file.proto": "proto"}, link: "easyp.yaml", target: "config.yaml"},
-		{name: "nested_metadata", files: map[string]string{"manifest": "direct ()\n", "file.proto": "proto"}, link: "nested/protobuf.mod", target: "../manifest"},
+		{name: "proto_link", files: map[string]string{"file.proto": "proto"}, link: "alias.proto", target: "file.proto", pinErr: "legacy hash mismatch"},
+		{name: "root_directory", files: map[string]string{"easyp.yaml": "generate:\n  inputs: [{directory: {path: proto, root: proto}}]\n", "real/file.proto": "proto"}, link: "proto", target: "real", pinErr: "source selection"},
+		{name: "root_ancestor", files: map[string]string{"easyp.yaml": "generate:\n  inputs: [{directory: {path: api/proto, root: api/proto}}]\n", "real/proto/file.proto": "proto"}, link: "api", target: "real", pinErr: "source selection"},
+		{name: "native_root_directory", files: map[string]string{"real/file.proto": "proto"}, link: "proto", target: "real", root: "proto", pinErr: "cannot reproduce legacy roots"},
+		{name: "native_root_ancestor", files: map[string]string{"real/proto/file.proto": "proto"}, link: "api", target: "real", root: "api/proto", pinErr: "cannot reproduce legacy roots"},
+		{name: "root_metadata", files: map[string]string{"config.yaml": "generate: {}\n", "file.proto": "proto"}, link: "easyp.yaml", target: "config.yaml", pinErr: "legacy hash mismatch"},
+		{name: "nested_metadata", files: map[string]string{"manifest": "direct (\n)\n", "file.proto": "proto"}, link: "nested/protobuf.mod", target: "../manifest", pinErr: "legacy hash mismatch"},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
@@ -139,8 +147,17 @@ func TestFetchMigrationRejectsSourceAndMetadataSymlinks(t *testing.T) {
 						version, legacyHash = commit, "h1:untrusted"
 					}
 					cacheDir := t.TempDir()
-					_, err := (&Cache{root: cacheDir}).FetchMigration(t.Context(), repository, version, legacyHash)
-					require.ErrorContains(t, err, "non-regular")
+					fetched, err := (&Cache{root: cacheDir}).FetchMigration(t.Context(), repository, version, legacyHash)
+					if mode.pinned {
+						require.ErrorContains(t, err, tt.pinErr)
+						assert.Empty(t, fetched.Lock.Source)
+					} else {
+						require.NoError(t, err)
+						ordinary, err := (&Cache{root: t.TempDir()}).Fetch(t.Context(), repository, commit)
+						require.NoError(t, err)
+						assert.Equal(t, ordinary.Lock.Hash, fetched.Lock.Hash)
+						assert.Equal(t, commit, fetched.Lock.Commit)
+					}
 					migrationTestAssertNoCheckout(t, cacheDir)
 				})
 			}
@@ -152,17 +169,16 @@ func TestMigrationTrackedFilesHandlesMaterializedSymlinks(t *testing.T) {
 	t.Parallel()
 
 	for _, tt := range []struct {
-		name    string
-		link    string
-		target  string
-		root    string
-		wantErr bool
+		name   string
+		link   string
+		target string
+		root   string
 	}{
 		{name: "auxiliary", link: "example-workspace/.bazelrc", target: "../real/file.proto", root: "."},
-		{name: "proto", link: "link.proto", target: "real/file.proto", root: ".", wantErr: true},
-		{name: "root", link: "proto", target: "real", root: "proto", wantErr: true},
-		{name: "root_ancestor", link: "api", target: "real", root: "api/proto", wantErr: true},
-		{name: "metadata", link: "buf.lock", target: "real/file.proto", root: ".", wantErr: true},
+		{name: "proto", link: "link.proto", target: "real/file.proto", root: "."},
+		{name: "root", link: "proto", target: "real", root: "proto"},
+		{name: "root_ancestor", link: "api", target: "real", root: "api/proto"},
+		{name: "metadata", link: "buf.lock", target: "real/file.proto", root: "."},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
@@ -174,13 +190,10 @@ func TestMigrationTrackedFilesHandlesMaterializedSymlinks(t *testing.T) {
 			info, err := os.Lstat(filepath.Join(checkout, filepath.FromSlash(tt.link)))
 			require.NoError(t, err)
 			require.True(t, info.Mode().IsRegular())
-			tracked, err := migrationTrackedFiles(t.Context(), checkout, tt.root)
-			if tt.wantErr {
-				require.ErrorContains(t, err, "non-regular")
-				return
-			}
+			tracked, err := migrationTrackedFiles(t.Context(), checkout)
 			require.NoError(t, err)
-			assert.True(t, tracked.omittedAuxiliarySymlinks)
+			assert.True(t, tracked.hasSymlinks)
+			assert.Equal(t, []string{tt.link}, tracked.symlinks)
 			assert.ElementsMatch(t, []string{"real/file.proto", "README"}, tracked.regularFiles)
 		})
 	}

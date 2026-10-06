@@ -231,17 +231,17 @@ tag and legacy content hash before writing the native lock; it never rewrites
 the historical lock or switches to HEAD. Peeled branches, abbreviated refs,
 repeated suffixes and pseudo-version-shaped peeled tags are rejected.
 Released v0 lock hashes cover the installed <code>git archive '*.proto'</code>
-contents after legacy root rewrites, while the new lock covers the tracked v1
-checkout. Migration verifies either the historical archive hash or the existing
+contents after legacy root rewrites, while the new lock covers the materialized v1
+snapshot. Migration verifies either the historical archive hash or the existing
 whole-tree hash at the pinned revision. It rejects archive attributes that omit
 or alter proto sources rather than silently changing their contracts.
-Auxiliary Git symlinks outside proto/configured-root/metadata roles are omitted
-without dereferencing their targets, including dangling links and Git links
-materialized as text by <code>core.symlinks=false</code>. Links affecting proto
-sources, source roots or dependency metadata remain errors. When auxiliary
-links are omitted, a regular-file-only whole-tree hash cannot prove historical
-v0 contents: the actual proto archive must match. The new native hash covers
-the regular tracked files and excludes the omitted links.
+Internal file, directory, import-root and metadata symlinks are supported.
+Logical paths keep their protobuf import names. Git targets resolve only from
+the pinned tree; installed snapshots contain regular resolved bytes and work
+with <code>core.symlinks=false</code>. Selected inputs cannot escape their owner,
+cross undeclared nested repositories/submodules or form cycles. Invalid unused
+auxiliary links are omitted. Migration verifies historical archive contents
+separately; it never substitutes the new snapshot hash for a v0 input hash.
 
 ### <code>easyp ls-files [flags]</code>
 

@@ -2,11 +2,15 @@
 package workspace
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/easyp-tech/easyp/internal/sourceview"
 )
 
 // Boundary finds the nearest Git repository, or the outermost EasyP ancestor
@@ -24,13 +28,13 @@ func Boundary(start string) (string, error) {
 		}
 		if _, err := os.Lstat(filepath.Join(dir, ".git")); err == nil {
 			return dir, nil
-		} else if !os.IsNotExist(err) {
+		} else if !errors.Is(err, os.ErrNotExist) {
 			return "", fmt.Errorf("Lstat: %w", err)
 		}
 		for _, name := range []string{"protobuf.mod", "easyp.yaml", "easyp.gen.yaml"} {
 			if _, err := os.Stat(filepath.Join(dir, name)); err == nil {
 				root = dir
-			} else if !os.IsNotExist(err) {
+			} else if !errors.Is(err, os.ErrNotExist) {
 				return "", fmt.Errorf("Stat: %w", err)
 			}
 		}
@@ -49,14 +53,16 @@ func FindUp(start, boundary, name string) (string, error) {
 			return "", fmt.Errorf("directory %q is outside workspace %q", dir, boundary)
 		}
 		path := filepath.Join(dir, name)
-		info, err := os.Stat(path)
+		relative, _ := filepath.Rel(boundary, path)
+		resolved, err := sourceview.ResolveLocal(context.Background(), boundary, relative)
+		info := resolved.Info
 		if err == nil {
 			if !info.Mode().IsRegular() {
 				return "", fmt.Errorf("configuration %q is not a regular file", path)
 			}
 			return path, nil
 		}
-		if !os.IsNotExist(err) {
+		if !errors.Is(err, os.ErrNotExist) {
 			return "", fmt.Errorf("Stat: %w", err)
 		}
 		if dir == boundary || dir == filepath.Dir(dir) {
@@ -90,7 +96,7 @@ func Policy(start string) (string, error) {
 		return path, err
 	}
 	var found []string
-	err = filepath.WalkDir(start, func(path string, entry fs.DirEntry, walkErr error) error {
+	err = Walk(start, func(path string, entry fs.DirEntry, walkErr error) error {
 		if walkErr != nil {
 			return walkErr
 		}
@@ -101,13 +107,15 @@ func Policy(start string) (string, error) {
 			return filepath.SkipDir
 		}
 		candidate := filepath.Join(path, "easyp.yaml")
-		if info, err := os.Stat(candidate); err == nil {
+		relative, _ := filepath.Rel(boundary, candidate)
+		resolved, err := sourceview.ResolveLocal(context.Background(), boundary, relative)
+		if info := resolved.Info; err == nil {
 			if !info.Mode().IsRegular() {
 				return fmt.Errorf("configuration %q is not a regular file", candidate)
 			}
 			found = append(found, candidate)
 			return filepath.SkipDir
-		} else if !os.IsNotExist(err) {
+		} else if !errors.Is(err, os.ErrNotExist) {
 			return err
 		}
 		return nil

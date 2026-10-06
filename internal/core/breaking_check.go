@@ -3,6 +3,7 @@ package core
 import (
 	"context"
 	"fmt"
+	"io"
 	"log/slog"
 	"maps"
 	"path/filepath"
@@ -53,14 +54,22 @@ func (c *Core) BreakingCheck(ctx context.Context, projectRoot, workingDir, path 
 // CompareBreaking compares explicitly scoped inputs with revision-specific imports.
 // Neither filesystem can fall back to the other revision's dependency roots.
 func (c *Core) CompareBreaking(ctx context.Context, current, against DirWalker, againstImportRoots []string) ([]IssueInfo, error) {
-	return c.CompareBreakingWithImports(ctx, current, against, againstImportRoots, nil)
+	return c.CompareBreakingWithImports(ctx, current, against, BreakingImports{Paths: againstImportRoots})
 }
 
-// CompareBreakingWithImports keeps source filters isolated between the two revisions.
-func (c *Core) CompareBreakingWithImports(ctx context.Context, current, against DirWalker, againstImportRoots []string, againstFileAllowed func(string) bool) ([]IssueInfo, error) {
+// BreakingImports binds one revision's import paths to its filter and opener.
+type BreakingImports struct {
+	Paths       []string
+	FileAllowed func(string) bool
+	Open        func(string) (io.ReadCloser, error)
+}
+
+// CompareBreakingWithImports keeps source access isolated between revisions.
+func (c *Core) CompareBreakingWithImports(ctx context.Context, current, against DirWalker, imports BreakingImports) ([]IssueInfo, error) {
 	baseline := *c
-	baseline.importRoots = againstImportRoots
-	baseline.importFileAllowed = againstFileAllowed
+	baseline.importRoots = imports.Paths
+	baseline.importFileAllowed = imports.FileAllowed
+	baseline.sourceFileOpen = imports.Open
 	if len(c.breakingCheckConfig.Categories) > 0 {
 		profiles, err := selectedBreakingProfiles(c.breakingCheckConfig.Categories)
 		if err != nil {

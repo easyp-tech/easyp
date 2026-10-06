@@ -1,10 +1,11 @@
 package migration
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"io/fs"
 	"maps"
-	"os"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -12,6 +13,7 @@ import (
 	v1 "github.com/easyp-tech/easyp/internal/config/v1"
 	"github.com/easyp-tech/easyp/internal/core/path_helpers"
 	"github.com/easyp-tech/easyp/internal/protosource"
+	"github.com/easyp-tech/easyp/internal/sourceview"
 )
 
 func localRoots(cfg legacyConfig) ([]string, []legacyDirectory, error) {
@@ -172,7 +174,7 @@ func proveLocalPackageSelection(root string, legacy, current map[string]string) 
 }
 
 func readSourcePackage(root, name string) (string, error) {
-	raw, err := os.ReadFile(filepath.Join(root, name))
+	raw, err := sourceview.ReadLocal(context.Background(), root, name)
 	if err != nil {
 		return "", fmt.Errorf("ReadFile: %w", err)
 	}
@@ -180,59 +182,77 @@ func readSourcePackage(root, name string) (string, error) {
 }
 
 func collectProto(root, importRoot, search string, native bool, files map[string]string) error {
-	// WalkDir does not follow links, but a linked starting directory/parent must
-	// also be rejected before traversal.
 	rel, err := filepath.Rel(root, search)
 	if err != nil {
 		return fmt.Errorf("Rel: %w", err)
 	}
-	part := root
-	for _, segment := range strings.Split(rel, string(filepath.Separator)) {
-		part = filepath.Join(part, segment)
-		info, err := os.Lstat(part)
-		if err != nil {
-			return fmt.Errorf("Lstat: %w", err)
-		}
-		if !info.IsDir() {
-			return fmt.Errorf("source %s is not a regular directory; manual migration required", part)
-		}
+	if !filepath.IsLocal(rel) {
+		return fmt.Errorf("source %q leaves migration root", search)
 	}
-	err = filepath.WalkDir(search, func(name string, entry fs.DirEntry, walkErr error) error {
-		if walkErr != nil {
+	rootRel, err := filepath.Rel(root, importRoot)
+	if err != nil {
+		return fmt.Errorf("Rel: %w", err)
+	}
+	rootResolution, err := sourceview.ResolveLocal(context.Background(), root, rootRel)
+	if err != nil {
+		return fmt.Errorf("ResolveLocal: %w", err)
+	}
+	physicalImportRoot := filepath.Join(root, filepath.FromSlash(rootResolution.Path))
+	return sourceview.WalkLocal(context.Background(), root, rel, func(logical string, resolved sourceview.Resolution, walkErr error) error {
+		name := filepath.Join(root, filepath.FromSlash(logical))
+		if errors.Is(walkErr, sourceview.ErrCycle) && resolved.Info != nil && resolved.Info.IsDir() {
+			if native && path_helpers.HiddenOrVendorSourcePath(importRoot, name) {
+				return nil
+			}
 			return walkErr
 		}
-		if entry.Type()&os.ModeSymlink != 0 {
-			return fmt.Errorf("source symlink %s prevents safe scope analysis", name)
+		if native && path_helpers.ShouldSkipV1SourceDir(importRoot, name) {
+			return fs.SkipDir
 		}
-		if entry.IsDir() {
-			if native && path_helpers.ShouldSkipV1SourceDir(importRoot, name) {
-				return filepath.SkipDir
+		if walkErr != nil {
+			if filepath.Ext(name) != ".proto" && logical != filepath.ToSlash(rel) {
+				return nil
+			}
+			return walkErr
+		}
+		physical := filepath.Join(root, filepath.FromSlash(resolved.Path))
+		if resolved.Info.IsDir() {
+			if native && path_helpers.ShouldSkipV1SourceDir(physicalImportRoot, physical) {
+				return fs.SkipDir
 			}
 			return nil
 		}
 		if filepath.Ext(name) != ".proto" {
 			return nil
 		}
-		if !entry.Type().IsRegular() {
+		if !resolved.Info.Mode().IsRegular() {
 			return fmt.Errorf("source %s is not a regular file", name)
+		}
+		if native {
+			for dir := filepath.Dir(physical); dir != root && sourceWithin(root, dir); dir = filepath.Dir(dir) {
+				if path_helpers.ShouldSkipV1SourceDir(physicalImportRoot, dir) {
+					return nil
+				}
+			}
 		}
 		importName, err := filepath.Rel(importRoot, name)
 		if err != nil {
 			return fmt.Errorf("Rel: %w", err)
 		}
-		physicalName, err := filepath.Rel(root, name)
+		logicalName, err := filepath.Rel(root, name)
 		if err != nil {
 			return fmt.Errorf("Rel: %w", err)
 		}
 		importName = filepath.ToSlash(importName)
-		if previous, ok := files[importName]; ok && previous != physicalName {
-			return fmt.Errorf("roots collide on import %s (%s and %s); manual migration required", importName, previous, physicalName)
+		if previous, ok := files[importName]; ok && previous != logicalName {
+			return fmt.Errorf("roots collide on import %s (%s and %s); manual migration required", importName, previous, logicalName)
 		}
-		files[importName] = physicalName
+		files[importName] = logicalName
 		return nil
 	})
-	if err != nil {
-		return fmt.Errorf("WalkDir: %w", err)
-	}
-	return nil
+}
+
+func sourceWithin(root, name string) bool {
+	rel, err := filepath.Rel(root, name)
+	return err == nil && filepath.IsLocal(rel)
 }

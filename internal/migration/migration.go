@@ -118,7 +118,7 @@ func (p *Plan) Apply() error {
 
 func (p *Plan) verifySourceSelection() error {
 	if len(p.inputs) > 0 {
-		selection, err := proveLocalSelection(p.tx.root, p.inputs, p.roots)
+		selection, err := proveLocalSelection(p.tx.requestedRoot, p.inputs, p.roots)
 		if err != nil {
 			return fmt.Errorf("proveLocalSelection: %w", err)
 		}
@@ -144,7 +144,11 @@ func Build(ctx context.Context, options Options) (*Plan, error) {
 	}
 	p := &Plan{tx: tx}
 	for _, name := range []string{v1.PolicyFile, v1.GenerateFile, v1.ModuleFile, v1.LockFile, "easyp.lock", "easyp.yaml.v0.bak", "protobuf.mod.v0.bak"} {
-		if _, err := tx.capture(name); err != nil {
+		capture := tx.captureInput
+		if strings.HasSuffix(name, ".v0.bak") {
+			capture = tx.capture
+		}
+		if _, err := capture(name); err != nil {
 			return nil, fmt.Errorf("capture: %w", err)
 		}
 	}
@@ -178,7 +182,7 @@ func Build(ctx context.Context, options Options) (*Plan, error) {
 	if err := checkManagedLocal(cfg, options.Module, len(inputs) > 0); err != nil {
 		return nil, fmt.Errorf("checkManagedLocal: %w", err)
 	}
-	selection, err := proveLocalSelection(tx.root, inputs, roots)
+	selection, err := proveLocalSelection(tx.requestedRoot, inputs, roots)
 	if err != nil {
 		return nil, fmt.Errorf("proveLocalSelection: %w", err)
 	}
@@ -196,7 +200,7 @@ func Build(ctx context.Context, options Options) (*Plan, error) {
 		}
 	}
 	for _, source := range p.sources {
-		if _, err := tx.capture(source); err != nil {
+		if _, err := tx.captureInput(source); err != nil {
 			return nil, fmt.Errorf("capture: %w", err)
 		}
 	}
@@ -337,6 +341,9 @@ func (p *Plan) addOutput(name string, content []byte, replaceLegacy bool) error 
 	current, err := p.tx.capture(name)
 	if err != nil {
 		return fmt.Errorf("capture: %w", err)
+	}
+	if len(current.links) > 0 && !replaceLegacy && !bytes.Equal(current.data, content) {
+		return fmt.Errorf("destination %q must be a regular file", name)
 	}
 	mode := os.FileMode(0o644)
 	if current.exists {

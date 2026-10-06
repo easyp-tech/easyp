@@ -4,10 +4,12 @@ import (
 	"errors"
 	"fmt"
 	"os"
+
+	"github.com/easyp-tech/easyp/internal/workspace"
 )
 
 func readOptionalFile(path string) ([]byte, bool, error) {
-	raw, err := os.ReadFile(path)
+	raw, err := workspace.ReadFileAt(path)
 	if errors.Is(err, os.ErrNotExist) {
 		return nil, false, nil
 	}

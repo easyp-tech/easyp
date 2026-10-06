@@ -7,7 +7,7 @@ import (
 	"os"
 	"path/filepath"
 
-	disk "github.com/easyp-tech/easyp/internal/fs/fs"
+	"io"
 )
 
 // Vendor copies the effective dependency sources into one import root.
@@ -50,8 +50,8 @@ func writeV1Vendor(root string, roots SourceRoots) error {
 			if !filepath.IsLocal(importPath) {
 				return fmt.Errorf("invalid import path %q", importPath)
 			}
-			if err := disk.CopyRegularFile(path, filepath.Join(stage, importPath)); err != nil {
-				return fmt.Errorf("CopyRegularFile: %w", err)
+			if err := copySourceFile(roots, path, filepath.Join(stage, importPath)); err != nil {
+				return fmt.Errorf("copySourceFile: %w", err)
 			}
 			return nil
 		})
@@ -105,6 +105,39 @@ func restoreV1Vendor(backup, target string) error {
 	}
 	if err := os.Rename(backup, target); err != nil {
 		return fmt.Errorf("Rename: %w", err)
+	}
+	return nil
+}
+
+func copySourceFile(roots SourceRoots, source, destination string) (resultErr error) {
+	in, err := roots.OpenSourceFile(source)
+	if err != nil {
+		return fmt.Errorf("OpenSourceFile: %w", err)
+	}
+	defer func() { resultErr = errors.Join(resultErr, in.Close()) }()
+	statter, ok := in.(interface{ Stat() (os.FileInfo, error) })
+	if !ok {
+		return fmt.Errorf("source %q has no file metadata", source)
+	}
+	info, err := statter.Stat()
+	if err != nil {
+		return fmt.Errorf("Stat: %w", err)
+	}
+	if !info.Mode().IsRegular() {
+		return fmt.Errorf("source %q is not regular", source)
+	}
+	err = os.MkdirAll(filepath.Dir(destination), 0o755)
+	if err != nil {
+		return fmt.Errorf("MkdirAll: %w", err)
+	}
+	out, err := os.OpenFile(destination, os.O_CREATE|os.O_EXCL|os.O_WRONLY, info.Mode().Perm())
+	if err != nil {
+		return fmt.Errorf("OpenFile: %w", err)
+	}
+	defer func() { resultErr = errors.Join(resultErr, out.Close()) }()
+	_, err = io.Copy(out, in)
+	if err != nil {
+		return fmt.Errorf("Copy: %w", err)
 	}
 	return nil
 }

@@ -3,7 +3,6 @@ package generation
 import (
 	"context"
 	"fmt"
-	"os"
 	"path/filepath"
 	"slices"
 
@@ -20,6 +19,7 @@ func selectedSourceFiles(ctx context.Context, selected v1GenerationModule, packa
 	if err != nil {
 		return nil, nil, nil, fmt.Errorf("ModuleSources: %w", err)
 	}
+	allRoots := append(append(modules.SourceRoots(nil), roots...), selected.dependencies...)
 	requested := make(map[string]bool, len(packages))
 	for _, name := range packages {
 		requested[name] = true
@@ -29,7 +29,10 @@ func selectedSourceFiles(ctx context.Context, selected v1GenerationModule, packa
 	seen := make(map[string]bool)
 	var files []string
 	for _, root := range roots {
-		err := root.Walk(func(path string) error {
+		err := allRoots.WalkSelected(root, func(path string) bool {
+			relative, err := filepath.Rel(root.Path, path)
+			return err == nil && (len(paths) == 0 || slices.ContainsFunc(paths, func(selector string) bool { return v1.PathSelectorMatches(selector, filepath.ToSlash(relative)) }))
+		}, func(path string) error {
 			if err := ctx.Err(); err != nil {
 				return fmt.Errorf("Err: %w", err)
 			}
@@ -44,7 +47,7 @@ func selectedSourceFiles(ctx context.Context, selected v1GenerationModule, packa
 				return nil
 			}
 			if len(packages) > 0 {
-				raw, err := os.ReadFile(path)
+				raw, err := allRoots.ReadSourceFile(path)
 				if err != nil {
 					return fmt.Errorf("ReadFile: %w", err)
 				}

@@ -16,6 +16,7 @@ import (
 	v1 "github.com/easyp-tech/easyp/internal/config/v1"
 	"github.com/easyp-tech/easyp/internal/flags"
 	"github.com/easyp-tech/easyp/internal/modules"
+	"github.com/easyp-tech/easyp/internal/workspace"
 	"github.com/easyp-tech/easyp/wellknownimports"
 )
 
@@ -74,7 +75,7 @@ func (l LsFiles) Action(ctx *cli.Context) error {
 		return fmt.Errorf("Getwd: %w", err)
 	}
 	if _, statErr := os.Stat(filepath.Join(root, v1.ModuleFile)); errors.Is(statErr, os.ErrNotExist) {
-		raw, readErr := os.ReadFile(filepath.Join(root, v1.PolicyFile))
+		raw, readErr := workspace.ReadFile(root, filepath.Join(root, v1.PolicyFile))
 		if readErr == nil && v1.LegacyPolicy(raw) {
 			return v1.ErrLegacyConfiguration
 		}
@@ -143,29 +144,30 @@ func listV1Files(ctx context.Context, moduleDir string, module v1.Module, includ
 			return v1ListResult{}, fmt.Errorf("EnsureSources: %w", err)
 		}
 	}
-	allowed := append(append(modules.SourceRoots(nil), roots...), dependencies...).FileAllowed()
+	allSources := append(append(modules.SourceRoots(nil), roots...), dependencies...)
 	for _, root := range roots {
 		result.Roots = append(result.Roots, v1ListedRoot{Path: filepath.ToSlash(root.Path), Source: "workspace"})
-		if err := indexV1ProtoRoot(root, "workspace", allowed, index, &result.Files); err != nil {
+		if err := indexV1ProtoRoot(root, "workspace", allSources, index, &result.Files); err != nil {
 			return v1ListResult{}, fmt.Errorf("indexV1ProtoRoot: %w", err)
 		}
 	}
 	if includeImports {
 		for _, dependency := range dependencies {
 			result.Roots = append(result.Roots, v1ListedRoot{Path: filepath.ToSlash(dependency.Path), Source: "dependency"})
-			if err := indexV1ProtoRoot(dependency, "dependency", allowed, index, nil); err != nil {
+			if err := indexV1ProtoRoot(dependency, "dependency", allSources, index, nil); err != nil {
 				return v1ListResult{}, fmt.Errorf("indexV1ProtoRoot: %w", err)
 			}
 		}
-		collectV1ListedImports(index, &result)
+		collectV1ListedImports(index, &result, allSources)
 	}
 	slices.SortFunc(result.Roots, func(a, b v1ListedRoot) int { return strings.Compare(a.Path, b.Path) })
 	slices.SortFunc(result.Files, func(a, b v1ListedFile) int { return strings.Compare(a.ImportPath, b.ImportPath) })
 	return result, nil
 }
 
-func indexV1ProtoRoot(root modules.SourceRoot, source string, allowed func(string) bool, index map[string]v1ListedFile, selected *[]v1ListedFile) error {
-	return root.Walk(func(path string) error {
+func indexV1ProtoRoot(root modules.SourceRoot, source string, sources modules.SourceRoots, index map[string]v1ListedFile, selected *[]v1ListedFile) error {
+	allowed := sources.FileAllowed()
+	return sources.WalkSelected(root, allowed, func(path string) error {
 		if allowed != nil && !allowed(path) {
 			return nil
 		}
@@ -186,7 +188,7 @@ func indexV1ProtoRoot(root modules.SourceRoot, source string, allowed func(strin
 	})
 }
 
-func collectV1ListedImports(index map[string]v1ListedFile, result *v1ListResult) {
+func collectV1ListedImports(index map[string]v1ListedFile, result *v1ListResult, sources modules.SourceRoots) {
 	queue := append([]v1ListedFile(nil), result.Files...)
 	seen := make(map[string]bool, len(queue))
 	for _, file := range queue {
@@ -195,7 +197,7 @@ func collectV1ListedImports(index map[string]v1ListedFile, result *v1ListResult)
 	for len(queue) > 0 {
 		file := queue[0]
 		queue = queue[1:]
-		imports, err := readV1ListedImports(file)
+		imports, err := readV1ListedImports(file, sources)
 		if err != nil {
 			result.Errors = append(result.Errors, v1ListError{Code: "parse_error", Message: fmt.Sprintf("%s: %v", file.ImportPath, err)})
 			continue
@@ -235,9 +237,13 @@ func resolveV1ListedImport(owner, importPath string, index map[string]v1ListedFi
 	return file, nil
 }
 
-func readV1ListedImports(file v1ListedFile) ([]string, error) {
+func readV1ListedImports(file v1ListedFile, sources modules.SourceRoots) ([]string, error) {
 	if file.Source != "wellknown" {
-		return modules.ReadProtoImports(filepath.FromSlash(file.AbsPath))
+		raw, err := sources.ReadSourceFile(filepath.FromSlash(file.AbsPath))
+		if err != nil {
+			return nil, fmt.Errorf("ReadSourceFile: %w", err)
+		}
+		return modules.ParseProtoImports(file.ImportPath, raw)
 	}
 	raw, err := wellknownimports.Content.ReadFile(file.ImportPath)
 	if err != nil {

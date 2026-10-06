@@ -267,9 +267,12 @@ Historical <code>easyp.lock</code> entries
 such as <code>v0.4.0^{}</code> are verified as the corresponding annotated Git tag,
 including the original content hash, while the old lock remains unchanged.
 The migration verifies released v0's proto archive hashes before calculating
-the native tracked-tree hash; Git archive attributes must preserve proto paths
+the native materialized-snapshot hash; Git archive attributes must preserve proto paths
 and contents.
-Auxiliary Git symlinks, such as <code>example-workspace/.bazelrc</code>, are
-omitted without reading their targets. Symlinks at proto source paths, dependency
-metadata paths or configured source roots still block migration. If links were omitted,
-historical verification requires the actual v0 proto archive hash.
+Internal file, directory, import-root and metadata symlinks are supported.
+Logical paths keep their protobuf import names. Git targets resolve only from
+the pinned tree; installed snapshots contain regular resolved bytes and work
+with <code>core.symlinks=false</code>. Selected inputs cannot escape their owner,
+cross undeclared nested repositories/submodules or form cycles. Invalid unused
+auxiliary links are omitted. Migration verifies historical archive contents
+separately; it never substitutes the new snapshot hash for a v0 input hash.

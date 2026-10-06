@@ -1,10 +1,12 @@
 package fs
 
 import (
+	"context"
 	"io"
-	"io/fs"
 	"os"
 	"path/filepath"
+
+	"github.com/easyp-tech/easyp/internal/sourceview"
 )
 
 type FS interface {
@@ -36,9 +38,10 @@ type FSWalker struct {
 }
 
 func (w *FSWalker) WalkDir(callback func(path string, err error) error) error {
-	err := fs.WalkDir(w.FS, w.path, func(path string, d fs.DirEntry, err error) error {
+	return sourceview.WalkLocal(context.Background(), w.rootDir, w.path, func(path string, resolved sourceview.Resolution, err error) error {
+		if err != nil && filepath.Ext(path) != ".proto" && path != w.path {
+			return nil
+		}
 		return callback(path, err)
 	})
-
-	return err
 }
