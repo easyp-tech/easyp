@@ -2,6 +2,7 @@ package modules_test
 
 import (
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -112,4 +113,86 @@ func TestNewAuthoritativeRootsKeepExistingDescriptorNames(t *testing.T) {
 	owners, err := sources.FileModules()
 	require.NoError(t, err)
 	assert.Equal(t, map[string]string{"a.proto": repository, "svc.proto": repository}, owners)
+}
+
+func TestNewAuthorityChecksOmittedDefaultFallback(t *testing.T) {
+	t.Parallel()
+	repository, oldCommit := importRootsRepository(t, map[string]string{"api/svc.proto": `syntax = "proto3";`}, nil)
+	importRootsGit(t, repository, "tag", "v0.4.0")
+	root := importRootsConsumer(t, repository, "v0.4.0", `syntax = "proto3"; import "api/svc.proto";`)
+	cache := gitmodules.New(t.TempDir())
+	require.NoError(t, modules.Tidy(t.Context(), root, cache))
+	old, err := modules.ReadLock(filepath.Join(root, v1.LockFile))
+	require.NoError(t, err)
+	assert.Empty(t, old.Modules[0].Roots)
+	importRootsWrite(t, repository, v1.ModuleFile, "module "+repository+"\nroots api\n")
+	importRootsGit(t, repository, "add", ".")
+	importRootsGit(t, repository, "commit", "--quiet", "-m", "declare roots for previously default namespace")
+	importRootsGit(t, repository, "tag", "v0.5.0")
+	newCommit := importRootsGit(t, repository, "rev-parse", "HEAD")
+	importRootsWrite(t, root, "consumer.proto", `syntax = "proto3"; import "svc.proto";`)
+	manifest, before := importRootsRead(t, root, v1.ModuleFile), importRootsRead(t, root, v1.LockFile)
+	spy := &importRootsInstallSpy{Cache: cache}
+
+	err = modules.Update(t.Context(), root, spy)
+
+	require.ErrorContains(t, err, "import namespace")
+	assert.ErrorContains(t, err, "verified fallback roots [.]")
+	assert.ErrorContains(t, err, "api/svc.proto -> svc.proto")
+	assert.ErrorContains(t, err, oldCommit)
+	assert.ErrorContains(t, err, newCommit)
+	assert.Zero(t, spy.installs)
+	assert.Equal(t, manifest, importRootsRead(t, root, v1.ModuleFile))
+	assert.Equal(t, before, importRootsRead(t, root, v1.LockFile))
+	require.NoError(t, modules.GetWithRoots(t.Context(), root, v1.Requirement{Module: repository, Version: "v0.5.0"}, cache, []string{"api"}))
+}
+
+func TestRootTransitionKeepsPriorAuthorityAndIdenticalEffectiveRoots(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name        string
+		oldFile     string
+		oldContent  string
+		newRoots    string
+		newConsumer string
+		moveFile    bool
+	}{
+		{name: "prior_native_default", oldFile: v1.ModuleFile, oldContent: "module %s\n", newRoots: "roots api\n", newConsumer: `syntax = "proto3"; import "svc.proto";`},
+		{name: "prior_buf_default", oldFile: "buf.yaml", oldContent: "version: v2\nmodules: [{path: .}]\n", newRoots: "roots api\n", newConsumer: `syntax = "proto3"; import "svc.proto";`},
+		{name: "same_effective_default_allows_physical_change", newConsumer: `syntax = "proto3"; import "api/other.proto";`, moveFile: true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			repository, _ := importRootsRepository(t, map[string]string{"api/svc.proto": `syntax = "proto3";`}, nil)
+			if tt.oldFile != "" {
+				content := strings.ReplaceAll(tt.oldContent, "%s", repository)
+				importRootsWrite(t, repository, tt.oldFile, content)
+				importRootsGit(t, repository, "add", ".")
+				importRootsGit(t, repository, "commit", "--quiet", "-m", "old authority")
+			}
+			importRootsGit(t, repository, "tag", "v0.4.0")
+			root := importRootsConsumer(t, repository, "v0.4.0", `syntax = "proto3"; import "api/svc.proto";`)
+			cache := gitmodules.New(t.TempDir())
+			require.NoError(t, modules.Tidy(t.Context(), root, cache))
+			old, err := modules.ReadLock(filepath.Join(root, v1.LockFile))
+			require.NoError(t, err)
+			assert.Empty(t, old.Modules[0].Roots)
+			if tt.moveFile {
+				importRootsGit(t, repository, "mv", "api/svc.proto", "api/other.proto")
+			}
+			importRootsWrite(t, repository, v1.ModuleFile, "module "+repository+"\n"+tt.newRoots)
+			importRootsGit(t, repository, "add", ".")
+			importRootsGit(t, repository, "commit", "--quiet", "-m", "new native metadata")
+			importRootsGit(t, repository, "tag", "v0.5.0")
+			importRootsWrite(t, root, "consumer.proto", tt.newConsumer)
+
+			err = modules.Update(t.Context(), root, cache)
+
+			require.NoError(t, err)
+			updated, err := modules.ReadLock(filepath.Join(root, v1.LockFile))
+			require.NoError(t, err)
+			assert.Equal(t, "v0.5.0", updated.Modules[0].Version)
+		})
+	}
 }
