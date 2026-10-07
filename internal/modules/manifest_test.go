@@ -85,7 +85,7 @@ func TestReadModuleOrDefault(t *testing.T) {
 		wantErr  string
 	}{
 		{name: "missing manifest", want: v1.Module{Roots: []string{"."}}},
-		{name: "declared roots", manifest: "module example.com/app\nroots proto\n", want: v1.Module{Name: "example.com/app", Roots: []string{"proto"}}},
+		{name: "declared roots", manifest: "module example.com/app\nroots proto\n", want: v1.Module{Name: "example.com/app", Roots: []string{"proto"}, RootsFromMetadata: true}},
 		{name: "invalid manifest", manifest: "roots proto\n", wantErr: "missing module directive"},
 	}
 	for _, tt := range tests {

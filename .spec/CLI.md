@@ -153,6 +153,19 @@ easyp get github.com/googleapis/googleapis@common-protos-1_3_1
 easyp get github.com/acme/contracts@v1.2.3
 ~~~
 
+Repeatable <code>--import-root</code> provides checked module-relative directory
+hints for this dependency's import-root resolution. Validate canonical roots
+before cache access or named-tag lookup. Authoritative dependency metadata keeps
+priority; otherwise verified fallback roots become <code>modules[].roots</code>
+in <code>protobuf.lock</code>. For example:
+
+~~~bash
+easyp get --import-root api/svc/v1 gitlab/products/svc
+~~~
+
+Generation selects the required module separately through
+<code>generate.modules</code>; path/package filters do not change import roots.
+
 ### <code>easyp mod &lt;subcommand&gt;</code>
 
 The <code>mod</code> parent and all four subcommands accept <code>--frozen</code>. They use the nearest ancestor <code>protobuf.mod</code> found within the workspace, not a YAML dependency list or an unconditional current-directory root. Registration is in [internal/api/mod.go](../internal/api/mod.go); lookup is in [module_root.go](../internal/api/module_root.go).
@@ -222,9 +235,17 @@ Each candidate must preserve the exact import-name-to-physical-source map.
 Omitted or empty legacy roots keep <code>.</code>; native manifests with no
 <code>roots</code> use that same default. Same-package files outside selected
 paths do not become generation targets, including ignored Gradle build copies.
-Changed import names, hidden/vendor/nested-module boundary changes and inferred
-local filters mixed with whole-module Git inputs stay blocked. The plan rechecks
+Unrepresentable import names and hidden/vendor/nested-module boundary changes
+stay blocked. Mixed local/Git inputs receive module-scoped selectors. The plan rechecks
 sources, paths and packages before applying. See [source selection](config/package-selection.md).
+
+Git input URL/version values become native requirements and generation module
+selections. Custom <code>root</code> is a resolution hint, accepted in the initial
+preview and verified at the historical pinned revision before apply. Resolved
+fallback roots are recorded in the native lock. <code>sub_directory</code>
+becomes module-directory-relative selection after comparing the legacy archive
+mapping with the v1 logical source map. Corrections are shown in the verified
+preview. Plugins remain disabled and failures preserve manifest/lock bytes.
 
 Historical <code>easyp.lock</code> entries may use a full SemVer tag followed by
 Git's peeled-ref suffix <code>^{}</code>. Migration verifies the corresponding

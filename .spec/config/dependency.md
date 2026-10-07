@@ -114,6 +114,23 @@ The resolver accepts <code>Source.Fetch</code>, independent of Git/cache. It sel
 
 ## Frozen graph validation
 
+Metadata-free module resolution may record canonical module-relative `roots` in
+its lock entry. Native/Buf/legacy root metadata has priority, including an
+authoritative default `.`. Missing roots can be inferred from uniquely consistent
+import/source constraints within the already declared graph. Explicit repeated
+`get --import-root` hints are validated before acquisition and recorded after
+pinned verification. Normal resolution uses a bounded provisional proto index
+before strict selected-alias validation, then installs the final exact-commit
+snapshot. Only marked provisional inspections can defer content-hash checks;
+immutable commit/tag checks remain immediate and the final hash is checked before
+installation/writes. Cache identity includes the canonical root selection so
+warm verification in one namespace cannot authorize another.
+
+Frozen replays recorded fallback roots and never chooses a new namespace.
+Generation module selectors and path/package filters remain separate from roots.
+Ambiguous layouts, unsafe selected sources and metadata conflicts are errors
+before consumer files are changed.
+
 Explicit <code>--frozen</code> requires <code>protobuf.mod</code> and <code>protobuf.lock</code> for each selected native dependency graph, even for a module with no dependencies. An empty graph must have an empty lock. A plain source tree without a manifest fails with a missing-manifest diagnostic. Frozen mode is never inferred from CI environment variables. See [CLI flag placement](../CLI.md#frozen-dependency-mode).
 
 All root replacement directives are forbidden, even when unused. Validation rejects them before opening replacement directories or accessing dependency caches/remotes. Dependency manifests still supply transitive requirements; dependency-local replacements remain ignored. The locked closure must satisfy direct and transitive requirements with no missing or stale entries. Malformed locks, incompatible versions/commits and unexpected graph entries fail instead of triggering resolution.

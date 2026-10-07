@@ -50,6 +50,7 @@ The native dependency format is documented in [`.spec/config/dependency.md`](.sp
 - `replace` is a main-module local development overlay. Local replacement state is not written into the shared `protobuf.lock`.
 - `--frozen` is explicit; it validates an existing manifest/lock graph and never infers frozen behavior from `CI=true`.
 - `mod tidy` does not discover arbitrary Git repositories from proto import strings.
+- Metadata-free declared dependencies can resolve missing import roots from an unambiguous pinned source/import map. Checked `get --import-root` and legacy Git input roots supply explicit hints; verified fallback roots are stored in the dependency's `protobuf.lock` entry and replayed in frozen/cold-cache operation. Existing native/Buf/legacy root metadata remains authoritative.
 - Known BSR dependencies encountered inside Git dependency metadata can be mapped through the current compatibility-snapshot resolver. Unknown BSR modules fail explicitly; no Git repository is guessed.
 
 ## Generation compatibility
@@ -67,6 +68,12 @@ The current command behavior is documented in [`.spec/CLI.md`](.spec/CLI.md):
 ## Migration
 
 `easyp migrate` is the supported v0-to-v1 transition path. It accepts the documented legacy compatibility metadata, preserves legacy inputs until apply succeeds, and does not silently reinterpret a pilot-RFC file as a native v1 manifest.
+
+Legacy Git inputs become requirements and generation module selections. Custom
+`root` is a checked resolution hint; `sub_directory` becomes module-local paths
+after pinned source/import-name verification. Local and Git input filters keep
+their own module scope. Corrections appear in the verified preview, and failures
+do not write consumer manifest/lock files.
 
 The wizard preserves legacy directory selections through literal
 <code>generate.paths</code>, retaining root <code>.</code>, source locations and
