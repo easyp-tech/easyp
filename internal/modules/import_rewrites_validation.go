@@ -26,6 +26,7 @@ type tidySourceView struct {
 	proposed map[string][]byte
 	scopes   map[string]*resolvedFilesTransaction
 	pinned   map[string]map[string][]byte
+	old      []tidyOldNamespace
 	mu       sync.Mutex
 }
 

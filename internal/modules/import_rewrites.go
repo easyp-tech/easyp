@@ -96,23 +96,21 @@ func TidyWithReport(ctx context.Context, root string, repository Repository) (_ 
 		return TidyResult{}, fmt.Errorf("ModuleSources: %w", err)
 	}
 	own = excludeTidyCacheSources(own, boundaries)
-	files, err := captureTidySources(tx, own)
-	if err != nil {
-		return TidyResult{}, fmt.Errorf("captureTidySources: %w", err)
-	}
-	needed, err := capturedTidyImports(tx, files)
-	if err != nil {
-		return TidyResult{}, fmt.Errorf("capturedTidyImports: %w", err)
+	var files []string
+	_, completeCacheOwnership := repository.(sourceCacheDirectories)
+	if completeCacheOwnership {
+		// Complete cache ownership permits an early consumer checkpoint. A
+		// generic repository must first identify the new snapshot directories.
+		files, err = captureTidySources(tx, own)
+		if err != nil {
+			return TidyResult{}, fmt.Errorf("captureTidySources: %w", err)
+		}
 	}
 	lock, source, err := resolveV1Graph(ctx, module, existing, repository, true, nil, true)
 	if err != nil {
 		return TidyResult{}, fmt.Errorf("resolveV1Graph: %w", err)
 	}
 	view := newTidySourceView(tx, own)
-	bindings, err := source.tidyImportBindings(ctx, existing, lock, needed, view)
-	if err != nil {
-		return TidyResult{}, fmt.Errorf("tidyImportBindings: %w", err)
-	}
 	if err := repository.Install(ctx, lock); err != nil {
 		return TidyResult{}, fmt.Errorf("Install: %w", err)
 	}
@@ -131,7 +129,28 @@ func TidyWithReport(ctx context.Context, root string, repository Repository) (_ 
 		return TidyResult{}, fmt.Errorf("checkTidyCacheOwnership: %w", err)
 	}
 	own = excludeTidyCacheSources(own, boundaries)
-	files = filterTidyCapturedSources(tx, files, boundaries)
+	if !completeCacheOwnership {
+		files, err = captureTidySources(tx, own)
+		if err != nil {
+			return TidyResult{}, fmt.Errorf("captureTidySources: %w", err)
+		}
+	}
+	needed, err := capturedTidyImports(tx, files)
+	if err != nil {
+		return TidyResult{}, fmt.Errorf("capturedTidyImports: %w", err)
+	}
+	bindings, err := source.tidyImportBindings(ctx, existing, lock, needed, view)
+	if err != nil {
+		return TidyResult{}, fmt.Errorf("tidyImportBindings: %w", err)
+	}
+	// Proof of an old pin can acquire a previously missing snapshot. Those
+	// newly known directories are excluded from subsequent consumer rechecks.
+	oldBoundaries, err := tidyCacheBoundaries(repository, existing)
+	if err != nil {
+		return TidyResult{}, fmt.Errorf("tidyCacheBoundaries: %w", err)
+	}
+	boundaries = append(boundaries, oldBoundaries...)
+	own = excludeTidyCacheSources(own, boundaries)
 	roots := append(slices.Clone(own), dependencies...)
 	if err := CheckSourceCollisions(roots); err != nil {
 		return TidyResult{}, fmt.Errorf("CheckSourceCollisions: %w", err)
@@ -142,6 +161,10 @@ func TidyWithReport(ctx context.Context, root string, repository Repository) (_ 
 		err := checkTidySourceSelection(tx, own, files)
 		if err != nil {
 			return fmt.Errorf("checkTidySourceSelection: %w", err)
+		}
+		err = view.verifyOldNamespaces(ctx, repository)
+		if err != nil {
+			return fmt.Errorf("verifyOldNamespaces: %w", err)
 		}
 		return verifyCache()
 	}
@@ -309,38 +332,9 @@ func (source *importRootSource) uninspectedTidyBinding(ctx context.Context, entr
 	if !supported {
 		return v1UnresolvedImport{}, false, fmt.Errorf("module %s: repository cannot verify the old locked import owners; keep commit %s roots %v or use checked root inspection before running easyp mod tidy", entry.Source, entry.Commit, entry.Roots)
 	}
-	previous := v1.Lock{Version: 1, Modules: []v1.LockedModule{entry}}
-	err := repository.Install(ctx, previous)
+	names, err := view.captureOldNamespace(ctx, repository, entry)
 	if err != nil {
-		return v1UnresolvedImport{}, false, fmt.Errorf("Install: %w", err)
-	}
-	directory, module, err := repository.Cached(entry)
-	if err != nil {
-		return v1UnresolvedImport{}, false, fmt.Errorf("Cached: %w", err)
-	}
-	err = view.observeModuleMetadata(directory, module)
-	if err != nil {
-		return v1UnresolvedImport{}, false, fmt.Errorf("observeModuleMetadata: %w", err)
-	}
-	err = view.tx.verifyCapturedInputs()
-	if err != nil {
-		return v1UnresolvedImport{}, false, fmt.Errorf("verifyCapturedInputs: %w", err)
-	}
-	err = tidyInputVerifier(ctx, previous, repository)()
-	if err != nil {
-		return v1UnresolvedImport{}, false, fmt.Errorf("tidyInputVerifier: %w", err)
-	}
-	err = view.tx.verifyCapturedInputs()
-	if err != nil {
-		return v1UnresolvedImport{}, false, fmt.Errorf("verifyCapturedInputs: %w", err)
-	}
-	roots, err := ModuleSources(directory, module)
-	if err != nil {
-		return v1UnresolvedImport{}, false, fmt.Errorf("ModuleSources: %w", err)
-	}
-	names, err := roots.FileModules()
-	if err != nil {
-		return v1UnresolvedImport{}, false, fmt.Errorf("FileModules: %w", err)
+		return v1UnresolvedImport{}, false, fmt.Errorf("captureOldNamespace: %w", err)
 	}
 	var imports []string
 	for name := range needed {

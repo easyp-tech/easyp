@@ -435,6 +435,78 @@ type tidyBasicRepository struct {
 	cache *gitmodules.Cache
 }
 
+func TestTidyBasicOldExportDeletionCannotPermitRebinding(t *testing.T) {
+	t.Parallel()
+	old, _ := importRootsRepository(t, map[string]string{"svc.proto": `syntax = "proto3"; package service; message Service {}`}, nil)
+	importRootsGit(t, old, "tag", "v0.4.0")
+	consumer := `syntax = "proto3"; import "svc.proto"; message Consumer { service.Service service = 1; }`
+	root := importRootsConsumer(t, old, "v0.4.0", consumer)
+	cache := gitmodules.New(t.TempDir())
+	require.NoError(t, modules.Tidy(t.Context(), root, cache))
+	next, _ := importRootsRepository(t, map[string]string{"svc.proto": `syntax = "proto3"; package service; message Service { string rebound = 1; }`}, nil)
+	importRootsGit(t, next, "tag", "v0.5.0")
+	importRootsWrite(t, root, v1.ModuleFile, "module example.test/consumer\nrequire "+next+" v0.5.0\n")
+	manifest, lock := importRootsRead(t, root, v1.ModuleFile), importRootsRead(t, root, v1.LockFile)
+	wrapped := &tidyOldExportDeletionRepository{tidyBasicRepository: tidyBasicRepository{cache: cache}, t: t, source: old}
+
+	report, err := modules.TidyWithReport(t.Context(), root, wrapped)
+
+	require.Error(t, err)
+	assert.Empty(t, report.Imports)
+	assert.Equal(t, consumer, string(importRootsRead(t, root, "consumer.proto")))
+	assert.Equal(t, manifest, importRootsRead(t, root, v1.ModuleFile))
+	assert.Equal(t, lock, importRootsRead(t, root, v1.LockFile))
+}
+
+type tidyOldExportDeletionRepository struct {
+	tidyBasicRepository
+	t             *testing.T
+	source        string
+	verifications int
+}
+
+func (repository *tidyOldExportDeletionRepository) Install(ctx context.Context, lock v1.Lock) error {
+	err := repository.tidyBasicRepository.Install(ctx, lock)
+	if err != nil {
+		return err
+	}
+	if len(lock.Modules) == 1 && lock.Modules[0].Source == repository.source {
+		repository.verifications++
+		if repository.verifications == 2 {
+			directory, _, err := repository.Cached(lock.Modules[0])
+			require.NoError(repository.t, err)
+			require.NoError(repository.t, os.Remove(filepath.Join(directory, "svc.proto")))
+		}
+	}
+	return nil
+}
+
+func TestTidyKnownNewCacheImportsRemainOutsideConsumerOwnership(t *testing.T) {
+	t.Parallel()
+	old, _ := importRootsRepository(t, map[string]string{"svc.proto": `syntax = "proto3"; package original; message Service {}`}, nil)
+	importRootsGit(t, old, "tag", "v0.4.0")
+	consumer := `syntax = "proto3"; import "local.proto"; message Consumer {}`
+	root := importRootsConsumer(t, old, "v0.4.0", consumer)
+	importRootsWrite(t, root, "local.proto", `syntax = "proto3";`)
+	cache := gitmodules.New(filepath.Join(root, "storage"))
+	require.NoError(t, modules.Tidy(t.Context(), root, cache))
+	next, _ := importRootsRepository(t, map[string]string{
+		"svc.proto":    `syntax = "proto3"; package replacement; message Service {}`,
+		"bridge.proto": `syntax = "proto3"; import "svc.proto";`,
+	}, nil)
+	importRootsGit(t, next, "tag", "v0.5.0")
+	fetched, err := cache.Fetch(t.Context(), next, "v0.5.0")
+	require.NoError(t, err)
+	require.NoError(t, cache.Install(t.Context(), v1.Lock{Version: 1, Modules: []v1.LockedModule{fetched.Lock}}))
+	importRootsWrite(t, root, v1.ModuleFile, "module example.test/consumer\nrequire "+next+" v0.5.0\n")
+
+	report, err := modules.TidyWithReport(t.Context(), root, tidyBasicRepository{cache: cache})
+
+	require.NoError(t, err)
+	assert.Empty(t, report.Imports)
+	assert.Equal(t, consumer, string(importRootsRead(t, root, "consumer.proto")))
+}
+
 func (repository tidyBasicRepository) Fetch(ctx context.Context, source, version string) (modules.Fetched, error) {
 	return repository.cache.Fetch(ctx, source, version)
 }

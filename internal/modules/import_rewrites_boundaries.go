@@ -107,15 +107,3 @@ func checkTidyCacheOwnership(tx *resolvedFilesTransaction, boundaries []tidyCach
 	}
 	return nil
 }
-
-func filterTidyCapturedSources(tx *resolvedFilesTransaction, files []string, boundaries []tidyCacheBoundary) []string {
-	var owned []string
-	for _, name := range files {
-		if tidyCacheContains(filepath.Join(tx.requestedRoot, name), boundaries) || tidyCacheContains(filepath.Join(tx.canonicalRoot, filepath.FromSlash(tx.expected[name].resolution.Path)), boundaries) {
-			delete(tx.expected, name)
-			continue
-		}
-		owned = append(owned, name)
-	}
-	return owned
-}
