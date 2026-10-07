@@ -58,6 +58,10 @@ func (view *tidySourceView) cachedSources(ctx context.Context, lock v1.Lock, rep
 		if err != nil {
 			return nil, fmt.Errorf("Cached: %w", err)
 		}
+		directory, err = filepath.Abs(directory)
+		if err != nil {
+			return nil, fmt.Errorf("Abs: %w", err)
+		}
 		// Discover the directory, then capture and verify its metadata before
 		// using the returned requirements or roots to build the source graph.
 		err = view.observeModuleMetadata(directory, module)

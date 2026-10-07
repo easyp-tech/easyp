@@ -29,6 +29,10 @@ func (view *tidySourceView) captureOldNamespace(ctx context.Context, repository 
 	if err != nil {
 		return nil, fmt.Errorf("Cached: %w", err)
 	}
+	directory, err = filepath.Abs(directory)
+	if err != nil {
+		return nil, fmt.Errorf("Abs: %w", err)
+	}
 	err = view.observeModuleMetadata(directory, module)
 	if err != nil {
 		return nil, fmt.Errorf("observeModuleMetadata: %w", err)

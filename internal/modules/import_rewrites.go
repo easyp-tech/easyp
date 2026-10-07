@@ -43,6 +43,9 @@ func TidyWithReport(ctx context.Context, root string, repository Repository) (_ 
 		return TidyResult{}, fmt.Errorf("newResolvedFilesTransaction: %w", err)
 	}
 	defer func() { resultErr = errors.Join(resultErr, tx.close()) }()
+	// All source comparisons use the absolute lexical spelling that was
+	// opened by the transaction. Keep aliases for bounded identity rechecks.
+	root = tx.requestedRoot
 	boundaries, err := tidyCacheBoundaries(repository, v1.Lock{})
 	if err != nil {
 		return TidyResult{}, fmt.Errorf("tidyCacheBoundaries: %w", err)
