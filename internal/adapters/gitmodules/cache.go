@@ -29,6 +29,12 @@ func NewWithBSRResolver(storageDir string, resolver modules.BSRResolver) *Cache 
 	return &Cache{root: filepath.Join(storageDir, "v1", "git"), bsrResolver: resolver}
 }
 
+// SourceCacheDirectories returns repository-owned storage that consumer source
+// traversal and writes must exclude, including objects and unused snapshots.
+func (c *Cache) SourceCacheDirectories() []string {
+	return []string{c.root}
+}
+
 // Cached reads installed metadata without downloading or changing files.
 // Call Install first to verify contents against the lock.
 func (c *Cache) Cached(entry v1.LockedModule) (string, v1.Module, error) {

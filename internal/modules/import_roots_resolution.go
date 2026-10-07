@@ -24,6 +24,7 @@ type importRootSource struct {
 	hints          map[string][]string
 	fetched        map[[2]string]Fetched
 	verifiedScopes map[string]Fetched
+	tidy           bool
 }
 
 func (source *importRootSource) Fetch(ctx context.Context, name, version string) (Fetched, error) {
@@ -153,9 +154,18 @@ func (source *importRootSource) finalizeSelections(ctx context.Context, lock v1.
 			return v1.Lock{}, err
 		}
 		inspection := source.fetched[[2]string{entry.Source, strings.ToLower(entry.Commit)}].Inspection
-		if err := source.validateRootTransition(ctx, fetched, inspection, selector); err != nil {
-			return v1.Lock{}, fmt.Errorf("validateRootTransition: %w", err)
+		if !source.tidy {
+			if err := source.validateRootTransition(ctx, fetched, inspection, selector); err != nil {
+				return v1.Lock{}, fmt.Errorf("validateRootTransition: %w", err)
+			}
 		}
+		// Keep the complete final scope available to tidy's source-binding proof.
+		if fetched.Inspection == nil && inspection != nil && fetched.Lock.Hash != "" {
+			complete := *inspection
+			complete.Provisional = false
+			fetched.Inspection = &complete
+		}
+		source.fetched[[2]string{entry.Source, strings.ToLower(entry.Commit)}] = fetched
 		lock.Modules[offset] = fetched.Lock
 	}
 	if err := lock.Validate(); err != nil {

@@ -30,7 +30,7 @@ func (m Mod) Command() *cli.Command {
 	tidyCmd := &cli.Command{
 		Flags:  []cli.Flag{flags.Frozen()},
 		Name:   "tidy",
-		Usage:  "resolve protobuf.mod and write protobuf.lock",
+		Usage:  "resolve protobuf.mod, repair verified import renames, and write protobuf.lock",
 		Action: m.Tidy,
 	}
 	vendorCmd := &cli.Command{
