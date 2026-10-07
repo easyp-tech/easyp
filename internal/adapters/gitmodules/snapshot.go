@@ -64,7 +64,7 @@ func prepareV1Snapshot(ctx context.Context, checkout, commit, source, subdir str
 	if err != nil {
 		return "", v1.Module{}, nil, fmt.Errorf("applyV1ModuleRoots: %w", err)
 	}
-	provisional := inspect && !module.RootsFromMetadata
+	provisional := inspect && !module.RootsFromMetadata && len(roots) == 0
 	ignoredMetadata := make(map[string]bool, len(metadataFailures))
 	for _, failure := range metadataFailures {
 		if (!provisional && snapshotFailedMetadataOwnsSources(failure.name, directory, module)) || (failure.unstaged && snapshotNativeCandidate(failure.name, source, subdir)) {
