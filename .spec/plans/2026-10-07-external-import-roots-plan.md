@@ -56,12 +56,12 @@ Ownership: new internal/modules/import_roots*.go, modules/get.go, operations.go,
 
 Ownership: a fresh sequential worker in internal/modules/import_roots selection/constraint/index helpers and tests, plus the coordinated internal/adapters/gitmodules/root_inspection.go boundary hook and focused tests. Keep metadata, explicit hints, immutable scope proofs and source boundaries unchanged.
 
-- [ ] Reproduce the real-Git public/service.proto -> public/types.proto default edge beside an unrelated tools/aux/service.proto -> aux_types.proto short edge. Prove the new resolver rejects it while the pre-resolver implementation accepts default names and cold/frozen replay.
-- [ ] On zero consistent intrinsic inferred layouts only, retain a valid default namespace with existing intrinsic bindings when missing locally matchable declarations originate outside default-bound owner/target identities. Implement the decision explicitly from intrinsic physical identities, without error-string matching or consumer/package/directory heuristics.
-- [ ] Preserve connected contradiction errors (direct and chained), multi-solution ambiguity, candidate/search limits, cancellation, selected alias failures, collisions and final pin/hash verification. Reaching an unresolved short-layout source must still fail unchanged.
-- [ ] Match ordinary snapshot handling of opaque direct tracked gitlinks: skip only a walk ErrGitlink with no resolved symlink trace. Keep explicit gitlink roots and symlinks into gitlinks rejected; include real-Git strict-fetch/inspection parity and existing snapshot boundary controls.
-- [ ] Add permanent regressions and run modules/Git adapter races, vet/lint and the pinned live grpc v1.84.0 get/tidy/generate/cold/frozen/vendor scenario using a fresh binary. Keep Go1.26.6 and dependencies unchanged.
-- [ ] Complete independent spec then quality gates before Task3 starts.
+- [x] Reproduce the real-Git public/service.proto -> public/types.proto default edge beside an unrelated tools/aux/service.proto -> aux_types.proto short edge. Prove the new resolver rejects it while the pre-resolver implementation accepts default names and cold/frozen replay.
+- [x] On zero consistent intrinsic inferred layouts only, retain a valid default namespace with existing intrinsic bindings when missing locally matchable declarations originate outside default-bound owner/target identities. Implement the decision explicitly from intrinsic physical identities, without error-string matching or consumer/package/directory heuristics.
+- [x] Preserve connected contradiction errors (direct and chained), multi-solution ambiguity, candidate/search limits, cancellation, selected alias failures, collisions and final pin/hash verification. Reaching an unresolved short-layout source must still fail unchanged.
+- [x] Match ordinary snapshot handling of opaque direct tracked gitlinks: skip only a walk ErrGitlink with no resolved symlink trace. Keep explicit gitlink roots and symlinks into gitlinks rejected; include real-Git strict-fetch/inspection parity and existing snapshot boundary controls.
+- [x] Add permanent regressions and run modules/Git adapter races, vet/lint and the pinned live grpc v1.84.0 get/tidy/generate/cold/frozen/vendor scenario using a fresh binary. Keep Go1.26.6 and dependencies unchanged.
+- [x] Complete independent spec then quality gates before Task3 starts.
 
 ## Task 3: Verified migration of Git root/sub_directory
 
