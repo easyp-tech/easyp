@@ -477,7 +477,12 @@ func snapshotStrictDirectory(name string, module v1.Module) bool {
 }
 
 func snapshotExcludedDirectory(name, root, directory string, module v1.Module) bool {
-	relative := strings.TrimPrefix(strings.TrimPrefix(name, root), "/")
+	relative := name
+	if name == root {
+		relative = ""
+	} else if root != "." {
+		relative = strings.TrimPrefix(name, root+"/")
+	}
 	for _, component := range strings.Split(relative, "/") {
 		if strings.HasPrefix(component, ".") || component == "easyp_vendor" {
 			return true
