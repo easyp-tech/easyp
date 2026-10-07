@@ -24,7 +24,7 @@ func (c *Cache) Fetch(ctx context.Context, source, version string) (modules.Fetc
 // FetchWithRoots resolves a revision with bounded roots when metadata declares none.
 // Authoritative native, Buf, and legacy EasyP roots may only be repeated unchanged.
 func (c *Cache) FetchWithRoots(ctx context.Context, source, version string, roots []string) (modules.Fetched, error) {
-	fetched, err := c.fetchWithRootSelection(ctx, source, version, roots, false)
+	fetched, err := c.fetchWithRootSelection(ctx, source, version, roots, len(roots) > 0)
 	if err != nil {
 		return modules.Fetched{}, fmt.Errorf("fetchWithRootSelection: %w", err)
 	}

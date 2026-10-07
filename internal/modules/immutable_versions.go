@@ -24,10 +24,17 @@ func (s lockedVersionSource) Fetch(ctx context.Context, source, version string) 
 	if err != nil {
 		return Fetched{}, fmt.Errorf("Fetch: %w", err)
 	}
-	old, ok := s.locked[source]
-	if ok && semver.IsValid(old.Version) && old.Version == fetched.Lock.Version &&
-		(!strings.EqualFold(old.Commit, fetched.Lock.Commit) || old.Hash != fetched.Lock.Hash) {
-		return Fetched{}, fmt.Errorf("%w: %s@%s: locked commit %s hash %s, fetched commit %s hash %s; restore the published version or select a new version", ErrLockedVersionChanged, source, old.Version, old.Commit, old.Hash, fetched.Lock.Commit, fetched.Lock.Hash)
+	if err := checkLockedVersion(s.locked[source], fetched); err != nil {
+		return Fetched{}, err
 	}
 	return fetched, nil
+}
+
+func checkLockedVersion(old v1.LockedModule, fetched Fetched) error {
+	provisional := fetched.Inspection != nil && fetched.Inspection.Provisional && fetched.Lock.Hash == ""
+	if semver.IsValid(old.Version) && old.Version == fetched.Lock.Version &&
+		(!strings.EqualFold(old.Commit, fetched.Lock.Commit) || (!provisional && old.Hash != fetched.Lock.Hash)) {
+		return fmt.Errorf("%w: %s@%s: locked commit %s hash %s, fetched commit %s hash %s; restore the published version or select a new version", ErrLockedVersionChanged, old.Source, old.Version, old.Commit, old.Hash, fetched.Lock.Commit, fetched.Lock.Hash)
+	}
+	return nil
 }

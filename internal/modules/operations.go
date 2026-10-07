@@ -43,15 +43,23 @@ func resolveV1LockWithPins(ctx context.Context, root string, module v1.Module, e
 }
 
 func resolveV1Lock(ctx context.Context, root string, module v1.Module, existing v1.Lock, repository Repository, preserveHeads bool) (v1.Lock, error) {
+	return resolveV1LockWithRoots(ctx, root, module, existing, repository, preserveHeads, nil)
+}
+
+func resolveV1LockWithRoots(ctx context.Context, root string, module v1.Module, existing v1.Lock, repository Repository, preserveHeads bool, hints map[string][]string) (v1.Lock, error) {
 	pins := make(map[string]v1.LockedModule, len(existing.Modules))
 	for _, entry := range existing.Modules {
 		pins[entry.Source] = entry
 	}
-	guard := lockedVersionSource{Source: repository, locked: pins}
+	source := &importRootSource{Source: repository, locked: pins, hints: hints}
 	if !preserveHeads {
 		pins = nil
 	}
-	lock, err := Resolve(ctx, module, guard, pins)
+	lock, err := Resolve(ctx, module, source, pins)
+	if err != nil {
+		return v1.Lock{}, fmt.Errorf("module %s: %w", module.Name, err)
+	}
+	lock, err = source.finalize(ctx, lock)
 	if err != nil {
 		return v1.Lock{}, fmt.Errorf("module %s: %w", module.Name, err)
 	}
