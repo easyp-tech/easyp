@@ -50,6 +50,9 @@ func selectModuleImportRoots(ctx context.Context, module importRootModule) ([]st
 		return nil, fmt.Errorf("visit: %w", err)
 	}
 	if len(search.solutions) == 0 {
+		if index.canRetainDefaultIntrinsicRoots(namespace, constraints) {
+			return nil, nil
+		}
 		if search.failure != nil {
 			return nil, search.failure
 		}
@@ -59,6 +62,36 @@ func selectModuleImportRoots(ctx context.Context, module importRootModule) ([]st
 		return nil, fmt.Errorf("ambiguous import roots: %s or %s; supply explicit import roots", search.describe(search.solutions[0]), search.describe(search.solutions[1]))
 	}
 	return search.solutions[0].roots[0], nil
+}
+
+// A valid default namespace can coexist with unrelated short-import projects.
+// Retain it only after inference found no layout, and only if none of the
+// missing declarations comes from a physical owner or target of a default
+// intrinsic binding. Reaching those unresolved sources still requires ordinary
+// import validation; they do not justify changing the established bindings.
+func (index *importRootIndex) canRetainDefaultIntrinsicRoots(namespace importRootNamespace, constraints importRootConstraints) bool {
+	if namespace.err != nil || len(constraints.bindings) == 0 || !slices.Equal(index.modules[0].roots, []string{"."}) {
+		return false
+	}
+	boundIdentities := make(map[string]bool)
+	for _, file := range index.files {
+		for _, name := range file.intrinsic {
+			if !ValidProtoImportPath(name) {
+				continue
+			}
+			target := namespace.files[name]
+			if target != nil {
+				boundIdentities[file.Identity] = true
+				boundIdentities[target.Identity] = true
+			}
+		}
+	}
+	for _, missing := range constraints.missing {
+		if missing.intrinsic == nil || boundIdentities[missing.intrinsic.Identity] {
+			return false
+		}
+	}
+	return true
 }
 
 func (search *importRootSearch) visit(ctx context.Context, layout importRootLayout) error {
