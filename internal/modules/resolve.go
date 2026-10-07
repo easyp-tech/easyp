@@ -14,8 +14,9 @@ import (
 
 // Fetched contains metadata and a reproducible identity for one requested revision.
 type Fetched struct {
-	Module v1.Module
-	Lock   v1.LockedModule
+	Module     v1.Module
+	Lock       v1.LockedModule
+	Inspection *RootInspection
 }
 
 // Source supplies revision metadata without exposing checkout or cache layout.

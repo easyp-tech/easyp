@@ -1,11 +1,13 @@
 package v1
 
 import (
+	"bytes"
 	"encoding/base64"
 	"encoding/hex"
 	"fmt"
 	"io"
 	"strings"
+	"unicode/utf8"
 
 	"golang.org/x/mod/semver"
 	"gopkg.in/yaml.v3"
@@ -23,13 +25,21 @@ type LockedModule struct {
 	Version string          `yaml:"version"`
 	Commit  string          `yaml:"commit"`
 	Hash    string          `yaml:"hash"`
+	Roots   []string        `yaml:"roots,omitempty"`
 	BSR     []BSRResolution `yaml:"bsr,omitempty"`
 }
 
 // ParseLock reads and validates a v1 protobuf.lock document.
 func ParseLock(reader io.Reader) (Lock, error) {
+	raw, err := io.ReadAll(reader)
+	if err != nil {
+		return Lock{}, fmt.Errorf("ReadAll: %w", err)
+	}
+	if err := validateLockRootsYAML(raw); err != nil {
+		return Lock{}, fmt.Errorf("validateLockRootsYAML: %w", err)
+	}
 	var lock Lock
-	decoder := yaml.NewDecoder(reader)
+	decoder := yaml.NewDecoder(bytes.NewReader(raw))
 	decoder.KnownFields(true)
 	if err := decoder.Decode(&lock); err != nil {
 		return Lock{}, fmt.Errorf("Decode: %w", err)
@@ -47,6 +57,39 @@ func ParseLock(reader io.Reader) (Lock, error) {
 	return lock, nil
 }
 
+// YAML's default string slice decoder coerces numeric scalars and drops null
+// entries. Validate root nodes before decoding so the parsed lock matches its schema.
+func validateLockRootsYAML(raw []byte) error {
+	var document map[string]any
+	if err := yaml.Unmarshal(raw, &document); err != nil {
+		return fmt.Errorf("Unmarshal: %w", err)
+	}
+	entries, ok := document["modules"].([]any)
+	if !ok {
+		return nil
+	}
+	for _, rawEntry := range entries {
+		entry, ok := rawEntry.(map[string]any)
+		if !ok {
+			continue
+		}
+		rawRoots, present := entry["roots"]
+		if !present {
+			continue
+		}
+		roots, ok := rawRoots.([]any)
+		if !ok {
+			return fmt.Errorf("roots must be a list of directory strings")
+		}
+		for index, root := range roots {
+			if _, ok := root.(string); !ok {
+				return fmt.Errorf("roots[%d] must be a directory string", index)
+			}
+		}
+	}
+	return nil
+}
+
 // Validate checks the version and integrity fields before a lock is used.
 func (lock Lock) Validate() error {
 	if lock.Version != 1 {
@@ -61,6 +104,9 @@ func (lock Lock) Validate() error {
 			return fmt.Errorf("duplicate locked module %s", entry.Source)
 		}
 		seen[entry.Source] = struct{}{}
+		if err := ValidateModuleRoots(entry.Roots); err != nil {
+			return fmt.Errorf("ValidateModuleRoots: %s: %w", entry.Source, err)
+		}
 		if err := ValidateModuleVersion(entry.Source, entry.Version); err != nil {
 			return fmt.Errorf("ValidateModuleVersion: %w", err)
 		}
@@ -91,6 +137,22 @@ func (lock Lock) Validate() error {
 			}
 			origins[origin] = true
 		}
+	}
+	return nil
+}
+
+// ValidateModuleRoots checks canonical portable module-relative directory names.
+// Empty selections are omitted from the lock; duplicate directories are invalid.
+func ValidateModuleRoots(roots []string) error {
+	seen := make(map[string]bool, len(roots))
+	for index, root := range roots {
+		if !utf8.ValidString(root) || !pathSelector.MatchString(root) {
+			return fmt.Errorf("roots[%d]: %q is not a canonical portable module-relative directory path", index, root)
+		}
+		if seen[root] {
+			return fmt.Errorf("roots[%d]: duplicate directory %q", index, root)
+		}
+		seen[root] = true
 	}
 	return nil
 }
