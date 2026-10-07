@@ -29,7 +29,7 @@ easyp
 ├── mod (m)                          Manage protobuf.mod / protobuf.lock
 │   ├── download                     Install the exact locked dependencies
 │   ├── update                       Update compatible versions / versionless HEAD
-│   ├── tidy                         Resolve requirements and write the lock
+│   ├── tidy                         Resolve requirements and repair verified imports
 │   └── vendor                       Copy locked sources into easyp_vendor
 ├── init (i)                         Initialize the three v1 project files
 ├── migrate                          Preview or apply v0-to-v1 migration
@@ -382,7 +382,7 @@ An import-related message alone does not imply status 2. [internal/core/proto_in
 - **stdin/terminal:** init may ask for module identity and overwrite choices through its interactive prompter, only when input and output are terminals. The migration wizard reads line-based input from the application reader (normally stdin) and also requires terminal input/output; flag-only migration accepts no stdin document.
 - **stdout:** lint/breaking findings; ls-files and validation reports; migration previews/prompts; shell completion; framework help/version. Schema generation primarily writes files.
 - **stderr:** structured text logger output (including debug records when enabled), fatal returned errors, ls-files text-mode collected errors, and its CLI exit error count for either report format.
-- **files:** init writes the three native project files; migration writes validated candidates/backups when authorized; generation writes configured plugin outputs and optional descriptors; get/tidy/update write manifest/lock results; download populates the cache; vendor writes <code>easyp_vendor</code>; schema-gen writes six schemas. Commands resolving imports may also populate the cache.
+- **files:** init writes the three native project files; migration writes validated candidates/backups when authorized; generation writes configured plugin outputs and optional descriptors; get/update write manifest/lock results; tidy can also rewrite verified consumer imports and commits them with manifest/lock; download populates the cache; vendor writes <code>easyp_vendor</code>; schema-gen writes six schemas. Commands resolving imports may also populate the cache.
 
 ~~~bash
 easyp --format json lint --path proto > lint-issues.json
