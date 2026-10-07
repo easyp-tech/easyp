@@ -50,7 +50,8 @@ The native dependency format is documented in [`.spec/config/dependency.md`](.sp
 - `replace` is a main-module local development overlay. Local replacement state is not written into the shared `protobuf.lock`.
 - `--frozen` is explicit; it validates an existing manifest/lock graph and never infers frozen behavior from `CI=true`.
 - `mod tidy` does not discover arbitrary Git repositories from proto import strings.
-- Metadata-free declared dependencies can resolve missing import roots from an unambiguous pinned source/import map. Checked `get --import-root` and legacy Git input roots supply explicit hints; verified fallback roots are stored in the dependency's `protobuf.lock` entry and replayed in frozen/cold-cache operation. Existing native/Buf/legacy root metadata remains authoritative.
+- Metadata-free declared dependencies can resolve missing import roots from an unambiguous pinned source/import map inside that same module. Consumer code only validates the resolved namespace and cannot select roots. Checked `get --import-root` and legacy Git input roots supply explicit hints; verified fallback roots are stored in the dependency's `protobuf.lock` entry and replayed in frozen/cold-cache operation. Existing native/Buf/legacy root metadata remains authoritative.
+- After a declared dependency revision changes its namespace, `mod tidy` repairs uniquely verified consumer import bindings, validates the proposed source and commits source/manifest/lock together. It preserves non-import bytes and reports applied renames; ambiguous or deleted imported bindings stop before writes. Tidy uses manifest versions without upgrading them; generation selectors and SDK output paths remain separate.
 - Known BSR dependencies encountered inside Git dependency metadata can be mapped through the current compatibility-snapshot resolver. Unknown BSR modules fail explicitly; no Git repository is guessed.
 
 ## Generation compatibility

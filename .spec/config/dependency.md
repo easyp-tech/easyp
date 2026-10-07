@@ -117,14 +117,16 @@ The resolver accepts <code>Source.Fetch</code>, independent of Git/cache. It sel
 Metadata-free module resolution may record canonical module-relative `roots` in
 its lock entry. Native/Buf/legacy root metadata has priority, including an
 authoritative default `.`. Missing roots can be inferred from uniquely consistent
-import/source constraints within the already declared graph. Explicit repeated
+import/source constraints inside that same declared module. External consumer or other-module imports never select its roots; they validate the resulting namespace. Explicit repeated
 `get --import-root` hints are validated before acquisition and recorded after
 pinned verification. Normal resolution uses a bounded provisional proto index
 before strict selected-alias validation, then installs the final exact-commit
 snapshot. Only marked provisional inspections can defer content-hash checks;
 immutable commit/tag checks remain immediate and the final hash is checked before
 installation/writes. Cache identity includes the canonical root selection so
-warm verification in one namespace cannot authorize another.
+warm verification in one namespace cannot authorize another. A module with no intrinsic evidence retains default `.` or uses an explicit checked hint.
+
+An update introducing authoritative roots checks whether the prior fallback namespace changes, including a metadata-free default `.` omitted from the old lock. The old pinned metadata distinguishes that fallback from previously authoritative roots. Directory changes preserving protobuf filenames are valid; implicit get/update namespace shifts fail with old/new revisions, roots and renamed-import guidance before writes. After a manifest version change, tidy repairs uniquely verified consumer import bindings and commits source/manifest/lock together after proposed-byte validation. It never chooses roots from consumer code or upgrades versions itself. Ambiguous or missing imported bindings fail unchanged. An explicit matching `get --import-root <new-root> <source>@<new-version>` can adopt authority when imports are already adapted; the prior version can also remain pinned. See the [tidy import-renames design](../plans/2026-10-07-tidy-import-renames-design.md).
 
 Frozen replays recorded fallback roots and never chooses a new namespace.
 Generation module selectors and path/package filters remain separate from roots.
