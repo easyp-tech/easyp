@@ -97,6 +97,7 @@ func moduleExamples() []Example {
 func lockExamples() []Example {
 	return []Example{
 		{Title: "empty_lock", YAML: "version: 1\nmodules: []\n", Paths: []string{"version", "modules"}},
+		{Title: "resolved_import_roots", Description: "Synthetic pin showing checked fallback roots for a dependency without root metadata; source bytes are not fetched by this reference.", YAML: "version: 1\nmodules:\n  - source: example.com/acme/legacy\n    version: v1.2.3\n    commit: \"1111111111111111111111111111111111111111\"\n    hash: h1:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=\n    roots: [api/svc/v1]\n", Paths: []string{"modules[].roots"}},
 		{Title: "version_pin", Description: "Synthetic revision and content hash; demonstrates the format, not a real downloaded module.", YAML: "version: 1\nmodules:\n  - source: example.com/acme/common\n    version: v1.2.3\n    commit: \"1111111111111111111111111111111111111111\"\n    hash: h1:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=\n", Paths: []string{"modules"}},
 		{Title: "commit_pin", Description: "Synthetic 64-character Git commit; version equals commit. Not fetched content.", YAML: "version: 1\nmodules:\n  - source: example.com/acme/types/v2\n    version: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n    commit: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n    hash: h1:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=\n", Paths: []string{"modules[].version", "modules[].commit", "modules[].hash"}},
 	}
