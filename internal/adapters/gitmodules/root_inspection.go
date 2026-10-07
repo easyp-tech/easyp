@@ -9,6 +9,7 @@ import (
 	"path"
 	"path/filepath"
 
+	"github.com/easyp-tech/easyp/internal/adapters/gitsnapshot"
 	v1 "github.com/easyp-tech/easyp/internal/config/v1"
 	"github.com/easyp-tech/easyp/internal/core/path_helpers"
 	"github.com/easyp-tech/easyp/internal/modules"
@@ -34,6 +35,11 @@ func inspectV1Snapshot(ctx context.Context, view *sourceview.View, directory str
 			return fmt.Errorf("Err: %w", err)
 		}
 		if walkErr != nil {
+			// Match strict snapshots: unentered submodules are opaque, while
+			// aliases attempting to enter them remain source path failures.
+			if errors.Is(walkErr, gitsnapshot.ErrGitlink) && len(resolved.Links) == 0 {
+				return nil
+			}
 			inspection.Problems = append(inspection.Problems, modules.RootPathProblem{Path: logical, Err: walkErr})
 			return nil
 		}

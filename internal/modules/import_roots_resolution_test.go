@@ -134,7 +134,10 @@ type provisionalRootTestSource struct{ fetched Fetched }
 
 func TestImportRootSearchIsBounded(t *testing.T) {
 	t.Parallel()
-	dependency := &RootInspection{}
+	dependency := &RootInspection{Files: []RootProtoFile{
+		{Path: "anchor.proto", Identity: "anchor.proto"},
+		{Path: "request.proto", Identity: "request.proto", Content: []byte(`import "anchor.proto";`)},
+	}}
 	for number := range 10 {
 		name := fmt.Sprintf("v1/a_%02d.proto", number)
 		declaration := fmt.Sprintf("choices/%02d/inner/request_%02d.proto", number, number)
@@ -142,6 +145,10 @@ func TestImportRootSearchIsBounded(t *testing.T) {
 		for _, side := range []string{"", "inner/"} {
 			path := fmt.Sprintf("choices/%02d/%s%s", number, side, name)
 			dependency.Files = append(dependency.Files, RootProtoFile{Path: path, Identity: path, Content: []byte(`syntax = "proto3";`)})
+			// Every candidate preserves this default binding. Exhausting
+			// the search must still fail rather than retain the default.
+			anchor := fmt.Sprintf("choices/%02d/%sanchor.proto", number, side)
+			dependency.Files = append(dependency.Files, RootProtoFile{Path: anchor, Identity: "anchor.proto"})
 			collision := fmt.Sprintf("choices/%02d/%scollision.proto", number, side)
 			dependency.Files = append(dependency.Files, RootProtoFile{Path: collision, Identity: collision, Content: []byte(`syntax = "proto3";`)})
 		}
