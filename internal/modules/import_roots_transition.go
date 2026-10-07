@@ -22,9 +22,9 @@ func (source *importRootSource) validateRootTransition(ctx context.Context, fetc
 	}
 	// Compare source names from immutable revisions without installing either
 	// graph. Replaying the old scope is also a proof of its original lock hash.
-	previous, err := fetchLockedRootScope(ctx, selector, old, old.Roots)
+	previous, err := source.lockedRootScope(ctx, selector, old)
 	if err != nil {
-		return fmt.Errorf("fetchLockedRootScope: %w", err)
+		return fmt.Errorf("lockedRootScope: %w", err)
 	}
 	if previous.Module.RootsFromMetadata {
 		return nil
@@ -48,8 +48,16 @@ func (source *importRootSource) validateRootTransition(ctx context.Context, fetc
 	before := rootNamespaceNames(previous.Module, previous.Inspection)
 	after := rootNamespaceNames(fetched.Module, inspection)
 	var missing []string
-	for name := range before {
-		if _, retained := after[name]; !retained {
+	newPhysical := make(map[string]bool, len(after))
+	for _, file := range after {
+		newPhysical[rootGitSourcePath(file, fetched.Lock)] = true
+	}
+	for name, file := range before {
+		current, retained := after[name]
+		physical := rootGitSourcePath(file, previous.Lock)
+		// An existing public name can shadow a surviving old Git source.
+		// Its bytes/package/basename do not establish source continuity.
+		if !retained || (physical != rootGitSourcePath(current, fetched.Lock) && newPhysical[physical]) {
 			missing = append(missing, name)
 		}
 	}
@@ -97,11 +105,11 @@ func representativeRootRenames(missing []string, before, after map[string]RootPr
 	var changes []string
 	for _, name := range missing[:min(len(missing), 3)] {
 		oldFile := before[name]
-		physical := strings.TrimPrefix(oldFile.Identity, old.Source+"@"+old.Commit+":")
+		physical := rootGitSourcePath(oldFile, old)
 		renamed := ""
 		for _, candidate := range newNames {
 			file := after[candidate]
-			newPhysical := strings.TrimPrefix(file.Identity, current.Source+"@"+current.Commit+":")
+			newPhysical := rootGitSourcePath(file, current)
 			if physical == newPhysical || oldFile.Path == file.Path {
 				renamed = candidate
 				break
@@ -114,6 +122,10 @@ func representativeRootRenames(missing []string, before, after map[string]RootPr
 		changes = append(changes, name+" -> "+renamed)
 	}
 	return changes
+}
+
+func rootGitSourcePath(file RootProtoFile, entry v1.LockedModule) string {
+	return strings.TrimPrefix(file.Identity, entry.Source+"@"+entry.Commit+":")
 }
 
 func rootAdoptionCommand(entry v1.LockedModule, roots []string) string {

@@ -20,9 +20,10 @@ type rootSelectionSource interface {
 
 type importRootSource struct {
 	Source
-	locked  map[string]v1.LockedModule
-	hints   map[string][]string
-	fetched map[[2]string]Fetched
+	locked         map[string]v1.LockedModule
+	hints          map[string][]string
+	fetched        map[[2]string]Fetched
+	verifiedScopes map[string]Fetched
 }
 
 func (source *importRootSource) Fetch(ctx context.Context, name, version string) (Fetched, error) {
@@ -62,11 +63,11 @@ func (source *importRootSource) Fetch(ctx context.Context, name, version string)
 	if v1.IsCommitRef(version) && !strings.EqualFold(version, fetched.Lock.Commit) {
 		return Fetched{}, fmt.Errorf("module %s: fetched commit %s differs from requested commit %s", name, fetched.Lock.Commit, version)
 	}
-	if err := checkLockedVersion(source.locked[name], fetched); err != nil {
+	if err := source.verifyRootFetch(ctx, fetched); err != nil {
 		return Fetched{}, err
 	}
 	if len(hint) == 0 && !fetched.Module.RootsFromMetadata {
-		if old := source.locked[name]; len(old.Roots) > 0 {
+		if old := source.locked[name]; len(old.Roots) > 0 || source.sameLockedPin(fetched.Lock) {
 			if selector, supported := source.Source.(rootSelectionSource); supported {
 				scoped, err := selector.FetchWithRoots(ctx, name, fetched.Lock.Commit, old.Roots)
 				if err != nil {
@@ -83,7 +84,7 @@ func (source *importRootSource) Fetch(ctx context.Context, name, version string)
 			}
 		}
 	}
-	if err := checkLockedVersion(source.locked[name], fetched); err != nil {
+	if err := source.verifyRootFetch(ctx, fetched); err != nil {
 		return Fetched{}, err
 	}
 	if source.fetched == nil {
@@ -98,7 +99,7 @@ func (source *importRootSource) finalize(ctx context.Context, lock v1.Lock) (v1.
 	inspected := false
 	for _, entry := range lock.Modules {
 		fetched := source.fetched[[2]string{entry.Source, strings.ToLower(entry.Commit)}]
-		fixed := fetched.Module.RootsFromMetadata || len(source.hints[entry.Source]) > 0 || len(source.locked[entry.Source].Roots) > 0 || fetched.Inspection == nil
+		fixed := source.fixedRootScope(entry, fetched)
 		dependencies = append(dependencies, importRootModule{name: entry.Source, roots: fetched.Module.Roots, fixed: fixed, inspection: fetched.Inspection})
 		inspected = inspected || fetched.Inspection != nil
 	}
@@ -131,6 +132,9 @@ func (source *importRootSource) finalizeSelections(ctx context.Context, lock v1.
 		roots := selected[offset]
 		if dependency.fixed && !source.fetched[[2]string{entry.Source, strings.ToLower(entry.Commit)}].Module.RootsFromMetadata {
 			roots = dependency.roots
+			if len(source.hints[entry.Source]) == 0 && source.sameLockedPin(entry) {
+				roots = source.locked[entry.Source].Roots
+			}
 		}
 		// Finalization uses the exact MVS-selected revision, never HEAD. Keep
 		// its semantic Version separately from the exact-commit fetch request.
@@ -145,12 +149,8 @@ func (source *importRootSource) finalizeSelections(ctx context.Context, lock v1.
 			return v1.Lock{}, fmt.Errorf("module %s: final root fetch remains provisional", entry.Source)
 		}
 		fetched.Lock.Version = entry.Version
-		if err := checkLockedVersion(source.locked[entry.Source], fetched); err != nil {
+		if err := source.verifyRootFetch(ctx, fetched); err != nil {
 			return v1.Lock{}, err
-		}
-		old := source.locked[entry.Source]
-		if old.Hash != "" && strings.EqualFold(old.Commit, fetched.Lock.Commit) && old.Hash != fetched.Lock.Hash {
-			return v1.Lock{}, fmt.Errorf("%w: %s@%s: locked hash %s, fetched hash %s", ErrLockedVersionChanged, entry.Source, entry.Version, old.Hash, fetched.Lock.Hash)
 		}
 		inspection := source.fetched[[2]string{entry.Source, strings.ToLower(entry.Commit)}].Inspection
 		if err := source.validateRootTransition(ctx, fetched, inspection, selector); err != nil {
