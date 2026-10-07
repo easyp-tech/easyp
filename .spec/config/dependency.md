@@ -67,7 +67,7 @@ The CLI resolves <code>EASYPPATH</code> once for a command that needs the cache 
 | Command | Application operation | Behavior |
 |---------|-----------------------|----------|
 | <code>get &lt;module&gt;[@version\|@commit]</code> | <code>modules.Get</code> | Add/promote a direct requirement, resolve the graph and add transitive requirements |
-| <code>mod tidy</code> | <code>modules.Tidy</code> | Resolve requirements, preserve versionless pins, validate imports and write manifest/lock |
+| <code>mod tidy</code> | <code>modules.Tidy</code> | Resolve requirements, preserve versionless pins, repair verified consumer imports, validate proposed sources and commit source/manifest/lock together |
 | <code>mod download</code> | <code>modules.Download</code> | Validate the lock against the manifest before installing exact locked contents |
 | <code>mod update</code> | <code>modules.Update</code> | Refresh HEAD requirements and tagged requirements within the existing major version; retain explicit commit pins |
 | <code>mod vendor</code> | <code>modules.Vendor</code> | Verify locked sources and copy their import paths into <code>easyp_vendor</code> |

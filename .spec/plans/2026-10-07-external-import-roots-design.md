@@ -8,7 +8,7 @@ Migration currently rejects every non-default git_repo.root/sub_directory before
 
 A root changes a protobuf filename; a generation path only selects files. Identical api/svc/v1/svc.proto bytes compile as either svc.proto or svc/v1/svc.proto with different valid roots. Therefore roots cannot be guessed from the directory name, package or common directory alone. A root hint that is not derivable from a repository must survive a cold cache as resolution metadata.
 
-Scope is one cohesive dependency/source namespace change. Keep Go 1.26.6 and existing dependencies. No v0 command fallback, new consumer-manifest roots section, source rewrites, release tags, or modifications to the real customer repositories are involved. Legacy readers remain in dependency compatibility and migration.
+Scope is one cohesive dependency/source namespace change. Keep Go 1.26.6 and existing dependencies. No v0 command fallback, new consumer-manifest roots section, release tags, or modifications to the real customer repositories are involved. The subsequent checked tidy extension permits verified consumer import rewrites; get/update retain their diagnostic-only behavior. Legacy readers remain in dependency compatibility and migration.
 
 ## Root authority and result
 
