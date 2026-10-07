@@ -174,7 +174,7 @@ The <code>mod</code> parent and all four subcommands accept <code>--frozen</code
 |---|---|
 | <code>download</code> | Read the existing lock, validate remote requirements against it, and install/verify its exact pinned dependencies in the cache. A missing lock reports that tidy is required. |
 | <code>update</code> | Advance tagged requirements within their current major version, refresh versionless requirements to HEAD, retain explicit commit pins, and rewrite manifest/lock resolution. Stable versions skip prerelease upgrades. |
-| <code>tidy</code> | Resolve manifest requirements and transitive requirements, check import collisions/unresolved imports, update manifest requirements, and write exact commits/content hashes to the lock. Existing versionless pins are preserved. |
+| <code>tidy</code> | Resolve declared and transitive requirements, repair uniquely verified consumer import bindings after namespace changes, check the proposed source, update direct/indirect requirements, and commit source/manifest/lock together. Existing versionless pins are preserved; tidy does not upgrade versions by itself. |
 | <code>vendor</code> | Copy verified locked dependency proto files into <code>easyp_vendor</code>, replacing that directory through staging/backup handling. |
 
 ~~~bash
@@ -183,6 +183,14 @@ easyp mod download
 easyp mod update
 easyp mod vendor
 ~~~
+
+After changing a requirement's revision in <code>protobuf.mod</code>, tidy can
+repair import literals using verified old/new pinned source bindings. It preserves
+comments, line endings, unrelated strings and internal aliases, validates the
+proposed bytes before writes, then reports committed renames. Ambiguous or
+deleted imported sources fail with guidance. Dependency and cached sources are
+never edited. Review generation selectors and SDK output paths separately. See
+[checked tidy import renames](plans/2026-10-07-tidy-import-renames-design.md).
 
 Outside frozen mode, with local replacements, <code>tidy</code> validates the ephemeral effective graph without writing manifest or lock. <code>get</code>/<code>update</code> may edit explicit requirements, but all operations preserve an existing lock byte-for-byte and do not create a local-graph lock. <code>vendor</code> copies the effective graph without changing the lock. Unknown imports are reported; automatic import-to-Git discovery is intentionally excluded. See [Dependency Management](config/dependency.md).
 
