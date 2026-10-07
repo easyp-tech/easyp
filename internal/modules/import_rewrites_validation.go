@@ -102,7 +102,7 @@ func (view *tidySourceView) observeModuleMetadata(directory string, module v1.Mo
 		// ancestors of the selected roots. Capture those validation inputs,
 		// including their absence, without reading unrelated proto bodies.
 		for directory := root; ; directory = filepath.Dir(directory) {
-			for _, name := range []string{v1.ModuleFile, "easyp.yaml", "buf.yaml", "buf.work.yaml"} {
+			for _, name := range []string{v1.ModuleFile, "easyp.yaml", "buf.yaml", "buf.work.yaml", "buf.lock"} {
 				_, err := tx.capture(filepath.Join(directory, name), nil)
 				if err != nil {
 					return fmt.Errorf("capture: %w", err)

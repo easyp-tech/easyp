@@ -100,18 +100,22 @@ func TidyWithReport(ctx context.Context, root string, repository Repository) (_ 
 	if err != nil {
 		return TidyResult{}, fmt.Errorf("captureTidySources: %w", err)
 	}
+	needed, err := capturedTidyImports(tx, files)
+	if err != nil {
+		return TidyResult{}, fmt.Errorf("capturedTidyImports: %w", err)
+	}
 	lock, source, err := resolveV1Graph(ctx, module, existing, repository, true, nil, true)
 	if err != nil {
 		return TidyResult{}, fmt.Errorf("resolveV1Graph: %w", err)
 	}
-	bindings, err := source.tidyImportBindings(ctx, existing, lock)
+	view := newTidySourceView(tx, own)
+	bindings, err := source.tidyImportBindings(ctx, existing, lock, needed, view)
 	if err != nil {
 		return TidyResult{}, fmt.Errorf("tidyImportBindings: %w", err)
 	}
 	if err := repository.Install(ctx, lock); err != nil {
 		return TidyResult{}, fmt.Errorf("Install: %w", err)
 	}
-	view := newTidySourceView(tx, own)
 	view.retainPinnedSources(source, lock)
 	dependencies, err := view.cachedSources(ctx, lock, repository)
 	if err != nil {
@@ -220,8 +224,27 @@ type tidyImportBinding struct {
 	names  map[string]RootProtoFile
 }
 
-func (source *importRootSource) tidyImportBindings(ctx context.Context, before, after v1.Lock) (map[string]tidyImportBinding, error) {
+func capturedTidyImports(tx *resolvedFilesTransaction, files []string) (map[string]v1UnresolvedImport, error) {
+	needed := make(map[string]v1UnresolvedImport)
+	for _, file := range files {
+		imports, err := ParseProtoImports(file, tx.expected[file].data)
+		if err != nil {
+			return nil, fmt.Errorf("ParseProtoImports: %w", err)
+		}
+		for _, name := range imports {
+			if _, exists := needed[name]; !exists {
+				needed[name] = v1UnresolvedImport{owner: file, path: name}
+			}
+		}
+	}
+	return needed, nil
+}
+
+func (source *importRootSource) tidyImportBindings(ctx context.Context, before, after v1.Lock, needed map[string]v1UnresolvedImport, view *tidySourceView) (map[string]tidyImportBinding, error) {
 	bindings := make(map[string]tidyImportBinding)
+	if len(needed) == 0 {
+		return bindings, nil
+	}
 	selector, supported := source.Source.(rootSelectionSource)
 	current := make(map[string]v1.LockedModule, len(after.Modules))
 	for _, entry := range after.Modules {
@@ -233,7 +256,14 @@ func (source *importRootSource) tidyImportBindings(ctx context.Context, before, 
 			continue
 		}
 		if !supported {
-			return nil, fmt.Errorf("module %s: cannot verify the previous import namespace from old %s commit %s recorded roots %v to new %s commit %s recorded roots %v; repository does not support pinned root inspection; keep the previous manifest requirement or use a repository with checked root inspection before running easyp mod tidy", old.Source, old.Version, old.Commit, old.Roots, entry.Version, entry.Commit, entry.Roots)
+			imported, used, err := source.uninspectedTidyBinding(ctx, old, needed, view)
+			if err != nil {
+				return nil, fmt.Errorf("uninspectedTidyBinding: %w", err)
+			}
+			if !used {
+				continue
+			}
+			return nil, fmt.Errorf("%s: module %s: cannot verify the previous import namespace from old %s commit %s recorded roots %v to new %s commit %s recorded roots %v; repository does not support pinned root inspection; keep the previous manifest requirement or use a repository with checked root inspection before running easyp mod tidy", imported, old.Source, old.Version, old.Commit, old.Roots, entry.Version, entry.Commit, entry.Roots)
 		}
 		previous, err := source.lockedRootScope(ctx, selector, old)
 		if err != nil {
@@ -262,6 +292,9 @@ func (source *importRootSource) tidyImportBindings(ctx context.Context, before, 
 			return nil, fmt.Errorf("tidyRootNamespace: %w", err)
 		}
 		for name, file := range previousNames {
+			if _, used := needed[name]; !used {
+				continue
+			}
 			if prior, exists := bindings[name]; exists && prior.before.Lock.Source != old.Source {
 				return nil, fmt.Errorf("old locked namespace has duplicate import %q from %s and %s", name, prior.before.Lock.Source, old.Source)
 			}
@@ -269,6 +302,57 @@ func (source *importRootSource) tidyImportBindings(ctx context.Context, before, 
 		}
 	}
 	return bindings, nil
+}
+
+func (source *importRootSource) uninspectedTidyBinding(ctx context.Context, entry v1.LockedModule, needed map[string]v1UnresolvedImport, view *tidySourceView) (v1UnresolvedImport, bool, error) {
+	repository, supported := source.Source.(Repository)
+	if !supported {
+		return v1UnresolvedImport{}, false, fmt.Errorf("module %s: repository cannot verify the old locked import owners; keep commit %s roots %v or use checked root inspection before running easyp mod tidy", entry.Source, entry.Commit, entry.Roots)
+	}
+	previous := v1.Lock{Version: 1, Modules: []v1.LockedModule{entry}}
+	err := repository.Install(ctx, previous)
+	if err != nil {
+		return v1UnresolvedImport{}, false, fmt.Errorf("Install: %w", err)
+	}
+	directory, module, err := repository.Cached(entry)
+	if err != nil {
+		return v1UnresolvedImport{}, false, fmt.Errorf("Cached: %w", err)
+	}
+	err = view.observeModuleMetadata(directory, module)
+	if err != nil {
+		return v1UnresolvedImport{}, false, fmt.Errorf("observeModuleMetadata: %w", err)
+	}
+	err = view.tx.verifyCapturedInputs()
+	if err != nil {
+		return v1UnresolvedImport{}, false, fmt.Errorf("verifyCapturedInputs: %w", err)
+	}
+	err = tidyInputVerifier(ctx, previous, repository)()
+	if err != nil {
+		return v1UnresolvedImport{}, false, fmt.Errorf("tidyInputVerifier: %w", err)
+	}
+	err = view.tx.verifyCapturedInputs()
+	if err != nil {
+		return v1UnresolvedImport{}, false, fmt.Errorf("verifyCapturedInputs: %w", err)
+	}
+	roots, err := ModuleSources(directory, module)
+	if err != nil {
+		return v1UnresolvedImport{}, false, fmt.Errorf("ModuleSources: %w", err)
+	}
+	names, err := roots.FileModules()
+	if err != nil {
+		return v1UnresolvedImport{}, false, fmt.Errorf("FileModules: %w", err)
+	}
+	var imports []string
+	for name := range needed {
+		imports = append(imports, name)
+	}
+	slices.Sort(imports)
+	for _, name := range imports {
+		if _, exported := names[name]; exported {
+			return needed[name], true, nil
+		}
+	}
+	return v1UnresolvedImport{}, false, nil
 }
 
 func tidyRootNamespace(fetched Fetched) (map[string]RootProtoFile, error) {

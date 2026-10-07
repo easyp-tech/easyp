@@ -21,7 +21,7 @@ func TestTidyBindingsRejectUnpinnedSourceIdentities(t *testing.T) {
 		fetched:        map[[2]string]Fetched{{name, entry.Commit}: next},
 	}
 
-	bindings, err := source.tidyImportBindings(t.Context(), v1.Lock{Version: 1, Modules: []v1.LockedModule{old}}, v1.Lock{Version: 1, Modules: []v1.LockedModule{entry}})
+	bindings, err := source.tidyImportBindings(t.Context(), v1.Lock{Version: 1, Modules: []v1.LockedModule{old}}, v1.Lock{Version: 1, Modules: []v1.LockedModule{entry}}, map[string]v1UnresolvedImport{"svc.proto": {owner: "consumer.proto", path: "svc.proto"}}, nil)
 
 	require.ErrorContains(t, err, "pinned source identity")
 	assert.Empty(t, bindings)
