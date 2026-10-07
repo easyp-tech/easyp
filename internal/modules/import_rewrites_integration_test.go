@@ -302,6 +302,67 @@ type tidySnapshotRepository struct {
 	cache *gitmodules.Cache
 }
 
+func TestTidyBasicRepositoryRejectsUnprovedProducerTransitions(t *testing.T) {
+	t.Parallel()
+	old, _ := importRootsRepository(t, map[string]string{"svc.proto": `syntax = "proto3"; package service; message Service {}`}, nil)
+	importRootsGit(t, old, "tag", "v0.4.0")
+	consumer := `syntax = "proto3"; import "svc.proto"; message Consumer { service.Service service = 1; }`
+	root := importRootsConsumer(t, old, "v0.4.0", consumer)
+	cache := gitmodules.New(t.TempDir())
+	require.NoError(t, modules.Tidy(t.Context(), root, cache))
+	next, _ := importRootsRepository(t, map[string]string{"svc.proto": `syntax = "proto3"; package service; message Service { string rebound = 1; }`}, nil)
+	importRootsGit(t, next, "tag", "v0.5.0")
+	importRootsWrite(t, root, v1.ModuleFile, "module example.test/consumer\nrequire "+next+" v0.5.0\n")
+	manifest, lock := importRootsRead(t, root, v1.ModuleFile), importRootsRead(t, root, v1.LockFile)
+
+	report, err := modules.TidyWithReport(t.Context(), root, tidyBasicRepository{cache: cache})
+
+	require.ErrorContains(t, err, "cannot verify the previous import namespace")
+	assert.ErrorContains(t, err, old)
+	assert.ErrorContains(t, err, "v0.4.0")
+	assert.ErrorContains(t, err, "easyp mod tidy")
+	assert.Empty(t, report.Imports)
+	assert.Equal(t, consumer, string(importRootsRead(t, root, "consumer.proto")))
+	assert.Equal(t, manifest, importRootsRead(t, root, v1.ModuleFile))
+	assert.Equal(t, lock, importRootsRead(t, root, v1.LockFile))
+}
+
+func TestTidyBasicRepositorySupportsFreshAndUnchangedPins(t *testing.T) {
+	t.Parallel()
+	repository, _ := importRootsRepository(t, map[string]string{"svc.proto": `syntax = "proto3"; package service; message Service {}`}, nil)
+	importRootsGit(t, repository, "tag", "v0.4.0")
+	consumer := `syntax = "proto3"; import "svc.proto"; message Consumer { service.Service service = 1; }`
+	root := importRootsConsumer(t, repository, "v0.4.0", consumer)
+	cache := tidyBasicRepository{cache: gitmodules.New(t.TempDir())}
+
+	report, err := modules.TidyWithReport(t.Context(), root, cache)
+
+	require.NoError(t, err)
+	assert.Empty(t, report.Imports)
+	lock := importRootsRead(t, root, v1.LockFile)
+	report, err = modules.TidyWithReport(t.Context(), root, cache)
+	require.NoError(t, err)
+	assert.Empty(t, report.Imports)
+	assert.Equal(t, consumer, string(importRootsRead(t, root, "consumer.proto")))
+	assert.Equal(t, lock, importRootsRead(t, root, v1.LockFile))
+}
+
+type tidyBasicRepository struct {
+	cache *gitmodules.Cache
+}
+
+func (repository tidyBasicRepository) Fetch(ctx context.Context, source, version string) (modules.Fetched, error) {
+	return repository.cache.Fetch(ctx, source, version)
+}
+
+func (repository tidyBasicRepository) Install(ctx context.Context, lock v1.Lock) error {
+	return repository.cache.Install(ctx, lock)
+}
+
+func (repository tidyBasicRepository) Cached(entry v1.LockedModule) (string, v1.Module, error) {
+	return repository.cache.Cached(entry)
+}
+
 func (repository tidySnapshotRepository) Fetch(ctx context.Context, source, version string) (modules.Fetched, error) {
 	return repository.cache.Fetch(ctx, source, version)
 }
@@ -473,7 +534,7 @@ func TestTidyRejectsCacheChangesAfterInstallation(t *testing.T) {
 
 	report, err := modules.TidyWithReport(t.Context(), root, spy)
 
-	require.ErrorContains(t, err, "verified pinned contents")
+	require.ErrorContains(t, err, "hash mismatch")
 	assert.Empty(t, report.Imports)
 	assert.Equal(t, consumer, string(importRootsRead(t, root, "consumer.proto")))
 	assert.Equal(t, manifest, importRootsRead(t, root, v1.ModuleFile))
@@ -503,6 +564,40 @@ type tidyMetadataMutation struct {
 	*gitmodules.Cache
 	mutate func(string)
 	calls  int
+}
+
+func TestTidyRejectsMetadataChangesBeforeFirstCaptureWithoutOptionalVerifier(t *testing.T) {
+	t.Parallel()
+	repository, root, cache, consumer := tidyRewriteFixture(t)
+	tidyRewriteNewNamespace(t, repository, root)
+	manifest, lock := importRootsRead(t, root, v1.ModuleFile), importRootsRead(t, root, v1.LockFile)
+	wrapped := &tidyEarlyMetadataMutation{tidySnapshotRepository: tidySnapshotRepository{cache: cache}, mutate: func(directory string) {
+		body := append(importRootsRead(t, directory, v1.ModuleFile), []byte("// changed before capture\n")...)
+		require.NoError(t, os.WriteFile(filepath.Join(directory, v1.ModuleFile), body, 0o600))
+	}}
+
+	report, err := modules.TidyWithReport(t.Context(), root, wrapped)
+
+	require.Error(t, err)
+	assert.Empty(t, report.Imports)
+	assert.Equal(t, consumer, string(importRootsRead(t, root, "consumer.proto")))
+	assert.Equal(t, manifest, importRootsRead(t, root, v1.ModuleFile))
+	assert.Equal(t, lock, importRootsRead(t, root, v1.LockFile))
+}
+
+type tidyEarlyMetadataMutation struct {
+	tidySnapshotRepository
+	mutate func(string)
+	calls  int
+}
+
+func (repository *tidyEarlyMetadataMutation) Cached(entry v1.LockedModule) (string, v1.Module, error) {
+	directory, module, err := repository.tidySnapshotRepository.Cached(entry)
+	repository.calls++
+	if err == nil && repository.calls == 2 {
+		repository.mutate(directory)
+	}
+	return directory, module, err
 }
 
 func (cache *tidyMetadataMutation) Cached(entry v1.LockedModule) (string, v1.Module, error) {
