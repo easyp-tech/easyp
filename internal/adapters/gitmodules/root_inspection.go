@@ -7,14 +7,27 @@ import (
 	"io"
 	"io/fs"
 	"path"
-	"slices"
+	"path/filepath"
 
 	v1 "github.com/easyp-tech/easyp/internal/config/v1"
+	"github.com/easyp-tech/easyp/internal/core/path_helpers"
 	"github.com/easyp-tech/easyp/internal/modules"
 	"github.com/easyp-tech/easyp/internal/sourceview"
 )
 
 func inspectV1Snapshot(ctx context.Context, view *sourceview.View, directory string, module v1.Module, commit string) (*modules.RootInspection, error) {
+	var boundaries []inspectionSourceBoundary
+	for _, root := range module.Roots {
+		logical := filepath.ToSlash(root)
+		resolved, err := view.Resolve(ctx, logical)
+		if err != nil {
+			if errors.Is(err, fs.ErrNotExist) && len(resolved.Links) == 0 {
+				continue
+			}
+			return nil, fmt.Errorf("Resolve: %w", err)
+		}
+		boundaries = append(boundaries, inspectionSourceBoundary{logical: logical, physical: resolved.Path})
+	}
 	inspection := &modules.RootInspection{}
 	err := view.Walk(ctx, ".", func(logical string, resolved sourceview.Resolution, walkErr error) error {
 		if err := ctx.Err(); err != nil {
@@ -25,8 +38,7 @@ func inspectV1Snapshot(ctx context.Context, view *sourceview.View, directory str
 			return nil
 		}
 		if resolved.Info.IsDir() {
-			selectedAncestor := slices.ContainsFunc(module.Roots, func(root string) bool { return v1FileWithin(root, logical) })
-			if logical != "." && !selectedAncestor && snapshotExcludedDirectory(logical, ".", directory, module) {
+			if inspectionSourceDirectoryExcluded(directory, logical, resolved.Path, boundaries) {
 				return fs.SkipDir
 			}
 			return nil
@@ -58,4 +70,35 @@ func inspectV1Snapshot(ctx context.Context, view *sourceview.View, directory str
 		return nil, fmt.Errorf("Walk: %w", err)
 	}
 	return inspection, nil
+}
+
+type inspectionSourceBoundary struct {
+	logical  string
+	physical string
+}
+
+func inspectionSourceDirectoryExcluded(directory, logical, physical string, boundaries []inspectionSourceBoundary) bool {
+	var owners []inspectionSourceBoundary
+	for _, boundary := range boundaries {
+		if v1FileWithin(boundary.logical, logical) {
+			return false
+		}
+		if v1FileWithin(logical, boundary.logical) {
+			owners = append(owners, boundary)
+		}
+	}
+	if len(owners) == 0 {
+		owners = []inspectionSourceBoundary{{logical: ".", physical: "."}}
+	}
+	skip := func(root, name string) bool {
+		rootPath := filepath.Join(directory, filepath.FromSlash(root))
+		namePath := filepath.Join(directory, filepath.FromSlash(name))
+		return path_helpers.HiddenOrVendorSourcePath(rootPath, namePath) || path_helpers.ShouldSkipV1SourceDir(rootPath, namePath)
+	}
+	for _, owner := range owners {
+		if !skip(owner.logical, logical) && !skip(owner.physical, physical) {
+			return false
+		}
+	}
+	return true
 }

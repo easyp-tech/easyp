@@ -230,6 +230,8 @@ func TestFetchForRootResolutionExcludesTraversalBoundaries(t *testing.T) {
 		{name: "nested hidden directory", files: map[string]string{"api/.hidden/svc.proto": content}},
 		{name: "vendor directory", files: map[string]string{"easyp_vendor/svc.proto": content}},
 		{name: "nested module", files: map[string]string{"protobuf.mod": "direct (\n)\n", "api/child/protobuf.mod": "module example.test/nested\n", "api/child/svc.proto": content}},
+		{name: "nested Buf module", files: map[string]string{"child/buf.yaml": "version: v1\n", "child/svc.proto": content}},
+		{name: "nested Buf workspace", files: map[string]string{"child/buf.work.yaml": "version: v1\ndirectories: [.]\n", "child/svc.proto": content}},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
@@ -249,14 +251,26 @@ func TestFetchForRootResolutionExcludesTraversalBoundaries(t *testing.T) {
 func TestFetchForRootResolutionRetainsExplicitHiddenRoot(t *testing.T) {
 	t.Parallel()
 	repository := t.TempDir()
-	commitRootSelectionRepository(t, repository, map[string]string{"protobuf.mod": "module " + repository + "\nroots .hidden\n", ".hidden/svc.proto": "syntax = \"proto3\"; message Service {}\n"}, nil)
+	content := "syntax = \"proto3\"; message Service {}\n"
+	commitRootSelectionRepository(t, repository, map[string]string{"protobuf.mod": "module " + repository + "\nroots .hidden\n", ".hidden/svc.proto": content, ".hidden/api/svc.proto": content, ".hidden/api/v1/svc.proto": content, ".hidden/.child/svc.proto": content, ".hidden/easyp_vendor/svc.proto": content}, nil)
 	fetcher := requireRootFetchingCache(t, &Cache{root: t.TempDir()})
 	fetched, err := fetcher.FetchForRootResolution(t.Context(), repository, "")
 	require.NoError(t, err)
 	require.NotNil(t, fetched.Inspection)
 	assert.False(t, fetched.Inspection.Provisional)
-	require.Len(t, fetched.Inspection.Files, 1)
-	assert.Equal(t, ".hidden/svc.proto", fetched.Inspection.Files[0].Path)
+	var actual []string
+	for _, file := range fetched.Inspection.Files {
+		actual = append(actual, file.Path)
+	}
+	assert.Equal(t, []string{".hidden/api/svc.proto", ".hidden/api/v1/svc.proto", ".hidden/svc.proto"}, actual)
+	var selected []string
+	require.NoError(t, modules.WalkProtoFiles(filepath.Join(repository, ".hidden"), func(filename string) error {
+		relative, err := filepath.Rel(repository, filename)
+		require.NoError(t, err)
+		selected = append(selected, filepath.ToSlash(relative))
+		return nil
+	}))
+	assert.Equal(t, selected, actual)
 }
 
 func TestFetchForRootResolutionRetainsAuthoritativeAliases(t *testing.T) {
