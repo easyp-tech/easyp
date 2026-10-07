@@ -126,6 +126,7 @@ func TestParseModuleEdgeCases(t *testing.T) {
 
 			got, err := ParseModule(strings.NewReader(tt.raw))
 			require.NoError(t, err)
+			tt.want.RootsFromMetadata = true
 			assert.Equal(t, tt.want, got)
 			assert.True(t, IsModuleManifest([]byte(tt.raw)))
 		})

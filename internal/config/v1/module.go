@@ -16,6 +16,9 @@ type Module struct {
 	Roots    []string
 	Requires []Requirement
 	Replaces []Replacement
+	// RootsFromMetadata distinguishes authoritative source roots, including the
+	// native default '.', from an implicit root on pre-native dependencies.
+	RootsFromMetadata bool
 	// ProtoFilters carries Buf source selection relative to the dependency directory.
 	// Native protobuf.mod files leave it empty.
 	ProtoFilters []ProtoFileFilter
@@ -204,6 +207,7 @@ func ParseModule(r io.Reader) (Module, error) {
 	if len(result.Roots) == 0 {
 		result.Roots = []string{"."}
 	}
+	result.RootsFromMetadata = true
 	return result, nil
 }
 

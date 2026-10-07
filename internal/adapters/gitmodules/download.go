@@ -12,7 +12,11 @@ import (
 )
 
 func v1ModuleCachePath(cacheRoot string, entry v1.LockedModule) string {
-	return filepath.Join(cacheRoot, "modules", v1CacheSourceKey(entry.Source), v1CacheSourceKey(entry.Commit+":"+entry.Hash))
+	identity := entry.Commit + ":" + entry.Hash
+	if roots := v1RootSelectionKey(entry.Roots); roots != "" {
+		identity += ":roots:" + roots
+	}
+	return filepath.Join(cacheRoot, "modules", v1CacheSourceKey(entry.Source), v1CacheSourceKey(identity))
 }
 
 // Install installs each locked Git commit, verifying its content hash

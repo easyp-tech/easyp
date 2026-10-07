@@ -35,10 +35,17 @@ func (c *Cache) Cached(entry v1.LockedModule) (string, v1.Module, error) {
 	if err := v1.ValidateModuleVersion(entry.Source, entry.Version); err != nil {
 		return "", v1.Module{}, fmt.Errorf("ValidateModuleVersion: %w", err)
 	}
+	if err := v1.ValidateModuleRoots(entry.Roots); err != nil {
+		return "", v1.Module{}, fmt.Errorf("ValidateModuleRoots: %w", err)
+	}
 	directory := v1ModuleCachePath(c.root, entry)
 	module, err := readCachedV1Module(directory, entry.Source)
 	if err != nil {
 		return "", v1.Module{}, fmt.Errorf("readCachedV1Module: %w", err)
+	}
+	module, err = applyV1ModuleRoots(module, entry.Roots)
+	if err != nil {
+		return "", v1.Module{}, fmt.Errorf("applyV1ModuleRoots: %w", err)
 	}
 	if err := moduleconfig.ValidateLegacyMajor(directory, entry.Source, entry.Version); err != nil {
 		return "", v1.Module{}, fmt.Errorf("ValidateLegacyMajor: %w", err)

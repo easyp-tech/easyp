@@ -18,12 +18,22 @@ import (
 // selection and import names. An empty version requires an empty legacyHash and
 // permits initial resolution; native v1 repositories need no legacy comparison.
 func (c *Cache) FetchMigration(ctx context.Context, source, version, legacyHash string) (fetched modules.Fetched, err error) {
+	fetched, err = c.FetchMigrationWithRoots(ctx, source, version, legacyHash, nil)
+	if err != nil {
+		return modules.Fetched{}, fmt.Errorf("FetchMigrationWithRoots: %w", err)
+	}
+	return fetched, nil
+}
+
+// FetchMigrationWithRoots preserves legacy integrity proofs while selecting roots
+// for a dependency that has no authoritative source metadata.
+func (c *Cache) FetchMigrationWithRoots(ctx context.Context, source, version, legacyHash string, roots []string) (fetched modules.Fetched, err error) {
 	if (version != "" || legacyHash != "") && !v1.IsCommitRef(version) && !semver.IsValid(version) {
 		return modules.Fetched{}, fmt.Errorf("migration version %q must be a full Git commit or SemVer tag", version)
 	}
-	checkout, err := checkoutV1Module(ctx, source, version, c.root)
+	checkout, err := checkoutV1ModuleWithRoots(ctx, source, version, c.root, roots, false)
 	if err != nil {
-		return modules.Fetched{}, fmt.Errorf("checkoutV1Module: %w", err)
+		return modules.Fetched{}, fmt.Errorf("checkoutV1ModuleWithRoots: %w", err)
 	}
 	defer func() {
 		for _, directory := range []string{checkout.snapshot, checkout.dir} {
@@ -73,6 +83,6 @@ func (c *Cache) FetchMigration(ctx context.Context, source, version, legacyHash 
 		return modules.Fetched{}, fmt.Errorf("resolveBSRDependencies: %w", err)
 	}
 	return modules.Fetched{Module: module, Lock: v1.LockedModule{
-		Source: source, Version: version, Commit: checkout.commit, Hash: hash, BSR: bindings,
+		Source: source, Version: version, Commit: checkout.commit, Hash: hash, Roots: lockedV1ModuleRoots(module, roots), BSR: bindings,
 	}}, nil
 }

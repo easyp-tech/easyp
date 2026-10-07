@@ -58,6 +58,9 @@ func readLegacyEasyPRootsAndRequires(path string) ([]string, []v1.Requirement, e
 	if err != nil {
 		return nil, nil, fmt.Errorf("readGitDependencyConfig: %w", err)
 	}
+	if err := validateGitDependencyRootYAML(raw, legacyEasyPConfigFile); err != nil {
+		return nil, nil, fmt.Errorf("validateGitDependencyRootYAML: %s: %w", path, err)
+	}
 	var old legacyDependencyConfig
 	err = yaml.Unmarshal(raw, &old)
 	if err != nil {
