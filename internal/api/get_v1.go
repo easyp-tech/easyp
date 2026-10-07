@@ -3,6 +3,7 @@ package api
 import (
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/urfave/cli/v2"
@@ -21,8 +22,14 @@ var _ Handler = Get{}
 
 func (g Get) Command() *cli.Command {
 	return &cli.Command{
-		Name:      "get",
-		Flags:     []cli.Flag{flags.Frozen()},
+		Name: "get",
+		Flags: []cli.Flag{
+			flags.Frozen(),
+			&cli.StringSliceFlag{
+				Name:  "import-root",
+				Usage: "checked module-relative import-root directory for this dependency (repeatable)",
+			},
+		},
 		Usage:     "add a Git module and its transitive dependencies",
 		ArgsUsage: "<module>[@version|@tag|@commit]",
 		Action:    g.Action,
@@ -35,6 +42,12 @@ func (g Get) Action(ctx *cli.Context) error {
 	}
 	if ctx.NArg() != 1 {
 		return errors.New("get expects one module: easyp get <module>[@version|@tag|@commit]")
+	}
+	roots := slices.Clone(ctx.StringSlice("import-root"))
+	slices.Sort(roots)
+	roots = slices.Compact(roots)
+	if err := v1.ValidateModuleRoots(roots); err != nil {
+		return fmt.Errorf("ValidateModuleRoots: %w", err)
 	}
 	requirement, err := parseV1GetRequirement(ctx.Args().First())
 	if err != nil {
@@ -62,7 +75,7 @@ func (g Get) Action(ctx *cli.Context) error {
 		}
 		requirement.Version = commit
 	}
-	return modules.Get(ctx.Context, root, requirement, cache)
+	return modules.GetWithRoots(ctx.Context, root, requirement, cache, roots)
 }
 
 func parseV1GetRequirement(spec string) (v1.Requirement, error) {
