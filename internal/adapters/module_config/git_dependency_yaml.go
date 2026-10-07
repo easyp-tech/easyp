@@ -112,16 +112,27 @@ func dependencyYAMLValue(node *yaml.Node) *yaml.Node {
 }
 
 func dependencyYAMLField(mapping *yaml.Node, field string) *yaml.Node {
-	return dependencyYAMLFieldAt(mapping, field, make(map[*yaml.Node]bool))
+	return dependencyYAMLFieldAt(mapping, field, make(map[*yaml.Node]bool), make(map[*yaml.Node]*yaml.Node))
 }
 
-func dependencyYAMLFieldAt(mapping *yaml.Node, field string, active map[*yaml.Node]bool) *yaml.Node {
+func dependencyYAMLFieldAt(mapping *yaml.Node, field string, active map[*yaml.Node]bool, memo map[*yaml.Node]*yaml.Node) (result *yaml.Node) {
 	mapping = dependencyYAMLValue(mapping)
-	if mapping == nil || mapping.Kind != yaml.MappingNode || active[mapping] {
+	if mapping == nil || mapping.Kind != yaml.MappingNode {
+		return nil
+	}
+	if value, known := memo[mapping]; known {
+		return value
+	}
+	if active[mapping] {
 		return nil
 	}
 	active[mapping] = true
-	defer delete(active, mapping)
+	// Each search has one fixed field. Cache absent results as well so repeated
+	// merge aliases cannot expand an acyclic mapping graph exponentially.
+	defer func() {
+		delete(active, mapping)
+		memo[mapping] = result
+	}()
 	var merges []*yaml.Node
 	for index := 0; index < len(mapping.Content); index += 2 {
 		if mapping.Content[index].Value == field {
@@ -137,7 +148,7 @@ func dependencyYAMLFieldAt(mapping *yaml.Node, field string, active map[*yaml.No
 		}
 	}
 	for _, merge := range merges {
-		if value := dependencyYAMLFieldAt(merge, field, active); value != nil {
+		if value := dependencyYAMLFieldAt(merge, field, active, memo); value != nil {
 			return value
 		}
 	}
