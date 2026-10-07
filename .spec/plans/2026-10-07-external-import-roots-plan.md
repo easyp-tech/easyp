@@ -52,6 +52,16 @@ Ownership: new internal/modules/import_roots*.go, modules/get.go, operations.go,
 - [ ] Add root-authority transition diagnostics for update: compare old fallback/new authoritative import mappings, allow physical move preserving namespace, stop implicit namespace shifts with revisions/roots/renamed imports and actionable explicit-adoption or old-pin guidance. Explicit matching new get hints acknowledge adoption only after caller/import checks. Verify no writes on implicit conflict and successful checked adoption.
 - [ ] Run modules race tests; review/commit. Have Task 1 owner connect intrinsic inference to completed snapshot preparation, then re-run adapter and module race tests.
 
+## Task 2c: Preserve a working default namespace in mixed-layout repositories
+
+Ownership: a fresh sequential worker in internal/modules/import_roots selection/constraint/index helpers and tests. Keep metadata, explicit hints, immutable scope proofs and source boundaries unchanged.
+
+- [ ] Reproduce the real-Git public/service.proto -> public/types.proto default edge beside an unrelated tools/aux/service.proto -> aux_types.proto short edge. Prove the new resolver rejects it while the pre-resolver implementation accepts default names and cold/frozen replay.
+- [ ] On zero consistent intrinsic inferred layouts only, retain a valid default namespace with existing intrinsic bindings when missing locally matchable declarations originate outside default-bound owner/target identities. Implement the decision explicitly from intrinsic physical identities, without error-string matching or consumer/package/directory heuristics.
+- [ ] Preserve connected contradiction errors (direct and chained), multi-solution ambiguity, candidate/search limits, cancellation, selected alias failures, collisions and final pin/hash verification. Reaching an unresolved short-layout source must still fail unchanged.
+- [ ] Add permanent regressions and run modules/Git adapter races, vet/lint and the pinned live grpc v1.84.0 get/tidy/generate/cold/frozen/vendor scenario using a fresh binary. Keep Go1.26.6 and dependencies unchanged.
+- [ ] Complete independent spec then quality gates before Task3 starts.
+
 ## Task 3: Verified migration of Git root/sub_directory
 
 Ownership: internal/migration, migration-specific cache verification hooks in coordination with Task 1; no CLI source modifications yet.
