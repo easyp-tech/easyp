@@ -63,6 +63,33 @@ func TestResolvedTransactionStagingFailureKeepsDestinations(t *testing.T) {
 	assert.Len(t, entries, 3)
 }
 
+func TestResolvedTransactionRechecksInputsAfterVerificationRepairsThem(t *testing.T) {
+	t.Parallel()
+	root, tx := resolvedTransactionFixture(t)
+	dependency := t.TempDir()
+	require.NoError(t, os.WriteFile(filepath.Join(dependency, v1.ModuleFile), []byte("changed before first capture"), 0o600))
+	input, err := newResolvedFilesTransaction(dependency)
+	require.NoError(t, err)
+	tx.inputs = append(tx.inputs, input)
+	_, err = input.capture(v1.ModuleFile, nil)
+	require.NoError(t, err)
+	checks := 0
+	tx.validateInputs = func() error {
+		checks++
+		if checks < 2 {
+			return nil
+		}
+		// Base Cache.Install may repair installed files while verifying a pin.
+		// A repair during the final staged check must still abort the commit.
+		return os.WriteFile(filepath.Join(dependency, v1.ModuleFile), []byte("verified original metadata"), 0o600)
+	}
+
+	err = tx.apply()
+
+	require.ErrorIs(t, err, sourceview.ErrChanged)
+	assertResolvedFixture(t, root)
+}
+
 func TestResolvedTransactionRejectsChangedValidationInputs(t *testing.T) {
 	t.Parallel()
 	tests := []struct {

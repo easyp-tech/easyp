@@ -253,6 +253,26 @@ func (tx *resolvedFilesTransaction) plan(name string, data []byte, defaultMode o
 }
 
 func (tx *resolvedFilesTransaction) verify() error {
+	err := tx.verifyCapturedInputs()
+	if err != nil {
+		return fmt.Errorf("verifyCapturedInputs: %w", err)
+	}
+	if tx.validateInputs != nil {
+		err = tx.validateInputs()
+		if err != nil {
+			return fmt.Errorf("validateInputs: %w", err)
+		}
+		// A cache verifier may acquire or repair its own files. Recheck every
+		// observed input so that a repaired race cannot be hidden by success.
+		err = tx.verifyCapturedInputs()
+		if err != nil {
+			return fmt.Errorf("verifyCapturedInputs: %w", err)
+		}
+	}
+	return nil
+}
+
+func (tx *resolvedFilesTransaction) verifyCapturedInputs() error {
 	err := tx.checkRoot()
 	if err != nil {
 		return fmt.Errorf("checkRoot: %w", err)
@@ -277,15 +297,9 @@ func (tx *resolvedFilesTransaction) verify() error {
 		}
 	}
 	for _, input := range tx.inputs {
-		err = input.verify()
+		err = input.verifyCapturedInputs()
 		if err != nil {
-			return fmt.Errorf("verify: %w", err)
-		}
-	}
-	if tx.validateInputs != nil {
-		err = tx.validateInputs()
-		if err != nil {
-			return fmt.Errorf("validateInputs: %w", err)
+			return fmt.Errorf("verifyCapturedInputs: %w", err)
 		}
 	}
 	return nil

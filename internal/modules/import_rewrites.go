@@ -111,9 +111,11 @@ func TidyWithReport(ctx context.Context, root string, repository Repository) (_ 
 	if err := repository.Install(ctx, lock); err != nil {
 		return TidyResult{}, fmt.Errorf("Install: %w", err)
 	}
-	dependencies, err := CachedSources(lock, repository)
+	view := newTidySourceView(tx, own)
+	view.retainPinnedSources(source, lock)
+	dependencies, err := view.cachedSources(ctx, lock, repository)
 	if err != nil {
-		return TidyResult{}, fmt.Errorf("CachedSources: %w", err)
+		return TidyResult{}, fmt.Errorf("cachedSources: %w", err)
 	}
 	nextBoundaries, err := tidyCacheBoundaries(repository, lock)
 	if err != nil {
@@ -130,11 +132,7 @@ func TidyWithReport(ctx context.Context, root string, repository Repository) (_ 
 	if err := CheckSourceCollisions(roots); err != nil {
 		return TidyResult{}, fmt.Errorf("CheckSourceCollisions: %w", err)
 	}
-	view := newTidySourceView(tx, roots)
-	err = view.observeMetadata(source, lock)
-	if err != nil {
-		return TidyResult{}, fmt.Errorf("observeMetadata: %w", err)
-	}
+	view.roots = roots
 	verifyCache := tidyInputVerifier(ctx, lock, repository)
 	tx.validateInputs = func() error {
 		err := checkTidySourceSelection(tx, own, files)
@@ -225,9 +223,6 @@ type tidyImportBinding struct {
 func (source *importRootSource) tidyImportBindings(ctx context.Context, before, after v1.Lock) (map[string]tidyImportBinding, error) {
 	bindings := make(map[string]tidyImportBinding)
 	selector, supported := source.Source.(rootSelectionSource)
-	if !supported {
-		return bindings, nil
-	}
 	current := make(map[string]v1.LockedModule, len(after.Modules))
 	for _, entry := range after.Modules {
 		current[entry.Source] = entry
@@ -236,6 +231,9 @@ func (source *importRootSource) tidyImportBindings(ctx context.Context, before, 
 		entry, retained := current[old.Source]
 		if retained && strings.EqualFold(old.Commit, entry.Commit) && slices.Equal(old.Roots, entry.Roots) {
 			continue
+		}
+		if !supported {
+			return nil, fmt.Errorf("module %s: cannot verify the previous import namespace from old %s commit %s recorded roots %v to new %s commit %s recorded roots %v; repository does not support pinned root inspection; keep the previous manifest requirement or use a repository with checked root inspection before running easyp mod tidy", old.Source, old.Version, old.Commit, old.Roots, entry.Version, entry.Commit, entry.Roots)
 		}
 		previous, err := source.lockedRootScope(ctx, selector, old)
 		if err != nil {
