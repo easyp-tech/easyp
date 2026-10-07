@@ -83,6 +83,39 @@ func TestImportRootSourceChecksTagBeforeRetainedRootFetch(t *testing.T) {
 	assert.Zero(t, backend.selections)
 }
 
+func TestCheckedRootReplacementKeepsIntegrityGuards(t *testing.T) {
+	t.Parallel()
+	old := v1.LockedModule{Source: "example.test/dep", Version: "v1.0.0", Commit: versionlessCommitA, Hash: versionlessHash, Roots: []string{"sources"}}
+	previous := Fetched{Module: v1.Module{Name: old.Source, Roots: old.Roots}, Lock: old}
+	tests := []struct {
+		name        string
+		roots       []string
+		commit      string
+		inspection  *RootInspection
+		wantChanged bool
+		wantError   string
+	}{
+		{name: "equivalent_scope_changed_hash", roots: []string{"sources"}, commit: old.Commit, wantChanged: true},
+		{name: "retagged_changed_scope", roots: []string{"api"}, commit: versionlessCommitANew, wantChanged: true},
+		{name: "provisional_changed_scope", roots: []string{"api"}, commit: old.Commit, inspection: &RootInspection{Provisional: true}, wantError: "provisional"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			current := Fetched{Module: v1.Module{Name: old.Source, Roots: tt.roots}, Lock: v1.LockedModule{Source: old.Source, Version: old.Version, Commit: tt.commit, Hash: "h1:changed"}, Inspection: tt.inspection}
+			source := &importRootSource{Source: provisionalRootTestSource{fetched: previous}, locked: map[string]v1.LockedModule{old.Source: old}, hints: map[string][]string{old.Source: tt.roots}}
+
+			err := source.verifyRootFetch(t.Context(), current)
+
+			if tt.wantChanged {
+				require.ErrorIs(t, err, ErrLockedVersionChanged)
+			} else {
+				require.ErrorContains(t, err, tt.wantError)
+			}
+		})
+	}
+}
+
 type retaggedRootTestSource struct {
 	provisionalRootTestSource
 	selections int

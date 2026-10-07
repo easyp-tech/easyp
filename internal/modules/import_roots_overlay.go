@@ -23,7 +23,7 @@ func finalizeEffectiveImportRoots(ctx context.Context, pass resolutionPass, loca
 	for _, locked := range pass.lock.Modules {
 		fetched := remote.roots.fetched[[2]string{locked.Source, strings.ToLower(locked.Commit)}]
 		candidate := importRootModule{name: locked.Source, roots: fetched.Module.Roots, inspection: fetched.Inspection}
-		candidate.fixed = fetched.Module.RootsFromMetadata || len(remote.roots.hints[locked.Source]) > 0 || len(remote.pins[locked.Source].Roots) > 0
+		candidate.fixed = remote.roots.fixedRootScope(locked, fetched)
 		if fetched.Inspection == nil {
 			// Published pins and repositories without inspections retain
 			// their ordinary verified cache path and fixed namespace.

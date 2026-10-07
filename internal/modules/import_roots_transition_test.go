@@ -196,3 +196,32 @@ func TestRootTransitionKeepsPriorAuthorityAndIdenticalEffectiveRoots(t *testing.
 		})
 	}
 }
+
+func TestNewAuthorityRejectsShadowedOldSourceBinding(t *testing.T) {
+	t.Parallel()
+	repository, oldCommit := importRootsRepository(t, map[string]string{"api/v1/svc.proto": `syntax = "proto3";`}, nil)
+	importRootsGit(t, repository, "tag", "v0.4.0")
+	root := importRootsConsumer(t, repository, "v0.4.0", `syntax = "proto3"; import "svc.proto";`)
+	cache := gitmodules.New(t.TempDir())
+	require.NoError(t, modules.GetWithRoots(t.Context(), root, v1.Requirement{Module: repository, Version: "v0.4.0"}, cache, []string{"api/v1"}))
+	importRootsWrite(t, repository, v1.ModuleFile, "module "+repository+"\nroots api\n")
+	importRootsWrite(t, repository, "api/svc.proto", `syntax = "proto3"; package newer;`)
+	importRootsGit(t, repository, "add", ".")
+	importRootsGit(t, repository, "commit", "--quiet", "-m", "rename old source and reuse its import name")
+	importRootsGit(t, repository, "tag", "v0.5.0")
+	newCommit := importRootsGit(t, repository, "rev-parse", "HEAD")
+	manifest, before := importRootsRead(t, root, v1.ModuleFile), importRootsRead(t, root, v1.LockFile)
+	spy := &importRootsInstallSpy{Cache: cache}
+
+	err := modules.Update(t.Context(), root, spy)
+
+	require.ErrorContains(t, err, "import namespace")
+	assert.ErrorContains(t, err, "svc.proto -> v1/svc.proto")
+	assert.ErrorContains(t, err, "verified fallback roots [api/v1]")
+	assert.ErrorContains(t, err, "roots [api] from authoritative dependency metadata")
+	assert.ErrorContains(t, err, oldCommit)
+	assert.ErrorContains(t, err, newCommit)
+	assert.Zero(t, spy.installs)
+	assert.Equal(t, manifest, importRootsRead(t, root, v1.ModuleFile))
+	assert.Equal(t, before, importRootsRead(t, root, v1.LockFile))
+}
