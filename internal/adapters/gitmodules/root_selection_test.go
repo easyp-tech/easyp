@@ -219,6 +219,46 @@ func TestFetchForRootResolutionRetainsPinnedInspection(t *testing.T) {
 	require.NoError(t, cache.Install(t.Context(), v1.Lock{Version: 1, Modules: []v1.LockedModule{final.Lock}}))
 }
 
+func TestFetchForRootResolutionExcludesTraversalBoundaries(t *testing.T) {
+	t.Parallel()
+	content := "syntax = \"proto3\"; message Service {}\n"
+	for _, tt := range []struct {
+		name  string
+		files map[string]string
+	}{
+		{name: "leading hidden directory", files: map[string]string{".hidden/svc.proto": content}},
+		{name: "nested hidden directory", files: map[string]string{"api/.hidden/svc.proto": content}},
+		{name: "vendor directory", files: map[string]string{"easyp_vendor/svc.proto": content}},
+		{name: "nested module", files: map[string]string{"protobuf.mod": "direct (\n)\n", "api/child/protobuf.mod": "module example.test/nested\n", "api/child/svc.proto": content}},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			tt.files["api/svc.proto"] = content
+			repository := rootSelectionRepository(t, tt.files, nil)
+			fetcher := requireRootFetchingCache(t, &Cache{root: t.TempDir()})
+			fetched, err := fetcher.FetchForRootResolution(t.Context(), repository, "")
+			require.NoError(t, err)
+			require.NotNil(t, fetched.Inspection)
+			assert.True(t, fetched.Inspection.Provisional)
+			require.Len(t, fetched.Inspection.Files, 1)
+			assert.Equal(t, "api/svc.proto", fetched.Inspection.Files[0].Path)
+		})
+	}
+}
+
+func TestFetchForRootResolutionRetainsExplicitHiddenRoot(t *testing.T) {
+	t.Parallel()
+	repository := t.TempDir()
+	commitRootSelectionRepository(t, repository, map[string]string{"protobuf.mod": "module " + repository + "\nroots .hidden\n", ".hidden/svc.proto": "syntax = \"proto3\"; message Service {}\n"}, nil)
+	fetcher := requireRootFetchingCache(t, &Cache{root: t.TempDir()})
+	fetched, err := fetcher.FetchForRootResolution(t.Context(), repository, "")
+	require.NoError(t, err)
+	require.NotNil(t, fetched.Inspection)
+	assert.False(t, fetched.Inspection.Provisional)
+	require.Len(t, fetched.Inspection.Files, 1)
+	assert.Equal(t, ".hidden/svc.proto", fetched.Inspection.Files[0].Path)
+}
+
 func TestFetchForRootResolutionRetainsAuthoritativeAliases(t *testing.T) {
 	t.Parallel()
 	repository := t.TempDir()
