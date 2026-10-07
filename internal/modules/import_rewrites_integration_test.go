@@ -347,6 +347,90 @@ func TestTidyBasicRepositorySupportsFreshAndUnchangedPins(t *testing.T) {
 	assert.Equal(t, lock, importRootsRead(t, root, v1.LockFile))
 }
 
+func TestTidyBasicRepositoryRemovesUnusedProducers(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name     string
+		consumer string
+	}{
+		{name: "no_imports", consumer: `syntax = "proto3"; message Consumer {}`},
+		{name: "unrelated_local_import", consumer: `syntax = "proto3"; import "local.proto"; message Consumer {}`},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			old, _ := importRootsRepository(t, map[string]string{"svc.proto": `syntax = "proto3";`}, nil)
+			importRootsGit(t, old, "tag", "v0.4.0")
+			root := importRootsConsumer(t, old, "v0.4.0", tt.consumer)
+			importRootsWrite(t, root, "local.proto", `syntax = "proto3";`)
+			cache := gitmodules.New(t.TempDir())
+			require.NoError(t, modules.Tidy(t.Context(), root, cache))
+			importRootsWrite(t, root, v1.ModuleFile, "module example.test/consumer\n")
+
+			report, err := modules.TidyWithReport(t.Context(), root, tidyBasicRepository{cache: cache})
+
+			require.NoError(t, err)
+			assert.Empty(t, report.Imports)
+			lock, err := modules.ReadLock(filepath.Join(root, v1.LockFile))
+			require.NoError(t, err)
+			assert.Empty(t, lock.Modules)
+			assert.Equal(t, tt.consumer, string(importRootsRead(t, root, "consumer.proto")))
+		})
+	}
+}
+
+func TestTidyDetectsBufLockRepairBeforeGraphUse(t *testing.T) {
+	t.Parallel()
+	repository, root, cache, consumer := tidyRewriteFixture(t)
+	importRootsWrite(t, repository, "buf.yaml", "version: v2\nmodules:\n  - path: api\n")
+	importRootsWrite(t, repository, "buf.lock", "version: v2\ndeps: []\n")
+	importRootsWrite(t, repository, "api/v1/a.proto", `syntax = "proto3"; import "v1/svc.proto";`)
+	importRootsGit(t, repository, "add", ".")
+	importRootsGit(t, repository, "commit", "--quiet", "-m", "declare Buf root")
+	importRootsGit(t, repository, "tag", "v0.5.0")
+	tidyRewriteRequirement(t, root, "v0.4.0", "v0.5.0")
+	manifest, lock := importRootsRead(t, root, v1.ModuleFile), importRootsRead(t, root, v1.LockFile)
+	wrapped := &tidyBufLockRepairRepository{tidySnapshotRepository: tidySnapshotRepository{cache: cache}, t: t}
+
+	report, err := modules.TidyWithReport(t.Context(), root, wrapped)
+
+	require.ErrorIs(t, err, sourceview.ErrChanged)
+	assert.Empty(t, report.Imports)
+	assert.Equal(t, consumer, string(importRootsRead(t, root, "consumer.proto")))
+	assert.Equal(t, manifest, importRootsRead(t, root, v1.ModuleFile))
+	assert.Equal(t, lock, importRootsRead(t, root, v1.LockFile))
+}
+
+type tidyBufLockRepairRepository struct {
+	tidySnapshotRepository
+	t          *testing.T
+	calls      int
+	installs   int
+	repairPath string
+	original   []byte
+}
+
+func (repository *tidyBufLockRepairRepository) Cached(entry v1.LockedModule) (string, v1.Module, error) {
+	directory, module, err := repository.tidySnapshotRepository.Cached(entry)
+	repository.calls++
+	if err == nil && repository.calls == 2 {
+		repository.repairPath = filepath.Join(directory, "buf.lock")
+		repository.original = importRootsRead(repository.t, directory, "buf.lock")
+		changed := append(append([]byte(nil), repository.original...), []byte("// changed before capture\n")...)
+		require.NoError(repository.t, os.WriteFile(repository.repairPath, changed, 0o644))
+	}
+	return directory, module, err
+}
+
+func (repository *tidyBufLockRepairRepository) Install(ctx context.Context, lock v1.Lock) error {
+	repository.installs++
+	if repository.installs > 1 && repository.repairPath != "" {
+		require.NoError(repository.t, os.WriteFile(repository.repairPath, repository.original, 0o644))
+		repository.repairPath = ""
+	}
+	return repository.tidySnapshotRepository.Install(ctx, lock)
+}
+
 type tidyBasicRepository struct {
 	cache *gitmodules.Cache
 }
