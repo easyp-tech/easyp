@@ -6,12 +6,10 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"path/filepath"
 
 	"gopkg.in/yaml.v3"
 
 	v1 "github.com/easyp-tech/easyp/internal/config/v1"
-	disk "github.com/easyp-tech/easyp/internal/fs/fs"
 	"github.com/easyp-tech/easyp/internal/sourceview"
 )
 
@@ -41,33 +39,51 @@ func ReadModuleOrDefault(root string) (v1.Module, error) {
 	return module, nil
 }
 
-func writeV1ResolvedFiles(root string, original, updated []byte, lock v1.Lock) error {
-	changed := !bytes.Equal(original, updated)
-	if changed {
-		if err := writeV1Manifest(root, updated); err != nil {
-			return err
-		}
+func writeV1ResolvedFiles(root string, original, updated []byte, lock v1.Lock) (resultErr error) {
+	tx, err := newResolvedFilesTransaction(root)
+	if err != nil {
+		return fmt.Errorf("newResolvedFilesTransaction: %w", err)
 	}
-	if err := writeV1Lock(root, lock); err != nil {
-		if changed {
-			if rollbackErr := writeV1Manifest(root, original); rollbackErr != nil {
-				return errors.Join(err, fmt.Errorf("restore protobuf.mod: %w", rollbackErr))
-			}
-		}
-		return err
+	defer func() { resultErr = errors.Join(resultErr, tx.close()) }()
+	manifest, err := tx.capture(v1.ModuleFile, nil)
+	if err != nil {
+		return fmt.Errorf("capture: %w", err)
+	}
+	if !manifest.exists || !bytes.Equal(manifest.data, original) {
+		return fmt.Errorf("protobuf.mod changed since resolution: %w", sourceview.ErrChanged)
+	}
+	_, err = tx.capture(v1.LockFile, nil)
+	if err != nil {
+		return fmt.Errorf("capture: %w", err)
+	}
+	return writeV1ResolvedFilesTransaction(tx, updated, lock)
+}
+
+func writeV1ResolvedFilesTransaction(tx *resolvedFilesTransaction, updated []byte, lock v1.Lock) error {
+	raw, err := marshalV1Lock(lock)
+	if err != nil {
+		return fmt.Errorf("marshalV1Lock: %w", err)
+	}
+	err = tx.plan(v1.ModuleFile, updated, 0o644)
+	if err != nil {
+		return fmt.Errorf("plan: %w", err)
+	}
+	err = tx.plan(v1.LockFile, raw, 0o644)
+	if err != nil {
+		return fmt.Errorf("plan: %w", err)
+	}
+	err = tx.apply()
+	if err != nil {
+		return fmt.Errorf("apply: %w", err)
 	}
 	return nil
 }
 
-func writeV1Lock(root string, lock v1.Lock) error {
+func marshalV1Lock(lock v1.Lock) ([]byte, error) {
 	raw, err := yaml.Marshal(lock)
 	if err != nil {
-		return fmt.Errorf("Marshal: %w", err)
+		return nil, fmt.Errorf("Marshal: %w", err)
 	}
-
 	raw = append([]byte("# protobuf.lock - GENERATED FILE, DO NOT EDIT MANUALLY\n"), raw...)
-	if err := disk.WriteAtomicFile(filepath.Join(root, v1.LockFile), raw, 0o644); err != nil {
-		return fmt.Errorf("WriteAtomicFile: %w", err)
-	}
-	return nil
+	return raw, nil
 }

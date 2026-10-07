@@ -66,7 +66,7 @@ func (source *importRootSource) validateRootTransition(ctx context.Context, fetc
 	}
 	slices.Sort(missing)
 	changes := representativeRootRenames(missing, before, after, previous.Lock, fetched.Lock)
-	return fmt.Errorf("module %s changes its import namespace: old %s commit %s has verified fallback roots %v; new %s commit %s has roots %v from authoritative dependency metadata; renamed or removed imports: %s; review consumer imports and generated SDK paths, then explicitly adopt with %s; or pin the previous revision with easyp get %s", old.Source, old.Version, old.Commit, oldRoots, fetched.Lock.Version, fetched.Lock.Commit, newRoots, strings.Join(changes, "; "), rootAdoptionCommand(fetched.Lock, newRoots), quoteRootCommandArg(old.Source+"@"+old.Commit))
+	return fmt.Errorf("module %s changes its import namespace: old %s commit %s has verified fallback roots %v; new %s commit %s has roots %v from authoritative dependency metadata; renamed or removed imports: %s; review consumer imports and generated SDK paths, then explicitly adopt with %s; or set its requirement to %s in protobuf.mod and run easyp mod tidy to apply verified import renames; or pin the previous revision with easyp get %s", old.Source, old.Version, old.Commit, oldRoots, fetched.Lock.Version, fetched.Lock.Commit, newRoots, strings.Join(changes, "; "), rootAdoptionCommand(fetched.Lock, newRoots), fetched.Lock.Version, quoteRootCommandArg(old.Source+"@"+old.Commit))
 }
 
 func fetchLockedRootScope(ctx context.Context, selector rootSelectionSource, entry v1.LockedModule, roots []string) (Fetched, error) {
