@@ -65,16 +65,16 @@ Do not replace filesystem/root proof with a general callback or storage abstract
 
 ## Task 3: Migration build stages, local proof and candidate updates
 
-- [ ] Run current real-Git native/Buf/default/scoped archive, local-selection and transaction regressions:
+- [x] Run current real-Git native/Buf/default/scoped archive, local-selection and transaction regressions:
   GOTOOLCHAIN=go1.26.6 go test -mod=readonly -race -count=1 -timeout=5m ./internal/migration
   Expected: PASS.
-- [ ] Group Plan's inputs/roots/packages/paths/source inventory into a named local selection proof with construction and rechecking. Keep exact selected imports, bytes and alias topology; empty local inputs must retain their current semantics. Local namespace observation takes the local identity directly, not p.git.localName.
-- [ ] Extract ordered Build stages for capture/parse, local/Git selection, known-candidate rendering/preflight, optional dependency verification, namespace/source proof and final outputs. Capture conflicting output metadata and known candidate errors before explicitly permitted dependency access.
-- [ ] Separate filesystem namespace observation from pure selection translation and binding/compilation proof. Preserve reversed legacy local root precedence, producer FIRST-prefix archive rewrites, physical generation filters, full available-namespace collision checks, selected/reachable witness bytes and deferred compile mode for Apply rechecks.
-- [ ] Add one migration candidate operation that atomically updates the in-memory preview and staged write proposal. Replace manual p.tx.changes edits in replaceCandidate and backup mode handling; retain byte/mode checks of existing backups and unmodified easyp.lock.
-- [ ] Preserve read-only no-resolve previews, native no-op/conflicts, explicit resolution authorization, historical pin/hash verification, default and scoped export-ignore semantics, and beforeApply after staging.
-- [ ] Run migration/API races plus existing failure/cancellation/confirmation/rollback cases. If extraction exposes an uncovered behavior boundary, demonstrate it red before fixing; do not modify behavior assertions to accept changed output.
-- [ ] Self-review/commit; independent spec gate then quality gate before Task4.
+- [x] Group Plan's inputs/roots/packages/paths/source inventory into a named local selection proof with construction and rechecking. Keep exact selected imports, bytes and alias topology; empty local inputs must retain their current semantics. Local namespace observation takes the local identity directly, not p.git.localName.
+- [x] Extract ordered Build stages for capture/parse, local/Git selection, known-candidate rendering/preflight, optional dependency verification, namespace/source proof and final outputs. Capture conflicting output metadata and known candidate errors before explicitly permitted dependency access.
+- [x] Separate filesystem namespace observation from pure selection translation and binding/compilation proof. Preserve reversed legacy local root precedence, producer FIRST-prefix archive rewrites, physical generation filters, full available-namespace collision checks, selected/reachable witness bytes and deferred compile mode for Apply rechecks.
+- [x] Add one migration candidate operation that atomically updates the in-memory preview and staged write proposal. Replace manual p.tx.changes edits in replaceCandidate and backup mode handling; retain byte/mode checks of existing backups and unmodified easyp.lock.
+- [x] Preserve read-only no-resolve previews, native no-op/conflicts, explicit resolution authorization, historical pin/hash verification, default and scoped export-ignore semantics, and beforeApply after staging.
+- [x] Run migration/API races plus existing failure/cancellation/confirmation/rollback cases. If extraction exposes an uncovered behavior boundary, demonstrate it red before fixing; do not modify behavior assertions to accept changed output.
+- [x] Self-review/commit; independent spec gate then quality gate before Task4.
 
 ## Task 4: Named Git migration requests
 
@@ -108,3 +108,5 @@ Existing source behavior was developed red/green and passed source/standard v1 r
 Task1: 8fefe5b7. Spec compliant and quality approved independently. Provider-buffer reuse and returned-view mutation RED/GREEN; final modules/API/generation races 17.586s/44.239s/30.949s; Git roots3.051s; independent spec13-case race2.935s and quality ownership race1.307s.
 
 Task2: 9506b923. Independent spec and quality approved. Capture-buffer mutation RED/GREEN; final modules/API/Git adapter races24.980s/44.393s/17.458s; snapshot/index/Git walker races passed. Independent spec tidy/transactions8.951s, overlay2.711s, CLI2.448s, literals1.041s. No direct transaction-storage access outside its observation/writer implementation.
+
+Task3: dc9cbe03. Independent spec/quality approved. Baseline migration4.363s; final migration/API/Git adapter races5.842s/39.252s/12.412s and vet passed. Fresh CLI/MCP PTY subset1.236s; independent archive/source/alias/candidates2.106s and staging/rollback/recovery1.121s. Existing private-shape test assertions preserved.
