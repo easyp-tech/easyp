@@ -20,6 +20,7 @@ type localReplacements struct {
 	modules   map[string]EffectiveModule
 	paths     map[string]string
 	localPath func(string) (string, error)
+	hints     map[string][]string
 }
 
 func newLocalReplacements(directory string, module v1.Module, localPath func(string) (string, error)) *localReplacements {
@@ -59,6 +60,10 @@ func (l *localReplacements) lookup(name string) (v1.Module, bool, error) {
 	entry, err := readLocalReplacement(directory, name)
 	if err != nil {
 		return v1.Module{}, true, fmt.Errorf("local replacement %s => %s: %w", name, target, err)
+	}
+	entry.Module, err = applyImportRootHint(entry.Module, l.hints[name])
+	if err != nil {
+		return v1.Module{}, true, fmt.Errorf("applyImportRootHint: %w", err)
 	}
 	canonical, err := filepath.EvalSymlinks(directory)
 	if err != nil {

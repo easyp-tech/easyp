@@ -20,31 +20,35 @@ import (
 	"github.com/easyp-tech/easyp/internal/adapters/gitsnapshot"
 	moduleconfig "github.com/easyp-tech/easyp/internal/adapters/module_config"
 	v1 "github.com/easyp-tech/easyp/internal/config/v1"
+	"github.com/easyp-tech/easyp/internal/modules"
 	"github.com/easyp-tech/easyp/internal/sourceview"
 )
 
 // prepareV1Snapshot constructs the regular logical view of one pinned Git tree.
 // Metadata is materialized before passing it to the existing metadata readers.
 // The caller owns and removes the returned directory.
-func prepareV1Snapshot(ctx context.Context, checkout, commit, source, subdir string) (directory string, module v1.Module, err error) {
+func prepareV1Snapshot(ctx context.Context, checkout, commit, source, subdir string, roots []string, inspect bool) (directory string, module v1.Module, inspection *modules.RootInspection, err error) {
 	tree, err := sourceV1SnapshotTree(ctx, checkout, commit)
 	if err != nil {
-		return "", v1.Module{}, fmt.Errorf("sourceV1SnapshotTree: %w", err)
+		return "", v1.Module{}, nil, fmt.Errorf("sourceV1SnapshotTree: %w", err)
 	}
 	view := sourceview.New(tree)
 	directory, err = os.MkdirTemp(filepath.Dir(checkout), "snapshot-*")
 	if err != nil {
-		return "", v1.Module{}, fmt.Errorf("MkdirTemp: %w", err)
+		return "", v1.Module{}, nil, fmt.Errorf("MkdirTemp: %w", err)
 	}
 	stagePath := directory
 	defer func() {
 		if err != nil {
-			_ = os.RemoveAll(stagePath)
+			removeErr := os.RemoveAll(stagePath)
+			if removeErr != nil {
+				err = errors.Join(err, fmt.Errorf("RemoveAll: %w", removeErr))
+			}
 		}
 	}()
 	inventory, err := stageSnapshotMetadata(ctx, tree, view, directory, subdir)
 	if err != nil {
-		return "", v1.Module{}, fmt.Errorf("stageSnapshotMetadata: %w", err)
+		return "", v1.Module{}, nil, fmt.Errorf("stageSnapshotMetadata: %w", err)
 	}
 	aliases, regular, metadataFailures := inventory.aliases, inventory.regular, inventory.metadataFailures
 	module, err = moduleconfig.ReadGitDependencyAt(directory, source, subdir)
@@ -54,22 +58,27 @@ func prepareV1Snapshot(ctx context.Context, checkout, commit, source, subdir str
 				err = errors.Join(err, fmt.Errorf("Resolve: %s: %w", failure.name, failure.err))
 			}
 		}
-		return "", v1.Module{}, fmt.Errorf("ReadGitDependencyAt: %w", err)
+		return "", v1.Module{}, nil, fmt.Errorf("ReadGitDependencyAt: %w", err)
 	}
+	module, err = applyV1ModuleRoots(module, roots)
+	if err != nil {
+		return "", v1.Module{}, nil, fmt.Errorf("applyV1ModuleRoots: %w", err)
+	}
+	provisional := inspect && !module.RootsFromMetadata && len(roots) == 0
 	ignoredMetadata := make(map[string]bool, len(metadataFailures))
 	for _, failure := range metadataFailures {
-		if snapshotFailedMetadataOwnsSources(failure.name, directory, module) || (failure.unstaged && snapshotNativeCandidate(failure.name, source, subdir)) {
-			return "", v1.Module{}, fmt.Errorf("Resolve: %s: %w", failure.name, failure.err)
+		if (!provisional && snapshotFailedMetadataOwnsSources(failure.name, directory, module)) || (failure.unstaged && snapshotNativeCandidate(failure.name, source, subdir)) {
+			return "", v1.Module{}, nil, fmt.Errorf("Resolve: %s: %w", failure.name, failure.err)
 		}
 		ignoredMetadata[failure.name] = true
 		if failure.unstaged {
 			continue
 		}
 		if err := os.Remove(filepath.Join(directory, filepath.FromSlash(failure.name))); err != nil {
-			return "", v1.Module{}, fmt.Errorf("Remove: %w", err)
+			return "", v1.Module{}, nil, fmt.Errorf("Remove: %w", err)
 		}
 		if err := pruneEmptySnapshotParents(directory, failure.name); err != nil {
-			return "", v1.Module{}, fmt.Errorf("pruneEmptySnapshotParents: %w", err)
+			return "", v1.Module{}, nil, fmt.Errorf("pruneEmptySnapshotParents: %w", err)
 		}
 	}
 	// Stage ordinary files only after metadata has selected Buf source paths.
@@ -79,14 +88,23 @@ func prepareV1Snapshot(ctx context.Context, checkout, commit, source, subdir str
 			continue
 		}
 		if err := materializeSnapshotFile(ctx, view, directory, name); err != nil {
-			return "", v1.Module{}, fmt.Errorf("materializeSnapshotFile: %w", err)
+			return "", v1.Module{}, nil, fmt.Errorf("materializeSnapshotFile: %w", err)
 		}
 	}
 	if err := materializeSnapshotAuxiliaryAliases(ctx, view, directory, aliases); err != nil {
-		return "", v1.Module{}, fmt.Errorf("materializeSnapshotAuxiliaryAliases: %w", err)
+		return "", v1.Module{}, nil, fmt.Errorf("materializeSnapshotAuxiliaryAliases: %w", err)
 	}
-	if err := materializeSelectedSnapshotAliases(ctx, view, directory, module, ignoredMetadata); err != nil {
-		return "", v1.Module{}, fmt.Errorf("materializeSelectedSnapshotAliases: %w", err)
+	if !provisional {
+		if err := materializeSelectedSnapshotAliases(ctx, view, directory, module, ignoredMetadata); err != nil {
+			return "", v1.Module{}, nil, fmt.Errorf("materializeSelectedSnapshotAliases: %w", err)
+		}
+	}
+	if inspect {
+		inspection, err = inspectV1Snapshot(ctx, view, directory, module, commit)
+		if err != nil {
+			return "", v1.Module{}, nil, fmt.Errorf("inspectV1Snapshot: %w", err)
+		}
+		inspection.Provisional = provisional
 	}
 	// Buf filters select the same logical paths for hashing and installation.
 	err = filepath.WalkDir(directory, func(file string, entry fs.DirEntry, walkErr error) error {
@@ -106,9 +124,9 @@ func prepareV1Snapshot(ctx context.Context, checkout, commit, source, subdir str
 		return nil
 	})
 	if err != nil {
-		return "", v1.Module{}, fmt.Errorf("WalkDir: %w", err)
+		return "", v1.Module{}, nil, fmt.Errorf("WalkDir: %w", err)
 	}
-	return directory, module, nil
+	return directory, module, inspection, nil
 }
 
 type snapshotInventory struct {
@@ -459,7 +477,12 @@ func snapshotStrictDirectory(name string, module v1.Module) bool {
 }
 
 func snapshotExcludedDirectory(name, root, directory string, module v1.Module) bool {
-	relative := strings.TrimPrefix(strings.TrimPrefix(name, root), "/")
+	relative := name
+	if name == root {
+		relative = ""
+	} else if root != "." {
+		relative = strings.TrimPrefix(name, root+"/")
+	}
 	for _, component := range strings.Split(relative, "/") {
 		if strings.HasPrefix(component, ".") || component == "easyp_vendor" {
 			return true

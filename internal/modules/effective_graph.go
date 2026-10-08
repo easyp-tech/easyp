@@ -33,6 +33,10 @@ func EnsureEffectiveGraph(ctx context.Context, root string, module v1.Module, ca
 }
 
 func ensureEffectiveGraph(ctx context.Context, root string, module v1.Module, cache Cache, localPath func(string) (string, error), refresh bool) (EffectiveGraph, error) {
+	return ensureEffectiveGraphWithRoots(ctx, root, module, cache, localPath, refresh, nil)
+}
+
+func ensureEffectiveGraphWithRoots(ctx context.Context, root string, module v1.Module, cache Cache, localPath func(string) (string, error), refresh bool, hints map[string][]string) (EffectiveGraph, error) {
 	graph := EffectiveGraph{Modules: make(map[string]EffectiveModule)}
 	existing, err := ReadLock(filepath.Join(root, v1.LockFile))
 	if err != nil && !errors.Is(err, os.ErrNotExist) {
@@ -43,7 +47,10 @@ func ensureEffectiveGraph(ctx context.Context, root string, module v1.Module, ca
 		pins[entry.Source] = entry
 	}
 	locals := newLocalReplacements(root, module, localPath)
+	locals.hints = hints
 	remote := &effectiveRemoteSource{cache: cache, pins: pins, refresh: refresh, historical: localPath != nil, modules: make(map[[4]string]cachedEffectiveModule)}
+	source, _ := cache.(Source)
+	remote.roots = newImportRootSource(source, existing, hints)
 	loader := revisionLoader{source: remote, fetched: make(map[string]Fetched), pins: pins, local: locals.lookupRequirement}
 	if refresh {
 		loader.pins = nil
@@ -51,6 +58,10 @@ func ensureEffectiveGraph(ctx context.Context, root string, module v1.Module, ca
 	pass, err := loader.resolve(ctx, module)
 	if err != nil {
 		return graph, fmt.Errorf("module %s: %w", module.Name, err)
+	}
+	pass.lock, err = finalizeEffectiveImportRoots(ctx, pass, locals, remote)
+	if err != nil {
+		return graph, fmt.Errorf("finalizeEffectiveImportRoots: %w", err)
 	}
 	appendModule := func(name string, entry EffectiveModule) error {
 		roots, err := ModuleSources(entry.Directory, entry.Module)
@@ -84,18 +95,20 @@ type effectiveRemoteSource struct {
 	refresh    bool
 	historical bool
 	modules    map[[4]string]cachedEffectiveModule
+	roots      *importRootSource
 }
 
 type cachedEffectiveModule struct {
 	module EffectiveModule
 	bsr    []v1.BSRResolution
+	roots  []string
 }
 
 func (s *effectiveRemoteSource) Fetch(ctx context.Context, name, version string) (Fetched, error) {
 	// Reuse the published identity for this revision. A higher old tag is not
 	// an extra requirement and must not override explicit tag/commit constraints.
 	// Install verifies hashes even for already cached contents.
-	if pin, ok := s.pins[name]; ok && !s.refresh && (version == "" || version == pin.Version || (v1.IsCommitRef(version) && strings.EqualFold(version, pin.Commit))) {
+	if pin, ok := s.pins[name]; ok && !s.refresh && len(s.roots.hints[name]) == 0 && (version == "" || version == pin.Version || (v1.IsCommitRef(version) && strings.EqualFold(version, pin.Commit))) {
 		entry, err := s.installed(ctx, pin)
 		if err != nil {
 			return Fetched{}, fmt.Errorf("installed: %w", err)
@@ -105,12 +118,11 @@ func (s *effectiveRemoteSource) Fetch(ctx context.Context, name, version string)
 	if s.historical && version == "" {
 		return Fetched{}, fmt.Errorf("historical local replacement dependency %s has no locked commit or explicit version; cannot substitute current HEAD for the baseline", name)
 	}
-	source, ok := s.cache.(Source)
+	_, ok := s.cache.(Source)
 	if !ok {
 		return Fetched{}, fmt.Errorf("protobuf.lock does not satisfy %s %s; repository cannot resolve new local-overlay dependencies", name, version)
 	}
-	guard := lockedVersionSource{Source: source, locked: s.pins}
-	fetched, err := guard.Fetch(ctx, name, version)
+	fetched, err := s.roots.Fetch(ctx, name, version)
 	if err != nil {
 		return Fetched{}, fmt.Errorf("Fetch: %w", err)
 	}
@@ -119,7 +131,7 @@ func (s *effectiveRemoteSource) Fetch(ctx context.Context, name, version string)
 
 func (s *effectiveRemoteSource) installed(ctx context.Context, entry v1.LockedModule) (EffectiveModule, error) {
 	key := [4]string{entry.Source, entry.Version, entry.Commit, entry.Hash}
-	if selected, ok := s.modules[key]; ok && slices.Equal(selected.bsr, entry.BSR) {
+	if selected, ok := s.modules[key]; ok && slices.Equal(selected.bsr, entry.BSR) && slices.Equal(selected.roots, entry.Roots) {
 		return selected.module, nil
 	}
 	if err := s.cache.Install(ctx, v1.Lock{Version: 1, Modules: []v1.LockedModule{entry}}); err != nil {
@@ -130,12 +142,16 @@ func (s *effectiveRemoteSource) installed(ctx context.Context, entry v1.LockedMo
 		return EffectiveModule{}, fmt.Errorf("Cached: %w", err)
 	}
 	selected := EffectiveModule{Directory: dir, Module: module}
-	s.modules[key] = cachedEffectiveModule{module: selected, bsr: slices.Clone(entry.BSR)}
+	s.modules[key] = cachedEffectiveModule{module: selected, bsr: slices.Clone(entry.BSR), roots: slices.Clone(entry.Roots)}
 	return selected, nil
 }
 
 func validateLocalOverlay(ctx context.Context, root string, module v1.Module, cache Cache, refresh bool) error {
-	graph, err := ensureEffectiveGraph(ctx, root, module, cache, nil, refresh)
+	return validateLocalOverlayWithRoots(ctx, root, module, cache, refresh, nil)
+}
+
+func validateLocalOverlayWithRoots(ctx context.Context, root string, module v1.Module, cache Cache, refresh bool, hints map[string][]string) error {
+	graph, err := ensureEffectiveGraphWithRoots(ctx, root, module, cache, nil, refresh, hints)
 	if err != nil {
 		return fmt.Errorf("ensureEffectiveGraph: %w", err)
 	}

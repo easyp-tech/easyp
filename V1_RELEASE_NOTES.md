@@ -50,6 +50,8 @@ The native dependency format is documented in [`.spec/config/dependency.md`](.sp
 - `replace` is a main-module local development overlay. Local replacement state is not written into the shared `protobuf.lock`.
 - `--frozen` is explicit; it validates an existing manifest/lock graph and never infers frozen behavior from `CI=true`.
 - `mod tidy` does not discover arbitrary Git repositories from proto import strings.
+- Metadata-free declared dependencies can resolve missing import roots from an unambiguous pinned source/import map inside that same module. Consumer code only validates the resolved namespace and cannot select roots. Checked `get --import-root` and legacy Git input roots supply explicit hints; verified fallback roots are stored in the dependency's `protobuf.lock` entry and replayed in frozen/cold-cache operation. Existing native/Buf/legacy root metadata remains authoritative.
+- After a declared dependency revision changes its namespace, `mod tidy` repairs uniquely verified consumer import bindings, validates the proposed source and commits source/manifest/lock together. It preserves non-import bytes and reports applied renames; ambiguous or deleted imported bindings stop before writes. Tidy uses manifest versions without upgrading them; generation selectors and SDK output paths remain separate.
 - Known BSR dependencies encountered inside Git dependency metadata can be mapped through the current compatibility-snapshot resolver. Unknown BSR modules fail explicitly; no Git repository is guessed.
 
 ## Generation compatibility
@@ -68,6 +70,12 @@ The current command behavior is documented in [`.spec/CLI.md`](.spec/CLI.md):
 
 `easyp migrate` is the supported v0-to-v1 transition path. It accepts the documented legacy compatibility metadata, preserves legacy inputs until apply succeeds, and does not silently reinterpret a pilot-RFC file as a native v1 manifest.
 
+Legacy Git inputs become requirements and generation module selections. Custom
+`root` is a checked resolution hint; `sub_directory` becomes module-local paths
+after pinned source/import-name verification. Local and Git input filters keep
+their own module scope. Corrections appear in the verified preview, and failures
+do not write consumer manifest/lock files.
+
 The wizard preserves legacy directory selections through literal
 <code>generate.paths</code>, retaining root <code>.</code>, source locations and
 import names. Paths select files or component-bounded directory subtrees and
@@ -77,8 +85,10 @@ fallback. Unknown selectors fail before plugins, including no-plugin parents
 selected with <code>--all</code>. Historical lock entries with annotated-tag spelling such as
 `v0.4.0^{}` retain their original hash verification and unchanged backup bytes.
 Released v0 proto archive hashes are verified before the native materialized-snapshot
-hash is calculated. Archive attributes that change proto paths or bytes block
-migration.
+hash is calculated. Archive attributes that omit selected/reachable proto sources
+or change verified bytes block migration. Unused export-ignored sources outside
+a verified filtered Git selection are permitted; whole-input target widening
+still fails.
 
 Internal file, directory, import-root and metadata symlinks are supported.
 Logical paths keep their protobuf import names. Git targets resolve only from

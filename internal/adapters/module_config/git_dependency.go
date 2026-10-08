@@ -116,6 +116,7 @@ func ReadGitDependency(dir, source string) (v1.Module, error) {
 	}
 	if foundBuf {
 		module.Roots = bufRoots
+		module.RootsFromMetadata = true
 		module.BSRDependencies = bsrDependencies
 		if slices.ContainsFunc(bufFilters, func(filter v1.ProtoFileFilter) bool {
 			return len(filter.Includes) > 0 || len(filter.Excludes) > 0
@@ -124,6 +125,7 @@ func ReadGitDependency(dir, source string) (v1.Module, error) {
 		}
 	} else {
 		module.Roots = legacyRoots
+		module.RootsFromMetadata = len(legacyRoots) > 0
 	}
 	if len(module.Roots) == 0 {
 		module.Roots = []string{"."}

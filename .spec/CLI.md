@@ -29,7 +29,7 @@ easyp
 ├── mod (m)                          Manage protobuf.mod / protobuf.lock
 │   ├── download                     Install the exact locked dependencies
 │   ├── update                       Update compatible versions / versionless HEAD
-│   ├── tidy                         Resolve requirements and write the lock
+│   ├── tidy                         Resolve requirements and repair verified imports
 │   └── vendor                       Copy locked sources into easyp_vendor
 ├── init (i)                         Initialize the three v1 project files
 ├── migrate                          Preview or apply v0-to-v1 migration
@@ -153,6 +153,25 @@ easyp get github.com/googleapis/googleapis@common-protos-1_3_1
 easyp get github.com/acme/contracts@v1.2.3
 ~~~
 
+Repeatable <code>--import-root</code> provides checked dependency-source directory
+hints for this dependency's import-root resolution. Validate canonical roots
+before cache access or named-tag lookup. Authoritative dependency metadata keeps
+priority; otherwise verified fallback roots become <code>modules[].roots</code>
+in <code>protobuf.lock</code>. For example:
+
+~~~bash
+easyp get --import-root api/svc/v1 gitlab/products/svc
+~~~
+
+For fetched Git modules, hint coordinates start at the pinned repository
+snapshot. A nested <code>repo/sub/protobuf.mod</code> with <code>roots proto</code>
+is checked with <code>--import-root sub/proto</code>. Local replacement hints
+start at the replacement directory. Producer manifests retain their own
+manifest-relative roots; the Git adapter rebases those paths into its snapshot.
+
+Generation selects the required module separately through
+<code>generate.modules</code>; path/package filters do not change import roots.
+
 ### <code>easyp mod &lt;subcommand&gt;</code>
 
 The <code>mod</code> parent and all four subcommands accept <code>--frozen</code>. They use the nearest ancestor <code>protobuf.mod</code> found within the workspace, not a YAML dependency list or an unconditional current-directory root. Registration is in [internal/api/mod.go](../internal/api/mod.go); lookup is in [module_root.go](../internal/api/module_root.go).
@@ -161,7 +180,7 @@ The <code>mod</code> parent and all four subcommands accept <code>--frozen</code
 |---|---|
 | <code>download</code> | Read the existing lock, validate remote requirements against it, and install/verify its exact pinned dependencies in the cache. A missing lock reports that tidy is required. |
 | <code>update</code> | Advance tagged requirements within their current major version, refresh versionless requirements to HEAD, retain explicit commit pins, and rewrite manifest/lock resolution. Stable versions skip prerelease upgrades. |
-| <code>tidy</code> | Resolve manifest requirements and transitive requirements, check import collisions/unresolved imports, update manifest requirements, and write exact commits/content hashes to the lock. Existing versionless pins are preserved. |
+| <code>tidy</code> | Resolve declared and transitive requirements, repair uniquely verified consumer import bindings after namespace changes, check the proposed source, update direct/indirect requirements, and commit source/manifest/lock together. Existing versionless pins are preserved; tidy does not upgrade versions by itself. |
 | <code>vendor</code> | Copy verified locked dependency proto files into <code>easyp_vendor</code>, replacing that directory through staging/backup handling. |
 
 ~~~bash
@@ -170,6 +189,14 @@ easyp mod download
 easyp mod update
 easyp mod vendor
 ~~~
+
+After changing a requirement's revision in <code>protobuf.mod</code>, tidy can
+repair import literals using verified old/new pinned source bindings. It preserves
+comments, line endings, unrelated strings and internal aliases, validates the
+proposed bytes before writes, then reports committed renames. Ambiguous or
+deleted imported sources fail with guidance. Dependency and cached sources are
+never edited. Review generation selectors and SDK output paths separately. See
+[checked tidy import renames](plans/2026-10-07-tidy-import-renames-design.md).
 
 Outside frozen mode, with local replacements, <code>tidy</code> validates the ephemeral effective graph without writing manifest or lock. <code>get</code>/<code>update</code> may edit explicit requirements, but all operations preserve an existing lock byte-for-byte and do not create a local-graph lock. <code>vendor</code> copies the effective graph without changing the lock. Unknown imports are reported; automatic import-to-Git discovery is intentionally excluded. See [Dependency Management](config/dependency.md).
 
@@ -222,9 +249,17 @@ Each candidate must preserve the exact import-name-to-physical-source map.
 Omitted or empty legacy roots keep <code>.</code>; native manifests with no
 <code>roots</code> use that same default. Same-package files outside selected
 paths do not become generation targets, including ignored Gradle build copies.
-Changed import names, hidden/vendor/nested-module boundary changes and inferred
-local filters mixed with whole-module Git inputs stay blocked. The plan rechecks
+Unrepresentable import names and hidden/vendor/nested-module boundary changes
+stay blocked. Mixed local/Git inputs receive module-scoped selectors. The plan rechecks
 sources, paths and packages before applying. See [source selection](config/package-selection.md).
+
+Git input URL/version values become native requirements and generation module
+selections. Custom <code>root</code> is a resolution hint, accepted in the initial
+preview and verified at the historical pinned revision before apply. Resolved
+fallback roots are recorded in the native lock. <code>sub_directory</code>
+becomes module-directory-relative selection after comparing the legacy archive
+mapping with the v1 logical source map. Corrections are shown in the verified
+preview. Plugins remain disabled and failures preserve manifest/lock bytes.
 
 Historical <code>easyp.lock</code> entries may use a full SemVer tag followed by
 Git's peeled-ref suffix <code>^{}</code>. Migration verifies the corresponding
@@ -234,8 +269,10 @@ repeated suffixes and pseudo-version-shaped peeled tags are rejected.
 Released v0 lock hashes cover the installed <code>git archive '*.proto'</code>
 contents after legacy root rewrites, while the new lock covers the materialized v1
 snapshot. Migration verifies either the historical archive hash or the existing
-whole-tree hash at the pinned revision. It rejects archive attributes that omit
-or alter proto sources rather than silently changing their contracts.
+whole-tree hash at the pinned revision. Omitted selected/reachable proto sources
+and changed verified archive bytes block migration. An unused export-ignored
+source outside a verified filtered Git selection is permitted; whole-input
+target widening remains an error.
 Internal file, directory, import-root and metadata symlinks are supported.
 Logical paths keep their protobuf import names. Git targets resolve only from
 the pinned tree; installed snapshots contain regular resolved bytes and work
@@ -353,7 +390,7 @@ An import-related message alone does not imply status 2. [internal/core/proto_in
 - **stdin/terminal:** init may ask for module identity and overwrite choices through its interactive prompter, only when input and output are terminals. The migration wizard reads line-based input from the application reader (normally stdin) and also requires terminal input/output; flag-only migration accepts no stdin document.
 - **stdout:** lint/breaking findings; ls-files and validation reports; migration previews/prompts; shell completion; framework help/version. Schema generation primarily writes files.
 - **stderr:** structured text logger output (including debug records when enabled), fatal returned errors, ls-files text-mode collected errors, and its CLI exit error count for either report format.
-- **files:** init writes the three native project files; migration writes validated candidates/backups when authorized; generation writes configured plugin outputs and optional descriptors; get/tidy/update write manifest/lock results; download populates the cache; vendor writes <code>easyp_vendor</code>; schema-gen writes six schemas. Commands resolving imports may also populate the cache.
+- **files:** init writes the three native project files; migration writes validated candidates/backups when authorized; generation writes configured plugin outputs and optional descriptors; get/update write manifest/lock results; tidy can also rewrite verified consumer imports and commits them with manifest/lock; download populates the cache; vendor writes <code>easyp_vendor</code>; schema-gen writes six schemas. Commands resolving imports may also populate the cache.
 
 ~~~bash
 easyp --format json lint --path proto > lint-issues.json

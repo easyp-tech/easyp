@@ -15,6 +15,16 @@ import (
 // Get adds or promotes one direct requirement. In published mode it also records
 // resolved transitives; local overlay mode preserves the shared lock.
 func Get(ctx context.Context, root string, requirement v1.Requirement, repository Repository) error {
+	return GetWithRoots(ctx, root, requirement, repository, nil)
+}
+
+// GetWithRoots verifies explicit import roots for the requested dependency before
+// recording it. Roots are dependency-relative and replace an earlier fallback.
+func GetWithRoots(ctx context.Context, root string, requirement v1.Requirement, repository Repository, roots []string) error {
+	roots, err := canonicalImportRootHints(roots)
+	if err != nil {
+		return fmt.Errorf("canonicalImportRootHints: %w", err)
+	}
 	original, module, err := ReadManifest(root)
 	if err != nil {
 		return fmt.Errorf("ReadManifest: %w", err)
@@ -31,7 +41,7 @@ func Get(ctx context.Context, root string, requirement v1.Requirement, repositor
 		return fmt.Errorf("ParseModule: %w", err)
 	}
 	if len(updatedModule.Replaces) > 0 {
-		if err := validateLocalOverlay(ctx, root, updatedModule, repository, false); err != nil {
+		if err := validateLocalOverlayWithRoots(ctx, root, updatedModule, repository, false, map[string][]string{requirement.Module: roots}); err != nil {
 			return err
 		}
 		if bytes.Equal(original, updated) {
@@ -44,7 +54,8 @@ func Get(ctx context.Context, root string, requirement v1.Requirement, repositor
 	if err != nil && !errors.Is(err, os.ErrNotExist) {
 		return fmt.Errorf("ReadLock: %w", err)
 	}
-	lock, err := resolveV1LockWithPins(ctx, root, updatedModule, existing, repository)
+	hints := map[string][]string{requirement.Module: roots}
+	lock, err := resolveV1LockWithRoots(ctx, root, updatedModule, existing, repository, true, hints)
 	if err != nil {
 		return fmt.Errorf("resolveV1LockWithPins: %w", err)
 	}

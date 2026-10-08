@@ -31,6 +31,7 @@ type schema struct {
 	Pattern              string             `json:"pattern,omitempty"`
 	MinLength            int                `json:"minLength,omitempty"`
 	MaxItems             *int               `json:"maxItems,omitempty"`
+	UniqueItems          bool               `json:"uniqueItems,omitempty"`
 }
 
 // policyExtendsPattern accepts a local ./ or ../ policy path, an exact declared
@@ -189,6 +190,9 @@ func documents() map[string]*schema {
 	entry.Properties["version"].Pattern = `^(v[0-9]+\.[0-9]+\.[0-9]+([+-][0-9A-Za-z.-]+)?|[0-9a-fA-F]{40}|[0-9a-fA-F]{64})$`
 	entry.Properties["commit"].Pattern = `^([0-9a-fA-F]{40}|[0-9a-fA-F]{64})$`
 	entry.Properties["hash"].Pattern = `^h1:[A-Za-z0-9+/]{43}=$`
+	entry.Properties["roots"].Items.Pattern = PathSelectorPattern
+	entry.Properties["roots"].UniqueItems = true
+	entry.Properties["roots"].Description = "Canonical portable directories relative to the pinned repository, used when source metadata does not declare roots. A single dot selects the repository root. Frozen commands replay the recorded roots; authoritative native, Buf, or EasyP roots cannot be overridden."
 	entry.Properties["bsr"].Description = "BSR requests and their pinned Git targets, recorded on the requiring Git module. Frozen commands replay these bindings without consulting a resolver. compatibility_snapshot does not guarantee BSR revision equivalence or verify the BSR digest."
 	binding := entry.Properties["bsr"].Items
 	binding.Required = []string{"dependency", "git", "resolution"}

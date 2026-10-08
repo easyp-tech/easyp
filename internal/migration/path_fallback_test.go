@@ -38,8 +38,8 @@ func TestMigrationNonportablePathCandidateUsesStrictPackageFallback(t *testing.T
 				return
 			}
 			require.NoError(t, err)
-			assert.Empty(t, plan.paths)
-			assert.Equal(t, []string{"selected.v1"}, plan.packages)
+			assert.Empty(t, plan.local.selection.paths)
+			assert.Equal(t, []string{"selected.v1"}, plan.local.selection.packages)
 			require.NoError(t, plan.Apply())
 		})
 	}
