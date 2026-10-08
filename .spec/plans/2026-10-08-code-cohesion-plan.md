@@ -78,14 +78,14 @@ Do not replace filesystem/root proof with a general callback or storage abstract
 
 ## Task 4: Named Git migration requests
 
-- [ ] Run the existing Git migration archive/roots tests first:
+- [x] Run the existing Git migration archive/roots tests first:
   GOTOOLCHAIN=go1.26.6 go test -mod=readonly -race -count=1 -timeout=5m ./internal/adapters/gitmodules -run 'Test.*Migration'
   Expected: PASS.
-- [ ] Convert public roots parameters once into a named internal request that distinguishes whole-namespace proof (nil roots), selection proof retaining producer/intrinsic roots (non-nil empty) and checked explicit roots. Keep public FetchMigration/FetchMigrationWithRoots signatures.
-- [ ] Replace native/selection boolean argument lists in legacy layout verification with named request fields/intent. Keep native initial fetch, historical expected-hash, symlink-aware archive variants, selected omission allowances and whole-input completeness checks in the same execution order.
-- [ ] Preserve early version/root validation, metadata identity, exact commit/hash, checkout cleanup/causes, snapshot alias materialization, installed cache identity and BSR resolution behavior.
-- [ ] Run adapter and migration races, focused export-ignore/default/alias controls and relevant CLI migration cases. Commit owned changes after self-review.
-- [ ] Independent spec gate, then quality gate; fix/re-review.
+- [x] Convert public roots parameters once into a named internal request that distinguishes whole-namespace proof (nil roots), selection proof retaining producer/intrinsic roots (non-nil empty) and checked explicit roots. Keep public FetchMigration/FetchMigrationWithRoots signatures.
+- [x] Replace native/selection boolean argument lists in legacy layout verification with named request fields/intent. Keep native initial fetch, historical expected-hash, symlink-aware archive variants, selected omission allowances and whole-input completeness checks in the same execution order.
+- [x] Preserve early version/root validation, metadata identity, exact commit/hash, checkout cleanup/causes, snapshot alias materialization, installed cache identity and BSR resolution behavior.
+- [x] Run adapter and migration races, focused export-ignore/default/alias controls and relevant CLI migration cases. Commit owned changes after self-review.
+- [x] Independent spec gate, then quality gate; fix/re-review.
 
 ## Task 5: Whole-change verification and publication
 
@@ -110,3 +110,5 @@ Task1: 8fefe5b7. Spec compliant and quality approved independently. Provider-buf
 Task2: 9506b923. Independent spec and quality approved. Capture-buffer mutation RED/GREEN; final modules/API/Git adapter races24.980s/44.393s/17.458s; snapshot/index/Git walker races passed. Independent spec tidy/transactions8.951s, overlay2.711s, CLI2.448s, literals1.041s. No direct transaction-storage access outside its observation/writer implementation.
 
 Task3: dc9cbe03. Independent spec/quality approved. Baseline migration4.363s; final migration/API/Git adapter races5.842s/39.252s/12.412s and vet passed. Fresh CLI/MCP PTY subset1.236s; independent archive/source/alias/candidates2.106s and staging/rollback/recovery1.121s. Existing private-shape test assertions preserved.
+
+Task4: 265fb529. Independent spec/quality approved. Before/after migration races4.891s/4.871s; full adapters+ migration Git13.722s/migration8.016s; vet and focused controls passed. Independent roots/hash/native/alias/attrs racesGit2.053s/migration2.394s. Fresh CLI/MCP Git migration+PTY controls2.164s.
