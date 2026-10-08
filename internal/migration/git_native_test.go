@@ -2,6 +2,7 @@ package migration
 
 import (
 	"bytes"
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -52,6 +53,68 @@ func TestMigrationGitHintsMatchNativeRootAuthority(t *testing.T) {
 			assert.Empty(t, lock.Modules[0].Roots, "authoritative roots need no fallback lock metadata")
 		})
 	}
+}
+
+func TestMigrationDefaultNativeGitInputCannotOmitHiddenLegacyTargets(t *testing.T) {
+	t.Parallel()
+	files := map[string]string{
+		"public/a.proto":      "syntax = \"proto3\"; package public.v1; message A {}\n",
+		".hidden/extra.proto": "syntax = \"proto3\"; package hidden.v1; message Extra {}\n",
+	}
+	repository, _ := gitSelectionRepository(t, files)
+	writeFixture(t, repository, v1.ModuleFile, "module "+repository+"\n")
+	gitSelectionCommand(t, repository, "add", ".")
+	gitSelectionCommand(t, repository, "-c", "user.name=EasyP Test", "-c", "user.email=test@example.test", "commit", "-qm", "native metadata")
+	commit := strings.TrimSpace(gitSelectionCommand(t, repository, "rev-parse", "HEAD"))
+	project := t.TempDir()
+	legacy := "generate:\n  inputs: [{git_repo: {url: '" + repository + "@" + commit + "'}}]\n"
+	writeFixture(t, project, v1.PolicyFile, legacy)
+	require.NoError(t, os.Chmod(filepath.Join(project, v1.PolicyFile), 0o640))
+	plan, err := Build(t.Context(), Options{Dir: project, Module: "example.test/consumer", ResolveLock: true, Repository: gitmodules.New(t.TempDir())})
+	require.ErrorContains(t, err, ".hidden/extra.proto")
+	assert.Nil(t, plan)
+	assert.Equal(t, legacy, string(mustRead(t, project, v1.PolicyFile)))
+	info, err := os.Stat(filepath.Join(project, v1.PolicyFile))
+	require.NoError(t, err)
+	assert.Equal(t, os.FileMode(0o640), info.Mode().Perm())
+	entries, err := os.ReadDir(project)
+	require.NoError(t, err)
+	assert.Len(t, entries, 1, "a refused default selection creates no native candidates or backups")
+}
+
+func TestMigrationDefaultNativeGitInputKeepsBufArchiveNames(t *testing.T) {
+	t.Parallel()
+	files := map[string]string{
+		"buf.yaml":            "version: v2\nmodules: [{path: api}]\n",
+		"api/service/a.proto": "syntax = \"proto3\"; package service.v1; message A {}\n",
+	}
+	repository, _ := gitSelectionRepository(t, files)
+	writeFixture(t, repository, v1.ModuleFile, "module "+repository+"\nroots api\n")
+	gitSelectionCommand(t, repository, "add", ".")
+	gitSelectionCommand(t, repository, "-c", "user.name=EasyP Test", "-c", "user.email=test@example.test", "commit", "-qm", "native metadata")
+	commit := strings.TrimSpace(gitSelectionCommand(t, repository, "rev-parse", "HEAD"))
+	project := t.TempDir()
+	legacy := "generate:\n  inputs: [{git_repo: {url: '" + repository + "@" + commit + "'}}]\n"
+	writeFixture(t, project, v1.PolicyFile, legacy)
+	cache := gitmodules.New(t.TempDir())
+	plan, err := Build(t.Context(), Options{Dir: project, Module: "example.test/consumer", ResolveLock: true, Repository: cache})
+	require.NoError(t, err)
+	gen, err := v1.ParseGenerate(bytes.NewReader(outputContent(t, plan, v1.GenerateFile)))
+	require.NoError(t, err)
+	assert.Equal(t, []v1.GenerateModule{{Module: repository}}, gen.Generate.Modules)
+	var lock v1.Lock
+	require.NoError(t, yaml.Unmarshal(outputContent(t, plan, v1.LockFile), &lock))
+	require.Len(t, lock.Modules, 1)
+	assert.Equal(t, commit, lock.Modules[0].Commit)
+	assert.Empty(t, lock.Modules[0].Roots)
+	require.NoError(t, cache.Install(t.Context(), lock))
+	directory, module, err := cache.Cached(lock.Modules[0])
+	require.NoError(t, err)
+	names, contents := gitSelectionTargets(t, directory, module, nil)
+	assert.Equal(t, map[string]string{"service/a.proto": "api/service/a.proto"}, names)
+	assert.Equal(t, map[string]string{"service/a.proto": files["api/service/a.proto"]}, contents)
+	require.NoError(t, plan.Apply())
+	assert.Equal(t, legacy, string(mustRead(t, project, "easyp.yaml.v0.bak")))
 }
 
 func TestMigrationNativeAuthorityKeepsProducerArchiveRootRewriting(t *testing.T) {

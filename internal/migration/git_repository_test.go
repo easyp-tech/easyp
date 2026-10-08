@@ -58,3 +58,16 @@ func TestMigrationExplicitGitSelectionRequiresRepositoryCapability(t *testing.T)
 	require.ErrorContains(t, err, "roots-aware migration repository")
 	assert.Empty(t, repository.calls)
 }
+
+func TestMigrationDefaultRootsAwareSelectionRequiresVerifiedArchiveMapping(t *testing.T) {
+	t.Parallel()
+	const dependency = "example.test/dependency"
+	project := t.TempDir()
+	legacy := "generate:\n  inputs: [{git_repo: {url: " + dependency + "}}]\n"
+	writeFixture(t, project, v1.PolicyFile, legacy)
+	writeFixture(t, project, "easyp.lock", dependency+" "+testCommit+" "+testHash+"\n")
+	repository := uncheckedRootsRepository{&mockRepository{wantOldHash: testHash, fetched: map[string]modules.Fetched{dependency + "@" + testCommit: migrationFetched(dependency, testCommit, testCommit)}}}
+	_, err := Build(t.Context(), Options{Dir: project, Module: "example.test/consumer", ResolveLock: true, Repository: repository})
+	require.ErrorContains(t, err, "verified legacy source mappings")
+	assert.Equal(t, legacy, string(mustRead(t, project, v1.PolicyFile)))
+}
