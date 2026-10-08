@@ -142,6 +142,13 @@ through one proposal operation. Backups retain their observed bytes and mode;
 updating a generator candidate cannot leave its preview and staged write out of
 sync. Source selection is checked again after staging and before replacement.
 
+The Git migration adapter converts validated public roots once into a private
+request with an explicit proof intent: complete namespace, consumer selection
+retaining producer/intrinsic roots, or consumer selection with checked roots.
+Intent remains separate from inferred roots and native metadata, so a later
+root update cannot change the archive proof policy. Public nil/empty-root
+semantics and historical hash verification order remain unchanged.
+
 ## Verification boundaries
 
 - Resolver, version selection, config conversion, manifest editing and collision rules: parallel table-driven unit tests.
