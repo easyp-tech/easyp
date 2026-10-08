@@ -22,9 +22,24 @@ type importRootSource struct {
 	Source
 	locked         map[string]v1.LockedModule
 	hints          map[string][]string
-	fetched        map[[2]string]Fetched
+	fetched        map[rootRevisionKey]Fetched
 	verifiedScopes map[string]Fetched
-	tidy           bool
+	transitions    []rootNamespaceTransition
+}
+
+func newImportRootSource(backend Source, existing v1.Lock, hints map[string][]string) *importRootSource {
+	source := &importRootSource{
+		Source: backend,
+		locked: make(map[string]v1.LockedModule, len(existing.Modules)),
+		hints:  make(map[string][]string, len(hints)),
+	}
+	for _, entry := range existing.Modules {
+		source.locked[entry.Source] = cloneRootPin(entry)
+	}
+	for name, roots := range hints {
+		source.hints[name] = slices.Clone(roots)
+	}
+	return source
 }
 
 func (source *importRootSource) Fetch(ctx context.Context, name, version string) (Fetched, error) {
@@ -61,6 +76,7 @@ func (source *importRootSource) Fetch(ctx context.Context, name, version string)
 	if err != nil {
 		return Fetched{}, fmt.Errorf("Fetch: %w", err)
 	}
+	fetched = cloneRootFetched(fetched)
 	if v1.IsCommitRef(version) && !strings.EqualFold(version, fetched.Lock.Commit) {
 		return Fetched{}, fmt.Errorf("module %s: fetched commit %s differs from requested commit %s", name, fetched.Lock.Commit, version)
 	}
@@ -78,7 +94,7 @@ func (source *importRootSource) Fetch(ctx context.Context, name, version string)
 					return Fetched{}, fmt.Errorf("module %s: retained-root fetch differs from resolved commit %s", name, fetched.Lock.Commit)
 				}
 				scoped.Lock.Version = fetched.Lock.Version
-				fetched = scoped
+				fetched = cloneRootFetched(scoped)
 			} else {
 				fetched.Module.Roots = slices.Clone(old.Roots)
 				fetched.Lock.Roots = slices.Clone(old.Roots)
@@ -89,21 +105,30 @@ func (source *importRootSource) Fetch(ctx context.Context, name, version string)
 		return Fetched{}, err
 	}
 	if source.fetched == nil {
-		source.fetched = make(map[[2]string]Fetched)
+		source.fetched = make(map[rootRevisionKey]Fetched)
 	}
-	source.fetched[[2]string{name, strings.ToLower(fetched.Lock.Commit)}] = fetched
+	source.fetched[rootRevision(name, fetched.Lock.Commit)] = cloneRootFetched(fetched)
 	return fetched, nil
 }
 
-func (source *importRootSource) finalize(ctx context.Context, lock v1.Lock) (v1.Lock, error) {
-	var dependencies []importRootModule
-	inspected := false
+func (source *importRootSource) rootCandidates(lock v1.Lock) []importRootModule {
+	dependencies := make([]importRootModule, 0, len(lock.Modules))
 	for _, entry := range lock.Modules {
-		fetched := source.fetched[[2]string{entry.Source, strings.ToLower(entry.Commit)}]
+		fetched := source.fetched[rootRevision(entry.Source, entry.Commit)]
 		fixed := source.fixedRootScope(entry, fetched)
-		dependencies = append(dependencies, importRootModule{name: entry.Source, roots: fetched.Module.Roots, fixed: fixed, inspection: fetched.Inspection})
-		inspected = inspected || fetched.Inspection != nil
+		dependencies = append(dependencies, importRootModule{
+			name:       entry.Source,
+			roots:      slices.Clone(fetched.Module.Roots),
+			fixed:      fixed,
+			inspection: cloneRootInspection(fetched.Inspection),
+		})
 	}
+	return dependencies
+}
+
+func (source *importRootSource) finalize(ctx context.Context, lock v1.Lock) (v1.Lock, error) {
+	dependencies := source.rootCandidates(lock)
+	inspected := slices.ContainsFunc(dependencies, func(dependency importRootModule) bool { return dependency.inspection != nil })
 	if !inspected {
 		return lock, nil
 	}
@@ -116,7 +141,7 @@ func (source *importRootSource) finalize(ctx context.Context, lock v1.Lock) (v1.
 
 func (source *importRootSource) finalizeSelections(ctx context.Context, lock v1.Lock, dependencies []importRootModule, selected [][]string) (v1.Lock, error) {
 	inspected := slices.ContainsFunc(lock.Modules, func(entry v1.LockedModule) bool {
-		return source.fetched[[2]string{entry.Source, strings.ToLower(entry.Commit)}].Inspection != nil
+		return source.fetched[rootRevision(entry.Source, entry.Commit)].Inspection != nil
 	})
 	if !inspected {
 		return lock, nil
@@ -126,12 +151,14 @@ func (source *importRootSource) finalizeSelections(ctx context.Context, lock v1.
 		return v1.Lock{}, fmt.Errorf("repository cannot finalize inspected import roots")
 	}
 	for offset, entry := range lock.Modules {
+		key := rootRevision(entry.Source, entry.Commit)
+		previous := source.fetched[key]
 		dependency := dependencies[offset]
-		if source.fetched[[2]string{entry.Source, strings.ToLower(entry.Commit)}].Inspection == nil {
+		if previous.Inspection == nil {
 			continue
 		}
 		roots := selected[offset]
-		if dependency.fixed && !source.fetched[[2]string{entry.Source, strings.ToLower(entry.Commit)}].Module.RootsFromMetadata {
+		if dependency.fixed && !previous.Module.RootsFromMetadata {
 			roots = dependency.roots
 			if len(source.hints[entry.Source]) == 0 && source.sameLockedPin(entry) {
 				roots = source.locked[entry.Source].Roots
@@ -143,6 +170,7 @@ func (source *importRootSource) finalizeSelections(ctx context.Context, lock v1.
 		if err != nil {
 			return v1.Lock{}, fmt.Errorf("FetchWithRoots: %w", err)
 		}
+		fetched = cloneRootFetched(fetched)
 		if fetched.Module.Name != entry.Source || fetched.Lock.Source != entry.Source || !strings.EqualFold(fetched.Lock.Commit, entry.Commit) {
 			return v1.Lock{}, fmt.Errorf("module %s: finalized revision differs from resolved commit %s", entry.Source, entry.Commit)
 		}
@@ -153,19 +181,17 @@ func (source *importRootSource) finalizeSelections(ctx context.Context, lock v1.
 		if err := source.verifyRootFetch(ctx, fetched); err != nil {
 			return v1.Lock{}, err
 		}
-		inspection := source.fetched[[2]string{entry.Source, strings.ToLower(entry.Commit)}].Inspection
-		if !source.tidy {
-			if err := source.validateRootTransition(ctx, fetched, inspection, selector); err != nil {
-				return v1.Lock{}, fmt.Errorf("validateRootTransition: %w", err)
-			}
-		}
+		inspection := previous.Inspection
+		// Keep the inspection used for namespace comparison inside resolution.
+		// Graph orchestration applies its explicit policy after finalization.
+		source.transitions = append(source.transitions, rootNamespaceTransition{fetched: fetched, inspection: inspection})
 		// Keep the complete final scope available to tidy's source-binding proof.
 		if fetched.Inspection == nil && inspection != nil && fetched.Lock.Hash != "" {
 			complete := *inspection
 			complete.Provisional = false
 			fetched.Inspection = &complete
 		}
-		source.fetched[[2]string{entry.Source, strings.ToLower(entry.Commit)}] = fetched
+		source.fetched[key] = fetched
 		lock.Modules[offset] = fetched.Lock
 	}
 	if err := lock.Validate(); err != nil {

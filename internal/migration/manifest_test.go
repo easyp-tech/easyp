@@ -71,9 +71,9 @@ func TestDirectoryPathIsRelativeToRoot(t *testing.T) {
 				return
 			}
 			require.NoError(t, err)
-			assert.Equal(t, map[string]string{"api/a.proto": filepath.Join("proto", "api", "a.proto")}, plan.sources)
-			assert.Equal(t, []string{"proto"}, plan.roots)
-			assert.Equal(t, []string{"proto/api"}, plan.paths)
+			assert.Equal(t, map[string]string{"api/a.proto": filepath.Join("proto", "api", "a.proto")}, plan.local.selection.files)
+			assert.Equal(t, []string{"proto"}, plan.local.roots)
+			assert.Equal(t, []string{"proto/api"}, plan.local.selection.paths)
 		})
 	}
 }

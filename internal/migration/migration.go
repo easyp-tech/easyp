@@ -17,7 +17,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"maps"
 	"os"
 	"slices"
 	"strings"
@@ -50,26 +49,15 @@ type Output struct {
 // A Plan is not safe for concurrent use.
 type Plan struct {
 	tx        *transaction
-	outputs   []Output
 	warnings  []string
 	blocked   string
 	alreadyV1 bool
-	inputs    []legacyDirectory
-	roots     []string
-	packages  []string
-	paths     []string
-	sources   map[string]string
+	local     *localSelectionProof
 	git       *gitSelectionProof
 }
 
 // Outputs returns copies of all candidate files; mutating them cannot alter Apply.
-func (p *Plan) Outputs() []Output {
-	result := slices.Clone(p.outputs)
-	for i := range result {
-		result[i].Content = bytes.Clone(result[i].Content)
-	}
-	return result
-}
+func (p *Plan) Outputs() []Output { return p.tx.outputs() }
 
 // Warnings returns migration caveats, including prerequisites for application.
 func (p *Plan) Warnings() []string { return slices.Clone(p.warnings) }
@@ -118,17 +106,11 @@ func (p *Plan) Apply() error {
 }
 
 func (p *Plan) verifySourceSelection() error {
-	if len(p.inputs) > 0 {
-		selection, err := proveLocalSelection(p.tx.requestedRoot, p.inputs, p.roots)
-		if err != nil {
-			return fmt.Errorf("proveLocalSelection: %w", err)
-		}
-		if !maps.Equal(selection.files, p.sources) || !slices.Equal(selection.packages, p.packages) || !slices.Equal(selection.paths, p.paths) {
-			return fmt.Errorf("local .proto source selection changed since planning; preview again")
-		}
+	if err := p.local.recheck(p.tx.requestedRoot); err != nil {
+		return fmt.Errorf("recheck: %w", err)
 	}
 	if p.git != nil {
-		bindings, err := p.proveGitSourceBindings(context.Background(), false)
+		bindings, err := proveGitSourceBindings(context.Background(), p.tx.requestedRoot, p.local, p.git, false)
 		if err != nil {
 			return fmt.Errorf("proveGitSourceBindings: %w", err)
 		}
@@ -148,9 +130,53 @@ func Build(ctx context.Context, options Options) (*Plan, error) {
 	if options.Dir == "" {
 		options.Dir = "."
 	}
+	p, cfg, err := captureMigrationProject(options)
+	if err != nil {
+		return nil, fmt.Errorf("captureMigrationProject: %w", err)
+	}
+	if p.alreadyV1 {
+		return p, nil
+	}
+	selection, err := p.selectSources(cfg, options.Module)
+	if err != nil {
+		return nil, fmt.Errorf("selectSources: %w", err)
+	}
+	candidates, err := p.tx.preflightCandidates(cfg, p.local, selection, options.ResolveLock)
+	if err != nil {
+		return nil, fmt.Errorf("preflightCandidates: %w", err)
+	}
+	lockInputs, err := p.tx.lockPrerequisites(candidates.module)
+	if err != nil {
+		return nil, fmt.Errorf("lockPrerequisites: %w", err)
+	}
+	if lockInputs.historical {
+		p.warnings = append(p.warnings, "easyp.lock is retained byte-for-byte as a historical backup; it is never rewritten or removed.")
+	}
+	var lock *v1.Lock
+	if lockInputs.needsLock && !options.ResolveLock {
+		p.blocked = "dependency integrity/lock verification is required before writing; preview again with --resolve-lock (this explicitly permits repository/cache access)"
+		p.warnings = append(p.warnings, "protobuf.lock cannot be prepared without --resolve-lock; --write is blocked until every required pin and legacy hash is verified.")
+	} else if lockInputs.needsLock {
+		verified, fetched, err := migrateSelectionLock(ctx, candidates.module, lockInputs.pins, lockInputs.historical, options.Repository, selection.git)
+		if err != nil {
+			return nil, fmt.Errorf("migrateSelectionLock: %w", err)
+		}
+		if err := p.proveGitSources(ctx, selection, fetched); err != nil {
+			return nil, fmt.Errorf("proveGitSources: %w", err)
+		}
+		lock = &verified
+	}
+	if err := p.finalizeOutputs(cfg, selection, candidates, lockInputs, lock); err != nil {
+		return nil, fmt.Errorf("finalizeOutputs: %w", err)
+	}
+	p.warnings = append(p.warnings, "Relative paths and variable placeholders are preserved; no plugin is executed. Stop other writers before applying; multiple file replacements are not process-crash atomic.")
+	return p, nil
+}
+
+func captureMigrationProject(options Options) (*Plan, legacyConfig, error) {
 	tx, err := newTransaction(options.Dir)
 	if err != nil {
-		return nil, fmt.Errorf("newTransaction: %w", err)
+		return nil, legacyConfig{}, fmt.Errorf("newTransaction: %w", err)
 	}
 	p := &Plan{tx: tx}
 	for _, name := range []string{v1.PolicyFile, v1.GenerateFile, v1.ModuleFile, v1.LockFile, "easyp.lock", "easyp.yaml.v0.bak", "protobuf.mod.v0.bak"} {
@@ -159,276 +185,111 @@ func Build(ctx context.Context, options Options) (*Plan, error) {
 			capture = tx.capture
 		}
 		if _, err := capture(name); err != nil {
-			return nil, fmt.Errorf("capture: %w", err)
+			return nil, legacyConfig{}, fmt.Errorf("capture: %w", err)
 		}
 	}
 	policy := tx.expected[v1.PolicyFile]
 	if !policy.exists {
-		return nil, fmt.Errorf("easyp.yaml is missing from %s", options.Dir)
+		return nil, legacyConfig{}, fmt.Errorf("easyp.yaml is missing from %s", options.Dir)
 	}
 	node, err := document(policy.data)
 	if err != nil {
-		return nil, fmt.Errorf("document: %w", err)
+		return nil, legacyConfig{}, fmt.Errorf("document: %w", err)
 	}
 	if nativePolicy(node) {
 		if err := p.checkNative(options.Module); err != nil {
-			return nil, fmt.Errorf("checkNative: %w", err)
+			return nil, legacyConfig{}, fmt.Errorf("checkNative: %w", err)
 		}
 		p.alreadyV1 = true
 		p.warnings = append(p.warnings, "Already v1: no files changed and no dependencies refreshed.")
-		return p, nil
+		return p, legacyConfig{}, nil
 	}
-	cfg, legacyWarnings, err := parseLegacy(policy.data)
+	cfg, warnings, err := parseLegacy(policy.data)
 	if err != nil {
-		return nil, fmt.Errorf("parseLegacy: %w", err)
+		return nil, legacyConfig{}, fmt.Errorf("parseLegacy: %w", err)
 	}
-	p.warnings = append(p.warnings, legacyWarnings...)
-	roots, inputs, err := localRoots(cfg)
+	p.warnings = append(p.warnings, warnings...)
+	return p, cfg, nil
+}
+
+func (p *Plan) selectSources(cfg legacyConfig, module string) (migrationSelections, error) {
+	var err error
+	p.local, err = newLocalSelectionProof(p.tx, cfg, module)
 	if err != nil {
-		return nil, fmt.Errorf("localRoots: %w", err)
+		return migrationSelections{}, fmt.Errorf("newLocalSelectionProof: %w", err)
 	}
-	p.roots, p.inputs = roots, inputs
 	p.tx.beforeApply = p.verifySourceSelection
-	if err := checkManagedLocal(cfg, options.Module, len(inputs) > 0); err != nil {
-		return nil, fmt.Errorf("checkManagedLocal: %w", err)
-	}
-	selection, err := proveLocalSelection(tx.requestedRoot, inputs, roots)
-	if err != nil {
-		return nil, fmt.Errorf("proveLocalSelection: %w", err)
-	}
-	p.sources, p.packages, p.paths = selection.files, selection.packages, selection.paths
-	if len(p.packages) > 0 || len(p.paths) > 0 {
-		if len(p.paths) > 0 {
+	if len(p.local.selection.packages) > 0 || len(p.local.selection.paths) > 0 {
+		if len(p.local.selection.paths) > 0 {
 			p.warnings = append(p.warnings, "Legacy directory selection is preserved through literal paths selectors for the local module. Import roots and source paths stay unchanged; files outside these paths do not become targets even when they declare the same package.")
 		} else {
 			p.warnings = append(p.warnings, "Legacy directory selection is preserved through exact packages selectors for the local module. Import roots and source paths stay unchanged; future files declaring those packages also participate in generation.")
 		}
 	}
-	for _, source := range p.sources {
-		if _, err := tx.captureInput(source); err != nil {
-			return nil, fmt.Errorf("capture: %w", err)
-		}
-	}
 	deps := requirements{}
 	for _, dep := range cfg.Deps {
 		if err := deps.add(dep, false); err != nil {
-			return nil, fmt.Errorf("add: %w", err)
+			return migrationSelections{}, fmt.Errorf("add: %w", err)
 		}
 	}
-	selected, gitSelections, err := planGitSelections(cfg, options.Module, len(inputs) > 0, p.packages, p.paths, &deps)
+	entries, git, err := planGitSelections(cfg, module, len(p.local.inputs) > 0, p.local.selection.packages, p.local.selection.paths, &deps)
 	if err != nil {
-		return nil, fmt.Errorf("planGitSelections: %w", err)
+		return migrationSelections{}, fmt.Errorf("planGitSelections: %w", err)
 	}
-	globalPackages, globalPaths := p.packages, p.paths
-	if len(gitSelections) > 0 {
-		globalPackages, globalPaths = nil, nil
+	packages, paths := p.local.selection.packages, p.local.selection.paths
+	if len(git) > 0 {
+		packages, paths = nil, nil
 	}
-	manifest := tx.expected[v1.ModuleFile]
-	nativeManifest := manifest.exists && v1.IsModuleManifest(manifest.data)
-	var replacements []v1.Replacement
-	if manifest.exists && !nativeManifest {
-		replacements, err = parseManifest(manifest.data, &deps)
-		if err != nil {
-			return nil, fmt.Errorf("parseManifest: %w", err)
-		}
-	}
-	moduleRoots := slices.Clone(roots)
-	if len(moduleRoots) == 0 {
-		moduleRoots = []string{"."}
-	}
-	module := v1.Module{Name: options.Module, Roots: moduleRoots, Requires: deps.items, Replaces: replacements}
-	for _, req := range module.Requires {
-		if req.Module == module.Name {
-			return nil, fmt.Errorf("dependency %s has the new local module identity; reconcile this ambiguity manually", req.Module)
-		}
-	}
-	moduleBytes := formatManifest(module, deps.indirect)
-	if _, err := v1.ParseModule(bytes.NewReader(moduleBytes)); err != nil {
-		return nil, fmt.Errorf("ParseModule: %w", err)
-	}
-	if nativeManifest && !bytes.Equal(manifest.data, moduleBytes) {
-		return nil, fmt.Errorf("existing native protobuf.mod conflicts with the migration candidate; reconcile it manually (it will not be overwritten)")
-	}
-	policyBytes, err := convertPolicy(cfg)
-	if err != nil {
-		return nil, fmt.Errorf("convertPolicy: %w", err)
-	}
-	generateBytes, err := convertGenerate(cfg, selected, globalPackages, globalPaths)
-	if err != nil {
-		return nil, fmt.Errorf("convertGenerate: %w", err)
-	}
-	if err := validatePolicy(policyBytes); err != nil {
-		return nil, fmt.Errorf("validatePolicy: %w", err)
-	}
-	if err := validateGenerate(generateBytes); err != nil {
-		return nil, fmt.Errorf("validateGenerate: %w", err)
-	}
-	// A Git subdirectory may name a producer-renamed installed path. Compare an
-	// existing generator with the final translated candidate after verification.
-	deferGenerator := options.ResolveLock && tx.expected[v1.GenerateFile].exists && slices.ContainsFunc(selected, func(entry v1.GenerateModule) bool {
-		_, git := gitSelections[entry.Module]
-		return git && len(entry.Paths) > 0
-	})
-	if deferGenerator {
-		if err := validateGenerate(tx.expected[v1.GenerateFile].data); err != nil {
-			return nil, fmt.Errorf("validateGenerate: %w", err)
-		}
-	}
-	// Preflight known local candidates before explicitly allowed cache work.
-	if err := p.addOutput(v1.PolicyFile, policyBytes, true); err != nil {
-		return nil, fmt.Errorf("addOutput: %w", err)
-	}
-	if !deferGenerator {
-		if err := p.addOutput(v1.GenerateFile, generateBytes, false); err != nil {
-			return nil, fmt.Errorf("addOutput: %w", err)
-		}
-	}
-	if err := p.addOutput(v1.ModuleFile, moduleBytes, manifest.exists && !nativeManifest); err != nil {
-		return nil, fmt.Errorf("addOutput: %w", err)
-	}
-	oldLock := tx.expected["easyp.lock"]
+	return migrationSelections{entries: entries, git: git, deps: deps, packages: packages, paths: paths}, nil
+}
+
+type migrationLockInputs struct {
+	pins       map[string]legacyPin
+	historical bool
+	needsLock  bool
+}
+
+func (t *transaction) lockPrerequisites(module v1.Module) (migrationLockInputs, error) {
+	oldLock := t.expected["easyp.lock"]
 	pins := make(map[string]legacyPin)
 	if oldLock.exists {
+		var err error
 		pins, err = parseLegacyLock(oldLock.data)
 		if err != nil {
-			return nil, fmt.Errorf("parseLegacyLock: %w", err)
+			return migrationLockInputs{}, fmt.Errorf("parseLegacyLock: %w", err)
 		}
 		for _, req := range module.Requires {
 			if _, exists := pins[req.Module]; !exists {
-				return nil, fmt.Errorf("legacy easyp.lock is missing required dependency %s; recover its historical pin before migration", req.Module)
+				return migrationLockInputs{}, fmt.Errorf("legacy easyp.lock is missing required dependency %s; recover its historical pin before migration", req.Module)
 			}
 		}
-		p.warnings = append(p.warnings, "easyp.lock is retained byte-for-byte as a historical backup; it is never rewritten or removed.")
 	}
-	if nativeLock := tx.expected[v1.LockFile]; nativeLock.exists {
+	if nativeLock := t.expected[v1.LockFile]; nativeLock.exists {
 		if _, err := validateNativeLock(nativeLock.data); err != nil {
-			return nil, fmt.Errorf("validateNativeLock: %w", err)
+			return migrationLockInputs{}, fmt.Errorf("validateNativeLock: %w", err)
 		}
 	}
 	needsLock := len(module.Requires) > 0 || len(pins) > 0 || len(module.Replaces) > 0
-	if needsLock && !options.ResolveLock {
-		p.blocked = "dependency integrity/lock verification is required before writing; preview again with --resolve-lock (this explicitly permits repository/cache access)"
-		p.warnings = append(p.warnings, "protobuf.lock cannot be prepared without --resolve-lock; --write is blocked until every required pin and legacy hash is verified.")
-	} else if needsLock {
-		lock, fetched, err := migrateSelectionLock(ctx, module, pins, oldLock.exists, options.Repository, gitSelections)
-		if err != nil {
-			return nil, fmt.Errorf("migrateSelectionLock: %w", err)
-		}
-		p.git, err = proveGitSelections(gitSelections, fetched, selected, options.Module)
-		if err != nil {
-			return nil, fmt.Errorf("proveGitSelections: %w", err)
-		}
-		p.git.bindings, err = p.proveGitSourceBindings(ctx, true)
-		if err != nil {
-			return nil, fmt.Errorf("proveGitSourceBindings: %w", err)
-		}
-		for _, file := range p.git.bindings {
-			if file.module == options.Module {
-				if _, err := tx.captureInput(file.path); err != nil {
-					return nil, fmt.Errorf("captureInput: %w", err)
-				}
-			}
-		}
-		for index, entry := range p.git.entries {
-			if !slices.Equal(entry.Paths, selected[index].Paths) {
-				p.warnings = append(p.warnings, fmt.Sprintf("Dependency %s: verified legacy sub_directory %v translates to module-relative generate.modules paths %v.", entry.Module, selected[index].Paths, entry.Paths))
-			}
-		}
-		generateBytes, err = convertGenerate(cfg, p.git.entries, globalPackages, globalPaths)
-		if err != nil {
-			return nil, fmt.Errorf("convertGenerate: %w", err)
-		}
-		if err := validateGenerate(generateBytes); err != nil {
-			return nil, fmt.Errorf("validateGenerate: %w", err)
-		}
-		if deferGenerator {
-			if err := p.addOutput(v1.GenerateFile, generateBytes, false); err != nil {
-				return nil, fmt.Errorf("addOutput: %w", err)
-			}
-		} else if err := p.replaceCandidate(v1.GenerateFile, generateBytes); err != nil {
-			return nil, fmt.Errorf("replaceCandidate: %w", err)
-		}
-		content, err := yaml.Marshal(lock)
-		if err != nil {
-			return nil, fmt.Errorf("Marshal: %w", err)
-		}
-		if err := p.addOutput(v1.LockFile, content, false); err != nil {
-			return nil, fmt.Errorf("addOutput: %w", err)
-		}
-	} else if nativeLock := tx.expected[v1.LockFile]; nativeLock.exists {
-		lock, err := validateNativeLock(nativeLock.data)
-		if err != nil {
-			return nil, fmt.Errorf("validateNativeLock: %w", err)
-		}
-		if len(lock.Modules) != 0 {
-			return nil, fmt.Errorf("existing native protobuf.lock contains dependencies absent from the migration candidate; it will not be overwritten")
-		}
-	}
-	if !needsLock && !tx.expected[v1.LockFile].exists {
-		content, err := yaml.Marshal(v1.Lock{Version: 1, Modules: []v1.LockedModule{}})
-		if err != nil {
-			return nil, fmt.Errorf("Marshal: %w", err)
-		}
-		if err := p.addOutput(v1.LockFile, content, false); err != nil {
-			return nil, fmt.Errorf("addOutput: %w", err)
-		}
-	}
-	p.warnings = append(p.warnings, "Relative paths and variable placeholders are preserved; no plugin is executed. Stop other writers before applying; multiple file replacements are not process-crash atomic.")
-	return p, nil
+	return migrationLockInputs{pins: pins, historical: oldLock.exists, needsLock: needsLock}, nil
 }
 
-func (p *Plan) replaceCandidate(name string, content []byte) error {
-	current := p.tx.expected[name]
-	if current.exists && !bytes.Equal(current.data, content) {
-		return fmt.Errorf("existing %s conflicts with the verified migration candidate; it will not be overwritten", name)
-	}
-	for index := range p.outputs {
-		if p.outputs[index].Name == name {
-			p.outputs[index].Content = bytes.Clone(content)
-		}
-	}
-	for index := range p.tx.changes {
-		if p.tx.changes[index].name == name {
-			p.tx.changes[index].content = bytes.Clone(content)
-		}
-	}
-	return nil
-}
-
-func (p *Plan) addOutput(name string, content []byte, replaceLegacy bool) error {
-	current, err := p.tx.capture(name)
+func (p *Plan) proveGitSources(ctx context.Context, selection migrationSelections, fetched map[string]modules.Fetched) error {
+	proof, err := proveGitSelections(selection.git, fetched, selection.entries)
 	if err != nil {
-		return fmt.Errorf("capture: %w", err)
+		return fmt.Errorf("proveGitSelections: %w", err)
 	}
-	if len(current.links) > 0 && !replaceLegacy && !bytes.Equal(current.data, content) {
-		return fmt.Errorf("destination %q must be a regular file", name)
+	proof.bindings, err = proveGitSourceBindings(ctx, p.tx.requestedRoot, p.local, proof, true)
+	if err != nil {
+		return fmt.Errorf("proveGitSourceBindings: %w", err)
 	}
-	mode := os.FileMode(0o644)
-	if current.exists {
-		mode = current.mode
-	}
-	unchanged := current.exists && bytes.Equal(current.data, content)
-	if current.exists && !unchanged && !replaceLegacy {
-		return fmt.Errorf("existing %s conflicts with the migration candidate; it will not be overwritten", name)
-	}
-	if replaceLegacy && !unchanged {
-		if err := p.addOutput(name+".v0.bak", current.data, false); err != nil {
-			return fmt.Errorf("addOutput: %w", err)
-		}
-		backup := &p.outputs[len(p.outputs)-1]
-		// A pre-existing backup must match both bytes and permissions exactly.
-		if backup.Unchanged && backup.Mode != mode {
-			return fmt.Errorf("existing %s.v0.bak has different permissions; it will not be overwritten", name)
-		}
-		backup.Mode = mode
-		if !backup.Unchanged {
-			p.tx.changes[len(p.tx.changes)-1].mode = mode
+	for _, file := range proof.bindings {
+		if file.module == p.local.module {
+			if _, err := p.tx.captureInput(file.path); err != nil {
+				return fmt.Errorf("captureInput: %w", err)
+			}
 		}
 	}
-	p.outputs = append(p.outputs, Output{Name: name, Content: bytes.Clone(content), Mode: mode, Unchanged: unchanged})
-	if !unchanged {
-		p.tx.changes = append(p.tx.changes, fileChange{name: name, content: bytes.Clone(content), mode: mode})
-	}
+	p.git = proof
 	return nil
 }
 

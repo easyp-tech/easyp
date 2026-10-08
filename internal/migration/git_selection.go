@@ -19,6 +19,13 @@ type RootsRepository interface {
 	FetchMigrationWithRoots(context.Context, string, string, string, []string) (modules.Fetched, error)
 }
 
+type migrationSelections struct {
+	entries         []v1.GenerateModule
+	git             map[string]gitModuleSelection
+	deps            requirements
+	packages, paths []string
+}
+
 type gitModuleSelection struct {
 	name, root string
 	subdirs    []string
@@ -116,14 +123,21 @@ type gitSelectionProof struct {
 	selections map[string]gitModuleSelection
 	fetched    map[string]modules.Fetched
 	entries    []v1.GenerateModule
-	localName  string
 	bindings   map[string]migrationProtoSource
 }
 
-func proveGitSelections(selections map[string]gitModuleSelection, fetched map[string]modules.Fetched, entries []v1.GenerateModule, local string) (*gitSelectionProof, error) {
-	proof := &gitSelectionProof{selections: selections, fetched: cloneMigrationFetched(fetched), entries: slices.Clone(entries), localName: local}
+func proveGitSelections(selections map[string]gitModuleSelection, fetched map[string]modules.Fetched, entries []v1.GenerateModule) (*gitSelectionProof, error) {
+	proof := &gitSelectionProof{selections: maps.Clone(selections), fetched: cloneMigrationFetched(fetched), entries: slices.Clone(entries)}
+	for name, selection := range proof.selections {
+		selection.subdirs = slices.Clone(selection.subdirs)
+		proof.selections[name] = selection
+	}
+	for index := range proof.entries {
+		proof.entries[index].Packages = slices.Clone(proof.entries[index].Packages)
+		proof.entries[index].Paths = slices.Clone(proof.entries[index].Paths)
+	}
 	for index, entry := range proof.entries {
-		selection, ok := selections[entry.Module]
+		selection, ok := proof.selections[entry.Module]
 		if !ok {
 			continue
 		}
@@ -169,7 +183,17 @@ func cloneMigrationFetched(fetched map[string]modules.Fetched) map[string]module
 	result := maps.Clone(fetched)
 	for name, dependency := range result {
 		dependency.Module.Roots = slices.Clone(dependency.Module.Roots)
+		dependency.Module.Requires = slices.Clone(dependency.Module.Requires)
+		dependency.Module.Replaces = slices.Clone(dependency.Module.Replaces)
+		dependency.Module.BSRDependencies = slices.Clone(dependency.Module.BSRDependencies)
+		dependency.Module.ProtoFilters = slices.Clone(dependency.Module.ProtoFilters)
+		for index, filter := range dependency.Module.ProtoFilters {
+			filter.Includes = slices.Clone(filter.Includes)
+			filter.Excludes = slices.Clone(filter.Excludes)
+			dependency.Module.ProtoFilters[index] = filter
+		}
 		dependency.Lock.Roots = slices.Clone(dependency.Lock.Roots)
+		dependency.Lock.BSR = slices.Clone(dependency.Lock.BSR)
 		if dependency.Inspection != nil {
 			inspection := *dependency.Inspection
 			inspection.Files = slices.Clone(inspection.Files)

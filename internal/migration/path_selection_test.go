@@ -30,7 +30,7 @@ func TestMigrationPathsPreserveGradleCopies(t *testing.T) {
 	writeFixture(t, root, "other.proto", "package other.v1; message {\n")
 	plan, err := Build(t.Context(), Options{Dir: root, Module: "example.com/sdk"})
 	require.NoError(t, err)
-	assert.Equal(t, map[string]string{"mcp/options/v1/options.proto": "mcp/options/v1/options.proto"}, plan.sources)
+	assert.Equal(t, map[string]string{"mcp/options/v1/options.proto": "mcp/options/v1/options.proto"}, plan.local.selection.files)
 	var output struct {
 		Generate struct {
 			Paths    []string
@@ -54,7 +54,7 @@ func TestMigrationPathsStayFixedWhenOutsideCopyAppears(t *testing.T) {
 	writeFixture(t, root, "mcp/options.proto", "package mcp.options.v1;")
 	plan, err := Build(t.Context(), Options{Dir: root, Module: "example.com/sdk"})
 	require.NoError(t, err)
-	require.Equal(t, []string{"mcp"}, plan.paths, "a clean tree must retain literal input scope for future builds")
+	require.Equal(t, []string{"mcp"}, plan.local.selection.paths, "a clean tree must retain literal input scope for future builds")
 	writeFixture(t, root, "build/copied.proto", "package mcp.options.v1;")
 	require.NoError(t, plan.CheckUnchanged())
 	require.NoError(t, plan.Apply())
@@ -75,8 +75,8 @@ func TestMigrationPathsPreservePartialOrUndeclaredPackages(t *testing.T) {
 			writeFixture(t, root, "other.proto", "package shared.v1; message Other {}")
 			plan, err := Build(t.Context(), Options{Dir: root, Module: "example.test/api"})
 			require.NoError(t, err)
-			assert.Equal(t, []string{"selected"}, plan.paths)
-			assert.Equal(t, map[string]string{"selected/a.proto": "selected/a.proto"}, plan.sources)
+			assert.Equal(t, []string{"selected"}, plan.local.selection.paths)
+			assert.Equal(t, map[string]string{"selected/a.proto": "selected/a.proto"}, plan.local.selection.files)
 			require.NoError(t, plan.Apply())
 			assert.Equal(t, tt.content, string(mustRead(t, root, "selected/a.proto")))
 		})
@@ -92,8 +92,8 @@ func TestMigrationPathsPreserveMixedRootSelection(t *testing.T) {
 	writeFixture(t, root, "b/outside/other.proto", "package other.v1;")
 	plan, err := Build(t.Context(), Options{Dir: root, Module: "example.test/api"})
 	require.NoError(t, err)
-	assert.Equal(t, []string{"a", "b/selected"}, plan.paths)
-	assert.Empty(t, plan.packages, "module-relative paths retain each root's directory selection")
-	assert.Equal(t, map[string]string{"first.proto": "a/first.proto", "selected/second.proto": "b/selected/second.proto"}, plan.sources)
+	assert.Equal(t, []string{"a", "b/selected"}, plan.local.selection.paths)
+	assert.Empty(t, plan.local.selection.packages, "module-relative paths retain each root's directory selection")
+	assert.Equal(t, map[string]string{"first.proto": "a/first.proto", "selected/second.proto": "b/selected/second.proto"}, plan.local.selection.files)
 	require.NoError(t, plan.Apply())
 }

@@ -31,6 +31,29 @@ The contracts reflect actual consumers:
 - <code>Repository</code>: source plus cache for <code>Get</code> and <code>Tidy</code>.
 - <code>VersionedRepository</code>: also list versions for <code>Update</code>.
 
+Root resolution keeps provisional metadata and checked revision evidence
+separate. The internal root source coordinates fetches and finalizes the exact
+MVS-selected commit and roots. Graph orchestration applies namespace adoption
+guards for get/update and effective overlays before exposing its result.
+`graphResolveResult` owns the selected lock and verified source observations;
+its accessors return independent copies of mutable roots, filters, maps and
+source bytes. Tidy's import planner consumes this result and previous pins,
+without accessing the resolver's working maps.
+
+`TidyWithReport` keeps input capture, resolution, repair planning, compilation
+and commit in execution order. `tidyInputs` owns consumer metadata, source
+selection and cache-boundary checkpoints. Its early capture is available only
+when the repository exposes complete cache ownership; generic repositories
+capture after their newly resolved directories are known. Previous-pin fetches
+add their boundaries before the final selection checks.
+
+The proposed source view reads through `resolvedFileObservations`, which owns
+bounded file/metadata/absence observations and read-only dependency scopes.
+Returned observations have independent byte buffers. The writer owns staged
+changes, checks observations around cache verification and after staging, then
+commits or rolls back. Compile-time reads and old namespace proofs remain
+available for the final input recheck.
+
 <code>Download</code> and <code>Vendor</code> need only <code>Cache</code>. The Git adapter implements these contracts. Unit tests use explicit fake answers/errors without Git; adapter and integration tests retain local repository fixtures.
 
 Git dependencies can carry BSR requests from Buf configs and locks. The Git adapter passes them to <code>modules.BSRResolver</code>, records their pinned Git targets and provenance on the parent lock entry, and exposes ordinary requirements to the graph. The current explicit compatibility snapshots are selected in <code>api.moduleCache</code>, shared by module commands and migration; a Service backend replaces that injected implementation. Cached/frozen reads replay recorded bindings without consulting the backend. See [BSR resolution and limitations](config/dependency.md#bsr-compatibility-snapshots).
@@ -104,6 +127,27 @@ Lint/breaking CLI adapters select producer policy and prepare shared module impo
 <code>internal/api/migrate.go</code> selects flag-only preview or the terminal wizard in <code>internal/api/migrate_interactive.go</code>. The wizard asks for directory and module identity, displays a preview, obtains separate consent for dependency/cache access when needed, then confirms applying the displayed plan. <code>--module</code> selects a noninteractive preview unless interactive mode is explicitly requested.
 
 <code>migration.Build</code> owns legacy conversion into policy, generator, manifest and lock candidates. Dependency verification uses an explicitly supplied migration repository and is gated by <code>ResolveLock</code>; conversion never executes plugins. <code>Plan.Apply</code> rechecks observed state, stages files and byte-identical backups, and rolls back ordinary write failures. Legacy <code>easyp.lock</code> stays unchanged; native output conflicts require manual reconciliation. This is not a crash-atomic multi-file transaction.
+
+Migration planning keeps its phases explicit: project capture and parsing,
+local/Git selections, known-candidate preflight, authorized historical
+dependency resolution, source-binding proof, then final outputs. A
+`localSelectionProof` owns the local identity, literal inputs, roots and proved
+inventory/selectors; its recheck detects selection changes. The Git proof owns
+its pinned observations independently. Namespace observation and binding
+compilation have separate owners, preserving legacy root precedence and the
+complete native namespace collision check.
+
+The migration transaction coordinates candidate previews and staged writes
+through one proposal operation. Backups retain their observed bytes and mode;
+updating a generator candidate cannot leave its preview and staged write out of
+sync. Source selection is checked again after staging and before replacement.
+
+The Git migration adapter converts validated public roots once into a private
+request with an explicit proof intent: complete namespace, consumer selection
+retaining producer/intrinsic roots, or consumer selection with checked roots.
+Intent remains separate from inferred roots and native metadata, so a later
+root update cannot change the archive proof policy. Public nil/empty-root
+semantics and historical hash verification order remain unchanged.
 
 ## Verification boundaries
 

@@ -68,9 +68,8 @@ func TestResolvedTransactionRechecksInputsAfterVerificationRepairsThem(t *testin
 	root, tx := resolvedTransactionFixture(t)
 	dependency := t.TempDir()
 	require.NoError(t, os.WriteFile(filepath.Join(dependency, v1.ModuleFile), []byte("changed before first capture"), 0o600))
-	input, err := newResolvedFilesTransaction(dependency)
+	input, err := tx.observeDirectory(dependency)
 	require.NoError(t, err)
-	tx.inputs = append(tx.inputs, input)
 	_, err = input.capture(v1.ModuleFile, nil)
 	require.NoError(t, err)
 	checks := 0

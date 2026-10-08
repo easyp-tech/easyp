@@ -92,16 +92,16 @@ func excludeTidyCacheSources(roots SourceRoots, boundaries []tidyCacheBoundary) 
 	return roots
 }
 
-func checkTidyCacheOwnership(tx *resolvedFilesTransaction, boundaries []tidyCacheBoundary) error {
+func checkTidyCacheOwnership(tx *resolvedFileObservations, boundaries []tidyCacheBoundary) error {
 	if tidyCacheContains(tx.requestedRoot, boundaries) || tidyCacheContains(tx.canonicalRoot, boundaries) {
 		return fmt.Errorf("consumer module %q is inside repository-owned cache storage; run easyp mod tidy from the consumer module outside the cache", tx.requestedRoot)
 	}
 	for _, name := range []string{v1.ModuleFile, v1.LockFile} {
-		state, captured := tx.expected[name]
+		target, captured := tx.capturedTarget(name)
 		if !captured {
 			continue
 		}
-		if tidyCacheContains(filepath.Join(tx.canonicalRoot, filepath.FromSlash(state.resolution.Path)), boundaries) {
+		if tidyCacheContains(filepath.Join(tx.canonicalRoot, filepath.FromSlash(target)), boundaries) {
 			return fmt.Errorf("consumer metadata %q resolves into repository-owned cache storage; restore its owning module path before running easyp mod tidy", name)
 		}
 	}
