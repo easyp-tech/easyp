@@ -9,6 +9,36 @@ import (
 	v1 "github.com/easyp-tech/easyp/internal/config/v1"
 )
 
+type namespaceTransitionPolicy int
+
+const (
+	_ namespaceTransitionPolicy = iota
+	namespaceTransitionsChecked
+	namespaceTransitionsTidyRepairs
+)
+
+type rootNamespaceTransition struct {
+	fetched    Fetched
+	inspection *RootInspection
+}
+
+func (source *importRootSource) validateRootTransitions(ctx context.Context) error {
+	if len(source.transitions) == 0 {
+		return nil
+	}
+	selector, supported := source.Source.(rootSelectionSource)
+	if !supported {
+		return fmt.Errorf("repository cannot verify import namespace transitions")
+	}
+	for _, transition := range source.transitions {
+		err := source.validateRootTransition(ctx, transition.fetched, transition.inspection, selector)
+		if err != nil {
+			return fmt.Errorf("validateRootTransition: %w", err)
+		}
+	}
+	return nil
+}
+
 func (source *importRootSource) validateRootTransition(ctx context.Context, fetched Fetched, inspection *RootInspection, selector rootSelectionSource) error {
 	old, exists := source.locked[fetched.Lock.Source]
 	if !exists || !fetched.Module.RootsFromMetadata || strings.EqualFold(old.Commit, fetched.Lock.Commit) || len(source.hints[old.Source]) > 0 {
@@ -74,6 +104,7 @@ func fetchLockedRootScope(ctx context.Context, selector rootSelectionSource, ent
 	if err != nil {
 		return Fetched{}, fmt.Errorf("FetchWithRoots: %w", err)
 	}
+	fetched = cloneRootFetched(fetched)
 	if fetched.Module.Name != entry.Source || fetched.Lock.Source != entry.Source || !strings.EqualFold(fetched.Lock.Commit, entry.Commit) || fetched.Lock.Hash != entry.Hash {
 		return Fetched{}, fmt.Errorf("%w: %s@%s: previous root scope differs from locked commit %s hash %s", ErrLockedVersionChanged, entry.Source, entry.Version, entry.Commit, entry.Hash)
 	}

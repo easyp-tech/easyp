@@ -20,10 +20,15 @@ func resolveV1Lock(ctx context.Context, root string, module v1.Module, existing 
 }
 
 func resolveV1LockWithRoots(ctx context.Context, root string, module v1.Module, existing v1.Lock, repository Repository, preserveHeads bool, hints map[string][]string) (v1.Lock, error) {
-	lock, _, err := resolveV1Graph(ctx, module, existing, repository, preserveHeads, hints, false)
+	resolved, err := resolveV1Graph(ctx, module, existing, repository, graphResolveRequest{
+		preserveHeads: preserveHeads,
+		hints:         hints,
+		transitions:   namespaceTransitionsChecked,
+	})
 	if err != nil {
 		return v1.Lock{}, fmt.Errorf("resolveV1Graph: %w", err)
 	}
+	lock := resolved.lockFile()
 	if err := repository.Install(ctx, lock); err != nil {
 		return v1.Lock{}, fmt.Errorf("module %s: %w", module.Name, err)
 	}
@@ -48,24 +53,45 @@ func resolveV1LockWithRoots(ctx context.Context, root string, module v1.Module, 
 	return lock, nil
 }
 
-func resolveV1Graph(ctx context.Context, module v1.Module, existing v1.Lock, repository Repository, preserveHeads bool, hints map[string][]string, tidy bool) (v1.Lock, *importRootSource, error) {
+type graphResolveRequest struct {
+	preserveHeads bool
+	hints         map[string][]string
+	transitions   namespaceTransitionPolicy
+}
+
+func resolveV1Graph(ctx context.Context, module v1.Module, existing v1.Lock, repository Repository, request graphResolveRequest) (graphResolveResult, error) {
+	switch request.transitions {
+	case namespaceTransitionsChecked, namespaceTransitionsTidyRepairs:
+	default:
+		return graphResolveResult{}, fmt.Errorf("namespace transition policy is required")
+	}
 	pins := make(map[string]v1.LockedModule, len(existing.Modules))
 	for _, entry := range existing.Modules {
-		pins[entry.Source] = entry
+		pins[entry.Source] = cloneRootPin(entry)
 	}
-	source := &importRootSource{Source: repository, locked: pins, hints: hints, tidy: tidy}
-	if !preserveHeads {
+	source := newImportRootSource(repository, existing, request.hints)
+	if !request.preserveHeads {
 		pins = nil
 	}
 	lock, err := Resolve(ctx, module, source, pins)
 	if err != nil {
-		return v1.Lock{}, nil, fmt.Errorf("Resolve: %w", err)
+		return graphResolveResult{}, fmt.Errorf("Resolve: %w", err)
 	}
 	lock, err = source.finalize(ctx, lock)
 	if err != nil {
-		return v1.Lock{}, nil, fmt.Errorf("finalize: %w", err)
+		return graphResolveResult{}, fmt.Errorf("finalize: %w", err)
 	}
-	return lock, source, nil
+	if request.transitions == namespaceTransitionsChecked {
+		err = source.validateRootTransitions(ctx)
+		if err != nil {
+			return graphResolveResult{}, fmt.Errorf("validateRootTransitions: %w", err)
+		}
+	}
+	result, err := source.checkedResult(lock)
+	if err != nil {
+		return graphResolveResult{}, fmt.Errorf("checkedResult: %w", err)
+	}
+	return result, nil
 }
 
 // Download installs published pins, or needed unreplaced snapshots in local

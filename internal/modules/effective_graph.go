@@ -50,7 +50,7 @@ func ensureEffectiveGraphWithRoots(ctx context.Context, root string, module v1.M
 	locals.hints = hints
 	remote := &effectiveRemoteSource{cache: cache, pins: pins, refresh: refresh, historical: localPath != nil, modules: make(map[[4]string]cachedEffectiveModule)}
 	source, _ := cache.(Source)
-	remote.roots = &importRootSource{Source: source, locked: pins, hints: hints}
+	remote.roots = newImportRootSource(source, existing, hints)
 	loader := revisionLoader{source: remote, fetched: make(map[string]Fetched), pins: pins, local: locals.lookupRequirement}
 	if refresh {
 		loader.pins = nil
