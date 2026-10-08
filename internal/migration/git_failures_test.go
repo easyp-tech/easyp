@@ -156,3 +156,58 @@ func TestMigrationProducerFilteredImportCannotFallThroughToAnotherDependency(t *
 	assert.Equal(t, oldLock, string(mustRead(t, project, "easyp.lock")))
 	assert.NoFileExists(t, filepath.Join(project, "easyp.yaml.v0.bak"))
 }
+
+func TestMigrationUnusedLocalGitCollisionFailsBeforeWrites(t *testing.T) {
+	t.Parallel()
+	files := map[string]string{
+		"api/service/a.proto": "syntax = \"proto3\"; package service.v1; message A {}\n",
+		"api/other/b.proto":   "syntax = \"proto3\"; package other.v1; message B { string remote = 1; }\n",
+	}
+	repository, commit := gitSelectionRepository(t, files)
+	project := t.TempDir()
+	legacy := "generate:\n  inputs: [{directory: selected}, {git_repo: {url: '" + repository + "', root: api, sub_directory: api/service}}]\n"
+	writeFixture(t, project, v1.PolicyFile, legacy)
+	writeFixture(t, project, "selected/main.proto", "syntax = \"proto3\"; package selected.v1; message Main {}\n")
+	writeFixture(t, project, "other/b.proto", "syntax = \"proto3\"; package other.v1; message B { int32 local = 1; }\n")
+	writeFixture(t, project, "easyp.lock", repository+" "+commit+" "+gitSelectionHash(t, files)+"\n")
+	inputNames := []string{v1.PolicyFile, "easyp.lock", "selected/main.proto", "other/b.proto"}
+	before := make(map[string][]byte)
+	for _, name := range inputNames {
+		require.NoError(t, os.Chmod(filepath.Join(project, name), 0o640))
+		before[name] = mustRead(t, project, name)
+	}
+	plan, err := Build(t.Context(), Options{Dir: project, Module: "example.test/consumer", ResolveLock: true, Repository: gitmodules.New(t.TempDir())})
+	require.ErrorContains(t, err, "duplicate import path")
+	assert.ErrorContains(t, err, "other/b.proto")
+	assert.Nil(t, plan)
+	for _, name := range inputNames {
+		assert.Equal(t, before[name], mustRead(t, project, name))
+		info, err := os.Stat(filepath.Join(project, name))
+		require.NoError(t, err)
+		assert.Equal(t, os.FileMode(0o640), info.Mode().Perm())
+	}
+	for _, name := range []string{v1.ModuleFile, v1.LockFile, v1.GenerateFile, "easyp.yaml.v0.bak"} {
+		assert.NoFileExists(t, filepath.Join(project, name))
+	}
+}
+
+func TestMigrationUnusedLocalGitCollisionAddedAfterPreviewBlocksApply(t *testing.T) {
+	t.Parallel()
+	files := map[string]string{
+		"api/service/a.proto": "syntax = \"proto3\"; package service.v1; message A {}\n",
+		"api/other/b.proto":   "syntax = \"proto3\"; package other.v1; message B {}\n",
+	}
+	repository, commit := gitSelectionRepository(t, files)
+	project := t.TempDir()
+	legacy := "generate:\n  inputs: [{directory: selected}, {git_repo: {url: '" + repository + "', root: api, sub_directory: api/service}}]\n"
+	writeFixture(t, project, v1.PolicyFile, legacy)
+	writeFixture(t, project, "selected/main.proto", "syntax = \"proto3\"; package selected.v1; message Main {}\n")
+	writeFixture(t, project, "easyp.lock", repository+" "+commit+" "+gitSelectionHash(t, files)+"\n")
+	plan, err := Build(t.Context(), Options{Dir: project, Module: "example.test/consumer", ResolveLock: true, Repository: gitmodules.New(t.TempDir())})
+	require.NoError(t, err)
+	writeFixture(t, project, "other/b.proto", "syntax = \"proto3\"; package other.v1; message B {}\n")
+	require.ErrorContains(t, plan.CheckUnchanged(), "duplicate import path")
+	require.ErrorContains(t, plan.Apply(), "duplicate import path")
+	assert.Equal(t, legacy, string(mustRead(t, project, v1.PolicyFile)))
+	assert.NoFileExists(t, filepath.Join(project, "easyp.yaml.v0.bak"))
+}

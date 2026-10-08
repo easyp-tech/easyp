@@ -29,6 +29,22 @@ type migrationImportNamespace struct {
 	dependencies []map[string]migrationProtoSource
 }
 
+// Native generation rejects duplicate names in all available source roots,
+// including files outside its target selectors and reachable import closure.
+func (n migrationImportNamespace) checkSourceCollisions() error {
+	seen := make(map[string]migrationProtoSource)
+	for _, namespace := range slices.Concat(n.primary, n.dependencies) {
+		for _, name := range slices.Sorted(maps.Keys(namespace)) {
+			file := namespace[name]
+			if previous, exists := seen[name]; exists && (previous.module != file.module || previous.path != file.path) {
+				return fmt.Errorf("duplicate import path %q: %s:%s and %s:%s", name, previous.module, previous.path, file.module, file.path)
+			}
+			seen[name] = file
+		}
+	}
+	return nil
+}
+
 func (n migrationImportNamespace) resolve(name string) (migrationProtoSource, error) {
 	if !modules.ValidProtoImportPath(name) {
 		return migrationProtoSource{}, fmt.Errorf("invalid protobuf filename %q", name)
@@ -149,6 +165,9 @@ func (p *Plan) proveGitSourceBindings(ctx context.Context, compile bool) (map[st
 			if name != entry.Module {
 				current.dependencies = append(current.dependencies, currentDependencies[name])
 			}
+		}
+		if err := current.checkSourceCollisions(); err != nil {
+			return nil, fmt.Errorf("checkSourceCollisions: generation module %s: %w", entry.Module, err)
 		}
 		slices.Sort(targets)
 		targets = slices.Compact(targets)
