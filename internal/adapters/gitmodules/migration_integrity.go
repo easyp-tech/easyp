@@ -16,8 +16,8 @@ import (
 
 // A historical lock can describe a whole installed tree or released v0's proto
 // archive. Each proof must match independently at the same pinned checkout.
-func verifyMigrationLegacyHash(ctx context.Context, checkout v1ModuleCheckout, source, expectedHash string, tracked migrationFiles) error {
-	if expectedHash == "" {
+func verifyMigrationLegacyHash(ctx context.Context, checkout v1ModuleCheckout, tracked migrationFiles, request migrationRequest) error {
+	if request.legacyHash == "" {
 		return validateMigrationInitialSelection(ctx, checkout, tracked)
 	}
 	var treeHash string
@@ -29,7 +29,7 @@ func verifyMigrationLegacyHash(ctx context.Context, checkout v1ModuleCheckout, s
 		if treeErr != nil {
 			treeErr = fmt.Errorf("hashMigrationLegacyFiles: %w", treeErr)
 		}
-		if treeErr == nil && treeHash == expectedHash {
+		if treeErr == nil && treeHash == request.legacyHash {
 			return validateMigrationSelection(checkout.snapshot, tracked.regularFiles, checkout.module)
 		}
 	}
@@ -58,7 +58,7 @@ func verifyMigrationLegacyHash(ctx context.Context, checkout v1ModuleCheckout, s
 	if err != nil {
 		return errors.Join(treeErr, fmt.Errorf("migrationArchiveHashes: %w", err))
 	}
-	if slices.Contains(hashes, expectedHash) {
+	if slices.Contains(hashes, request.legacyHash) {
 		return nil
 	}
 
@@ -66,7 +66,7 @@ func verifyMigrationLegacyHash(ctx context.Context, checkout v1ModuleCheckout, s
 	if !tracked.hasSymlinks {
 		candidates += " or whole-tree " + treeHash
 	}
-	mismatch := fmt.Errorf("legacy hash mismatch for %s at %s: got %s, want %s", source, checkout.commit, candidates, expectedHash)
+	mismatch := fmt.Errorf("legacy hash mismatch for %s at %s: got %s, want %s", request.source, checkout.commit, candidates, request.legacyHash)
 	return errors.Join(treeErr, mismatch)
 }
 
