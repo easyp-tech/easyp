@@ -95,7 +95,7 @@ Do not replace filesystem/root proof with a general callback or storage abstract
 - [x] Build fresh CLI/MCP into owned temporary evidence resources. Run GOTOOLCHAIN=go1.26.6 with EASYP_BIN/EASYP_MCP_BIN/EASYP_SOURCE against the complete easyp-test standard v1 suite, -mod=readonly -race -tags=v1 -count=1 -timeout=15m. Expected: PASS, including Go SDK compilation, source edits/modes, migration, cold/frozen and breaking imported-contract controls.
 - [x] Run affected opt-in live/Python checks when supported; retain exact evidence and explicitly state unavailable reported-plugin coverage.
 - [x] Independent final integration/code review; fix/re-review. Record actual commands, revisions and outcomes.
-- [ ] Inspect original checkout/feature branch preservation and clean owned status. Commit, push the authorized refactor branch, create/attach a reviewable PR. If #236 is still open, use its feature branch as the stacked PR base; if merged, base main and incorporate it without force-pushing unrelated branches. No merge or tag.
+- [x] Inspect original checkout/feature branch preservation and clean owned status. Commit, push the authorized refactor branch, create/attach a reviewable PR. If #236 is still open, use its feature branch as the stacked PR base; if merged, base main and incorporate it without force-pushing unrelated branches. No merge or tag.
 
 ## Workflow and testing discipline
 
@@ -125,4 +125,4 @@ Runtime source: 265fb529eae7d7d1f76bd3672b53ca9a42b813bc; subsequent changes are
 - Full vet, pinned golangci-lint2.14.0 (zero issues), schema/dev-tool/native-proto checks passed. Go dependencies, version, public contracts and generated schemas have no diff.
 - Independent final integration/code review approved the complete runtime/doc change with no Must Fix, Should Fix or Nice to Have findings.
 - Structural audit: tidy resolver type dependencies3->0; resolver map reads3->0; module transaction storage accesses outside owner6->0; migration Plan staged-change accesses5->0. These are direct access counts, not general complexity scores.
-- The feature checkout remains clean at898bb664; this refactor is isolated on codex/readability-cohesion-20261008. Publication is the last pending step; no merge/tag is authorized.
+- The feature checkout remains clean at898bb664; this refactor is isolated on codex/readability-cohesion-20261008. Publication completed: [refactor PR #237](https://github.com/easyp-tech/easyp/pull/237) is pushed and attached, stacked on the open external-roots feature branch (#236). No merge or tag was performed.
