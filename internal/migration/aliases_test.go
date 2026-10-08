@@ -127,7 +127,7 @@ func TestBuildAbsoluteInternalSourceAlias(t *testing.T) {
 	plan, err := Build(context.Background(), Options{Dir: root, Module: "example.com/api"})
 	require.NoError(t, err)
 	require.NoError(t, plan.Apply())
-	require.Equal(t, map[string]string{"model.proto": "proto/model.proto"}, plan.sources)
+	require.Equal(t, map[string]string{"model.proto": "proto/model.proto"}, plan.local.selection.files)
 }
 
 func TestTransactionRejectsOutputOverlappingLinkedInputHop(t *testing.T) {
