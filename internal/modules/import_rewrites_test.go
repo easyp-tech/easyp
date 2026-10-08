@@ -18,10 +18,13 @@ func TestTidyBindingsRejectUnpinnedSourceIdentities(t *testing.T) {
 	next := Fetched{Module: v1.Module{Name: name, Roots: []string{"api"}, RootsFromMetadata: true}, Lock: entry, Inspection: &RootInspection{Files: []RootProtoFile{{Path: "api/v1/svc.proto", Identity: "unverified-same-source"}}}}
 	source := &importRootSource{Source: provisionalRootTestSource{},
 		verifiedScopes: map[string]Fetched{name: previous},
-		fetched:        map[[2]string]Fetched{{name, entry.Commit}: next},
+		fetched:        map[rootRevisionKey]Fetched{rootRevision(name, entry.Commit): next},
 	}
+	resolved, err := source.checkedResult(v1.Lock{Version: 1, Modules: []v1.LockedModule{entry}})
+	require.NoError(t, err)
+	planner := newTidyImportPlanner(resolved, v1.Lock{Version: 1, Modules: []v1.LockedModule{old}}, source.Source)
 
-	bindings, err := source.tidyImportBindings(t.Context(), v1.Lock{Version: 1, Modules: []v1.LockedModule{old}}, v1.Lock{Version: 1, Modules: []v1.LockedModule{entry}}, map[string]v1UnresolvedImport{"svc.proto": {owner: "consumer.proto", path: "svc.proto"}}, nil)
+	bindings, err := planner.tidyImportBindings(t.Context(), map[string]v1UnresolvedImport{"svc.proto": {owner: "consumer.proto", path: "svc.proto"}}, nil)
 
 	require.ErrorContains(t, err, "pinned source identity")
 	assert.Empty(t, bindings)

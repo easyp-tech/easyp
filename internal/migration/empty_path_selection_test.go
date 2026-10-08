@@ -41,8 +41,8 @@ func TestMigrationPathsRequireEveryInputToMatch(t *testing.T) {
 			}
 			require.NoError(t, err)
 			assert.Equal(t, []string{dependency + "@v1.0.0"}, repo.calls)
-			assert.Empty(t, plan.paths, "an empty input cannot become an unmatched runtime selector")
-			assert.Equal(t, []string{"mcp.options.v1"}, plan.packages)
+			assert.Empty(t, plan.local.selection.paths, "an empty input cannot become an unmatched runtime selector")
+			assert.Equal(t, []string{"mcp.options.v1"}, plan.local.selection.packages)
 			require.NoError(t, plan.Apply())
 		})
 	}

@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"slices"
-	"strings"
 
 	v1 "github.com/easyp-tech/easyp/internal/config/v1"
 )
@@ -19,33 +18,33 @@ func finalizeEffectiveImportRoots(ctx context.Context, pass resolutionPass, loca
 		}
 		candidates = append(candidates, candidate)
 	}
-	var dependencies []importRootModule
-	for _, locked := range pass.lock.Modules {
-		fetched := remote.roots.fetched[[2]string{locked.Source, strings.ToLower(locked.Commit)}]
-		candidate := importRootModule{name: locked.Source, roots: fetched.Module.Roots, inspection: fetched.Inspection}
-		candidate.fixed = remote.roots.fixedRootScope(locked, fetched)
-		if fetched.Inspection == nil {
-			// Published pins and repositories without inspections retain
-			// their ordinary verified cache path and fixed namespace.
-			candidate.fixed = true
+	// Published pins and repositories without inspections keep their fixed
+	// namespace through the ordinary verified cache path.
+	dependencies := remote.roots.rootCandidates(pass.lock)
+	candidates = append(candidates, dependencies...)
+	selected := make([][]string, len(dependencies))
+	if slices.ContainsFunc(candidates, func(candidate importRootModule) bool { return !candidate.fixed }) {
+		choices, err := selectImportRoots(ctx, candidates)
+		if err != nil {
+			return v1.Lock{}, fmt.Errorf("selectImportRoots: %w", err)
 		}
-		dependencies = append(dependencies, candidate)
-		candidates = append(candidates, candidate)
+		for offset, name := range pass.locals {
+			if len(choices[offset]) == 0 {
+				continue
+			}
+			entry := locals.modules[name]
+			entry.Module.Roots = slices.Clone(choices[offset])
+			locals.modules[name] = entry
+		}
+		selected = choices[len(pass.locals):]
 	}
-	if !slices.ContainsFunc(candidates, func(candidate importRootModule) bool { return !candidate.fixed }) {
-		return remote.roots.finalizeSelections(ctx, pass.lock, dependencies, make([][]string, len(dependencies)))
-	}
-	selected, err := selectImportRoots(ctx, candidates)
+	lock, err := remote.roots.finalizeSelections(ctx, pass.lock, dependencies, selected)
 	if err != nil {
-		return v1.Lock{}, fmt.Errorf("selectImportRoots: %w", err)
+		return v1.Lock{}, fmt.Errorf("finalizeSelections: %w", err)
 	}
-	for offset, name := range pass.locals {
-		if len(selected[offset]) == 0 {
-			continue
-		}
-		entry := locals.modules[name]
-		entry.Module.Roots = slices.Clone(selected[offset])
-		locals.modules[name] = entry
+	err = remote.roots.validateRootTransitions(ctx)
+	if err != nil {
+		return v1.Lock{}, fmt.Errorf("validateRootTransitions: %w", err)
 	}
-	return remote.roots.finalizeSelections(ctx, pass.lock, dependencies, selected[len(pass.locals):])
+	return lock, nil
 }

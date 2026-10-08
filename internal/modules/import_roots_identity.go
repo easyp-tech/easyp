@@ -64,7 +64,7 @@ func (source *importRootSource) verifyRootFetch(ctx context.Context, fetched Fet
 
 func (source *importRootSource) lockedRootScope(ctx context.Context, selector rootSelectionSource, entry v1.LockedModule) (Fetched, error) {
 	if previous, exists := source.verifiedScopes[entry.Source]; exists {
-		return previous, nil
+		return cloneRootFetched(previous), nil
 	}
 	previous, err := fetchLockedRootScope(ctx, selector, entry, entry.Roots)
 	if err != nil {
@@ -73,6 +73,6 @@ func (source *importRootSource) lockedRootScope(ctx context.Context, selector ro
 	if source.verifiedScopes == nil {
 		source.verifiedScopes = make(map[string]Fetched)
 	}
-	source.verifiedScopes[entry.Source] = previous
+	source.verifiedScopes[entry.Source] = cloneRootFetched(previous)
 	return previous, nil
 }

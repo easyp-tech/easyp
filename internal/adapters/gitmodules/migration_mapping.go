@@ -21,9 +21,14 @@ type migrationLegacyLayout struct {
 	files map[string]string
 }
 
-func proveMigrationLegacyLayout(ctx context.Context, checkout v1ModuleCheckout, source, expectedHash string, tracked migrationFiles, native, selection bool) (migrationLegacyLayout, error) {
-	nativeInitial := native && expectedHash == ""
-	if nativeInitial && !selection {
+func proveMigrationLegacyLayout(ctx context.Context, checkout v1ModuleCheckout, tracked migrationFiles, request migrationRequest) (migrationLegacyLayout, error) {
+	switch request.proof {
+	case migrationWholeNamespaceProof, migrationRetainedRootsProof, migrationExplicitRootsProof:
+	default:
+		return migrationLegacyLayout{}, fmt.Errorf("invalid migration proof intent %d", request.proof)
+	}
+	nativeInitial := request.nativeModule && request.legacyHash == ""
+	if nativeInitial && request.proof == migrationWholeNamespaceProof {
 		layout := migrationLegacyLayout{files: make(map[string]string)}
 		for _, file := range checkout.inspection.Files {
 			layout.files[file.Path] = file.Path
@@ -46,10 +51,10 @@ func proveMigrationLegacyLayout(ctx context.Context, checkout v1ModuleCheckout, 
 	}
 	if !tracked.hasSymlinks && !nativeInitial {
 		treeHash, treeErr = hashMigrationRenamedFiles(tracked.regularFiles, roots, func(name string) (io.ReadCloser, error) { return view.Open(ctx, name) })
-		if treeErr == nil && expectedHash != "" && treeHash == expectedHash {
+		if treeErr == nil && request.legacyHash != "" && treeHash == request.legacyHash {
 			return migrationRegularLayout(tracked.regularFiles, roots), nil
 		}
-		if expectedHash == "" && treeErr != nil {
+		if request.legacyHash == "" && treeErr != nil {
 			return migrationLegacyLayout{}, fmt.Errorf("hashMigrationRenamedFiles: %w", treeErr)
 		}
 	}
@@ -59,7 +64,7 @@ func proveMigrationLegacyLayout(ctx context.Context, checkout v1ModuleCheckout, 
 	}
 	// A consumer selection proves its own targets and reachable imports against
 	// this verified archive. Omitted raw protos may remain outside that scope.
-	if !selection {
+	if request.proof == migrationWholeNamespaceProof {
 		if err := validateMigrationArchiveCoverage(nodes, tracked.regularFiles); err != nil {
 			return migrationLegacyLayout{}, fmt.Errorf("validateMigrationArchiveCoverage: %w", err)
 		}
@@ -83,7 +88,7 @@ func proveMigrationLegacyLayout(ctx context.Context, checkout v1ModuleCheckout, 
 			failures = append(failures, fmt.Errorf("Hash1: %w", err))
 			continue
 		}
-		if expectedHash == "" || hash == expectedHash {
+		if request.legacyHash == "" || hash == request.legacyHash {
 			return layout, nil
 		}
 		if !slices.Contains(hashes, hash) {
@@ -97,7 +102,7 @@ func proveMigrationLegacyLayout(ctx context.Context, checkout v1ModuleCheckout, 
 	if !tracked.hasSymlinks {
 		candidates += " or whole-tree " + treeHash
 	}
-	return migrationLegacyLayout{}, errors.Join(treeErr, fmt.Errorf("legacy hash mismatch for %s at %s: got %s, want %s", source, checkout.commit, candidates, expectedHash))
+	return migrationLegacyLayout{}, errors.Join(treeErr, fmt.Errorf("legacy hash mismatch for %s at %s: got %s, want %s", request.source, checkout.commit, candidates, request.legacyHash))
 }
 
 func validateMigrationArchiveCoverage(nodes []migrationArchiveNode, files []string) error {

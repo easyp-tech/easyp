@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"slices"
 	"strconv"
-	"strings"
 
 	"github.com/bufbuild/protocompile/ast"
 	"github.com/bufbuild/protocompile/parser"
@@ -82,54 +81,4 @@ func rewriteProtoImportLiterals(path string, raw []byte, replacement func(string
 	}
 	output.Write(raw[at:])
 	return output.Bytes(), mappings, nil
-}
-
-func planTidyImportRewrites(tx *resolvedFilesTransaction, files []string, bindings map[string]tidyImportBinding, view *tidySourceView) (TidyResult, error) {
-	var result TidyResult
-	seen := make(map[string]bool)
-	for _, name := range files {
-		before := tx.expected[name]
-		target := before.resolution.Path
-		if seen[target] {
-			continue
-		}
-		seen[target] = true
-		updated, mappings, err := rewriteProtoImportLiterals(name, before.data, func(importPath string) (string, error) {
-			binding, exists := bindings[importPath]
-			if !exists {
-				return importPath, nil
-			}
-			return binding.replacement(name, importPath)
-		})
-		if err != nil {
-			return TidyResult{}, fmt.Errorf("rewriteProtoImportLiterals: %w", err)
-		}
-		if len(mappings) == 0 {
-			continue
-		}
-		err = tx.plan(name, updated, before.resolution.Info.Mode())
-		if err != nil {
-			return TidyResult{}, fmt.Errorf("plan: %w", err)
-		}
-		view.proposed[target] = updated
-		for _, mapping := range mappings {
-			binding := bindings[mapping[0]]
-			result.Imports = append(result.Imports, ImportRewrite{
-				File: target, From: mapping[0], To: mapping[1], Module: binding.before.Lock.Source,
-				OldVersion: binding.before.Lock.Version, Version: binding.after.Lock.Version,
-				OldCommit: binding.before.Lock.Commit, Commit: binding.after.Lock.Commit,
-				OldRoots: slices.Clone(binding.before.Module.Roots), Roots: slices.Clone(binding.after.Module.Roots),
-			})
-		}
-	}
-	slices.SortFunc(result.Imports, func(before, after ImportRewrite) int {
-		if order := strings.Compare(before.File, after.File); order != 0 {
-			return order
-		}
-		if order := strings.Compare(before.From, after.From); order != 0 {
-			return order
-		}
-		return strings.Compare(before.To, after.To)
-	})
-	return result, nil
 }
