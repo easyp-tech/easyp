@@ -8,7 +8,6 @@ import (
 	"io"
 	"os"
 	"path/filepath"
-	"strings"
 	"sync"
 
 	"github.com/bufbuild/protocompile"
@@ -34,10 +33,10 @@ func newTidySourceView(tx *resolvedFilesTransaction, roots SourceRoots) *tidySou
 	return &tidySourceView{tx: tx, roots: roots, proposed: make(map[string][]byte), scopes: make(map[string]*resolvedFilesTransaction), pinned: make(map[string]map[string][]byte)}
 }
 
-func (view *tidySourceView) retainPinnedSources(source *importRootSource, lock v1.Lock) {
-	for _, entry := range lock.Modules {
-		fetched := source.fetched[[2]string{entry.Source, strings.ToLower(entry.Commit)}]
-		if fetched.Inspection != nil && !fetched.Inspection.Provisional {
+func (view *tidySourceView) retainPinnedSources(resolved graphResolveResult) {
+	for _, entry := range resolved.lockFile().Modules {
+		fetched, exists := resolved.currentRevision(entry)
+		if exists && fetched.Inspection != nil {
 			view.pinned[entry.Source] = make(map[string][]byte)
 			for _, file := range fetched.Inspection.Files {
 				view.pinned[entry.Source][file.Path] = file.Content

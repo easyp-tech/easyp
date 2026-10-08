@@ -62,7 +62,7 @@ func TestFinalizationRejectsProvisionalResults(t *testing.T) {
 	entry := v1.LockedModule{Source: name, Version: "v1.0.0", Commit: versionlessCommitA, Hash: versionlessHash}
 	module := v1.Module{Name: name, Roots: []string{"."}}
 	fetched := Fetched{Module: module, Lock: entry, Inspection: &RootInspection{Provisional: true}}
-	source := &importRootSource{Source: provisionalRootTestSource{fetched: fetched}, fetched: map[[2]string]Fetched{{name, entry.Commit}: fetched}}
+	source := &importRootSource{Source: provisionalRootTestSource{fetched: fetched}, fetched: map[rootRevisionKey]Fetched{rootRevision(name, entry.Commit): fetched}}
 	lock := v1.Lock{Version: 1, Modules: []v1.LockedModule{entry}}
 
 	_, err := source.finalizeSelections(t.Context(), lock, []importRootModule{{name: name, roots: module.Roots, inspection: fetched.Inspection}}, [][]string{nil})
