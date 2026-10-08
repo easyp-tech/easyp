@@ -153,7 +153,7 @@ easyp get github.com/googleapis/googleapis@common-protos-1_3_1
 easyp get github.com/acme/contracts@v1.2.3
 ~~~
 
-Repeatable <code>--import-root</code> provides checked module-relative directory
+Repeatable <code>--import-root</code> provides checked dependency-source directory
 hints for this dependency's import-root resolution. Validate canonical roots
 before cache access or named-tag lookup. Authoritative dependency metadata keeps
 priority; otherwise verified fallback roots become <code>modules[].roots</code>
@@ -162,6 +162,12 @@ in <code>protobuf.lock</code>. For example:
 ~~~bash
 easyp get --import-root api/svc/v1 gitlab/products/svc
 ~~~
+
+For fetched Git modules, hint coordinates start at the pinned repository
+snapshot. A nested <code>repo/sub/protobuf.mod</code> with <code>roots proto</code>
+is checked with <code>--import-root sub/proto</code>. Local replacement hints
+start at the replacement directory. Producer manifests retain their own
+manifest-relative roots; the Git adapter rebases those paths into its snapshot.
 
 Generation selects the required module separately through
 <code>generate.modules</code>; path/package filters do not change import roots.
@@ -263,8 +269,10 @@ repeated suffixes and pseudo-version-shaped peeled tags are rejected.
 Released v0 lock hashes cover the installed <code>git archive '*.proto'</code>
 contents after legacy root rewrites, while the new lock covers the materialized v1
 snapshot. Migration verifies either the historical archive hash or the existing
-whole-tree hash at the pinned revision. It rejects archive attributes that omit
-or alter proto sources rather than silently changing their contracts.
+whole-tree hash at the pinned revision. Omitted selected/reachable proto sources
+and changed verified archive bytes block migration. An unused export-ignored
+source outside a verified filtered Git selection is permitted; whole-input
+target widening remains an error.
 Internal file, directory, import-root and metadata symlinks are supported.
 Logical paths keep their protobuf import names. Git targets resolve only from
 the pinned tree; installed snapshots contain regular resolved bytes and work

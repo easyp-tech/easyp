@@ -85,8 +85,10 @@ fallback. Unknown selectors fail before plugins, including no-plugin parents
 selected with <code>--all</code>. Historical lock entries with annotated-tag spelling such as
 `v0.4.0^{}` retain their original hash verification and unchanged backup bytes.
 Released v0 proto archive hashes are verified before the native materialized-snapshot
-hash is calculated. Archive attributes that change proto paths or bytes block
-migration.
+hash is calculated. Archive attributes that omit selected/reachable proto sources
+or change verified bytes block migration. Unused export-ignored sources outside
+a verified filtered Git selection are permitted; whole-input target widening
+still fails.
 
 Internal file, directory, import-root and metadata symlinks are supported.
 Logical paths keep their protobuf import names. Git targets resolve only from

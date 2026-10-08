@@ -46,7 +46,7 @@ EasyP uses Go-style semantic import versioning for module identities. Native <co
 
 The final slash major suffix is logical: it is excluded from the repository candidate and the tag prefix. A tag alone does not establish module identity; the manifest at an allowed location must declare the exact requested source. Lightweight and annotated tags resolve to commits. A <code>v2/v2.0.0</code> tag does not release <code>repo/v2</code>.
 
-<code>repo</code> and <code>repo/v2</code> are separate MVS, lock, cache and replacement identities. They may coexist when their protobuf import paths are distinct. EasyP never rewrites protobuf packages or imports; duplicate import paths still fail, even for identical content. Same-identity maximum-minimum selection, exact SHA/tag agreement, immutable tags, local overlays and explicit frozen checks remain in force.
+<code>repo</code> and <code>repo/v2</code> are separate MVS, lock, cache and replacement identities. They may coexist when their protobuf import paths are distinct. Major-version identities do not rename protobuf packages or disambiguate import paths; duplicates still fail, even for identical content. Checked tidy may repair consumer import declarations after a verified dependency namespace change, as described below. Same-identity maximum-minimum selection, exact SHA/tag agreement, immutable tags, local overlays and explicit frozen checks remain in force.
 
 The Go pre-module <code>+incompatible</code> exception is supported for an unsuffixed v2+ requirement whose exact Git revision has no native root <code>protobuf.mod</code> and no matching nested native manifest. <code>easyp get repo@v2.0.0</code> adds the marker after verifying this boundary; a manually written manifest must include it explicitly. For example, <code>repo v2.0.0+incompatible</code> resolves the root tag <code>v2.0.0</code>, never a tag literally ending in <code>+incompatible</code>. Fetch, migration, cold installation and warm cache reads verify this metadata boundary. Update preserves the marker for eligible legacy releases and rejects a selected revision that has become native. Markers on v0/v1 or on suffixed identities are rejected. An unmarked unsuffixed v2+ requirement remains invalid.
 
@@ -114,7 +114,7 @@ The resolver accepts <code>Source.Fetch</code>, independent of Git/cache. It sel
 
 ## Frozen graph validation
 
-Metadata-free module resolution may record canonical module-relative `roots` in
+Metadata-free module resolution may record canonical repository-snapshot-relative `roots` in
 its lock entry. Native/Buf/legacy root metadata has priority, including an
 authoritative default `.`. Missing roots can be inferred from uniquely consistent
 import/source constraints inside that same declared module. External consumer or other-module imports never select its roots; they validate the resulting namespace. Explicit repeated
