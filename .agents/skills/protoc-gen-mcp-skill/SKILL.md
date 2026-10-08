@@ -1,13 +1,11 @@
 ---
 name: protoc-gen-mcp-skill
-description: "Build MCP servers from protobuf definitions using protoc-gen-mcp and easyp. Use when: creating an MCP server, generating MCP tools from proto files, building a proto-first MCP server in Go, configuring easyp for MCP generation, adding MCP tool annotations to protobuf services, implementing MCP tool handlers, setting up ProtoJSON-based MCP tools, or any task involving protobuf-to-MCP code generation. Also use when the user mentions protoc-gen-mcp, mcp proto, proto mcp server, easyp mcp, or wants type-safe MCP bindings from .proto files."
+description: "Build MCP servers from protobuf definitions using protoc-gen-mcp and easyp. Use when: creating an MCP server, generating MCP tools from proto files, building a proto-first MCP server in Go, Python, Java, Kotlin, TypeScript, or JavaScript, configuring easyp (v1: protobuf.mod, easyp.yaml, easyp.gen.yaml) for MCP generation, migrating an existing easyp v0 setup, adding MCP tool annotations to protobuf services, implementing MCP tool handlers, setting up ProtoJSON-based MCP tools, or any task involving protobuf-to-MCP code generation. Also use when the user mentions protoc-gen-mcp, mcp proto, proto mcp server, easyp mcp, or wants type-safe MCP bindings from .proto files."
 ---
 
 # protoc-gen-mcp — Proto-First MCP Server Generator
 
-Generate type-safe Go MCP tool bindings from annotated protobuf services.
-Protobuf is the source of truth: define your service once in `.proto`, generate
-both `*.pb.go` and `*.mcp.go`, implement the handler interface, and serve.
+Generate type-safe MCP tool bindings from annotated protobuf services for **Go, Python, Java, Kotlin, and TypeScript**. JavaScript projects consume compiled TypeScript output. Protobuf is the source of truth: define your service once in `.proto`, generate language-specific protobuf types and MCP sidecars, implement the handler interface, and serve.
 
 ## When to Use
 
@@ -15,20 +13,21 @@ both `*.pb.go` and `*.mcp.go`, implement the handler interface, and serve.
 - Already have protobuf services and want to expose them as MCP tools
 - Need JSON Schema validation on MCP tool inputs derived from proto definitions
 - Want ProtoJSON as the wire format for MCP tool requests and responses
+- Targeting Go, Python, Java, Kotlin, TypeScript, or JavaScript runtimes
 
 ## Prerequisites
 
-Install [easyp](https://easyp.tech) — the recommended way to lint and generate:
+Install [easyp](https://easyp.tech) **v1**, the recommended way to lint and generate. v1 is published as nightly tags (`v1.0.0-nightly.YYYYMMDD.N`); `brew` and `go install …@latest` still install v0.17.0:
 
 ```bash
-brew install easyp-tech/tap/easyp
+EASYP_VERSION=v1.0.0-nightly.20261008.1   # pick the newest from github.com/easyp-tech/easyp/releases
+go install "github.com/easyp-tech/easyp/cmd/easyp@$EASYP_VERSION"
+easyp --version
 ```
 
-Or install from source:
+EasyP v1 uses three config files plus a lock: `protobuf.mod` (module and dependencies), `easyp.yaml` (lint policy), `easyp.gen.yaml` (plugins) and `protobuf.lock`.
 
-```bash
-go install github.com/easyp-tech/easyp/cmd/easyp@latest
-```
+**Existing project with a v0 `easyp.yaml`** (top-level `deps:`, `lint.use`, `generate.inputs`), or easyp failing with `legacy EasyP configuration detected`? Migrate first with `easyp migrate`. Follow the step-by-step procedure in the [protobuf-expert-skill](https://github.com/easyp-tech/protobuf-expert-skill) (`references/migration-v0-to-v1.md`).
 
 See https://easyp.tech/docs for full documentation.
 
@@ -36,7 +35,7 @@ See https://easyp.tech/docs for full documentation.
 
 ### Step 1: Define Your Proto Service
 
-Create a `.proto` file with service, methods, and MCP annotations:
+Create a `.proto` file with service, methods, and MCP annotations using `mcp/options/v1/options.proto`:
 
 ```proto
 syntax = "proto3";
@@ -54,7 +53,6 @@ service MyServiceAPI {
     description: "My tools exposed as MCP tools."
   };
 
-  // CreateItem creates a new item.
   rpc CreateItem(CreateItemRequest) returns (CreateItemResponse) {
     option (mcp.options.v1.method) = {
       title: "Create item"
@@ -63,7 +61,6 @@ service MyServiceAPI {
     };
   }
 
-  // Health returns server status.
   rpc Health(google.protobuf.Empty) returns (HealthResponse) {
     option (mcp.options.v1.method) = {
       title: "Health check"
@@ -74,7 +71,6 @@ service MyServiceAPI {
 }
 
 message CreateItemRequest {
-  // name is required (singular, non-optional in proto3).
   string name = 1 [(mcp.options.v1.field) = {
     description: "Item name."
     examples: [{ string_value: "Widget" }]
@@ -82,20 +78,17 @@ message CreateItemRequest {
     max_length: 200
   }];
 
-  // count has a default and numeric bounds.
   int32 count = 2 [(mcp.options.v1.field) = {
-    default_value: { number_value: 1 }
+    default_value: { integer_value: 1 }
     minimum: 1
     maximum: 1000
   }];
 
-  // tags is optional because it is repeated.
   repeated string tags = 3 [(mcp.options.v1.field) = {
     max_items: 20
     unique_items: true
   }];
 
-  // note is optional because of the `optional` keyword.
   optional string note = 4;
 }
 
@@ -108,138 +101,43 @@ message HealthResponse {
 }
 ```
 
-### Step 2: Configure easyp
+### Step 2: Choose Your Language
 
-Create `easyp.yaml` and `protobuf.mod` in your project root. These drive both
-`protoc-gen-go` (standard Go protobuf) and `protoc-gen-mcp` (MCP bindings):
+Each language has its own EasyP configuration (`protobuf.mod`, `easyp.yaml`, `easyp.gen.yaml`) and handler pattern. See the examples:
 
-```
-direct (
-	github.com/easyp-tech/protoc-gen-mcp@v0.3.1
-)
-```
-
-```yaml
-lint:
-  use:
-    - PACKAGE_DEFINED
-    - PACKAGE_VERSION_SUFFIX
-    - RPC_NO_CLIENT_STREAMING
-    - RPC_NO_SERVER_STREAMING
-
-generate:
-  inputs:
-    - directory:
-        path: proto          # directory containing your .proto files
-        root: "."
-  plugins:
-    - name: go
-      out: .
-      opts:
-        paths: source_relative
-    - command: ["go", "run", "github.com/easyp-tech/protoc-gen-mcp/cmd/protoc-gen-mcp@latest"]
-      out: .
-      opts:
-        paths: source_relative
-```
-
-For reproducible builds, pin a specific version tag instead of `@latest`:
-
-```yaml
-    - command: ["go", "run", "github.com/easyp-tech/protoc-gen-mcp/cmd/protoc-gen-mcp@v0.3.1"]
-```
-
-Why easyp over raw protoc:
-- Single `easyp.yaml` config manages all plugins, lint rules, and dependencies
-- Both `*.pb.go` and `*.mcp.go` are generated in one command
-- Built-in linting catches streaming RPCs and other unsupported patterns early
-- Git-native dependency management with lock files for reproducibility
-- No need to install `protoc` or manage plugin binaries manually
+| Language | Example | Handler Style |
+|---|---|---|
+| Go | [examples/go](examples/go/README.md) | `<Service>ToolHandler` interface |
+| Python (dataclass) | [examples/python/dataclass](examples/python/dataclass/README.md) | Dataclasses from `*_mcp.py` |
+| Python (protobuf) | [examples/python/protobuf](examples/python/protobuf/README.md) | Raw `*_pb2` classes |
+| Python (dataclass+protobuf) | [examples/python/dataclass-protobuf](examples/python/dataclass-protobuf/README.md) | Both surfaces side by side |
+| Java | [examples/java](examples/java/README.md) | Nested `<Service>ToolHandler` in `*Mcp.java` |
+| Kotlin | [examples/kotlin](examples/kotlin/README.md) | `<Service>ToolHandler` interface |
+| TypeScript | [examples/typescript](examples/typescript/README.md) | `<Service>ToolHandler` interface |
+| JavaScript | [examples/javascript](examples/javascript/README.md) | Compiled TS output + JSDoc types |
 
 ### Step 3: Generate Code
 
 ```bash
-# Validate config
+easyp mod tidy           # first run / after editing protobuf.mod: resolve protoc-gen-mcp and write protobuf.lock
 easyp validate-config
-
-# Download dependencies
-easyp mod download
-
-# Lint proto files
-easyp lint -p proto -r .
-
-# Generate *.pb.go and *.mcp.go
-easyp generate -p proto -r .
+easyp lint
+easyp generate           # targets come from easyp.gen.yaml (generate.paths); v1 has no -p/-r flags
 ```
 
-This produces two files next to your `.proto`:
-- `myapi.pb.go` — standard protobuf Go types
-- `myapi.mcp.go` — MCP tool handler interface + registration
+In CI use the committed lock exactly: `easyp --frozen mod download && easyp --frozen generate && git diff --exit-code`.
 
-### Step 4: Implement the Handler
+The `mcp/options/v1/options.proto` import comes from the `require github.com/easyp-tech/protoc-gen-mcp vX.Y.Z` line in `protobuf.mod`. Keep that version equal to the `protoc-gen-mcp@vX.Y.Z` used in the plugin `command`.
 
-The generated code exposes a `<Service>ToolHandler` interface. Implement it:
+### Step 4: Implement the Handler and Serve
 
-```go
-package main
-
-import (
-    "context"
-    "log"
-
-    myapiv1 "github.com/you/myproject/myapi/v1"
-    "github.com/modelcontextprotocol/go-sdk/mcp"
-    emptypb "google.golang.org/protobuf/types/known/emptypb"
-)
-
-type handler struct{}
-
-func (handler) CreateItem(
-    _ context.Context,
-    req *myapiv1.CreateItemRequest,
-) (*myapiv1.CreateItemResponse, error) {
-    return &myapiv1.CreateItemResponse{Id: "item-1"}, nil
-}
-
-func (handler) Health(
-    _ context.Context,
-    _ *emptypb.Empty,
-) (*myapiv1.HealthResponse, error) {
-    return &myapiv1.HealthResponse{Status: "ok"}, nil
-}
-
-func main() {
-    server := mcp.NewServer(&mcp.Implementation{
-        Name:    "myapi-mcp",
-        Version: "v0.1.0",
-    }, nil)
-
-    if err := myapiv1.RegisterMyServiceAPITools(server, handler{}); err != nil {
-        log.Fatal(err)
-    }
-
-    if err := server.Run(context.Background(), &mcp.StdioTransport{}); err != nil {
-        log.Fatal(err)
-    }
-}
-```
-
-### Step 5: Run
-
-```bash
-go run ./cmd/myserver
-```
-
-The server communicates over stdio. Connect any MCP client to it. The generated
-tools are `myapi_CreateItem` and `myapi_Health`.
+Follow the language-specific example linked above.
 
 ## Key Concepts
 
 ### Tool Naming
 
-Generated tool names follow the pattern `{namespace}_{MethodName}`. Dots in
-the namespace are normalized to underscores. Override the method segment with
-`mcp.options.v1.method.name`.
+Generated tool names follow the pattern `{namespace}_{MethodName}`. Dots in the namespace are normalized to underscores. Override the method segment with `mcp.options.v1.method.name`.
 
 ### Requiredness Policy
 
@@ -307,7 +205,7 @@ option (mcp.options.v1.method) = {
 [(mcp.options.v1.field) = {
   description: "Field purpose."
   examples: [{ string_value: "example" }]
-  default_value: { number_value: 42 }
+  default_value: { integer_value: 42 }
   pattern: "^[A-Z]"
   min_length: 1
   max_length: 255
@@ -321,10 +219,10 @@ option (mcp.options.v1.method) = {
 // Oneof: make a oneof group required in the MCP schema
 option (mcp.options.v1.oneof) = { required: true };
 
-// Enum: title and description for the enum type
+// Enum: title and description
 option (mcp.options.v1.enum) = { title: "Status" };
 
-// Enum value: hide sentinel zero-value from the schema
+// Enum value: hide sentinel zero-value
 UNSPECIFIED = 0 [(mcp.options.v1.enum_value) = { hidden: true }];
 ```
 
@@ -354,12 +252,20 @@ option (mcp.options.v1.method) = {
 };
 ```
 
-### Namespace Override at Registration
+## Testing With MCP Inspector
 
-```go
-myapiv1.RegisterMyServiceAPITools(server, handler{},
-    mcpruntime.WithNamespace("custom_prefix"),
-)
+```bash
+# Go
+npx -y @modelcontextprotocol/inspector go run ./cmd/myserver
+
+# Python
+npx -y @modelcontextprotocol/inspector python server.py
+
+# TypeScript (build first)
+npx -y @modelcontextprotocol/inspector node dist/server.js
+
+# Java/Kotlin (after installDist)
+npx -y @modelcontextprotocol/inspector ./build/install/myserver/bin/myserver
 ```
 
 ## Reference Files

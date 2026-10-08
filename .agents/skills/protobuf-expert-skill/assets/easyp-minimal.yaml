@@ -1,7 +1,8 @@
-# EasyP starter config: minimal linting only
-# Usage: copy to your project root as easyp.yaml
+# EasyP v1 policy — lint only, gentle start.
+# Usage: copy to your module root as easyp.yaml (next to protobuf.mod).
+# See references/config-reference.md and references/lint-rules.md.
+version: v1
 
-lint:
-  use:
-    - DEFAULT
-  allow_comment_ignores: true
+linters:
+  default: BASIC              # naming + import hygiene; move to STANDARD when ready
+  allow_comment_ignores: true # // easyp:disable RULE ... // easyp:enable RULE

@@ -1,26 +1,20 @@
-# EasyP starter config: Go + gRPC project
-# Usage: copy to your project root as easyp.yaml
-# Dependencies: copy assets/protobuf-common.mod as protobuf.mod
+# EasyP v1 policy — typical Go + gRPC API module.
+# Usage: copy to your module root as easyp.yaml.
+# Pair with easyp.gen-go-grpc.yaml (generation) and protobuf-example.mod (module + deps).
+version: v1
 
-lint:
-  use:
-    - DEFAULT
+linters:
+  default: STANDARD
+  enable:
     - COMMENTS
-  allow_comment_ignores: true
 
-generate:
-  inputs:
-    - directory: proto
-  plugins:
-    - name: go
-      out: gen/go
-      opts:
-        paths: source_relative
-    - name: go-grpc
-      out: gen/go
-      opts:
-        paths: source_relative
-        require_unimplemented_servers: false
+linters-settings:
+  ENUM_ZERO_VALUE_SUFFIX:
+    suffix: _UNSPECIFIED
+  SERVICE_SUFFIX:
+    suffix: Service
 
 breaking:
-  against_git_ref: main
+  baseline: git:main
+  categories: [FILE]
+  ignore_unstable: true       # v1alpha1 / v1beta1 packages may change freely

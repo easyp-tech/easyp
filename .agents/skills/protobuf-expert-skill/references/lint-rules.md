@@ -1,18 +1,37 @@
 # EasyP Lint Rules Reference
 
-EasyP provides 42 lint rules organized into 5 groups. Groups are cumulative — `BASIC` includes `MINIMAL`, `DEFAULT` includes `BASIC`.
+EasyP v1 has 41 lint rules. Configure them in `easyp.yaml` under `linters` (see [config-reference.md](./config-reference.md#easypyaml--lint-and-breaking-policy)).
 
-## Rule Groups
+## Presets and groups
 
-| Group | Rules | Description |
-|-------|-------|-------------|
-| `MINIMAL` | 4 | Package consistency only |
-| `BASIC` | 24 | MINIMAL + naming conventions and import hygiene |
-| `DEFAULT` | 32 | BASIC + enum/RPC/service/file standards |
-| `COMMENTS` | 7 | Documentation requirements for all entities |
-| `UNARY_RPC` | 2 | Disallow streaming RPCs |
+`linters.default` picks a **cumulative preset**:
 
-Use a group name directly in `lint.use` to enable all its rules.
+| `linters.default` | Rules | Contains |
+|---|---|---|
+| `MINIMAL` | 4 | MINIMAL group |
+| `BASIC` | 24 | MINIMAL + BASIC groups |
+| `STANDARD` (default) | 32 | MINIMAL + BASIC + DEFAULT groups |
+| `COMMENTS` | 39 | STANDARD + COMMENTS group |
+
+`linters.enable` / `linters.disable` / `issues.exclude-rules[].linters` accept rule names **and group names**. Groups are disjoint sets:
+
+| Group | Rules | Topic |
+|---|---|---|
+| `MINIMAL` | 4 | Package/directory consistency |
+| `BASIC` | 20 | Naming conventions, import hygiene, package option consistency |
+| `DEFAULT` | 8 | Enum/RPC/service/file API standards |
+| `COMMENTS` | 7 | Documentation on every entity |
+| `UNARY_RPC` | 2 | No streaming RPCs; never part of a preset |
+
+```yaml
+version: v1
+linters:
+  default: STANDARD
+  enable: [COMMENTS, UNARY_RPC]
+  disable: [COMMENT_FIELD]
+```
+
+> **v0 note:** v0 `lint.use` took the *disjoint* groups, so `use: [DEFAULT]` enabled only the 8 DEFAULT rules, not 32. `easyp migrate` keeps the exact v0 rule set, so the result usually reads `default: MINIMAL` plus long `enable`/`disable` lists. Switching to `default: STANDARD` turns on more rules: run lint before proposing it.
 
 ---
 
@@ -27,7 +46,7 @@ Use a group name directly in `lint.use` to enable all its rules.
 
 ---
 
-## BASIC Group (adds 20 rules)
+## BASIC Group (20 rules)
 
 ### Naming
 
@@ -71,7 +90,7 @@ Use a group name directly in `lint.use` to enable all its rules.
 
 ---
 
-## DEFAULT Group (adds 8 rules)
+## DEFAULT Group (8 rules)
 
 | Rule | What it checks | Config |
 |------|----------------|--------|
@@ -109,46 +128,58 @@ Use a group name directly in `lint.use` to enable all its rules.
 
 ---
 
-## Uncategorized (1 rule)
+## Removed in v1
 
-| Rule | What it checks |
-|------|----------------|
-| `PACKAGE_NO_IMPORT_CYCLE` | Packages must not have circular import dependencies |
+| Rule | Status |
+|---|---|
+| `PACKAGE_NO_IMPORT_CYCLE` | Removed. Listing it anywhere is an error: `invalid rule: PACKAGE_NO_IMPORT_CYCLE is not implemented`. |
 
 ---
 
 ## Suppression
 
-### Ignoring paths
+### Excluding paths and rules
 
 ```yaml
-lint:
-  ignore:
-    - proto/vendor        # Ignore entire directories
-  ignore_only:
-    FIELD_LOWER_SNAKE_CASE:
-      - proto/legacy      # Ignore specific rule for specific paths
+issues:
+  exclude-rules:
+    - path: proto/vendor                  # all rules, whole subtree
+    - path: proto/legacy/**
+      linters: [FIELD_LOWER_SNAKE_CASE]   # one rule, one subtree
+    - linters: [PACKAGE_VERSION_SUFFIX]   # no path: disable everywhere
 ```
 
-### Inline comment ignores
+Paths are relative to the `easyp.yaml` and support `*`, `?`, `[...]` and whole-segment `**`. A plain directory covers everything below it.
 
-Enable with `lint.allow_comment_ignores: true`, then use in `.proto` files:
-
-```protobuf
-// easyp:off
-message legacy_message {  // This won't trigger MESSAGE_PASCAL_CASE
-  string BadField = 1;    // This won't trigger FIELD_LOWER_SNAKE_CASE
-}
-// easyp:on
-```
-
-### Excluding rules
+### Disabling rules
 
 ```yaml
-lint:
-  use:
-    - DEFAULT
-  except:
-    - SERVICE_SUFFIX          # Disable individual rules from a group
+linters:
+  default: STANDARD
+  disable:
+    - SERVICE_SUFFIX
     - PACKAGE_VERSION_SUFFIX
 ```
+
+### Inline comment directives
+
+Allowed when `linters.allow_comment_ignores` is true (the v1 default):
+
+```protobuf
+// easyp:disable MESSAGE_PASCAL_CASE, FIELD_LOWER_SNAKE_CASE
+message legacy_message {          // directive annotates this declaration only
+  string BadField = 1;
+}
+
+// easyp:disable FIELD_LOWER_SNAKE_CASE
+message A { string BadOne = 1; }
+message B { string BadTwo = 1; }
+// easyp:enable FIELD_LOWER_SNAKE_CASE   // paired: covers every line in between
+message C { string good_one = 1; }
+```
+
+Directives are read from comments attached to declarations. If the closing `// easyp:enable` is the last thing in the file, with no declaration after it, it is silently ignored (as of `v1.0.0-nightly.20261008.1`). The `disable` then covers only the declaration right below it. Close a range before a following declaration, or annotate each declaration separately.
+
+Also accepted for compatibility, scoped to the next declaration: `// buf:lint:ignore RULE` and `// nolint:RULE`.
+
+Rule names must exist. Any other `easyp:` directive is a **hard error** that stops the whole lint run, for example `// easyp:off` / `// easyp:on`: `malformed lint directive "easyp:off"`. Replace those with `easyp:disable` / `easyp:enable` pairs that name the rules.
