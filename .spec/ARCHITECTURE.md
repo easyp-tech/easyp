@@ -128,6 +128,20 @@ Lint/breaking CLI adapters select producer policy and prepare shared module impo
 
 <code>migration.Build</code> owns legacy conversion into policy, generator, manifest and lock candidates. Dependency verification uses an explicitly supplied migration repository and is gated by <code>ResolveLock</code>; conversion never executes plugins. <code>Plan.Apply</code> rechecks observed state, stages files and byte-identical backups, and rolls back ordinary write failures. Legacy <code>easyp.lock</code> stays unchanged; native output conflicts require manual reconciliation. This is not a crash-atomic multi-file transaction.
 
+Migration planning keeps its phases explicit: project capture and parsing,
+local/Git selections, known-candidate preflight, authorized historical
+dependency resolution, source-binding proof, then final outputs. A
+`localSelectionProof` owns the local identity, literal inputs, roots and proved
+inventory/selectors; its recheck detects selection changes. The Git proof owns
+its pinned observations independently. Namespace observation and binding
+compilation have separate owners, preserving legacy root precedence and the
+complete native namespace collision check.
+
+The migration transaction coordinates candidate previews and staged writes
+through one proposal operation. Backups retain their observed bytes and mode;
+updating a generator candidate cannot leave its preview and staged write out of
+sync. Source selection is checked again after staging and before replacement.
+
 ## Verification boundaries
 
 - Resolver, version selection, config conversion, manifest editing and collision rules: parallel table-driven unit tests.
