@@ -88,6 +88,15 @@
             "type": "string",
             "pattern": "^h1:[A-Za-z0-9+/]{43}=$"
           },
+          "roots": {
+            "description": "Canonical portable directories relative to the pinned repository, used when source metadata does not declare roots. A single dot selects the repository root. Frozen commands replay the recorded roots; authoritative native, Buf, or EasyP roots cannot be overridden.",
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^(\\.|([^/.\\\\:*?\\[\\]\"\u003c\u003e|\\x00-\\x20\\x7f-\\x9f   - \u2028\u2029  　﻿]|\\.[^/.\\\\:*?\\[\\]\"\u003c\u003e|\\x00-\\x20\\x7f-\\x9f   - \u2028\u2029  　﻿]|\\.\\.[^/\\\\:*?\\[\\]\"\u003c\u003e|\\x00-\\x20\\x7f-\\x9f   - \u2028\u2029  　﻿])[^/\\\\:*?\\[\\]\"\u003c\u003e|\\x00-\\x20\\x7f-\\x9f   - \u2028\u2029  　﻿]*(/([^/.\\\\:*?\\[\\]\"\u003c\u003e|\\x00-\\x20\\x7f-\\x9f   - \u2028\u2029  　﻿]|\\.[^/.\\\\:*?\\[\\]\"\u003c\u003e|\\x00-\\x20\\x7f-\\x9f   - \u2028\u2029  　﻿]|\\.\\.[^/\\\\:*?\\[\\]\"\u003c\u003e|\\x00-\\x20\\x7f-\\x9f   - \u2028\u2029  　﻿])[^/\\\\:*?\\[\\]\"\u003c\u003e|\\x00-\\x20\\x7f-\\x9f   - \u2028\u2029  　﻿]*)*)$"
+            },
+            "uniqueItems": true
+          },
           "source": {
             "type": "string",
             "minLength": 1

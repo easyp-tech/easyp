@@ -14,35 +14,16 @@ import (
 // augmentV1ManifestRequirements records selected transitive modules. A module
 // imported by a root .proto file is direct even if it arrived transitively.
 func augmentV1ManifestRequirements(original []byte, root string, module v1.Module, lock v1.Lock, repository Cache) ([]byte, error) {
-	lines := strings.Split(string(original), "\n")
-	indirect := make(map[string]v1RequirementLine)
-	for _, line := range parseV1RequirementLines(lines) {
-		if line.indirect() {
-			indirect[line.module] = line
-		}
-	}
-	existing := make(map[string]bool, len(module.Requires))
-	for _, requirement := range module.Requires {
-		existing[requirement.Module] = true
-	}
 	imports, err := v1RootImports(root, module.Roots)
 	if err != nil {
 		return nil, fmt.Errorf("v1RootImports: %w", err)
 	}
-	versions, err := manifestRequirementVersions(lock, repository)
-	if err != nil {
-		return nil, fmt.Errorf("manifestRequirementVersions: %w", err)
-	}
-	var additions []v1ManifestRequirement
+	owners := make(map[string]bool)
 	for _, entry := range lock.Modules {
-		if _, derived := indirect[entry.Source]; existing[entry.Source] && !derived {
-			continue
-		}
 		installDir, dependency, err := repository.Cached(entry)
 		if err != nil {
 			return nil, fmt.Errorf("Cached: %w", err)
 		}
-		direct := false
 		for _, depRoot := range dependency.Roots {
 			base := filepath.Join(installDir, depRoot)
 			for importPath := range imports {
@@ -57,14 +38,38 @@ func augmentV1ManifestRequirements(original []byte, root string, module v1.Modul
 					return nil, fmt.Errorf("Stat: %w", err)
 				}
 				if info.Mode().IsRegular() {
-					direct = true
-					break
+					owners[entry.Source] = true
 				}
 			}
-			if direct {
-				break
-			}
 		}
+	}
+	return augmentV1ManifestRequirementsWithOwners(original, module, lock, repository, owners)
+}
+
+// augmentV1ManifestRequirementsWithOwners accepts ownership proved from the
+// proposed consumer view, so renamed imports can promote transitive modules.
+func augmentV1ManifestRequirementsWithOwners(original []byte, module v1.Module, lock v1.Lock, repository Cache, owners map[string]bool) ([]byte, error) {
+	lines := strings.Split(string(original), "\n")
+	indirect := make(map[string]v1RequirementLine)
+	for _, line := range parseV1RequirementLines(lines) {
+		if line.indirect() {
+			indirect[line.module] = line
+		}
+	}
+	existing := make(map[string]bool, len(module.Requires))
+	for _, requirement := range module.Requires {
+		existing[requirement.Module] = true
+	}
+	versions, err := manifestRequirementVersions(lock, repository)
+	if err != nil {
+		return nil, fmt.Errorf("manifestRequirementVersions: %w", err)
+	}
+	var additions []v1ManifestRequirement
+	for _, entry := range lock.Modules {
+		if _, derived := indirect[entry.Source]; existing[entry.Source] && !derived {
+			continue
+		}
+		direct := owners[entry.Source]
 		if line, ok := indirect[entry.Source]; ok {
 			if !existing[entry.Source] {
 				line = line.withVersion(versions[entry.Source])

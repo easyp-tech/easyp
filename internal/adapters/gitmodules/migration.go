@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"slices"
 
 	"golang.org/x/mod/semver"
 
@@ -13,17 +14,68 @@ import (
 	"github.com/easyp-tech/easyp/internal/modules"
 )
 
+// migrationProofIntent retains the public nil/empty roots distinction even
+// after a selection's roots have been inferred.
+type migrationProofIntent uint8
+
+const (
+	_ migrationProofIntent = iota
+	migrationWholeNamespaceProof
+	migrationRetainedRootsProof
+	migrationExplicitRootsProof
+)
+
+type migrationRequest struct {
+	source, version, legacyHash string
+	roots                       []string
+	proof                       migrationProofIntent
+	nativeModule                bool
+}
+
+// migrationRequestForRoots receives roots that have passed ValidateModuleRoots.
+// Empty selection roots retain producer authority or intrinsic root inference.
+func migrationRequestForRoots(source, version, legacyHash string, checkedRoots []string) migrationRequest {
+	request := migrationRequest{
+		source: source, version: version, legacyHash: legacyHash,
+		roots: slices.Clone(checkedRoots),
+	}
+	switch {
+	case checkedRoots == nil:
+		request.proof = migrationWholeNamespaceProof
+	case len(checkedRoots) == 0:
+		request.proof = migrationRetainedRootsProof
+	default:
+		request.proof = migrationExplicitRootsProof
+	}
+	return request
+}
+
 // FetchMigration verifies a legacy installed-tree hash before calculating the
 // v1 logical snapshot hash. Legacy repositories must preserve their proto source
 // selection and import names. An empty version requires an empty legacyHash and
 // permits initial resolution; native v1 repositories need no legacy comparison.
 func (c *Cache) FetchMigration(ctx context.Context, source, version, legacyHash string) (fetched modules.Fetched, err error) {
+	fetched, err = c.FetchMigrationWithRoots(ctx, source, version, legacyHash, nil)
+	if err != nil {
+		return modules.Fetched{}, fmt.Errorf("FetchMigrationWithRoots: %w", err)
+	}
+	return fetched, nil
+}
+
+// FetchMigrationWithRoots verifies the historical installed layout before root
+// selection. Non-nil roots request a consumer selection proof and return its
+// immutable legacy-to-repository mapping; nil retains whole-namespace checks.
+func (c *Cache) FetchMigrationWithRoots(ctx context.Context, source, version, legacyHash string, roots []string) (fetched modules.Fetched, err error) {
 	if (version != "" || legacyHash != "") && !v1.IsCommitRef(version) && !semver.IsValid(version) {
 		return modules.Fetched{}, fmt.Errorf("migration version %q must be a full Git commit or SemVer tag", version)
 	}
-	checkout, err := checkoutV1Module(ctx, source, version, c.root)
+	if err := v1.ValidateModuleRoots(roots); err != nil {
+		return modules.Fetched{}, fmt.Errorf("ValidateModuleRoots: %w", err)
+	}
+	request := migrationRequestForRoots(source, version, legacyHash, roots)
+	checkout, err := checkoutV1ModuleWithRoots(ctx, request.source, request.version, c.root, nil, true)
 	if err != nil {
-		return modules.Fetched{}, fmt.Errorf("checkoutV1Module: %w", err)
+		return modules.Fetched{}, fmt.Errorf("checkoutV1ModuleWithRoots: %w", err)
 	}
 	defer func() {
 		for _, directory := range []string{checkout.snapshot, checkout.dir} {
@@ -34,7 +86,7 @@ func (c *Cache) FetchMigration(ctx context.Context, source, version, legacyHash 
 			}
 		}
 	}()
-	if err := moduleconfig.ValidateLegacyMajor(checkout.snapshot, source, version); err != nil {
+	if err := moduleconfig.ValidateLegacyMajor(checkout.snapshot, request.source, request.version); err != nil {
 		return modules.Fetched{}, fmt.Errorf("ValidateLegacyMajor: %w", err)
 	}
 	tracked, err := migrationTrackedFiles(ctx, checkout.dir)
@@ -48,31 +100,66 @@ func (c *Cache) FetchMigration(ctx context.Context, source, version, legacyHash 
 	if err := validateMigrationLegacyReplacements(checkout.snapshot, files); err != nil {
 		return modules.Fetched{}, fmt.Errorf("validateMigrationLegacyReplacements: %w", err)
 	}
-	native, err := hasNativeMigrationModule(checkout.snapshot, files, source)
+	request.nativeModule, err = hasNativeMigrationModule(checkout.snapshot, files, request.source)
 	if err != nil {
 		return modules.Fetched{}, fmt.Errorf("hasNativeMigrationModule: %w", err)
 	}
-	_, err = migrationSelectedFiles(checkout.snapshot, checkout.module)
-	if err != nil {
-		return modules.Fetched{}, fmt.Errorf("migrationSelectedFiles: %w", err)
-	}
-	if !native || legacyHash != "" {
-		if err := verifyMigrationLegacyHash(ctx, checkout, source, legacyHash, tracked); err != nil {
-			return modules.Fetched{}, fmt.Errorf("verifyMigrationLegacyHash: %w", err)
+	var layout migrationLegacyLayout
+	if request.proof != migrationWholeNamespaceProof {
+		layout, err = proveMigrationLegacyLayout(ctx, checkout, tracked, request)
+		if err != nil {
+			return modules.Fetched{}, fmt.Errorf("proveMigrationLegacyLayout: %w", err)
 		}
+		if request.proof == migrationRetainedRootsProof {
+			inferred, err := modules.ResolveIntrinsicImportRoots(ctx, checkout.module, checkout.inspection)
+			if err != nil {
+				return modules.Fetched{}, fmt.Errorf("ResolveIntrinsicImportRoots: %w", err)
+			}
+			request.roots = inferred
+		}
+	}
+	checkout.module, err = applyV1ModuleRoots(checkout.module, request.roots)
+	if err != nil {
+		return modules.Fetched{}, fmt.Errorf("applyV1ModuleRoots: %w", err)
+	}
+	view, err := sourceV1SnapshotView(ctx, checkout.dir, checkout.commit)
+	if err != nil {
+		return modules.Fetched{}, fmt.Errorf("sourceV1SnapshotView: %w", err)
+	}
+	if err := materializeSelectedSnapshotAliases(ctx, view, checkout.snapshot, checkout.module, nil); err != nil {
+		return modules.Fetched{}, fmt.Errorf("materializeSelectedSnapshotAliases: %w", err)
+	}
+	checkout.inspection, err = inspectV1Snapshot(ctx, view, checkout.snapshot, checkout.module, checkout.commit)
+	if err != nil {
+		return modules.Fetched{}, fmt.Errorf("inspectV1Snapshot: %w", err)
+	}
+	if request.proof == migrationWholeNamespaceProof {
+		if !request.nativeModule || request.legacyHash != "" {
+			if err := verifyMigrationLegacyHash(ctx, checkout, tracked, request); err != nil {
+				return modules.Fetched{}, fmt.Errorf("verifyMigrationLegacyHash: %w", err)
+			}
+		}
+		layout, err = proveMigrationLegacyLayout(ctx, checkout, tracked, request)
+		if err != nil {
+			return modules.Fetched{}, fmt.Errorf("proveMigrationLegacyLayout: %w", err)
+		}
+	}
+	checkout.inspection.LegacyFiles = layout.files
+	if _, err := migrationSelectedFiles(checkout.snapshot, checkout.module); err != nil {
+		return modules.Fetched{}, fmt.Errorf("migrationSelectedFiles: %w", err)
 	}
 	hash, err := hashSnapshotV1Files(checkout.snapshot)
 	if err != nil {
 		return modules.Fetched{}, fmt.Errorf("hashSnapshotV1Files: %w", err)
 	}
-	if version == "" {
-		version = checkout.commit
+	if request.version == "" {
+		request.version = checkout.commit
 	}
 	module, bindings, err := c.resolveBSRDependencies(ctx, checkout.module)
 	if err != nil {
 		return modules.Fetched{}, fmt.Errorf("resolveBSRDependencies: %w", err)
 	}
 	return modules.Fetched{Module: module, Lock: v1.LockedModule{
-		Source: source, Version: version, Commit: checkout.commit, Hash: hash, BSR: bindings,
-	}}, nil
+		Source: request.source, Version: request.version, Commit: checkout.commit, Hash: hash, Roots: lockedV1ModuleRoots(module, request.roots), BSR: bindings,
+	}, Inspection: checkout.inspection}, nil
 }

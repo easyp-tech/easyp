@@ -51,6 +51,9 @@ func readBufDependencyWorkspace(path string) (bufDependencyMetadata, error) {
 	if err != nil {
 		return bufDependencyMetadata{}, fmt.Errorf("readGitDependencyConfig: %w", err)
 	}
+	if err := validateGitDependencyRootYAML(raw, bufWorkConfigFile); err != nil {
+		return bufDependencyMetadata{}, fmt.Errorf("validateGitDependencyRootYAML: %s: %w", path, err)
+	}
 	var workspace bufDependencyWorkspaceConfig
 	err = yaml.Unmarshal(raw, &workspace)
 	if err != nil {
@@ -109,6 +112,9 @@ func readBufDependencyModule(path string) (bufDependencyMetadata, error) {
 	raw, err := readGitDependencyConfig(path)
 	if err != nil {
 		return bufDependencyMetadata{}, fmt.Errorf("readGitDependencyConfig: %w", err)
+	}
+	if err := validateGitDependencyRootYAML(raw, bufModuleConfigFile); err != nil {
+		return bufDependencyMetadata{}, fmt.Errorf("validateGitDependencyRootYAML: %s: %w", path, err)
 	}
 	var buf bufDependencyConfig
 	err = yaml.Unmarshal(raw, &buf)

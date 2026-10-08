@@ -72,7 +72,7 @@ func TestMigrationPackageSelectionPreservesLegacyInputs(t *testing.T) {
 			}
 			plan, err := Build(t.Context(), Options{Dir: root, Module: "example.com/acme/api"})
 			require.NoError(t, err)
-			assert.Equal(t, tt.wantFiles, plan.sources)
+			assert.Equal(t, tt.wantFiles, plan.local.selection.files)
 			gen, err := v1.ParseGenerate(bytes.NewReader(outputContent(t, plan, v1.GenerateFile)))
 			require.NoError(t, err)
 			assert.Empty(t, gen.Generate.Packages)
@@ -101,7 +101,6 @@ func TestMigrationPackageSelectionRejectsChangedScope(t *testing.T) {
 		{name: "hidden source", path: ".selected", selected: "package selected.v1;", other: "package other.v1;"},
 		{name: "vendor source", path: "easyp_vendor", selected: "package selected.v1;", other: "package other.v1;"},
 		{name: "nested module", path: "selected", selected: "package selected.v1;", other: "package other.v1;", files: map[string]string{"selected/protobuf.mod": "module example.com/nested\n"}},
-		{name: "mixed whole Git input", path: "selected", selected: "package selected.v1;", other: "package other.v1;", extraInput: ", {git_repo: {url: example.com/acme/dependency}}"},
 		{name: "empty subtree cannot select no packages", path: "selected", other: "package other.v1;"},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
@@ -155,12 +154,12 @@ func TestMigrationPackageSelectionRechecksFixedSelectors(t *testing.T) {
 	writeFixture(t, root, "other.proto", "package other.v1;")
 	plan, err := Build(t.Context(), Options{Dir: root, Module: "example.com/acme/api"})
 	require.NoError(t, err)
-	require.Equal(t, []string{"selected"}, plan.paths)
+	require.Equal(t, []string{"selected"}, plan.local.selection.paths)
 	require.NoError(t, os.Remove(filepath.Join(root, "other.proto")))
-	recomputed, err := proveLocalSelection(root, plan.inputs, plan.roots)
+	recomputed, err := proveLocalSelection(root, plan.local.inputs, plan.local.roots)
 	require.NoError(t, err)
-	require.Equal(t, plan.sources, recomputed.files, "selected paths and bytes are unchanged")
-	require.Equal(t, plan.paths, recomputed.paths, "removing outside files must not drop the approved directory filter")
+	require.Equal(t, plan.local.selection.files, recomputed.files, "selected paths and bytes are unchanged")
+	require.Equal(t, plan.local.selection.paths, recomputed.paths, "removing outside files must not drop the approved directory filter")
 	require.NoError(t, plan.CheckUnchanged())
 	require.NoError(t, plan.Apply())
 	assert.Equal(t, legacy, string(mustRead(t, root, "easyp.yaml.v0.bak")))

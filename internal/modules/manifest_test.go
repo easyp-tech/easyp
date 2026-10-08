@@ -9,6 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	v1 "github.com/easyp-tech/easyp/internal/config/v1"
+	"github.com/easyp-tech/easyp/internal/sourceview"
 )
 
 func TestWriteV1ResolvedFiles(t *testing.T) {
@@ -55,10 +56,7 @@ func TestWriteV1ResolvedFiles(t *testing.T) {
 			err := writeV1ResolvedFiles(root, original, []byte(tt.updated), v1.Lock{Version: 1})
 
 			if tt.wantErr {
-				var pathErr *os.LinkError
-				require.ErrorAs(t, err, &pathErr)
-				assert.Equal(t, "rename", pathErr.Op)
-				assert.Equal(t, filepath.Join(root, v1.LockFile), pathErr.New)
+				require.ErrorIs(t, err, sourceview.ErrUnsupported)
 			} else {
 				require.NoError(t, err)
 				lock, err := ReadLock(filepath.Join(root, v1.LockFile))
@@ -85,7 +83,7 @@ func TestReadModuleOrDefault(t *testing.T) {
 		wantErr  string
 	}{
 		{name: "missing manifest", want: v1.Module{Roots: []string{"."}}},
-		{name: "declared roots", manifest: "module example.com/app\nroots proto\n", want: v1.Module{Name: "example.com/app", Roots: []string{"proto"}}},
+		{name: "declared roots", manifest: "module example.com/app\nroots proto\n", want: v1.Module{Name: "example.com/app", Roots: []string{"proto"}, RootsFromMetadata: true}},
 		{name: "invalid manifest", manifest: "roots proto\n", wantErr: "missing module directive"},
 	}
 	for _, tt := range tests {

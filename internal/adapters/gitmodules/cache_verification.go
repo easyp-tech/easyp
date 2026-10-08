@@ -15,12 +15,13 @@ import (
 	v1 "github.com/easyp-tech/easyp/internal/config/v1"
 )
 
-const cacheVerificationVersion = 1
+const cacheVerificationVersion = 2
 
 type cacheVerificationStamp struct {
 	Version     int    `json:"version"`
 	Hash        string `json:"hash"`
 	Fingerprint string `json:"fingerprint"`
+	Roots       string `json:"roots,omitempty"`
 }
 
 func verifyInstalledV1Module(installed string, entry v1.LockedModule) error {
@@ -30,7 +31,7 @@ func verifyInstalledV1Module(installed string, entry v1.LockedModule) error {
 	}
 	if fast {
 		stamp, readErr := readCacheVerificationStamp(installed)
-		if readErr == nil && stamp.Version == cacheVerificationVersion && stamp.Hash == entry.Hash && stamp.Fingerprint == fingerprint {
+		if readErr == nil && stamp.Version == cacheVerificationVersion && stamp.Hash == entry.Hash && stamp.Roots == v1RootSelectionKey(entry.Roots) && stamp.Fingerprint == fingerprint {
 			return nil
 		}
 	}
@@ -55,6 +56,7 @@ func verifyInstalledV1Module(installed string, entry v1.LockedModule) error {
 			Version:     cacheVerificationVersion,
 			Hash:        entry.Hash,
 			Fingerprint: after,
+			Roots:       v1RootSelectionKey(entry.Roots),
 		})
 	}
 	return nil
