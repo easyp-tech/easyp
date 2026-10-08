@@ -190,16 +190,24 @@ func (s migrationSource) selectedFetched(lock v1.Lock) map[string]modules.Fetche
 }
 
 func (s migrationSource) fetchMigration(ctx context.Context, source, version, hash string) (modules.Fetched, error) {
-	if selection, ok := s.selections[source]; ok && selection.needsProof() {
+	if selection, selected := s.selections[source]; selected {
 		repository, ok := s.repository.(RootsRepository)
 		if !ok {
-			return modules.Fetched{}, fmt.Errorf("dependency %s requires a roots-aware migration repository", source)
+			if selection.needsProof() {
+				return modules.Fetched{}, fmt.Errorf("dependency %s requires a roots-aware migration repository", source)
+			}
+		} else {
+			// Even an unfiltered Git input generates the old installed archive,
+			// which may differ from the native dependency's inspected namespace.
+			fetched, err := repository.FetchMigrationWithRoots(ctx, source, version, hash, selection.roots())
+			if err != nil {
+				return modules.Fetched{}, fmt.Errorf("FetchMigrationWithRoots: %w", err)
+			}
+			if fetched.Inspection == nil || fetched.Inspection.LegacyFiles == nil {
+				return modules.Fetched{}, fmt.Errorf("generate.inputs[%d].git_repo %s requires verified legacy source mappings from the roots-aware migration repository", selection.index, source)
+			}
+			return fetched, nil
 		}
-		fetched, err := repository.FetchMigrationWithRoots(ctx, source, version, hash, selection.roots())
-		if err != nil {
-			return modules.Fetched{}, fmt.Errorf("FetchMigrationWithRoots: %w", err)
-		}
-		return fetched, nil
 	}
 	fetched, err := s.repository.FetchMigration(ctx, source, version, hash)
 	if err != nil {
