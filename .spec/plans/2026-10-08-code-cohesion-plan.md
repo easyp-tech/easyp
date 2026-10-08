@@ -89,12 +89,12 @@ Do not replace filesystem/root proof with a general callback or storage abstract
 
 ## Task 5: Whole-change verification and publication
 
-- [ ] Update .spec/ARCHITECTURE.md and .spec/PACKAGES.md to describe the actual owners/data flow. Product behavior docs and schemas should have no content drift; no edits in docs/easyp-test repositories unless a demonstrated behavioral coverage gap requires one.
-- [ ] Verify boundaries directly: no tidy *importRootSource dependency or fetched-map reads; module transaction storage accessed only by its implementation; migration candidate updates use their owner; no new cyclic package coupling or generic layers.
-- [ ] Run GOTOOLCHAIN=go1.26.6 go test -mod=readonly -race -count=1 -timeout=5m ./..., go vet -mod=readonly ./..., pinned golangci-lint 2.14.0, and task schema:check dev-tools:check proto:check. Expected: PASS and unchanged generated schemas/go.mod/go.sum.
-- [ ] Build fresh CLI/MCP into owned temporary evidence resources. Run GOTOOLCHAIN=go1.26.6 with EASYP_BIN/EASYP_MCP_BIN/EASYP_SOURCE against the complete easyp-test standard v1 suite, -mod=readonly -race -tags=v1 -count=1 -timeout=15m. Expected: PASS, including Go SDK compilation, source edits/modes, migration, cold/frozen and breaking imported-contract controls.
-- [ ] Run affected opt-in live/Python checks when supported; retain exact evidence and explicitly state unavailable reported-plugin coverage.
-- [ ] Independent final integration/code review; fix/re-review. Record actual commands, revisions and outcomes.
+- [x] Update .spec/ARCHITECTURE.md and .spec/PACKAGES.md to describe the actual owners/data flow. Product behavior docs and schemas should have no content drift; no edits in docs/easyp-test repositories unless a demonstrated behavioral coverage gap requires one.
+- [x] Verify boundaries directly: no tidy *importRootSource dependency or fetched-map reads; module transaction storage accessed only by its implementation; migration candidate updates use their owner; no new cyclic package coupling or generic layers.
+- [x] Run GOTOOLCHAIN=go1.26.6 go test -mod=readonly -race -count=1 -timeout=5m ./..., go vet -mod=readonly ./..., pinned golangci-lint 2.14.0, and task schema:check dev-tools:check proto:check. Expected: PASS and unchanged generated schemas/go.mod/go.sum.
+- [x] Build fresh CLI/MCP into owned temporary evidence resources. Run GOTOOLCHAIN=go1.26.6 with EASYP_BIN/EASYP_MCP_BIN/EASYP_SOURCE against the complete easyp-test standard v1 suite, -mod=readonly -race -tags=v1 -count=1 -timeout=15m. Expected: PASS, including Go SDK compilation, source edits/modes, migration, cold/frozen and breaking imported-contract controls.
+- [x] Run affected opt-in live/Python checks when supported; retain exact evidence and explicitly state unavailable reported-plugin coverage.
+- [x] Independent final integration/code review; fix/re-review. Record actual commands, revisions and outcomes.
 - [ ] Inspect original checkout/feature branch preservation and clean owned status. Commit, push the authorized refactor branch, create/attach a reviewable PR. If #236 is still open, use its feature branch as the stacked PR base; if merged, base main and incorporate it without force-pushing unrelated branches. No merge or tag.
 
 ## Workflow and testing discipline
@@ -112,3 +112,17 @@ Task2: 9506b923. Independent spec and quality approved. Capture-buffer mutation 
 Task3: dc9cbe03. Independent spec/quality approved. Baseline migration4.363s; final migration/API/Git adapter races5.842s/39.252s/12.412s and vet passed. Fresh CLI/MCP PTY subset1.236s; independent archive/source/alias/candidates2.106s and staging/rollback/recovery1.121s. Existing private-shape test assertions preserved.
 
 Task4: 265fb529. Independent spec/quality approved. Before/after migration races4.891s/4.871s; full adapters+ migration Git13.722s/migration8.016s; vet and focused controls passed. Independent roots/hash/native/alias/attrs racesGit2.053s/migration2.394s. Fresh CLI/MCP Git migration+PTY controls2.164s.
+
+
+## Final controller verification
+
+Runtime source: 265fb529eae7d7d1f76bd3672b53ca9a42b813bc; subsequent changes are documentation only. Fresh CLI/MCP were built with Go1.26.6 and -mod=readonly; EASYP_SOURCE points to this owned refactor checkout.
+
+- Full source race suite passed (API57.364s, generation48.466s, modules31.756s, migration10.929s, Git adapter23.416s; all remaining packages passed).
+- Complete standard standalone v1 suite passed with all three EASYP variables and -race (102.867s). Generated Go SDK compilation, source/mode preservation, Git migration, frozen/cold replay and imported-contract breaking controls are included.
+- Python gRPC preflight/imported-message scenarios passed (21.024s), using the existing isolated compatible Python venv. The separate reported-plugin reproduction was not run because no reported plugin binary was supplied.
+- Eleven live Git scenarios were attempted. Ten passed; grpc_current_release exceeded the existing 300s per-command timeout during get in the parallel run. Its retained fixture already contained fetched Git objects/materialized files; no source patch was made. A fresh isolated rerun passed get/tidy/generate/cold-frozen/vendor and byte/pin checks (113.45s scenario, 114.472s suite). The exact cause of the first timing failure was not established; report both results rather than calling the initial aggregate green.
+- Full vet, pinned golangci-lint2.14.0 (zero issues), schema/dev-tool/native-proto checks passed. Go dependencies, version, public contracts and generated schemas have no diff.
+- Independent final integration/code review approved the complete runtime/doc change with no Must Fix, Should Fix or Nice to Have findings.
+- Structural audit: tidy resolver type dependencies3->0; resolver map reads3->0; module transaction storage accesses outside owner6->0; migration Plan staged-change accesses5->0. These are direct access counts, not general complexity scores.
+- The feature checkout remains clean at898bb664; this refactor is isolated on codex/readability-cohesion-20261008. Publication is the last pending step; no merge/tag is authorized.
