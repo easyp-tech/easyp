@@ -264,7 +264,7 @@ func migrationRootNamespace(dependency modules.Fetched) (map[string]modules.Root
 			if root != "." {
 				name = strings.TrimPrefix(name, root+"/")
 			}
-			if previous, exists := result[name]; exists && previous.Identity != file.Identity {
+			if previous, exists := result[name]; exists && (previous.Path != file.Path || previous.Identity != file.Identity) {
 				return nil, fmt.Errorf("dependency %s filename %q collides between %q and %q", dependency.Module.Name, name, previous.Path, file.Path)
 			}
 			result[name] = file

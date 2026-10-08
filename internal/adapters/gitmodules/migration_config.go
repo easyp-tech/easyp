@@ -17,9 +17,7 @@ import (
 )
 
 func readMigrationLegacyRoots(checkout string, files []string) ([]string, error) {
-	tracked := make(map[string]bool, len(files))
 	for _, name := range files {
-		tracked[name] = true
 		if path.Base(name) != v1.ModuleFile {
 			continue
 		}
@@ -30,6 +28,20 @@ func readMigrationLegacyRoots(checkout string, files []string) ([]string, error)
 		if v1.IsModuleManifest(raw) {
 			return nil, fmt.Errorf("cannot reproduce legacy roots with native protobuf.mod %q", name)
 		}
+	}
+	roots, err := readMigrationArchiveRoots(checkout, files)
+	if err != nil {
+		return nil, fmt.Errorf("readMigrationArchiveRoots: %w", err)
+	}
+	return roots, nil
+}
+
+// Native protobuf.mod owns the v1 namespace, but released v0 installers read
+// these producer configs independently when renaming their archive entries.
+func readMigrationArchiveRoots(checkout string, files []string) ([]string, error) {
+	tracked := make(map[string]bool, len(files))
+	for _, name := range files {
+		tracked[name] = true
 	}
 	// Legacy ReadFromRepo preferred buf.work.yaml, then buf.yaml, then easyp.yaml.
 	// Malformed higher-priority files are refused rather than silently falling

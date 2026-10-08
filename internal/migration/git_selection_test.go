@@ -158,7 +158,7 @@ func TestMigrationGitReachableImportsKeepSourceBindings(t *testing.T) {
 	}{
 		{name: "rooted reachable source", imported: "other/b.proto"},
 		{name: "raw alias would disappear", imported: "api/other/b.proto", wantError: "api/other/b.proto"},
-		{name: "local source shadows dependency", imported: "other/b.proto", localName: "other/b.proto", wantError: "source binding"},
+		{name: "local source shadows dependency", imported: "other/b.proto", localName: "other/b.proto", wantError: "duplicate import path"},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()

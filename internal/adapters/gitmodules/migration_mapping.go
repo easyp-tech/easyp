@@ -30,13 +30,13 @@ func proveMigrationLegacyLayout(ctx context.Context, checkout v1ModuleCheckout, 
 		}
 		return layout, nil
 	}
-	var roots []string
-	if !nativeInitial {
-		var err error
-		roots, err = readMigrationLegacyRoots(checkout.snapshot, tracked.trackedFiles)
-		if err != nil {
-			return migrationLegacyLayout{}, fmt.Errorf("readMigrationLegacyRoots: %w", err)
-		}
+	readRoots := readMigrationLegacyRoots
+	if nativeInitial {
+		readRoots = readMigrationArchiveRoots
+	}
+	roots, err := readRoots(checkout.snapshot, tracked.trackedFiles)
+	if err != nil {
+		return migrationLegacyLayout{}, fmt.Errorf("readRoots: %w", err)
 	}
 	var treeHash string
 	var treeErr error
