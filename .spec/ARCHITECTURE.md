@@ -31,6 +31,29 @@ The contracts reflect actual consumers:
 - <code>Repository</code>: source plus cache for <code>Get</code> and <code>Tidy</code>.
 - <code>VersionedRepository</code>: also list versions for <code>Update</code>.
 
+Root resolution keeps provisional metadata and checked revision evidence
+separate. The internal root source coordinates fetches and finalizes the exact
+MVS-selected commit and roots. Graph orchestration applies namespace adoption
+guards for get/update and effective overlays before exposing its result.
+`graphResolveResult` owns the selected lock and verified source observations;
+its accessors return independent copies of mutable roots, filters, maps and
+source bytes. Tidy's import planner consumes this result and previous pins,
+without accessing the resolver's working maps.
+
+`TidyWithReport` keeps input capture, resolution, repair planning, compilation
+and commit in execution order. `tidyInputs` owns consumer metadata, source
+selection and cache-boundary checkpoints. Its early capture is available only
+when the repository exposes complete cache ownership; generic repositories
+capture after their newly resolved directories are known. Previous-pin fetches
+add their boundaries before the final selection checks.
+
+The proposed source view reads through `resolvedFileObservations`, which owns
+bounded file/metadata/absence observations and read-only dependency scopes.
+Returned observations have independent byte buffers. The writer owns staged
+changes, checks observations around cache verification and after staging, then
+commits or rolls back. Compile-time reads and old namespace proofs remain
+available for the final input recheck.
+
 <code>Download</code> and <code>Vendor</code> need only <code>Cache</code>. The Git adapter implements these contracts. Unit tests use explicit fake answers/errors without Git; adapter and integration tests retain local repository fixtures.
 
 Git dependencies can carry BSR requests from Buf configs and locks. The Git adapter passes them to <code>modules.BSRResolver</code>, records their pinned Git targets and provenance on the parent lock entry, and exposes ordinary requirements to the graph. The current explicit compatibility snapshots are selected in <code>api.moduleCache</code>, shared by module commands and migration; a Service backend replaces that injected implementation. Cached/frozen reads replay recorded bindings without consulting the backend. See [BSR resolution and limitations](config/dependency.md#bsr-compatibility-snapshots).

@@ -49,17 +49,17 @@ Normalization and immutable tag checks retain their existing order. Current evid
 
 ## Task 2: Cohesive tidy phases and transaction observations
 
-- [ ] Inspect current TidyWithReport checkpoints and run existing tidy/transaction cases before changes:
+- [x] Inspect current TidyWithReport checkpoints and run existing tidy/transaction cases before changes:
   GOTOOLCHAIN=go1.26.6 go test -mod=readonly -race -count=1 -timeout=5m ./internal/modules ./internal/api
   Expected: PASS.
-- [ ] Move public report types and the top-level tidy operation into a focused owner. Make the operation visibly perform capture -> resolve -> plan -> validate -> commit, with early error handling. Supporting concrete units own consumer observations, import binding/edit planning and proposed-source compilation; the transaction owns file-state storage and staged changes.
-- [ ] Preserve distinct ownership checkpoints: initial cache exclusion; manifest/lock capture; early consumer capture for complete cache ownership; late capture for generic repositories after new directories are known; previous-pin boundaries after old-source proof; final source selection/integrity rechecks.
-- [ ] Add narrow transaction operations for captured bytes/physical identities and child read-only observations. Replace all external reads of expected/changes and writes to inputs. Return owned/copy-safe observations; bounded SourceRoots validation remains in the observation owner. Preserve nil observation scope semantics for metadata.
-- [ ] Keep old namespaces, dependency metadata and absence observations alive through commit. Preserve verifyCapturedInputs -> cache verification -> verifyCapturedInputs, compilation of every changed source/closure, and the post-staging recheck. Retain existing test injection points and rollback/recovery behavior.
-- [ ] Keep token-only imports, physical alias deduplication, source bytes/CRLF/modes, indirect augmentation and committed-only deterministic reports unchanged. Preserve read-only local replacement behavior and early frozen rejection at the CLI boundary.
-- [ ] Run existing literal/binding/cache-ownership/metadata-mutation/rollback regressions with -race; add a red/green behavioral case only for a proven uncovered boundary.
-- [ ] Run modules/API/Git adapter races, self-review and commit owned files.
-- [ ] Independent spec gate, then quality gate; fix/re-review before Task3.
+- [x] Move public report types and the top-level tidy operation into a focused owner. Make the operation visibly perform capture -> resolve -> plan -> validate -> commit, with early error handling. Supporting concrete units own consumer observations, import binding/edit planning and proposed-source compilation; the transaction owns file-state storage and staged changes.
+- [x] Preserve distinct ownership checkpoints: initial cache exclusion; manifest/lock capture; early consumer capture for complete cache ownership; late capture for generic repositories after new directories are known; previous-pin boundaries after old-source proof; final source selection/integrity rechecks.
+- [x] Add narrow transaction operations for captured bytes/physical identities and child read-only observations. Replace all external reads of expected/changes and writes to inputs. Return owned/copy-safe observations; bounded SourceRoots validation remains in the observation owner. Preserve nil observation scope semantics for metadata.
+- [x] Keep old namespaces, dependency metadata and absence observations alive through commit. Preserve verifyCapturedInputs -> cache verification -> verifyCapturedInputs, compilation of every changed source/closure, and the post-staging recheck. Retain existing test injection points and rollback/recovery behavior.
+- [x] Keep token-only imports, physical alias deduplication, source bytes/CRLF/modes, indirect augmentation and committed-only deterministic reports unchanged. Preserve read-only local replacement behavior and early frozen rejection at the CLI boundary.
+- [x] Run existing literal/binding/cache-ownership/metadata-mutation/rollback regressions with -race; add a red/green behavioral case only for a proven uncovered boundary.
+- [x] Run modules/API/Git adapter races, self-review and commit owned files.
+- [x] Independent spec gate, then quality gate; fix/re-review before Task3.
 
 Do not replace filesystem/root proof with a general callback or storage abstraction. The existing private transaction stays the writer; observations are a narrow view of that implementation.
 
@@ -106,3 +106,5 @@ Existing source behavior was developed red/green and passed source/standard v1 r
 ## Completed gates
 
 Task1: 8fefe5b7. Spec compliant and quality approved independently. Provider-buffer reuse and returned-view mutation RED/GREEN; final modules/API/generation races 17.586s/44.239s/30.949s; Git roots3.051s; independent spec13-case race2.935s and quality ownership race1.307s.
+
+Task2: 9506b923. Independent spec and quality approved. Capture-buffer mutation RED/GREEN; final modules/API/Git adapter races24.980s/44.393s/17.458s; snapshot/index/Git walker races passed. Independent spec tidy/transactions8.951s, overlay2.711s, CLI2.448s, literals1.041s. No direct transaction-storage access outside its observation/writer implementation.
