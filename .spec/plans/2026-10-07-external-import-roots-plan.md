@@ -67,27 +67,36 @@ Ownership: a fresh sequential worker in internal/modules/import_roots selection/
 
 Ownership: internal/migration, migration-specific cache verification hooks in coordination with Task 1; no CLI source modifications yet.
 
-- [ ] Write failing real-Git tests for default/root-only/sub_directory-only/both inputs, duplicate Git inputs, mixed local selectors and Git targets, authoritative dependency roots and historical archive root rewriting. Assert require, module selections, root lock metadata, exact source/import maps, and unchanged inputs on failure.
-- [ ] Observe the current custom-root guard and whole-Git/local-selector guard fail these tests.
-- [ ] Replace unconditional guards with literal bounded input validation and per-module selection planning. Convert local paths/packages into the local module object when Git modules are also selected. Maintain compact inference for a sole unfiltered local module and root-free Git shorthands.
-- [ ] Add an optional roots-aware migration repository interface; call it for explicit legacy hints. Verify the historical hash and pin before resolving roots. Use cache-backed pinned sources to compare legacy archive-normalized selection with v1 logical filenames; translate sub_directory into physical module-relative selectors.
-- [ ] Keep unresolved previews blocked for apply until dependency verification is authorized. No plugins execute. Surface actual namespace/scope conflicts and proposed corrections. Recheck selected sources and root choices before apply.
-- [ ] Run migration/API race tests, including PTY wizard cancellation/confirmation cases and transaction rollback. Commit owned changes after spec and code review.
+- [x] Write failing real-Git tests for default/root-only/sub_directory-only/both inputs, duplicate Git inputs, mixed local selectors and Git targets, authoritative dependency roots and historical archive root rewriting. Assert require, module selections, root lock metadata, exact source/import maps, and unchanged inputs on failure.
+- [x] Observe the current custom-root guard and whole-Git/local-selector guard fail these tests.
+- [x] Replace unconditional guards with literal bounded input validation and per-module selection planning. Convert local paths/packages into the local module object when Git modules are also selected. Maintain compact inference for a sole unfiltered local module and root-free Git shorthands.
+- [x] Add an optional roots-aware migration repository interface; call it for explicit legacy hints. Verify the historical hash and pin before resolving roots. Use cache-backed pinned sources to compare legacy archive-normalized selection with v1 logical filenames; translate sub_directory into physical module-relative selectors.
+- [x] Keep unresolved previews blocked for apply until dependency verification is authorized. No plugins execute. Surface actual namespace/scope conflicts and proposed corrections. Recheck selected sources and root choices before apply.
+- [x] Run migration/API race tests, including PTY wizard cancellation/confirmation cases and transaction rollback. Commit owned changes after spec and code review.
 
 ## Task 4: CLI, schemas, documentation and end-to-end behavior
 
 Ownership: controller internal/api GET wiring/flags/tests, mcp/easypconfig, schemas via generator, .spec/CLI.md/dependency docs/V1 release notes; easyp-test/docs use their own clean owned branches and applicable rules.
 
-- [ ] Add a failing CLI test for repeatable get --import-root, frozen rejection and invalid hints rejected before fetch. Inspect actual Get CLI wiring; add the flag alongside existing GET flags and use GetWithRoots.
-- [ ] Generate schemas through `GOTOOLCHAIN=go1.26.6 task schema:generate`; update MCP root-field descriptions and mod/get reference. Run schema tests/check; do not hand edit generated JSON.
-- [ ] Document roots as resolution metadata rather than generation selectors; add no-config inference/ambiguity, explicit hints, locked roots and frozen semantics, and updated migration examples.
-- [ ] Add standalone v1 live local-Git regressions in easyp-test for migration with roots, SDK filename equivalence, source_relative/import/default Go plugin modes, cold cache/frozen replay, independent consumers, metadata precedence, no write on failures and breaking imported-contract changes.
-- [ ] Build fresh CLI and MCP into a temporary directory using `GOTOOLCHAIN=go1.26.6 go build -mod=readonly` and run the full standard v1 suite with EASYP_BIN, EASYP_MCP_BIN and EASYP_SOURCE. Keep public plugin/cache downloads separate from private/customer sources.
-- [ ] Run `go test -mod=readonly -race -count=1 ./...`, lint, schema check and relevant docs validation. Compile generated SDKs. Review exact diff and evidence; fix confirmed issues without unrelated refactoring.
+- [x] Add a failing CLI test for repeatable get --import-root, frozen rejection and invalid hints rejected before fetch. Inspect actual Get CLI wiring; add the flag alongside existing GET flags and use GetWithRoots.
+- [x] Generate schemas through `GOTOOLCHAIN=go1.26.6 task schema:generate`; update MCP root-field descriptions and mod/get reference. Run schema tests/check; do not hand edit generated JSON.
+- [x] Document roots as resolution metadata rather than generation selectors; add no-config inference/ambiguity, explicit hints, locked roots and frozen semantics, and updated migration examples.
+- [x] Add standalone v1 live local-Git regressions in easyp-test for migration with roots, SDK filename equivalence, source_relative/import/default Go plugin modes, cold cache/frozen replay, independent consumers, metadata precedence, no write on failures and breaking imported-contract changes.
+- [x] Build fresh CLI and MCP into a temporary directory using `GOTOOLCHAIN=go1.26.6 go build -mod=readonly` and run the full standard v1 suite with EASYP_BIN, EASYP_MCP_BIN and EASYP_SOURCE. Keep public plugin/cache downloads separate from private/customer sources.
+- [x] Run `go test -mod=readonly -race -count=1 ./...`, lint, schema check and relevant docs validation. Compile generated SDKs. Review exact diff and evidence; fix confirmed issues without unrelated refactoring.
 - [ ] Commit/push authorized implementation/test/docs branches, create reviewable PRs and attach each to this task. Do not merge or tag a release.
 
 ## Review checkpoints
 
-- [ ] Independent spec/plan review before code.
-- [ ] Each implementation task: red test evidence, green race tests, spec compliance review, then quality review. Keep implementers sequential in the shared worktree.
-- [ ] Final integration/code review and full test evidence before reporting completion.
+- [x] Independent spec/plan review before code.
+- [x] Each implementation task: red test evidence, green race tests, spec compliance review, then quality review. Keep implementers sequential in the shared worktree.
+- [x] Final integration/code review and full test evidence before reporting completion.
+
+## Final validation evidence
+
+- Runtime implementation: `13f6ba92afb55d933648dddf86e612a29c58898a`. Full source `GOTOOLCHAIN=go1.26.6 go test -mod=readonly -race -count=1 -timeout=5m ./...` passed. Pinned golangci-lint 2.14.0 reported zero issues; schema/dev-tools/native proto checks passed.
+- Fresh CLI/MCP from that source passed the complete standard standalone v1 suite with all three EASYP variables (75.843s), including generated Go SDK compilation and scoped export-ignore cold/frozen replay. Python gRPC scenarios passed (5.220s).
+- All eleven live Git dependency scenarios passed at `de80a1d` (408.958s). Later runtime changes are confined to migration archive selection; ordinary get/tidy/generate/vendor paths remain unchanged. The separate reported-plugin `python_grpc_repro` scenario was not run because no reported plugin binary was supplied.
+- Final help/MCP coordinate clarification passed fresh API and MCP race suites (35.882s/1.094s). EN/RU documentation passed types:check and the 684-page production build. Standalone tests passed vet.
+- Independent spec and quality gates approved each implementation task; final integration review approved the complete work after the two documentation clarifications. Go versions and dependencies remain unchanged.
+- Publication is tracked separately below; no merge or release tag is authorized for this feature branch.

@@ -27,7 +27,7 @@ func (g Get) Command() *cli.Command {
 			flags.Frozen(),
 			&cli.StringSliceFlag{
 				Name:  "import-root",
-				Usage: "checked module-relative import-root directory for this dependency (repeatable)",
+				Usage: "checked dependency import-root directory (Git: repository snapshot; local replace: replacement directory; repeatable)",
 			},
 		},
 		Usage:     "add a Git module and its transitive dependencies",

@@ -37,5 +37,5 @@ Ownership for one worker after Task2 resolver reviews finish:
 
 - [x] Add standalone CLI RED->GREEN regressions for source rewrite, old/new root diagnostics, failure byte preservation, separate breaking baselines and SDK outputs.
 - [x] Update `.spec/CLI.md`, dependency docs, V1 release notes and EN/RU public docs. Keep generated schemas unchanged unless model changes justify regeneration.
-- [ ] Rebuild final CLI/MCP and run full source race, standard v1 standalone suite and opt-in live/Python checks after all implementation tasks.
+- [x] Rebuild final CLI/MCP and verify source race, standard v1 standalone and opt-in live/Python coverage. Exact tested revisions and the reported-plugin limitation are recorded in the external import roots plan.
 - [ ] Commit/push the authorized source/tests/docs branches and attach PRs. No merge or release tag.
