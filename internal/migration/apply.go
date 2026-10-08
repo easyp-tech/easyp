@@ -44,6 +44,7 @@ type transaction struct {
 	root          string
 	expected      map[string]snapshot
 	changes       []fileChange
+	candidates    []Output
 	requestedRoot string
 	rootInfo      os.FileInfo
 	beforeApply   func() error
