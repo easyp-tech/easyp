@@ -22,17 +22,17 @@ Names describe the intended responsibility; consolidate an anticipated small fil
 
 ## Task 1: Checked root resolution result
 
-- [ ] Run the existing roots/transition/overlay/tidy behavior regressions before changing code:
+- [x] Run the existing roots/transition/overlay/tidy behavior regressions before changing code:
   GOTOOLCHAIN=go1.26.6 go test -mod=readonly -race -count=1 -timeout=5m ./internal/modules
   Expected: PASS on the baseline.
-- [ ] Introduce a named revision key and one explicit graph request value instead of positional preserveHeads/hints/tidy booleans. A named transition policy must represent checked get/update versus tidy repair planning; reserve enum zero and make a missing policy safe rather than implicitly dropping guards.
-- [ ] Have resolveV1Graph return a concrete result with the final lock and owned per-revision evidence. Accessors must copy mutable nested bytes/roots/maps; no consumer receives *importRootSource. Keep incomplete/provisional observations inside resolution only. Repositories without inspections remain supported; distinguish absence of evidence from an incomplete evidence result.
-- [ ] Move tidy binding planning off importRootSource into a cohesive planner with current checked evidence, previous lock and the existing pinned-source capability. Reuse old-scope proofs without widening or weakening the original hash check. Retain the generic repository old-namespace/absence fallback.
-- [ ] Keep old/new namespace guards explicit in get/update graph orchestration and all effective overlay finalization paths. Audit finalize and finalizeSelections callers so moving a guard cannot silently bypass overlays, root hints or historical baselines.
-- [ ] Adapt retainPinnedSources and tidy callers to the checked result, and preserve current behavior before the Task2 orchestration rewrite. No direct fetched/locked map reads outside resolver/evidence implementation.
-- [ ] Add a behavioral red/green regression if evidence ownership is not covered: mutations of a returned/current source view or provider buffers must not corrupt a separately retained checked view or its pin/hash proof. Refactoring under existing passing behavioral regressions is the refactor phase; do not add tests for private method names/struct shapes.
-- [ ] Run modules/API/generation races and focused Git adapter roots regressions. Inspect actual call graph, self-review and commit only Task1-owned files.
-- [ ] Independent spec compliance review; fix/re-review. Then independent quality review; fix/re-review before Task2 starts.
+- [x] Introduce a named revision key and one explicit graph request value instead of positional preserveHeads/hints/tidy booleans. A named transition policy must represent checked get/update versus tidy repair planning; reserve enum zero and make a missing policy safe rather than implicitly dropping guards.
+- [x] Have resolveV1Graph return a concrete result with the final lock and owned per-revision evidence. Accessors must copy mutable nested bytes/roots/maps; no consumer receives *importRootSource. Keep incomplete/provisional observations inside resolution only. Repositories without inspections remain supported; distinguish absence of evidence from an incomplete evidence result.
+- [x] Move tidy binding planning off importRootSource into a cohesive planner with current checked evidence, previous lock and the existing pinned-source capability. Reuse old-scope proofs without widening or weakening the original hash check. Retain the generic repository old-namespace/absence fallback.
+- [x] Keep old/new namespace guards explicit in get/update graph orchestration and all effective overlay finalization paths. Audit finalize and finalizeSelections callers so moving a guard cannot silently bypass overlays, root hints or historical baselines.
+- [x] Adapt retainPinnedSources and tidy callers to the checked result, and preserve current behavior before the Task2 orchestration rewrite. No direct fetched/locked map reads outside resolver/evidence implementation.
+- [x] Add a behavioral red/green regression if evidence ownership is not covered: mutations of a returned/current source view or provider buffers must not corrupt a separately retained checked view or its pin/hash proof. Refactoring under existing passing behavioral regressions is the refactor phase; do not add tests for private method names/struct shapes.
+- [x] Run modules/API/generation races and focused Git adapter roots regressions. Inspect actual call graph, self-review and commit only Task1-owned files.
+- [x] Independent spec compliance review; fix/re-review. Then independent quality review; fix/re-review before Task2 starts.
 
 Suggested private value shape, with concrete implementation names chosen by the owner:
 
@@ -102,3 +102,7 @@ Do not replace filesystem/root proof with a general callback or storage abstract
 The human approved the concrete design and autonomous implementation on 2026-10-08. Do not ask again for execution choice or routine code organization. Single implementer at a time; reviewers are read-only; controller does not edit worker-owned production files.
 
 Existing source behavior was developed red/green and passed source/standard v1 race suites plus GitHub CI. This is behavior-preserving refactoring under those regressions. Before/after tests are mandatory; new tests must verify genuine behavior/ownership/checkpoints, not mirror architecture.
+
+## Completed gates
+
+Task1: 8fefe5b7. Spec compliant and quality approved independently. Provider-buffer reuse and returned-view mutation RED/GREEN; final modules/API/generation races 17.586s/44.239s/30.949s; Git roots3.051s; independent spec13-case race2.935s and quality ownership race1.307s.
