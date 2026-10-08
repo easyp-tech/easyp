@@ -84,7 +84,7 @@ Ownership: controller internal/api GET wiring/flags/tests, mcp/easypconfig, sche
 - [x] Add standalone v1 live local-Git regressions in easyp-test for migration with roots, SDK filename equivalence, source_relative/import/default Go plugin modes, cold cache/frozen replay, independent consumers, metadata precedence, no write on failures and breaking imported-contract changes.
 - [x] Build fresh CLI and MCP into a temporary directory using `GOTOOLCHAIN=go1.26.6 go build -mod=readonly` and run the full standard v1 suite with EASYP_BIN, EASYP_MCP_BIN and EASYP_SOURCE. Keep public plugin/cache downloads separate from private/customer sources.
 - [x] Run `go test -mod=readonly -race -count=1 ./...`, lint, schema check and relevant docs validation. Compile generated SDKs. Review exact diff and evidence; fix confirmed issues without unrelated refactoring.
-- [ ] Commit/push authorized implementation/test/docs branches, create reviewable PRs and attach each to this task. Do not merge or tag a release.
+- [x] Commit/push authorized implementation/test/docs branches, create reviewable PRs and attach each to this task. Do not merge or tag a release.
 
 ## Review checkpoints
 
@@ -99,4 +99,5 @@ Ownership: controller internal/api GET wiring/flags/tests, mcp/easypconfig, sche
 - All eleven live Git dependency scenarios passed at `de80a1d` (408.958s). Later runtime changes are confined to migration archive selection; ordinary get/tidy/generate/vendor paths remain unchanged. The separate reported-plugin `python_grpc_repro` scenario was not run because no reported plugin binary was supplied.
 - Final help/MCP coordinate clarification passed fresh API and MCP race suites (35.882s/1.094s). EN/RU documentation passed types:check and the 684-page production build. Standalone tests passed vet.
 - Independent spec and quality gates approved each implementation task; final integration review approved the complete work after the two documentation clarifications. Go versions and dependencies remain unchanged.
-- Publication is tracked separately below; no merge or release tag is authorized for this feature branch.
+- Final CLI/MCP from `f3eca343a518c5e456f296d0fed425a67e31921f` passed the complete standard standalone v1 suite again with Go1.26.6 and `-race` (71.435s).
+- All three branches were pushed and review PRs attached: [source #236](https://github.com/easyp-tech/easyp/pull/236), [tests #2](https://github.com/easyp-tech/easyp-test/pull/2), [docs #3](https://github.com/easyp-tech/docs/pull/3). No merge or release tag was performed.
