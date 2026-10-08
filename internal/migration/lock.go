@@ -69,22 +69,34 @@ func parseLegacyLock(raw []byte) (map[string]legacyPin, error) {
 }
 
 func migrateLock(ctx context.Context, module v1.Module, pins map[string]legacyPin, hadLock bool, repository Repository) (v1.Lock, error) {
+	lock, _, err := migrateSelectionLock(ctx, module, pins, hadLock, repository, nil)
+	return lock, err
+}
+
+func migrateSelectionLock(ctx context.Context, module v1.Module, pins map[string]legacyPin, hadLock bool, repository Repository, selections map[string]gitModuleSelection) (v1.Lock, map[string]modules.Fetched, error) {
 	if len(module.Replaces) > 0 {
-		return v1.Lock{}, fmt.Errorf("full lock migration with local replacements requires manual migration; the preview preserves replacement structure")
+		return v1.Lock{}, nil, fmt.Errorf("full lock migration with local replacements requires manual migration; the preview preserves replacement structure")
 	}
 	if repository == nil {
-		return v1.Lock{}, fmt.Errorf("--resolve-lock requires a dependency repository")
+		return v1.Lock{}, nil, fmt.Errorf("--resolve-lock requires a dependency repository")
 	}
-	source := migrationSource{repository: repository, metadata: make(map[migrationRevision]v1.Module)}
+	source := migrationSource{repository: repository, metadata: make(map[migrationRevision]v1.Module), fetched: make(map[migrationRevision]modules.Fetched), selections: selections}
+	for _, selection := range selections {
+		if selection.needsProof() {
+			if _, ok := repository.(RootsRepository); !ok {
+				return v1.Lock{}, nil, fmt.Errorf("generate.inputs[%d].git_repo %s requires a roots-aware migration repository; its explicit root/sub_directory cannot be ignored", selection.index, selection.name)
+			}
+		}
+	}
 	if !hadLock {
 		lock, err := modules.Resolve(ctx, module, source, nil)
 		if err != nil {
-			return v1.Lock{}, fmt.Errorf("Resolve: %w", err)
+			return v1.Lock{}, nil, fmt.Errorf("Resolve: %w", err)
 		}
 		if err := validateRuntimeLock(module, lock, source.metadata); err != nil {
-			return v1.Lock{}, fmt.Errorf("validateRuntimeLock: %w", err)
+			return v1.Lock{}, nil, fmt.Errorf("validateRuntimeLock: %w", err)
 		}
-		return lock, nil
+		return lock, source.selectedFetched(lock), nil
 	}
 	// Never run the normal version-selection algorithm on historical pins: every
 	// legacy entry is verified at its recorded SHA/tag, including indirect pins.
@@ -97,15 +109,15 @@ func migrateLock(ctx context.Context, module v1.Module, pins map[string]legacyPi
 	lock := v1.Lock{Version: 1, Modules: []v1.LockedModule{}}
 	for _, name := range names {
 		if err := ctx.Err(); err != nil {
-			return v1.Lock{}, fmt.Errorf("Err: %w", err)
+			return v1.Lock{}, nil, fmt.Errorf("Err: %w", err)
 		}
 		pin := pins[name]
-		fetched, err := repository.FetchMigration(ctx, name, pin.version, pin.hash)
+		fetched, err := source.fetchMigration(ctx, name, pin.version, pin.hash)
 		if err != nil {
-			return v1.Lock{}, fmt.Errorf("FetchMigration: %w", err)
+			return v1.Lock{}, nil, fmt.Errorf("fetchMigration: %w", err)
 		}
 		if err := checkFetched(name, pin.version, fetched); err != nil {
-			return v1.Lock{}, fmt.Errorf("checkFetched: %w", err)
+			return v1.Lock{}, nil, fmt.Errorf("checkFetched: %w", err)
 		}
 		resolved[name] = fetched
 		source.remember(fetched)
@@ -119,11 +131,11 @@ func migrateLock(ctx context.Context, module v1.Module, pins map[string]legacyPi
 	for _, requirement := range requirements {
 		pin, ok := resolved[requirement.Module]
 		if !ok {
-			return v1.Lock{}, fmt.Errorf("legacy easyp.lock is missing required dependency %s; recover its historical pin before migration (HEAD will not be selected)", requirement.Module)
+			return v1.Lock{}, nil, fmt.Errorf("legacy easyp.lock is missing required dependency %s; recover its historical pin before migration (HEAD will not be selected)", requirement.Module)
 		}
 		version, err := checkPinRequirement(ctx, requirement, pin.Lock, source)
 		if err != nil {
-			return v1.Lock{}, fmt.Errorf("checkPinRequirement: %w", err)
+			return v1.Lock{}, nil, fmt.Errorf("checkPinRequirement: %w", err)
 		}
 		previous := verifiedVersions[requirement.Module]
 		if version != "" && (previous == "" || semver.Compare(version, previous) > 0 || semver.Compare(version, previous) == 0 && version > previous) {
@@ -139,9 +151,9 @@ func migrateLock(ctx context.Context, module v1.Module, pins map[string]legacyPi
 		}
 	}
 	if err := validateRuntimeLock(module, lock, source.metadata); err != nil {
-		return v1.Lock{}, fmt.Errorf("validateRuntimeLock: %w", err)
+		return v1.Lock{}, nil, fmt.Errorf("validateRuntimeLock: %w", err)
 	}
-	return lock, nil
+	return lock, source.selectedFetched(lock), nil
 }
 
 type migrationRevision struct{ source, commit, hash string }
@@ -149,6 +161,8 @@ type migrationRevision struct{ source, commit, hash string }
 type migrationSource struct {
 	repository Repository
 	metadata   map[migrationRevision]v1.Module
+	fetched    map[migrationRevision]modules.Fetched
+	selections map[string]gitModuleSelection
 }
 
 func revisionKey(entry v1.LockedModule) migrationRevision {
@@ -159,7 +173,39 @@ func (s migrationSource) remember(fetched modules.Fetched) {
 	key := revisionKey(fetched.Lock)
 	if _, exists := s.metadata[key]; !exists {
 		s.metadata[key] = fetched.Module
+		if s.fetched != nil {
+			s.fetched[key] = fetched
+		}
 	}
+}
+
+func (s migrationSource) selectedFetched(lock v1.Lock) map[string]modules.Fetched {
+	result := make(map[string]modules.Fetched, len(lock.Modules))
+	for _, entry := range lock.Modules {
+		fetched := s.fetched[revisionKey(entry)]
+		fetched.Lock = entry
+		result[entry.Source] = fetched
+	}
+	return result
+}
+
+func (s migrationSource) fetchMigration(ctx context.Context, source, version, hash string) (modules.Fetched, error) {
+	if selection, ok := s.selections[source]; ok && selection.needsProof() {
+		repository, ok := s.repository.(RootsRepository)
+		if !ok {
+			return modules.Fetched{}, fmt.Errorf("dependency %s requires a roots-aware migration repository", source)
+		}
+		fetched, err := repository.FetchMigrationWithRoots(ctx, source, version, hash, selection.roots())
+		if err != nil {
+			return modules.Fetched{}, fmt.Errorf("FetchMigrationWithRoots: %w", err)
+		}
+		return fetched, nil
+	}
+	fetched, err := s.repository.FetchMigration(ctx, source, version, hash)
+	if err != nil {
+		return modules.Fetched{}, fmt.Errorf("FetchMigration: %w", err)
+	}
+	return fetched, nil
 }
 
 func (s migrationSource) Fetch(ctx context.Context, source, version string) (modules.Fetched, error) {
@@ -167,9 +213,9 @@ func (s migrationSource) Fetch(ctx context.Context, source, version string) (mod
 	if err != nil {
 		return modules.Fetched{}, fmt.Errorf("migrationVersion: %w", err)
 	}
-	fetched, err := s.repository.FetchMigration(ctx, source, version, "")
+	fetched, err := s.fetchMigration(ctx, source, version, "")
 	if err != nil {
-		return modules.Fetched{}, fmt.Errorf("FetchMigration: %w", err)
+		return modules.Fetched{}, fmt.Errorf("fetchMigration: %w", err)
 	}
 	if err := checkFetched(source, version, fetched); err != nil {
 		return modules.Fetched{}, fmt.Errorf("checkFetched: %w", err)
@@ -211,6 +257,9 @@ func validateRuntimeRequirements(module v1.Module, lock v1.Lock) error {
 }
 
 func checkFetched(source, version string, fetched modules.Fetched) error {
+	if fetched.Inspection != nil && fetched.Inspection.Provisional {
+		return fmt.Errorf("dependency %s still has provisional sources; roots and integrity must be finalized before migration", source)
+	}
 	if fetched.Lock.Source != source || fetched.Module.Name != source {
 		return fmt.Errorf("resolved dependency identity differs from %s", source)
 	}

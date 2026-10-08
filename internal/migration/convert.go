@@ -50,10 +50,10 @@ type generateOutput struct {
 	Options  v1.GenerateOptions `yaml:"options,omitempty"`
 }
 type targetsOutput struct {
-	Modules  []string           `yaml:"modules,omitempty"`
-	Packages []string           `yaml:"packages,omitempty"`
-	Paths    []string           `yaml:"paths,omitempty"`
-	Managed  config.ManagedMode `yaml:"managed,omitempty"`
+	Modules  []v1.GenerateModule `yaml:"modules,omitempty"`
+	Packages []string            `yaml:"packages,omitempty"`
+	Paths    []string            `yaml:"paths,omitempty"`
+	Managed  config.ManagedMode  `yaml:"managed,omitempty"`
 }
 type pluginOutput struct {
 	Name        string            `yaml:"name,omitempty"`
@@ -232,7 +232,7 @@ func prefixExclusionPaths(value string) ([]string, error) {
 	return []string{prefix, prefix + "/**"}, nil
 }
 
-func convertGenerate(cfg legacyConfig, selected, packages, paths []string) ([]byte, error) {
+func convertGenerate(cfg legacyConfig, selected []v1.GenerateModule, packages, paths []string) ([]byte, error) {
 	output := generateOutput{
 		Version: "v1", Generate: targetsOutput{Modules: selected, Packages: packages, Paths: paths, Managed: cfg.Generate.Managed},
 		Plugins: []pluginOutput{},

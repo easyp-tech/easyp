@@ -59,6 +59,7 @@ type Plan struct {
 	packages  []string
 	paths     []string
 	sources   map[string]string
+	git       *gitSelectionProof
 }
 
 // Outputs returns copies of all candidate files; mutating them cannot alter Apply.
@@ -126,6 +127,15 @@ func (p *Plan) verifySourceSelection() error {
 			return fmt.Errorf("local .proto source selection changed since planning; preview again")
 		}
 	}
+	if p.git != nil {
+		bindings, err := p.proveGitSourceBindings(context.Background(), false)
+		if err != nil {
+			return fmt.Errorf("proveGitSourceBindings: %w", err)
+		}
+		if !equalMigrationBindings(bindings, p.git.bindings) {
+			return fmt.Errorf("selected/reachable protobuf source bindings changed since planning; preview again")
+		}
+	}
 	return nil
 }
 
@@ -188,15 +198,10 @@ func Build(ctx context.Context, options Options) (*Plan, error) {
 	}
 	p.sources, p.packages, p.paths = selection.files, selection.packages, selection.paths
 	if len(p.packages) > 0 || len(p.paths) > 0 {
-		for _, input := range cfg.Generate.Inputs {
-			if input.GitRepo != nil {
-				return nil, fmt.Errorf("inferred local selectors would change the generation scope of whole-module Git inputs; migrate separate generation projects manually")
-			}
-		}
 		if len(p.paths) > 0 {
-			p.warnings = append(p.warnings, "Legacy directory selection is preserved through literal generate.paths selectors relative to the module directory. Import roots and source paths stay unchanged; files outside these paths do not become targets even when they declare the same package.")
+			p.warnings = append(p.warnings, "Legacy directory selection is preserved through literal paths selectors for the local module. Import roots and source paths stay unchanged; files outside these paths do not become targets even when they declare the same package.")
 		} else {
-			p.warnings = append(p.warnings, "Legacy directory selection is preserved through exact generate.packages selectors. Import roots and source paths stay unchanged; future files declaring those packages also participate in generation.")
+			p.warnings = append(p.warnings, "Legacy directory selection is preserved through exact packages selectors for the local module. Import roots and source paths stay unchanged; future files declaring those packages also participate in generation.")
 		}
 	}
 	for _, source := range p.sources {
@@ -210,30 +215,13 @@ func Build(ctx context.Context, options Options) (*Plan, error) {
 			return nil, fmt.Errorf("add: %w", err)
 		}
 	}
-	var selected []string
-	if len(inputs) > 0 {
-		selected = append(selected, options.Module)
+	selected, gitSelections, err := planGitSelections(cfg, options.Module, len(inputs) > 0, p.packages, p.paths, &deps)
+	if err != nil {
+		return nil, fmt.Errorf("planGitSelections: %w", err)
 	}
-	for _, input := range cfg.Generate.Inputs {
-		if input.GitRepo == nil {
-			continue
-		}
-		git := input.GitRepo
-		if (git.Root != "" && git.Root != ".") || (git.SubDirectory != "" && git.SubDirectory != ".") {
-			return nil, fmt.Errorf("git_repo custom root/sub_directory requires manual migration; an entire dependency module cannot represent this selection")
-		}
-		if err := deps.add(git.URL, false); err != nil {
-			return nil, fmt.Errorf("add: %w", err)
-		}
-		name, _, _ := strings.Cut(git.URL, "@")
-		if !slices.Contains(selected, name) {
-			selected = append(selected, name)
-		}
-	}
-	// The generator already belongs to this module. Keep explicit selections
-	// only when legacy Git inputs add other generation modules.
-	if len(inputs) > 0 && len(selected) == 1 && selected[0] == options.Module {
-		selected = nil
+	globalPackages, globalPaths := p.packages, p.paths
+	if len(gitSelections) > 0 {
+		globalPackages, globalPaths = nil, nil
 	}
 	manifest := tx.expected[v1.ModuleFile]
 	nativeManifest := manifest.exists && v1.IsModuleManifest(manifest.data)
@@ -265,7 +253,7 @@ func Build(ctx context.Context, options Options) (*Plan, error) {
 	if err != nil {
 		return nil, fmt.Errorf("convertPolicy: %w", err)
 	}
-	generateBytes, err := convertGenerate(cfg, selected, p.packages, p.paths)
+	generateBytes, err := convertGenerate(cfg, selected, globalPackages, globalPaths)
 	if err != nil {
 		return nil, fmt.Errorf("convertGenerate: %w", err)
 	}
@@ -275,12 +263,25 @@ func Build(ctx context.Context, options Options) (*Plan, error) {
 	if err := validateGenerate(generateBytes); err != nil {
 		return nil, fmt.Errorf("validateGenerate: %w", err)
 	}
-	// Preflight every local destination before any explicitly allowed cache work.
+	// A Git subdirectory may name a producer-renamed installed path. Compare an
+	// existing generator with the final translated candidate after verification.
+	deferGenerator := options.ResolveLock && tx.expected[v1.GenerateFile].exists && slices.ContainsFunc(selected, func(entry v1.GenerateModule) bool {
+		_, git := gitSelections[entry.Module]
+		return git && len(entry.Paths) > 0
+	})
+	if deferGenerator {
+		if err := validateGenerate(tx.expected[v1.GenerateFile].data); err != nil {
+			return nil, fmt.Errorf("validateGenerate: %w", err)
+		}
+	}
+	// Preflight known local candidates before explicitly allowed cache work.
 	if err := p.addOutput(v1.PolicyFile, policyBytes, true); err != nil {
 		return nil, fmt.Errorf("addOutput: %w", err)
 	}
-	if err := p.addOutput(v1.GenerateFile, generateBytes, false); err != nil {
-		return nil, fmt.Errorf("addOutput: %w", err)
+	if !deferGenerator {
+		if err := p.addOutput(v1.GenerateFile, generateBytes, false); err != nil {
+			return nil, fmt.Errorf("addOutput: %w", err)
+		}
 	}
 	if err := p.addOutput(v1.ModuleFile, moduleBytes, manifest.exists && !nativeManifest); err != nil {
 		return nil, fmt.Errorf("addOutput: %w", err)
@@ -309,9 +310,43 @@ func Build(ctx context.Context, options Options) (*Plan, error) {
 		p.blocked = "dependency integrity/lock verification is required before writing; preview again with --resolve-lock (this explicitly permits repository/cache access)"
 		p.warnings = append(p.warnings, "protobuf.lock cannot be prepared without --resolve-lock; --write is blocked until every required pin and legacy hash is verified.")
 	} else if needsLock {
-		lock, err := migrateLock(ctx, module, pins, oldLock.exists, options.Repository)
+		lock, fetched, err := migrateSelectionLock(ctx, module, pins, oldLock.exists, options.Repository, gitSelections)
 		if err != nil {
-			return nil, fmt.Errorf("migrateLock: %w", err)
+			return nil, fmt.Errorf("migrateSelectionLock: %w", err)
+		}
+		p.git, err = proveGitSelections(gitSelections, fetched, selected, options.Module)
+		if err != nil {
+			return nil, fmt.Errorf("proveGitSelections: %w", err)
+		}
+		p.git.bindings, err = p.proveGitSourceBindings(ctx, true)
+		if err != nil {
+			return nil, fmt.Errorf("proveGitSourceBindings: %w", err)
+		}
+		for _, file := range p.git.bindings {
+			if file.module == options.Module {
+				if _, err := tx.captureInput(file.path); err != nil {
+					return nil, fmt.Errorf("captureInput: %w", err)
+				}
+			}
+		}
+		for index, entry := range p.git.entries {
+			if !slices.Equal(entry.Paths, selected[index].Paths) {
+				p.warnings = append(p.warnings, fmt.Sprintf("Dependency %s: verified legacy sub_directory %v translates to module-relative generate.modules paths %v.", entry.Module, selected[index].Paths, entry.Paths))
+			}
+		}
+		generateBytes, err = convertGenerate(cfg, p.git.entries, globalPackages, globalPaths)
+		if err != nil {
+			return nil, fmt.Errorf("convertGenerate: %w", err)
+		}
+		if err := validateGenerate(generateBytes); err != nil {
+			return nil, fmt.Errorf("validateGenerate: %w", err)
+		}
+		if deferGenerator {
+			if err := p.addOutput(v1.GenerateFile, generateBytes, false); err != nil {
+				return nil, fmt.Errorf("addOutput: %w", err)
+			}
+		} else if err := p.replaceCandidate(v1.GenerateFile, generateBytes); err != nil {
+			return nil, fmt.Errorf("replaceCandidate: %w", err)
 		}
 		content, err := yaml.Marshal(lock)
 		if err != nil {
@@ -340,6 +375,24 @@ func Build(ctx context.Context, options Options) (*Plan, error) {
 	}
 	p.warnings = append(p.warnings, "Relative paths and variable placeholders are preserved; no plugin is executed. Stop other writers before applying; multiple file replacements are not process-crash atomic.")
 	return p, nil
+}
+
+func (p *Plan) replaceCandidate(name string, content []byte) error {
+	current := p.tx.expected[name]
+	if current.exists && !bytes.Equal(current.data, content) {
+		return fmt.Errorf("existing %s conflicts with the verified migration candidate; it will not be overwritten", name)
+	}
+	for index := range p.outputs {
+		if p.outputs[index].Name == name {
+			p.outputs[index].Content = bytes.Clone(content)
+		}
+	}
+	for index := range p.tx.changes {
+		if p.tx.changes[index].name == name {
+			p.tx.changes[index].content = bytes.Clone(content)
+		}
+	}
+	return nil
 }
 
 func (p *Plan) addOutput(name string, content []byte, replaceLegacy bool) error {

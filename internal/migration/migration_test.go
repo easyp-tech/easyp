@@ -147,7 +147,7 @@ func TestRejectedInputsDoNotWrite(t *testing.T) {
 		{name: "nested_boundary", input: "generate:\n  inputs: [{directory: {root: ., path: selected}}]\n", want: "scope"},
 		{name: "external", input: "generate:\n  inputs: [{directory: {root: ../external, path: .}}]\n", want: "manual"},
 		{name: "placeholder", input: "generate:\n  inputs: [{directory: '${ROOT}'}]\n", want: "placeholder"},
-		{name: "git_slice", input: "generate:\n  inputs: [{git_repo: {url: example.com/acme/deps, sub_directory: api}}]\n", want: "manual"},
+		{name: "git_external_slice", input: "generate:\n  inputs: [{git_repo: {url: example.com/acme/deps, sub_directory: ../api}}]\n", want: "manual"},
 		{name: "unsupported_ref", input: "deps: [example.com/acme/deps@main]\n", want: "full Git commit"},
 		{name: "unpinned_remote", input: "generate:\n  inputs: [{directory: .}]\n  plugins: [{remote: registry/go:latest, out: gen}]\n", want: "semantic version"},
 	} {
