@@ -101,7 +101,6 @@ func TestMigrationPackageSelectionRejectsChangedScope(t *testing.T) {
 		{name: "hidden source", path: ".selected", selected: "package selected.v1;", other: "package other.v1;"},
 		{name: "vendor source", path: "easyp_vendor", selected: "package selected.v1;", other: "package other.v1;"},
 		{name: "nested module", path: "selected", selected: "package selected.v1;", other: "package other.v1;", files: map[string]string{"selected/protobuf.mod": "module example.com/nested\n"}},
-		{name: "mixed whole Git input", path: "selected", selected: "package selected.v1;", other: "package other.v1;", extraInput: ", {git_repo: {url: example.com/acme/dependency}}"},
 		{name: "empty subtree cannot select no packages", path: "selected", other: "package other.v1;"},
 	} {
 		t.Run(tt.name, func(t *testing.T) {

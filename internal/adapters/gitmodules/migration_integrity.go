@@ -102,7 +102,6 @@ func validateMigrationInitialSelection(ctx context.Context, checkout v1ModuleChe
 // nodes participate. Released v0 installers instead used the filtered Git
 // archive reproduced by hashMigrationProtoArchive.
 func hashMigrationLegacyFiles(checkout string, files []string) (string, error) {
-	directories := make(map[string]bool)
 	for _, name := range files {
 		if !filepath.IsLocal(filepath.FromSlash(name)) || path.Clean(name) != name || strings.Contains(name, "\\") {
 			return "", fmt.Errorf("unsupported tracked path %q", name)
@@ -110,15 +109,32 @@ func hashMigrationLegacyFiles(checkout string, files []string) (string, error) {
 		if _, err := regularV1File(filepath.Join(checkout, filepath.FromSlash(name))); err != nil {
 			return "", fmt.Errorf("regularV1File: %w", err)
 		}
-		for directory := path.Dir(name); directory != "."; directory = path.Dir(directory) {
-			directories[directory] = true
-		}
 	}
 	roots, err := readMigrationLegacyRoots(checkout, files)
 	if err != nil {
 		return "", fmt.Errorf("readMigrationLegacyRoots: %w", err)
 	}
 
+	hash, err := hashMigrationRenamedFiles(files, roots, func(name string) (io.ReadCloser, error) {
+		file, err := os.Open(filepath.Join(checkout, filepath.FromSlash(name)))
+		if err != nil {
+			return nil, fmt.Errorf("Open: %w", err)
+		}
+		return file, nil
+	})
+	if err != nil {
+		return "", fmt.Errorf("hashMigrationRenamedFiles: %w", err)
+	}
+	return hash, nil
+}
+
+func hashMigrationRenamedFiles(files, roots []string, open func(string) (io.ReadCloser, error)) (string, error) {
+	directories := make(map[string]bool)
+	for _, name := range files {
+		for directory := path.Dir(name); directory != "."; directory = path.Dir(directory) {
+			directories[directory] = true
+		}
+	}
 	installedDirectories := make(map[string]bool)
 	for directory := range directories {
 		for destination := renameMigrationLegacyFile(directory, roots); destination != "."; destination = path.Dir(destination) {
@@ -145,11 +161,7 @@ func hashMigrationLegacyFiles(checkout string, files []string) (string, error) {
 		}
 	}
 	hash, err := dirhash.Hash1(names, func(name string) (io.ReadCloser, error) {
-		file, err := os.Open(filepath.Join(checkout, filepath.FromSlash(originals[name])))
-		if err != nil {
-			return nil, fmt.Errorf("Open: %w", err)
-		}
-		return file, nil
+		return open(originals[name])
 	})
 	if err != nil {
 		return "", fmt.Errorf("Hash1: %w", err)
