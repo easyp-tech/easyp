@@ -40,9 +40,16 @@ func TestFetchMigrationWithRootsRetainsArchiveByteEquivalenceChecks(t *testing.T
 			}
 			cacheDirectory := t.TempDir()
 			fetched, err := (&Cache{root: cacheDirectory}).FetchMigrationWithRoots(t.Context(), repository, commit, migrationTestHash(t, installed), []string{"api"})
-			require.ErrorContains(t, err, "source selection")
-			assert.ErrorContains(t, err, "api/changed.proto")
-			assert.Empty(t, fetched.Lock.Source)
+			if tt.name == "export ignored source" {
+				require.NoError(t, err)
+				require.NotNil(t, fetched.Inspection)
+				assert.Equal(t, map[string]string{"api/kept.proto": "api/kept.proto"}, fetched.Inspection.LegacyFiles, "only the verified old archive names may authorize consumer targets")
+				assert.Len(t, fetched.Inspection.Files, 2, "v1 source boundaries are not narrowed to the old archive")
+			} else {
+				require.ErrorContains(t, err, "source selection")
+				assert.ErrorContains(t, err, "api/changed.proto")
+				assert.Empty(t, fetched.Lock.Source)
+			}
 			migrationTestAssertNoCheckout(t, cacheDirectory)
 		})
 	}

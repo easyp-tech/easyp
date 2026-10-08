@@ -57,8 +57,12 @@ func proveMigrationLegacyLayout(ctx context.Context, checkout v1ModuleCheckout, 
 	if err != nil {
 		return migrationLegacyLayout{}, fmt.Errorf("readMigrationProtoArchive: %w", err)
 	}
-	if err := validateMigrationArchiveCoverage(nodes, tracked.regularFiles); err != nil {
-		return migrationLegacyLayout{}, fmt.Errorf("validateMigrationArchiveCoverage: %w", err)
+	// A consumer selection proves its own targets and reachable imports against
+	// this verified archive. Omitted raw protos may remain outside that scope.
+	if !selection {
+		if err := validateMigrationArchiveCoverage(nodes, tracked.regularFiles); err != nil {
+			return migrationLegacyLayout{}, fmt.Errorf("validateMigrationArchiveCoverage: %w", err)
+		}
 	}
 	var hashes []string
 	var failures []error
