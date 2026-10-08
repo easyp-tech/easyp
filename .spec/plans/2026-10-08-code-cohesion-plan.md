@@ -14,7 +14,7 @@ Branch: codex/readability-cohesion-20261008, separate from feature PR #236.
 
 - Task1 owns graph coordination and revision evidence in internal/modules: operations.go, import_roots_resolution.go, import_roots_identity.go, import_roots_transition.go, effective_graph.go, import_roots_overlay.go, new import_roots_result.go, and minimal call-site adaptation in import_rewrites.go / import_rewrites_validation.go. Existing inference/search algorithms remain intact.
 - Task2 owns tidy orchestration, proposed source validation and module transaction access: import_rewrites*.go, resolved_files_transaction.go, project_files.go; introduce tidy_operation.go, tidy_inputs.go, tidy_input_verification.go and resolved_file_observations.go as needed to keep one responsibility per file.
-- Task3 owns internal/migration: migration.go, transaction.go and adjacent transaction helpers, git_selection.go, git_imports.go; introduce local_selection_proof.go, build_candidates.go, migration_namespaces.go and migration_bindings.go for the distinct existing responsibilities.
+- Task3 owns internal/migration: migration.go, apply.go and adjacent transaction helpers, git_selection.go, git_imports.go; introduce local_selection_proof.go, build_candidates.go, migration_namespaces.go and migration_bindings.go for the distinct existing responsibilities.
 - Task4 owns Git migration request interpretation: internal/adapters/gitmodules/migration.go, migration_mapping.go, migration_integrity.go and new migration_request.go.
 - Controller owns .spec design/plan/architecture/package docs, temporary evidence, fresh binaries, easyp-test invocation and publication. No implementation worker edits these files or another task's production files except the minimal listed Task1 call-site adapters.
 
