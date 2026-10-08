@@ -13,7 +13,7 @@ import (
 // unused old import name. Its cache proof and absence evidence survive until
 // commit instead of consulting a mutable filesystem after verification.
 type tidyOldNamespace struct {
-	tx    *resolvedFilesTransaction
+	tx    *resolvedFileObservations
 	roots SourceRoots
 	files []string
 	lock  v1.Lock
@@ -58,7 +58,7 @@ func (view *tidySourceView) captureOldNamespace(ctx context.Context, repository 
 	return names, nil
 }
 
-func captureOldProtoNamespace(tx *resolvedFilesTransaction, roots SourceRoots) ([]string, map[string]bool, error) {
+func captureOldProtoNamespace(tx *resolvedFileObservations, roots SourceRoots) ([]string, map[string]bool, error) {
 	names, captured := make(map[string]bool), make(map[string]bool)
 	var files []string
 	for _, root := range roots {
@@ -95,9 +95,9 @@ func (proof tidyOldNamespace) verify(ctx context.Context, repository Repository)
 	if err != nil {
 		return fmt.Errorf("checkInputs: %w", err)
 	}
-	err = tidyInputVerifier(ctx, proof.lock, repository)()
+	err = verifyTidyCache(ctx, proof.lock, repository)
 	if err != nil {
-		return fmt.Errorf("tidyInputVerifier: %w", err)
+		return fmt.Errorf("verifyTidyCache: %w", err)
 	}
 	err = proof.checkInputs()
 	if err != nil {

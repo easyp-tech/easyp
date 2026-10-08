@@ -28,8 +28,8 @@ type tidyImportBinding struct {
 	names  map[string]RootProtoFile
 }
 
-func (planner tidyImportPlanner) tidyImportBindings(ctx context.Context, needed map[string]v1UnresolvedImport, view *tidySourceView) (map[string]tidyImportBinding, error) {
-	bindings := make(map[string]tidyImportBinding)
+func (planner tidyImportPlanner) tidyImportBindings(ctx context.Context, needed map[string]v1UnresolvedImport, view *tidySourceView) (tidyImportBindings, error) {
+	bindings := make(tidyImportBindings)
 	if len(needed) == 0 {
 		return bindings, nil
 	}
