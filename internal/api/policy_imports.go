@@ -12,6 +12,7 @@ import (
 	gitadapter "github.com/easyp-tech/easyp/internal/adapters/go_git"
 	v1 "github.com/easyp-tech/easyp/internal/config/v1"
 	"github.com/easyp-tech/easyp/internal/core/path_helpers"
+	"github.com/easyp-tech/easyp/internal/migration"
 	"github.com/easyp-tech/easyp/internal/modules"
 )
 
@@ -166,6 +167,12 @@ func (s *policyReplacementSources) replacementManifest(directory string) (v1.Mod
 		return v1.Module{}, fmt.Errorf("ReadFile: %w", err)
 	}
 	var module v1.Module
+	if s.projectRoot != s.repositoryRoot && !v1.IsModuleManifest(raw) {
+		module, _, err = migration.ReadLegacyBaselineModule(directory)
+		if err != nil {
+			return v1.Module{}, fmt.Errorf("ReadLegacyBaselineModule: %w", err)
+		}
+	}
 	if v1.IsModuleManifest(raw) {
 		module, err = v1.ParseModule(bytes.NewReader(raw))
 		if err != nil {

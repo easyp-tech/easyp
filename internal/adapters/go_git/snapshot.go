@@ -203,7 +203,7 @@ func snapshotInput(name string) bool {
 		return true
 	}
 	switch path.Base(name) {
-	case "protobuf.mod", "protobuf.lock", "easyp.yaml", "buf.yaml", "buf.yml", "buf.work.yaml":
+	case "protobuf.mod", "protobuf.lock", "easyp.lock", "easyp.yaml", "buf.yaml", "buf.yml", "buf.work.yaml":
 		return true
 	default:
 		return false

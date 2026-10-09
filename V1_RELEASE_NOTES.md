@@ -5,6 +5,28 @@ versions; the default installation remains the stable v0.17.0 release. The
 implementation and the current `.spec` documents are the source of truth for
 the v1 contract.
 
+## Nightly migration regression fixes
+
+Migration accepts Buf v2 <code>includes</code> and <code>excludes</code> metadata.
+Historical archive hashes are verified against the pinned Git revision, before
+producer filters are applied to the native source snapshot. Filtered import-only
+dependencies are checked against the consumer generation/import closure; a used
+excluded source still stops migration rather than silently changing its binding.
+
+BSR compatibility snapshots prefer a verified historical Git pin during migration.
+Exact BSR resolutions and explicit Git requirements are not overridden. The
+original BSR request and the selected Git pin remain recorded in the native lock.
+
+Breaking checks can read a v0 baseline's own <code>easyp.lock</code>, including in
+frozen mode. They verify the historical hashes and never borrow the current
+project's dependency pins or resolve an unpinned HEAD. Missing historical locks
+and unverifiable legacy local replacements fail explicitly. Baseline plugins are
+not executed and neither baseline nor current project files are migrated.
+
+Lint range directives retain standalone comments at EOF and before closing
+braces. Migration reports all invalid remote-plugin pins together and does not
+produce a partial generator candidate.
+
 ## Distribution and Go module compatibility
 
 After the v1 branch is merged into `main`, v1 is published only with
