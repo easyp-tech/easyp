@@ -66,7 +66,7 @@ func TestFetchMigration(t *testing.T) {
 				assert.Equal(t, repository, fetched.Lock.Source)
 				assert.Equal(t, repository, fetched.Module.Name)
 				assert.Equal(t, []string{"proto"}, fetched.Module.Roots)
-				assert.Equal(t, migrationTestHash(t, files), fetched.Lock.Hash)
+				assert.Equal(t, migrationTestHash(t, map[string]string{"easyp.yaml": config, "proto/example.proto": files["proto/example.proto"]}), fetched.Lock.Hash)
 				assert.NotEqual(t, legacyHash, fetched.Lock.Hash)
 				if version == "" {
 					assert.Equal(t, commit, fetched.Lock.Version)

@@ -58,16 +58,18 @@ func proveMigrationLegacyLayout(ctx context.Context, checkout v1ModuleCheckout, 
 	if err != nil {
 		return migrationLegacyLayout{}, fmt.Errorf("sourceV1SnapshotView: %w", err)
 	}
-	if !tracked.hasSymlinks && !nativeInitial {
+	if request.legacyHash != "" && !tracked.hasSymlinks && !nativeInitial {
 		treeHash, treeErr = hashMigrationRenamedFiles(tracked.regularFiles, roots, func(name string) (io.ReadCloser, error) { return view.Open(ctx, name) })
 		if treeErr == nil && request.legacyHash != "" && treeHash == request.legacyHash {
 			return migrationRegularLayout(tracked.regularFiles, roots), nil
 		}
-		if request.legacyHash == "" && treeErr != nil {
-			return migrationLegacyLayout{}, fmt.Errorf("hashMigrationRenamedFiles: %w", treeErr)
-		}
 	}
-	nodes, err := readMigrationProtoArchive(ctx, checkout.dir, checkout.commit, tracked.trackedFiles)
+	var nodes []migrationArchiveNode
+	if request.legacyHash != "" {
+		nodes, err = readMigrationProtoArchive(ctx, checkout.dir, checkout.commit, tracked.trackedFiles)
+	} else {
+		nodes, err = readMigrationSourceArchive(ctx, checkout.dir, checkout.commit, tracked.trackedFiles, roots)
+	}
 	if err != nil {
 		return migrationLegacyLayout{}, fmt.Errorf("readMigrationProtoArchive: %w", err)
 	}
@@ -91,6 +93,9 @@ func proveMigrationLegacyLayout(ctx context.Context, checkout v1ModuleCheckout, 
 		if err != nil {
 			failures = append(failures, fmt.Errorf("migrationArchiveLayout: %w", err))
 			continue
+		}
+		if request.legacyHash == "" {
+			return layout, nil
 		}
 		hash, err := dirhash.Hash1(names, func(name string) (io.ReadCloser, error) { return legacyView.Open(ctx, name) })
 		if err != nil {

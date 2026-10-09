@@ -9,8 +9,8 @@ import (
 	"io/fs"
 	"path"
 	"slices"
-	"strconv"
 	"strings"
+	"sync"
 
 	"github.com/easyp-tech/easyp/internal/adapters/gitcommand"
 )
@@ -25,6 +25,9 @@ type repositoryFS struct {
 	ctx       context.Context
 	directory string
 	entries   map[string]repositoryEntry
+	mu        sync.Mutex
+	sizes     map[string]int64
+	trees     map[string]map[string]string
 }
 
 // NewRepository reads an immutable tree through Git's format-aware object
@@ -33,14 +36,26 @@ func NewRepository(ctx context.Context, directory, commit string) (*FS, error) {
 	if !objectID(commit) {
 		return nil, fmt.Errorf("invalid pinned Git commit %q", commit)
 	}
-	backend := &repositoryFS{ctx: ctx, directory: directory, entries: map[string]repositoryEntry{
+	commit = strings.ToLower(commit)
+	backend := &repositoryFS{ctx: ctx, directory: directory, sizes: make(map[string]int64), trees: make(map[string]map[string]string), entries: map[string]repositoryEntry{
 		".": {info: fileInfo{name: ".", mode: fs.ModeDir | 0o755}},
 	}}
+	commitData, err := backend.object("commit", commit)
+	if err != nil {
+		return nil, fmt.Errorf("object: %w", err)
+	}
+	treeLine, _, _ := strings.Cut(string(commitData), "\n")
+	rootTree := strings.TrimPrefix(treeLine, "tree ")
+	if !objectID(rootTree) {
+		return nil, fmt.Errorf("invalid commit tree")
+	}
+	root := backend.entries["."]
+	root.object = rootTree
+	backend.entries["."] = root
 	raw, err := backend.command(nil, "ls-tree", "-rzt", "--full-tree", commit)
 	if err != nil {
 		return nil, fmt.Errorf("command: %w", err)
 	}
-	objects := make(map[string]bool)
 	for record := range strings.SplitSeq(string(raw), "\x00") {
 		if record == "" {
 			continue
@@ -65,38 +80,7 @@ func NewRepository(ctx context.Context, directory, commit string) (*FS, error) {
 		default:
 			return nil, fmt.Errorf("unsupported Git tree mode %q", fields[0])
 		}
-		if fields[1] == "blob" {
-			objects[entry.object] = true
-		}
 		backend.entries[name] = entry
-	}
-	ids := make([]string, 0, len(objects))
-	for id := range objects {
-		ids = append(ids, id)
-	}
-	slices.Sort(ids)
-	if len(ids) != 0 {
-		input := strings.NewReader(strings.Join(ids, "\n") + "\n")
-		checked, err := backend.command(input, "cat-file", "--batch-check")
-		if err != nil {
-			return nil, fmt.Errorf("command: %w", err)
-		}
-		sizes := make(map[string]int64, len(ids))
-		for line := range strings.SplitSeq(strings.TrimSpace(string(checked)), "\n") {
-			fields := strings.Fields(line)
-			if len(fields) != 3 || fields[1] != "blob" {
-				return nil, fmt.Errorf("invalid Git blob metadata %q", line)
-			}
-			size, err := strconv.ParseInt(fields[2], 10, 64)
-			if err != nil || size < 0 {
-				return nil, fmt.Errorf("invalid Git blob size %q", line)
-			}
-			sizes[fields[0]] = size
-		}
-		for name, entry := range backend.entries {
-			entry.info.size = sizes[entry.object]
-			backend.entries[name] = entry
-		}
 	}
 	return &FS{raw: backend}, nil
 }
@@ -130,6 +114,9 @@ func (f *repositoryFS) lookup(name string) (repositoryEntry, error) {
 	if !found {
 		return repositoryEntry{}, fs.ErrNotExist
 	}
+	if err := f.verifyPath(name); err != nil {
+		return repositoryEntry{}, err
+	}
 	return entry, nil
 }
 
@@ -137,6 +124,13 @@ func (f *repositoryFS) Lstat(name string) (fs.FileInfo, error) {
 	entry, err := f.lookup(name)
 	if err != nil {
 		return nil, &fs.PathError{Op: "lstat", Path: name, Err: err}
+	}
+	if !entry.info.IsDir() {
+		size, err := f.objectSize(entry.object)
+		if err != nil {
+			return nil, fmt.Errorf("objectSize: %w", err)
+		}
+		entry.info.size = size
 	}
 	return entry.info, nil
 }
@@ -149,7 +143,7 @@ func (f *repositoryFS) ReadLink(name string) (string, error) {
 	if entry.info.mode&fs.ModeSymlink == 0 {
 		return "", &fs.PathError{Op: "readlink", Path: name, Err: fs.ErrInvalid}
 	}
-	raw, err := f.command(nil, "cat-file", "blob", entry.object)
+	raw, err := f.object("blob", entry.object)
 	if err != nil {
 		return "", fmt.Errorf("command: %w", err)
 	}
@@ -168,10 +162,11 @@ func (f *repositoryFS) Open(name string) (fs.File, error) {
 		}
 		return &directory{info: entry.info, entries: children}, nil
 	}
-	raw, err := f.command(nil, "cat-file", "blob", entry.object)
+	raw, err := f.object("blob", entry.object)
 	if err != nil {
 		return nil, fmt.Errorf("command: %w", err)
 	}
+	entry.info.size = int64(len(raw))
 	return &blobFile{ReadCloser: io.NopCloser(bytes.NewReader(raw)), info: entry.info}, nil
 }
 
@@ -191,9 +186,20 @@ func (f *repositoryFS) ReadDir(name string) ([]fs.DirEntry, error) {
 		if entry.link {
 			children = append(children, gitlinkEntry{name: path.Base(child)})
 		} else {
-			children = append(children, fs.FileInfoToDirEntry(entry.info))
+			children = append(children, repositoryDirEntry{fsys: f, name: child, info: entry.info})
 		}
 	}
 	slices.SortFunc(children, func(a, b fs.DirEntry) int { return strings.Compare(a.Name(), b.Name()) })
 	return children, nil
 }
+
+type repositoryDirEntry struct {
+	fsys *repositoryFS
+	name string
+	info fileInfo
+}
+
+func (e repositoryDirEntry) Name() string               { return e.info.Name() }
+func (e repositoryDirEntry) IsDir() bool                { return e.info.IsDir() }
+func (e repositoryDirEntry) Type() fs.FileMode          { return e.info.Mode().Type() }
+func (e repositoryDirEntry) Info() (fs.FileInfo, error) { return e.fsys.Lstat(e.name) }

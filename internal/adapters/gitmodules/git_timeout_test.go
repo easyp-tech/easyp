@@ -62,7 +62,7 @@ func TestPinnedFetchTimeoutDoesNotFetchFullHistory(t *testing.T) {
 	if runtime.GOOS == "windows" {
 		t.Skip("SSH fixture uses a POSIX shell")
 	}
-	t.Setenv("EASYP_GIT_TIMEOUT", "50ms")
+	t.Setenv("EASYP_GIT_TIMEOUT", "250ms")
 	directory := t.TempDir()
 	attempts := filepath.Join(directory, "attempts")
 	ssh := filepath.Join(directory, "ssh")

@@ -51,9 +51,15 @@ func New(repo *git.Repository, commit plumbing.Hash) (*FS, error) {
 	if err != nil {
 		return nil, fmt.Errorf("CommitObject: %w", err)
 	}
+	if revision.Hash != commit {
+		return nil, fmt.Errorf("object hash mismatch for Git commit %s", commit)
+	}
 	tree, err := revision.Tree()
 	if err != nil {
 		return nil, fmt.Errorf("Tree: %w", err)
+	}
+	if tree.Hash != revision.TreeHash {
+		return nil, fmt.Errorf("object hash mismatch for Git tree %s", revision.TreeHash)
 	}
 	return &FS{
 		repo: repo, tree: tree,
@@ -74,6 +80,9 @@ func (f *FS) indexedTree(hash plumbing.Hash) (indexedTree, error) {
 	if err != nil {
 		return indexedTree{}, fmt.Errorf("TreeObject: %w", err)
 	}
+	if tree.Hash != hash {
+		return indexedTree{}, fmt.Errorf("object hash mismatch for Git tree %s", hash)
+	}
 	index := indexTree(tree)
 	f.trees[hash] = index
 	return index, nil
@@ -85,14 +94,12 @@ func (f *FS) blobSize(hash plumbing.Hash) (int64, error) {
 	if size, ok := f.sizes[hash]; ok {
 		return size, nil
 	}
-	blob, err := f.repo.BlobObject(hash)
+	size, err := f.repo.Storer.EncodedObjectSize(hash)
 	if err != nil {
-		return 0, fmt.Errorf("BlobObject: %w", err)
+		return 0, fmt.Errorf("EncodedObjectSize: %w", err)
 	}
-	// A go-git Blob retains its decoded body. Keep only the size here so metadata
-	// traversal cannot retain the full repository outside the storage's bounded LRU.
-	f.sizes[hash] = blob.Size
-	return blob.Size, nil
+	f.sizes[hash] = size
+	return size, nil
 }
 
 func (f *FS) lookup(name string) (object.TreeEntry, error) {
@@ -223,6 +230,9 @@ func (f *FS) Open(name string) (fs.File, error) {
 	if err != nil {
 		return nil, fmt.Errorf("BlobObject: %w", err)
 	}
+	if blob.Hash != entry.Hash {
+		return nil, fmt.Errorf("object hash mismatch for Git blob %s", entry.Hash)
+	}
 	reader, err := blob.Reader()
 	if err != nil {
 		return nil, fmt.Errorf("Reader: %w", err)
@@ -254,14 +264,29 @@ func (f *FS) ReadDir(name string) ([]fs.DirEntry, error) {
 			entries = append(entries, gitlinkEntry{name: child.Name})
 			continue
 		}
-		info, err := f.info(child)
+		mode, err := child.Mode.ToOSFileMode()
 		if err != nil {
-			return nil, fmt.Errorf("info: %w", err)
+			return nil, fmt.Errorf("ToOSFileMode: %w", err)
 		}
-		entries = append(entries, fs.FileInfoToDirEntry(info))
+		entries = append(entries, treeDirEntry{fsys: f, entry: child, mode: mode})
 	}
 	slices.SortFunc(entries, func(a, b fs.DirEntry) int { return strings.Compare(a.Name(), b.Name()) })
 	return entries, nil
+}
+
+// Tree entries carry names and modes without loading file objects. Consumers
+// request sizes only after selecting a source or configuration file.
+type treeDirEntry struct {
+	fsys  *FS
+	entry object.TreeEntry
+	mode  fs.FileMode
+}
+
+func (e treeDirEntry) Name() string      { return e.entry.Name }
+func (e treeDirEntry) IsDir() bool       { return e.mode.IsDir() }
+func (e treeDirEntry) Type() fs.FileMode { return e.mode.Type() }
+func (e treeDirEntry) Info() (fs.FileInfo, error) {
+	return e.fsys.info(e.entry)
 }
 
 type fileInfo struct {

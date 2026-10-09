@@ -206,6 +206,9 @@ func fetchPinnedV1Module(ctx context.Context, entry v1.LockedModule, cacheRoot, 
 	if err := moduleconfig.ValidateLegacyMajor(checkout.snapshot, entry.Source, entry.Version); err != nil {
 		return fmt.Errorf("ValidateLegacyMajor: %w", err)
 	}
+	if err := writeSourceBinding(ctx, cacheRoot, checkout.dir, entry); err != nil {
+		return fmt.Errorf("writeSourceBinding: %w", err)
+	}
 	if err := os.Rename(checkout.snapshot, installed); err != nil {
 		return fmt.Errorf("Rename: %w", err)
 	}

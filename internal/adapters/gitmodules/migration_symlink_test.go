@@ -71,7 +71,7 @@ func TestFetchMigrationOmitsAuxiliarySymlinks(t *testing.T) {
 					if target == "internal" {
 						expectedSnapshot["example-workspace/.bazelrc"] = files["proto/file.proto"]
 					}
-					assert.Equal(t, migrationTestHash(t, expectedSnapshot), fetched.Lock.Hash)
+					assert.Equal(t, snapshotTestHash(t, expectedSnapshot), fetched.Lock.Hash)
 					ordinary, err := (&Cache{root: t.TempDir()}).Fetch(t.Context(), repository, commit)
 					require.NoError(t, err)
 					assert.Equal(t, ordinary.Lock.Hash, fetched.Lock.Hash)

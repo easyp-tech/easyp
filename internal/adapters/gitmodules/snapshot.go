@@ -15,8 +15,6 @@ import (
 	"github.com/go-git/go-billy/v5/osfs"
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
-	"github.com/go-git/go-git/v5/plumbing/cache"
-	"github.com/go-git/go-git/v5/storage/filesystem"
 
 	"github.com/easyp-tech/easyp/internal/adapters/gitcommand"
 	"github.com/easyp-tech/easyp/internal/adapters/gitsnapshot"
@@ -199,8 +197,10 @@ func stageSnapshotMetadata(ctx context.Context, tree *gitsnapshot.FS, view *sour
 			}
 			return nil
 		}
-		if !moduleconfig.IsGitDependencyConfigFile(path.Base(name)) {
-			regular = append(regular, name)
+		if !snapshotConfigFile(name) {
+			if path.Ext(name) == ".proto" {
+				regular = append(regular, name)
+			}
 			return nil
 		}
 		return materializeSnapshotFile(ctx, view, directory, name)
@@ -232,7 +232,7 @@ func stageSnapshotMetadata(ctx context.Context, tree *gitsnapshot.FS, view *sour
 			continue
 		}
 		if resolution.Info.IsDir() {
-			walkErr := view.Walk(ctx, name, func(logical string, resolved sourceview.Resolution, walkErr error) error {
+			walkErr := view.WalkSelected(ctx, name, snapshotSourceCandidate, func(logical string, resolved sourceview.Resolution, walkErr error) error {
 				if walkErr != nil {
 					if moduleconfig.IsGitDependencyConfigFile(path.Base(logical)) && !snapshotMetadataExcluded(logical, subdir) {
 						if err := failedMarker(logical, walkErr); err != nil {
@@ -287,7 +287,7 @@ func materializeSelectedSnapshotAliases(ctx context.Context, view *sourceview.Vi
 		if err := makeSnapshotDirectory(directory, root); err != nil {
 			return fmt.Errorf("MkdirAll: %w", err)
 		}
-		err := view.Walk(ctx, logicalRoot, func(logical string, resolved sourceview.Resolution, walkErr error) error {
+		err := view.WalkSelected(ctx, logicalRoot, snapshotSourceCandidate, func(logical string, resolved sourceview.Resolution, walkErr error) error {
 			if ignoredMetadata[logical] {
 				return nil
 			}
@@ -342,7 +342,10 @@ func sourceV1SnapshotTree(ctx context.Context, checkout, commit string) (*gitsna
 		}
 		return tree, nil
 	}
-	storage := filesystem.NewStorageWithOptions(osfs.New(filepath.Join(checkout, ".git")), cache.NewObjectLRUDefault(), filesystem.Options{AlternatesFS: osfs.New(string(filepath.Separator))})
+	storage, err := snapshotStorage(checkout)
+	if err != nil {
+		return nil, fmt.Errorf("snapshotStorage: %w", err)
+	}
 	repo, err := git.Open(storage, osfs.New(checkout))
 	if err != nil {
 		return nil, fmt.Errorf("Open: %w", err)
@@ -427,11 +430,11 @@ func materializeSnapshotAuxiliaryAliases(ctx context.Context, view *sourceview.V
 			continue
 		}
 		if resolved.Info.IsDir() {
-			err = view.Walk(ctx, name, func(logical string, resolved sourceview.Resolution, walkErr error) error {
+			err = view.WalkSelected(ctx, name, snapshotSourceCandidate, func(logical string, resolved sourceview.Resolution, walkErr error) error {
 				if walkErr != nil {
 					return nil
 				}
-				if resolved.Info.IsDir() || path.Ext(logical) == ".proto" {
+				if resolved.Info.IsDir() || !snapshotConfigFile(logical) {
 					return nil
 				}
 				return materializeSnapshotFile(ctx, view, directory, logical)
@@ -441,7 +444,7 @@ func materializeSnapshotAuxiliaryAliases(ctx context.Context, view *sourceview.V
 			}
 			continue
 		}
-		if path.Ext(name) == ".proto" {
+		if !snapshotConfigFile(name) {
 			continue
 		}
 		if err := materializeSnapshotFile(ctx, view, directory, name); err != nil {
