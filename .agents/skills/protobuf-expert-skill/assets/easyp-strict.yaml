@@ -1,28 +1,19 @@
-# EasyP starter config: strict API project (all 42 rules)
-# Usage: copy to your project root as easyp.yaml
-# Dependencies: copy assets/protobuf-common.mod as protobuf.mod
+# EasyP v1 policy — strict public API: every rule, wire+JSON compatibility.
+# Usage: copy to your module root as easyp.yaml.
+version: v1
 
-lint:
-  use:
-    - DEFAULT
-    - COMMENTS
-    - UNARY_RPC
-    - PACKAGE_NO_IMPORT_CYCLE
-  allow_comment_ignores: true
+linters:
+  default: COMMENTS           # STANDARD + documentation on every entity
+  enable:
+    - UNARY_RPC               # no streaming RPCs
+  allow_comment_ignores: false
 
-generate:
-  inputs:
-    - directory: proto
-  plugins:
-    - name: go
-      out: gen/go
-      opts:
-        paths: source_relative
-    - name: go-grpc
-      out: gen/go
-      opts:
-        paths: source_relative
-        require_unimplemented_servers: false
+linters-settings:
+  ENUM_ZERO_VALUE_SUFFIX:
+    suffix: _UNSPECIFIED
+  SERVICE_SUFFIX:
+    suffix: Service
 
 breaking:
-  against_git_ref: main
+  baseline: git:main
+  categories: [FILE, WIRE_JSON]

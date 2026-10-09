@@ -1,0 +1,16 @@
+# EasyP v1 generation — Go + gRPC with local plugins.
+# Usage: copy as easyp.gen.yaml; install the plugins:
+#   go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
+#   go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
+version: v1
+
+plugins:
+  - name: go
+    out: gen/go
+    opts:
+      paths: source_relative
+  - name: go-grpc
+    out: gen/go
+    opts:
+      paths: source_relative
+      require_unimplemented_servers: false
