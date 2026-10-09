@@ -9,6 +9,7 @@ import (
 
 	"golang.org/x/mod/semver"
 
+	"github.com/easyp-tech/easyp/internal/adapters/gitcommand"
 	moduleconfig "github.com/easyp-tech/easyp/internal/adapters/module_config"
 	v1 "github.com/easyp-tech/easyp/internal/config/v1"
 	"github.com/easyp-tech/easyp/internal/modules"
@@ -86,6 +87,9 @@ func (c *Cache) FetchMigrationImports(ctx context.Context, source, version, lega
 }
 
 func (c *Cache) fetchMigration(ctx context.Context, source, version, legacyHash string, roots []string, imports bool) (fetched modules.Fetched, err error) {
+	ctx = c.operationContext(ctx, source, version)
+	finish := gitcommand.Start(ctx, "migrate dependency")
+	defer func() { finish(err) }()
 	if (version != "" || legacyHash != "") && !v1.IsCommitRef(version) && !semver.IsValid(version) {
 		return modules.Fetched{}, fmt.Errorf("migration version %q must be a full Git commit or SemVer tag", version)
 	}

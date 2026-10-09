@@ -4,11 +4,14 @@ package gitmodules
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"path/filepath"
 
 	"github.com/easyp-tech/easyp/internal/adapters/bsr"
+	"github.com/easyp-tech/easyp/internal/adapters/gitcommand"
 	moduleconfig "github.com/easyp-tech/easyp/internal/adapters/module_config"
 	v1 "github.com/easyp-tech/easyp/internal/config/v1"
+	"github.com/easyp-tech/easyp/internal/logger"
 	"github.com/easyp-tech/easyp/internal/modules"
 )
 
@@ -16,6 +19,22 @@ import (
 type Cache struct {
 	root        string
 	bsrResolver modules.BSRResolver
+	logger      logger.Logger
+}
+
+// WithLogger returns an isolated cache handle with dependency progress logging.
+// Historical-pin scopes preserve this logger through their existing shallow copy.
+func (c *Cache) WithLogger(log logger.Logger) *Cache {
+	scoped := *c
+	scoped.logger = log
+	return &scoped
+}
+
+func (c *Cache) operationContext(ctx context.Context, source, version string) context.Context {
+	if c.logger == nil {
+		return ctx
+	}
+	return gitcommand.WithLogger(ctx, c.logger.With(slog.String("source", source), slog.String("version", version)))
 }
 
 // New places the v1 Git cache below the supplied EasyP storage directory.
@@ -64,7 +83,10 @@ func (c *Cache) Cached(entry v1.LockedModule) (string, v1.Module, error) {
 }
 
 // Versions lists semantic versions available for a module, including nested modules.
-func (c *Cache) Versions(ctx context.Context, source string) ([]string, error) {
+func (c *Cache) Versions(ctx context.Context, source string) (versions []string, err error) {
+	ctx = c.operationContext(ctx, source, "")
+	finish := gitcommand.Start(ctx, "list module versions")
+	defer func() { finish(err) }()
 	return listV1ModuleTags(ctx, source)
 }
 

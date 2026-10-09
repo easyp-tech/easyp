@@ -64,6 +64,30 @@ The CLI resolves <code>EASYPPATH</code> once for a command that needs the cache 
 
 ## Operations
 
+Git commands and acquisition of object/install cache locks each have a default
+five-minute limit. Set <code>EASYP_GIT_TIMEOUT=10m</code> to increase it; values
+must be positive Go durations. Earlier caller deadlines and cancellation still
+apply. A command timeout stops repository-candidate searches and the historical
+fetch fallback, retaining the cancellation cause. This limit applies to each
+operation, not to the entire dependency graph. On Unix, cancellation terminates
+the Git process group; inherited output pipes also have a bounded cleanup wait.
+
+With <code>easyp --debug migrate</code> or <code>easyp --debug mod tidy</code>,
+dependency diagnostics identify source/revision, repository candidate, command,
+snapshot materialization, source inspection, legacy archive proof and cache lock
+phases. Start/finish records include status and elapsed time; inventories include
+file counts and selected roots/filters. Slow phases report elapsed progress every
+15 seconds at info level, including without <code>--debug</code>. These logs do
+not change source selection or dependency identity. Indexed tree and blob
+metadata are reused only within one immutable Git filesystem; mutable local
+source resolution remains uncached.
+
+Deleting the old <code>easyp.lock</code> is not required for migration. Its absence
+does not change an explicit <code>git_repo.url: repo@&lt;commit&gt;</code> pin.
+Migration verifies retained and excluded historical archive files against that
+same commit before checking the consumer's native import bindings. A filtered
+native snapshot must never stand in for the complete historical archive.
+
 | Command | Application operation | Behavior |
 |---------|-----------------------|----------|
 | <code>get &lt;module&gt;[@version\|@commit]</code> | <code>modules.Get</code> | Add/promote a direct requirement, resolve the graph and add transitive requirements |

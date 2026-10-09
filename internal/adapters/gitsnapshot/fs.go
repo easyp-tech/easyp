@@ -9,6 +9,7 @@ import (
 	"path"
 	"slices"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/go-git/go-git/v5"
@@ -23,9 +24,25 @@ var ErrGitlink = errors.New("gitlink boundary")
 // FS reads tracked trees and blobs without consulting a checkout or host links.
 // Symlinks are exposed to fs.ReadLinkFS; callers choose their bounded resolution policy.
 type FS struct {
-	repo *git.Repository
-	tree *object.Tree
-	raw  *repositoryFS
+	repo  *git.Repository
+	tree  *object.Tree
+	raw   *repositoryFS
+	mu    sync.Mutex
+	trees map[plumbing.Hash]indexedTree
+	sizes map[plumbing.Hash]int64
+}
+
+type indexedTree struct {
+	entries []object.TreeEntry
+	byName  map[string]object.TreeEntry
+}
+
+func indexTree(tree *object.Tree) indexedTree {
+	index := indexedTree{entries: tree.Entries, byName: make(map[string]object.TreeEntry, len(tree.Entries))}
+	for _, entry := range tree.Entries {
+		index.byName[entry.Name] = entry
+	}
+	return index
 }
 
 // New opens the tree pinned by commit in repo.
@@ -38,7 +55,44 @@ func New(repo *git.Repository, commit plumbing.Hash) (*FS, error) {
 	if err != nil {
 		return nil, fmt.Errorf("Tree: %w", err)
 	}
-	return &FS{repo: repo, tree: tree}, nil
+	return &FS{
+		repo: repo, tree: tree,
+		trees: map[plumbing.Hash]indexedTree{tree.Hash: indexTree(tree)},
+		sizes: make(map[plumbing.Hash]int64),
+	}, nil
+}
+
+// Immutable objects are decoded once per pinned filesystem. Keeping both the
+// directory index and blob metadata avoids reopening packs for every path prefix.
+func (f *FS) indexedTree(hash plumbing.Hash) (indexedTree, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	if tree, ok := f.trees[hash]; ok {
+		return tree, nil
+	}
+	tree, err := f.repo.TreeObject(hash)
+	if err != nil {
+		return indexedTree{}, fmt.Errorf("TreeObject: %w", err)
+	}
+	index := indexTree(tree)
+	f.trees[hash] = index
+	return index, nil
+}
+
+func (f *FS) blobSize(hash plumbing.Hash) (int64, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	if size, ok := f.sizes[hash]; ok {
+		return size, nil
+	}
+	blob, err := f.repo.BlobObject(hash)
+	if err != nil {
+		return 0, fmt.Errorf("BlobObject: %w", err)
+	}
+	// A go-git Blob retains its decoded body. Keep only the size here so metadata
+	// traversal cannot retain the full repository outside the storage's bounded LRU.
+	f.sizes[hash] = blob.Size
+	return blob.Size, nil
 }
 
 func (f *FS) lookup(name string) (object.TreeEntry, error) {
@@ -48,31 +102,28 @@ func (f *FS) lookup(name string) (object.TreeEntry, error) {
 	if name == "." {
 		return object.TreeEntry{Name: ".", Mode: filemode.Dir, Hash: f.tree.Hash}, nil
 	}
-	tree := f.tree
+	tree, err := f.indexedTree(f.tree.Hash)
+	if err != nil {
+		return object.TreeEntry{}, fmt.Errorf("indexedTree: %w", err)
+	}
 	parts := strings.Split(name, "/")
 	for i, part := range parts {
-		var entry *object.TreeEntry
-		for j := range tree.Entries {
-			if tree.Entries[j].Name == part {
-				entry = &tree.Entries[j]
-				break
-			}
-		}
-		if entry == nil {
+		entry, ok := tree.byName[part]
+		if !ok {
 			return object.TreeEntry{}, fs.ErrNotExist
 		}
 		if entry.Mode == filemode.Submodule {
 			return object.TreeEntry{}, fmt.Errorf("%w at %q", ErrGitlink, strings.Join(parts[:i+1], "/"))
 		}
 		if i == len(parts)-1 {
-			return *entry, nil
+			return entry, nil
 		}
 		if entry.Mode != filemode.Dir {
 			return object.TreeEntry{}, fmt.Errorf("non-directory Git component %q", strings.Join(parts[:i+1], "/"))
 		}
-		child, err := f.repo.TreeObject(entry.Hash)
+		child, err := f.indexedTree(entry.Hash)
 		if err != nil {
-			return object.TreeEntry{}, fmt.Errorf("TreeObject: %w", err)
+			return object.TreeEntry{}, fmt.Errorf("indexedTree: %w", err)
 		}
 		tree = child
 	}
@@ -96,11 +147,11 @@ func (f *FS) info(entry object.TreeEntry) (fileInfo, error) {
 		return fileInfo{}, fmt.Errorf("unsupported Git mode %s at %q", entry.Mode, entry.Name)
 	}
 	if entry.Mode != filemode.Dir {
-		blob, err := f.repo.BlobObject(entry.Hash)
+		size, err := f.blobSize(entry.Hash)
 		if err != nil {
-			return fileInfo{}, fmt.Errorf("BlobObject: %w", err)
+			return fileInfo{}, fmt.Errorf("blobSize: %w", err)
 		}
-		info.size = blob.Size
+		info.size = size
 	}
 	return info, nil
 }
@@ -191,12 +242,12 @@ func (f *FS) ReadDir(name string) ([]fs.DirEntry, error) {
 	if entry.Mode != filemode.Dir {
 		return nil, &fs.PathError{Op: "readdir", Path: name, Err: fs.ErrInvalid}
 	}
-	tree, err := f.repo.TreeObject(entry.Hash)
+	tree, err := f.indexedTree(entry.Hash)
 	if err != nil {
-		return nil, fmt.Errorf("TreeObject: %w", err)
+		return nil, fmt.Errorf("indexedTree: %w", err)
 	}
-	entries := make([]fs.DirEntry, 0, len(tree.Entries))
-	for _, child := range tree.Entries {
+	entries := make([]fs.DirEntry, 0, len(tree.entries))
+	for _, child := range tree.entries {
 		// Gitlinks are represented as inaccessible directories so bounded walkers
 		// can omit auxiliary submodules but fail when a selected path crosses one.
 		if child.Mode == filemode.Submodule {

@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/easyp-tech/easyp/internal/adapters/gitcommand"
 	moduleconfig "github.com/easyp-tech/easyp/internal/adapters/module_config"
 	v1 "github.com/easyp-tech/easyp/internal/config/v1"
 )
@@ -32,6 +33,11 @@ func (c *Cache) VerifyCached(ctx context.Context, lock v1.Lock) error {
 }
 
 func (c *Cache) install(ctx context.Context, lock v1.Lock, acquire bool) error {
+	if acquire {
+		if _, err := gitcommand.Timeout(); err != nil {
+			return fmt.Errorf("Timeout: %w", err)
+		}
+	}
 	if err := lock.Validate(); err != nil {
 		return fmt.Errorf("Validate: %w", err)
 	}
@@ -46,7 +52,10 @@ func (c *Cache) install(ctx context.Context, lock v1.Lock, acquire bool) error {
 	return nil
 }
 
-func (c *Cache) installEntry(ctx context.Context, entry v1.LockedModule, acquire bool) error {
+func (c *Cache) installEntry(ctx context.Context, entry v1.LockedModule, acquire bool) (err error) {
+	ctx = c.operationContext(ctx, entry.Source, entry.Commit)
+	finish := gitcommand.Start(ctx, "install module")
+	defer func() { finish(err) }()
 	installed := v1ModuleCachePath(c.root, entry)
 	info, err := os.Lstat(installed)
 	if errors.Is(err, os.ErrNotExist) {
