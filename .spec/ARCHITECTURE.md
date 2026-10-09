@@ -9,7 +9,8 @@ EasyP v1 separates CLI composition, module operations, generation preparation, a
 |-----------|--------------------------------|--------------|
 | <code>internal/api</code> | Flags, process paths/environment, adapter construction, policy command orchestration, output and exit status | Module/generation operations, configuration, rules, core, concrete adapters |
 | <code>internal/modules</code> | Dependency selection, lock validation, source roots and ownership, manifest edits, coordinated project-file updates | V1 models, <code>Source</code>/<code>Cache</code> contracts, metadata reader, filesystem |
-| <code>internal/adapters/gitmodules</code> | Git candidates/revisions, checkout lifetime, persistent object cache and locking, immutable materialized snapshot hashes and installation | System Git, <code>module_config</code>, module contracts, filesystem |
+| <code>internal/adapters/gitmodules</code> | Git candidates/revisions, checkout lifetime, persistent object cache and locking, immutable materialized snapshot hashes and installation | Bounded <code>gitcommand</code> runner, <code>module_config</code>, module contracts, filesystem |
+| <code>internal/adapters/gitcommand</code> | Git process deadlines, cancellation, pipe cleanup and dependency phase diagnostics | System Git, contexts, logger; no source selection or dependency policy |
 | <code>internal/adapters/module_config</code> | Adapt repository metadata into a named module and import roots | Native <code>protobuf.mod</code> parser, legacy EasyP and Buf readers |
 | <code>internal/migration</code> | Preview plans, legacy conversion, integrity verification gates, backups and rollback | V1 models, module resolution, explicit migration repository, filesystem |
 | <code>internal/workspace</code> | Repository boundary and ancestor/module/config discovery | Filesystem |

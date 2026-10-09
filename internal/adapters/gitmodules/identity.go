@@ -3,7 +3,6 @@ package gitmodules
 import (
 	"context"
 	"net/url"
-	"os/exec"
 	"path/filepath"
 	"strings"
 )
@@ -20,12 +19,11 @@ func WorkspaceIdentity(ctx context.Context, root string) string {
 		return ""
 	}
 	// Read the declared identity, not a transport URL rewritten by insteadOf.
-	cmd := exec.CommandContext(ctx, "git", "-C", root, "config", "--get", "remote.origin.url")
-	raw, err := cmd.Output()
+	raw, err := gitV1(ctx, root, "config", "--get", "remote.origin.url")
 	if err != nil {
 		return ""
 	}
-	remote := strings.TrimSpace(string(raw))
+	remote := strings.TrimSpace(raw)
 	if strings.Contains(remote, "://") {
 		parsed, err := url.Parse(remote)
 		if err != nil || parsed.Host == "" {

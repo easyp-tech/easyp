@@ -264,17 +264,24 @@ func closeWithError(file fs.File, err error) error {
 // but distinct aliases visited in separate branches are expanded independently.
 // Resolution and directory-reading failures are handed to fn for classification.
 func (v *View) Walk(ctx context.Context, logicalRoot string, fn WalkFunc) error {
+	return v.WalkSelected(ctx, logicalRoot, nil, fn)
+}
+
+// WalkSelected filters directory entries before resolving their file metadata or
+// following links. A nil selectEntry retains Walk's complete traversal.
+// Include directory/link candidates when their descendants may contain sources.
+func (v *View) WalkSelected(ctx context.Context, logicalRoot string, selectEntry func(string, fs.DirEntry) bool, fn WalkFunc) error {
 	if fn == nil {
 		return &fs.PathError{Op: "Walk", Path: logicalRoot, Err: fs.ErrInvalid}
 	}
-	err := v.walk(ctx, logicalRoot, fn, make(map[string]bool))
+	err := v.walk(ctx, logicalRoot, selectEntry, fn, make(map[string]bool))
 	if errors.Is(err, fs.SkipDir) || errors.Is(err, fs.SkipAll) {
 		return nil
 	}
 	return err
 }
 
-func (v *View) walk(ctx context.Context, logical string, fn WalkFunc, active map[string]bool) error {
+func (v *View) walk(ctx context.Context, logical string, selectEntry func(string, fs.DirEntry) bool, fn WalkFunc, active map[string]bool) error {
 	err := ctx.Err()
 	if err != nil {
 		return &fs.PathError{Op: "Walk", Path: logical, Err: err}
@@ -317,11 +324,18 @@ func (v *View) walk(ctx context.Context, logical string, fn WalkFunc, active map
 	active[resolved.Path] = true
 	defer delete(active, resolved.Path)
 	for _, entry := range entries {
+		if err := ctx.Err(); err != nil {
+			return &fs.PathError{Op: "Walk", Path: logical, Err: err}
+		}
 		name := entry.Name()
 		if !fs.ValidPath(name) || strings.Contains(name, "/") || name == "." {
 			err = fn(joinName(logical, name), Resolution{}, &fs.PathError{Op: "Walk", Path: name, Err: fs.ErrInvalid})
 		} else {
-			err = v.walk(ctx, joinName(logical, name), fn, active)
+			child := joinName(logical, name)
+			if selectEntry != nil && !selectEntry(child, entry) {
+				continue
+			}
+			err = v.walk(ctx, child, selectEntry, fn, active)
 		}
 		if errors.Is(err, fs.SkipDir) {
 			return nil

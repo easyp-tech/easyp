@@ -31,6 +31,7 @@ type Resolver struct {
 	loaded   map[loadKey]loadedPolicy
 	graphs   map[string]modules.PolicyGraph
 	resolved map[resolveKey]resolvedSection
+	pinned   map[pinnedSourceKey]modules.PolicyFiles
 }
 
 // NewResolver constructs an operation-scoped policy resolver.
@@ -41,6 +42,7 @@ func NewResolver(workspaceRoot string, graph GraphProvider) *Resolver {
 		loaded:        make(map[loadKey]loadedPolicy),
 		graphs:        make(map[string]modules.PolicyGraph),
 		resolved:      make(map[resolveKey]resolvedSection),
+		pinned:        make(map[pinnedSourceKey]modules.PolicyFiles),
 	}
 }
 
@@ -50,11 +52,15 @@ type loadedPolicy struct {
 	policy            v1.Policy
 	presence          v1.PolicyPresence
 	expandEnvironment bool
+	graphKey          string
 }
+
+type pinnedSourceKey struct{ boundary, graph string }
 
 type loadKey struct {
 	path              string
 	expandEnvironment bool
+	graph             string
 }
 
 type resolveKey struct {
@@ -104,11 +110,11 @@ func (r *Resolver) ResolveLint(ctx context.Context, input LintInput) (LintResult
 	if err != nil {
 		return LintResult{}, fmt.Errorf("resolve %s linters.extends %q for consuming policy %s: %w", input.PolicyPath, local.Linters.Extends, input.PolicyPath, err)
 	}
-	current, err := r.load(input.PolicyPath, r.WorkspaceRoot, true)
+	current, err := r.load(ctx, input.PolicyPath, r.WorkspaceRoot, true, input.ModuleDir)
 	if err != nil {
 		return LintResult{}, err
 	}
-	basePath, baseBoundary, reference, expandEnvironment, err := r.resolveReference(current, local.Linters.Extends, graph, r.WorkspaceRoot)
+	basePath, baseBoundary, reference, expandEnvironment, err := r.resolveReference(ctx, current, local.Linters.Extends, graph, r.WorkspaceRoot)
 	if err != nil {
 		return LintResult{}, fmt.Errorf("%s: linters.extends %q: %w", input.PolicyPath, local.Linters.Extends, err)
 	}
@@ -148,11 +154,11 @@ func (r *Resolver) ResolveBreaking(ctx context.Context, input BreakingInput) (Br
 	if err != nil {
 		return BreakingResult{}, fmt.Errorf("resolve %s breaking.extends %q for consuming policy %s: %w", input.PolicyPath, local.Breaking.Extends, input.PolicyPath, err)
 	}
-	current, err := r.load(input.PolicyPath, r.WorkspaceRoot, true)
+	current, err := r.load(ctx, input.PolicyPath, r.WorkspaceRoot, true, input.ModuleDir)
 	if err != nil {
 		return BreakingResult{}, err
 	}
-	basePath, baseBoundary, reference, expandEnvironment, err := r.resolveReference(current, local.Breaking.Extends, graph, r.WorkspaceRoot)
+	basePath, baseBoundary, reference, expandEnvironment, err := r.resolveReference(ctx, current, local.Breaking.Extends, graph, r.WorkspaceRoot)
 	if err != nil {
 		return BreakingResult{}, fmt.Errorf("%s: breaking.extends %q: %w", input.PolicyPath, local.Breaking.Extends, err)
 	}
@@ -166,7 +172,7 @@ func (r *Resolver) ResolveBreaking(ctx context.Context, input BreakingInput) (Br
 }
 
 func (r *Resolver) resolveLintFile(ctx context.Context, path, boundary string, graphKey string, expandEnvironment bool, stack []string) (resolvedSection, error) {
-	loaded, err := r.load(path, boundary, expandEnvironment)
+	loaded, err := r.load(ctx, path, boundary, expandEnvironment, graphKey)
 	if err != nil {
 		return resolvedSection{}, err
 	}
@@ -190,7 +196,7 @@ func (r *Resolver) resolveLintFile(ctx context.Context, path, boundary string, g
 		if err != nil {
 			return resolvedSection{}, fmt.Errorf("%s: linters.extends %q: %w", loaded.path, loaded.policy.Linters.Extends, err)
 		}
-		basePath, baseBoundary, _, baseExpandEnvironment, err := r.resolveReference(loaded, loaded.policy.Linters.Extends, graph, boundary)
+		basePath, baseBoundary, _, baseExpandEnvironment, err := r.resolveReference(ctx, loaded, loaded.policy.Linters.Extends, graph, boundary)
 		if err != nil {
 			return resolvedSection{}, fmt.Errorf("%s: linters.extends %q: %w", loaded.path, loaded.policy.Linters.Extends, err)
 		}
@@ -211,7 +217,7 @@ func (r *Resolver) resolveLintFile(ctx context.Context, path, boundary string, g
 }
 
 func (r *Resolver) resolveBreakingFile(ctx context.Context, path, boundary string, graphKey string, expandEnvironment bool, stack []string) (resolvedSection, error) {
-	loaded, err := r.load(path, boundary, expandEnvironment)
+	loaded, err := r.load(ctx, path, boundary, expandEnvironment, graphKey)
 	if err != nil {
 		return resolvedSection{}, err
 	}
@@ -235,7 +241,7 @@ func (r *Resolver) resolveBreakingFile(ctx context.Context, path, boundary strin
 		if err != nil {
 			return resolvedSection{}, fmt.Errorf("%s: breaking.extends %q: %w", loaded.path, loaded.policy.Breaking.Extends, err)
 		}
-		basePath, baseBoundary, _, baseExpandEnvironment, err := r.resolveReference(loaded, loaded.policy.Breaking.Extends, graph, boundary)
+		basePath, baseBoundary, _, baseExpandEnvironment, err := r.resolveReference(ctx, loaded, loaded.policy.Breaking.Extends, graph, boundary)
 		if err != nil {
 			return resolvedSection{}, fmt.Errorf("%s: breaking.extends %q: %w", loaded.path, loaded.policy.Breaking.Extends, err)
 		}
@@ -253,16 +259,12 @@ func (r *Resolver) resolveBreakingFile(ctx context.Context, path, boundary strin
 	return result, nil
 }
 
-func (r *Resolver) load(path, boundary string, expandEnvironment bool) (loadedPolicy, error) {
+func (r *Resolver) load(ctx context.Context, path, boundary string, expandEnvironment bool, graphKey string) (loadedPolicy, error) {
 	absolute, err := filepath.Abs(path)
 	if err != nil {
 		return loadedPolicy{}, fmt.Errorf("policy source %s: Abs: %w", path, err)
 	}
-	canonical, err := filepath.EvalSymlinks(absolute)
-	if err != nil {
-		return loadedPolicy{}, fmt.Errorf("policy source %s: EvalSymlinks: %w", path, err)
-	}
-	key := loadKey{path: absolute + "\x00" + boundary, expandEnvironment: expandEnvironment}
+	key := loadKey{path: absolute + "\x00" + boundary, expandEnvironment: expandEnvironment, graph: graphKey}
 	if cached, ok := r.loaded[key]; ok {
 		return cached, nil
 	}
@@ -270,9 +272,23 @@ func (r *Resolver) load(path, boundary string, expandEnvironment bool) (loadedPo
 	if err != nil || !filepath.IsLocal(relative) {
 		return loadedPolicy{}, fmt.Errorf("policy source %s is outside allowed policy root %s", path, boundary)
 	}
-	raw, err := sourceview.ReadLocal(context.Background(), boundary, relative)
-	if err != nil {
-		return loadedPolicy{}, fmt.Errorf("read policy source %s: %w", canonical, err)
+	var raw []byte
+	var canonical string
+	if files := r.pinned[pinnedSourceKey{boundary, graphKey}]; files != nil {
+		file, err := files.Read(ctx, filepath.ToSlash(relative))
+		if err != nil {
+			return loadedPolicy{}, fmt.Errorf("Read: policy source %s: %w", absolute, err)
+		}
+		raw, canonical = file.Content, file.Canonical
+	} else {
+		canonical, err = filepath.EvalSymlinks(absolute)
+		if err != nil {
+			return loadedPolicy{}, fmt.Errorf("policy source %s: EvalSymlinks: %w", path, err)
+		}
+		raw, err = sourceview.ReadLocal(ctx, boundary, relative)
+		if err != nil {
+			return loadedPolicy{}, fmt.Errorf("read policy source %s: %w", canonical, err)
+		}
 	}
 	var parsed v1.Policy
 	if expandEnvironment {
@@ -289,7 +305,7 @@ func (r *Resolver) load(path, boundary string, expandEnvironment bool) (loadedPo
 	}
 	result := loadedPolicy{
 		path: absolute, canonical: canonical, policy: parsed, presence: presence,
-		expandEnvironment: expandEnvironment,
+		expandEnvironment: expandEnvironment, graphKey: graphKey,
 	}
 	r.loaded[key] = result
 	return result, nil
@@ -328,7 +344,7 @@ func (r *Resolver) graphForReference(ctx context.Context, moduleDir, raw string)
 	return r.graph(ctx, moduleDir)
 }
 
-func (r *Resolver) resolveReference(from loadedPolicy, raw string, graph modules.PolicyGraph, inheritedBoundary string) (string, string, string, bool, error) {
+func (r *Resolver) resolveReference(ctx context.Context, from loadedPolicy, raw string, graph modules.PolicyGraph, inheritedBoundary string) (string, string, string, bool, error) {
 	reference, err := v1.ParsePolicyReference(raw)
 	if err != nil {
 		return "", "", "", false, err
@@ -350,6 +366,7 @@ func (r *Resolver) resolveReference(from loadedPolicy, raw string, graph modules
 		directory = module.Directory
 		boundary = module.Directory
 		expandEnvironment = false
+		r.pinned[pinnedSourceKey{boundary, from.graphKey}] = module.Files
 		if relative != "" {
 			directory = filepath.Join(module.Directory, filepath.FromSlash(relative))
 		}
@@ -361,7 +378,14 @@ func (r *Resolver) resolveReference(from loadedPolicy, raw string, graph modules
 	if err != nil {
 		return "", "", "", false, fmt.Errorf("Rel: %w", err)
 	}
-	resolved, err := sourceview.ResolveLocal(context.Background(), boundary, relative)
+	if files := r.pinned[pinnedSourceKey{boundary, from.graphKey}]; files != nil {
+		file, err := files.Read(ctx, filepath.ToSlash(relative))
+		if err != nil {
+			return "", "", "", false, fmt.Errorf("Read: reference %q: %w", raw, err)
+		}
+		return filepath.Join(boundary, filepath.FromSlash(file.Path)), boundary, raw, false, nil
+	}
+	resolved, err := sourceview.ResolveLocal(ctx, boundary, relative)
 	info := resolved.Info
 	if err != nil {
 		return "", "", "", false, fmt.Errorf("reference %q selects %s: %w", raw, directory, err)

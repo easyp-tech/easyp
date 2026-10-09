@@ -25,6 +25,13 @@ type policyReadCache struct{ *gitmodules.Cache }
 // version resolver promoted through policyReadCache's embedded Git cache.
 type policyDiscoveryCache struct{ modules.Cache }
 
+func (c policyDiscoveryCache) PolicyFiles(entry v1.LockedModule, prefix string) modules.PolicyFiles {
+	if provider, ok := c.Cache.(modules.PolicyFilesCache); ok {
+		return provider.PolicyFiles(entry, prefix)
+	}
+	return nil
+}
+
 func (c policyReadCache) Install(ctx context.Context, lock v1.Lock) error {
 	return c.VerifyCached(ctx, lock)
 }

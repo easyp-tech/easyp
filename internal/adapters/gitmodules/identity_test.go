@@ -4,11 +4,27 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+func TestWorkspaceIdentityBoundsItsConfigurationCommand(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("blocked Git fixture uses a POSIX shell")
+	}
+	t.Setenv("EASYP_GIT_TIMEOUT", "50ms")
+	root := t.TempDir()
+	bin := t.TempDir()
+	require.NoError(t, os.WriteFile(filepath.Join(bin, "git"), []byte("#!/bin/sh\ncase \"$1\" in\nrev-parse) pwd;;\n*) exec sleep 1;;\nesac\n"), 0o755))
+	t.Setenv("PATH", bin+string(os.PathListSeparator)+os.Getenv("PATH"))
+	started := time.Now()
+	assert.Empty(t, WorkspaceIdentity(t.Context(), root))
+	assert.Less(t, time.Since(started), 800*time.Millisecond)
+}
 
 func TestWorkspaceIdentityUsesDeclaredOrigin(t *testing.T) {
 	t.Parallel()

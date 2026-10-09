@@ -3,11 +3,13 @@ package gitmodules
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"strings"
 	"time"
 
+	"github.com/easyp-tech/easyp/internal/adapters/gitcommand"
 	v1 "github.com/easyp-tech/easyp/internal/config/v1"
 )
 
@@ -42,15 +44,19 @@ func checkoutCachedCommit(ctx context.Context, checkout string, entry v1.LockedM
 	}
 	commit := strings.ToLower(entry.Commit)
 	if _, err := gitV1(ctx, repository, "cat-file", "-e", commit+"^{commit}"); err != nil {
+		if gitcommand.Interrupted(err) {
+			return false, fmt.Errorf("gitV1: %w", err)
+		}
 		// Depth-one fetch works even for a historical commit when the server permits
 		// requesting its object ID. Do not silently replace an unavailable pin by HEAD.
 		_, fetchErr := gitV1(ctx, repository, "-c", "fetch.fsckObjects=true", "fetch", "--quiet", "--no-tags", "--no-write-fetch-head", "--depth=1", "--", candidate.remote, commit)
 		if fetchErr != nil {
-			if ctx.Err() != nil {
-				return false, ctx.Err()
+			if gitcommand.Interrupted(fetchErr) {
+				return false, fmt.Errorf("gitV1: %w", fetchErr)
 			}
 			// Some servers only expose advertised refs. Fetch reachable history as a
 			// compatibility fallback, then verify the exact requested commit again.
+			gitcommand.Debug(ctx, "Pinned commit shallow fetch failed; fetching reachable history", slog.String("commit", commit))
 			args := []string{"-c", "fetch.fsckObjects=true", "fetch", "--quiet", "--no-tags", "--no-write-fetch-head"}
 			if _, err := os.Stat(filepath.Join(repository, "shallow")); err == nil {
 				args = append(args, "--unshallow")
@@ -87,7 +93,15 @@ func checkoutCachedCommit(ctx context.Context, checkout string, entry v1.LockedM
 }
 
 // OS locks are released on process exit and shared across concurrent CLI runs.
-func lockObjectRepository(ctx context.Context, path string) (func(), error) {
+func lockObjectRepository(ctx context.Context, path string) (unlock func(), err error) {
+	ctx, cancel, err := gitcommand.Operation(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("Operation: %w", err)
+	}
+	defer cancel()
+	deadline, _ := ctx.Deadline()
+	finish := gitcommand.Start(ctx, "cache lock", slog.String("path", path), slog.Duration("timeout", time.Until(deadline)))
+	defer func() { finish(err) }()
 	file, err := os.OpenFile(path, os.O_CREATE|os.O_RDWR, 0o600)
 	if err != nil {
 		return nil, err

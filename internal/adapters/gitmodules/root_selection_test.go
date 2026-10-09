@@ -44,7 +44,7 @@ func TestFetchWithRootsReplaysColdAndWarmSelections(t *testing.T) {
 	assert.False(t, fetched.Module.RootsFromMetadata)
 	assert.Equal(t, roots, fetched.Module.Roots)
 	assert.Equal(t, roots, fetched.Lock.Roots)
-	assert.Equal(t, migrationTestHash(t, files), fetched.Lock.Hash)
+	assert.Equal(t, snapshotTestHash(t, files), fetched.Lock.Hash)
 	roots[0] = "changed"
 	assert.Equal(t, []string{"api"}, fetched.Lock.Roots)
 
@@ -68,7 +68,7 @@ func TestFetchWithRootsReplaysColdAndWarmSelections(t *testing.T) {
 		_, again, err := cache.Cached(entry)
 		require.NoError(t, err)
 		assert.Equal(t, entry.Roots, again.Roots)
-		assert.Equal(t, "original repository bytes\n", string(mustReadRootSelectionFile(t, directory, "README.md")))
+		assert.NoFileExists(t, filepath.Join(directory, "README.md"))
 	}
 }
 

@@ -21,9 +21,9 @@ func (c *Core) protoInfoRead(ctx context.Context, fs FS, path string) (ProtoInfo
 	}
 	defer c.close(ctx, f, path)
 
-	protoFile, err := readProtoFile(f)
+	protoFile, comments, err := readProtoFileWithDirectives(f)
 	if err != nil {
-		return ProtoInfo{}, fmt.Errorf("readProtoFile: %w", err)
+		return ProtoInfo{}, fmt.Errorf("readProtoFileWithDirectives: %w", err)
 	}
 
 	protoFilesFromImport, err := c.readFilesFromImport(ctx, fs, protoFile)
@@ -32,6 +32,7 @@ func (c *Core) protoInfoRead(ctx context.Context, fs FS, path string) (ProtoInfo
 	}
 
 	protoInfo := ProtoInfo{
+		directiveComments:    comments,
 		Path:                 path,
 		Info:                 protoFile,
 		ProtoFilesFromImport: protoFilesFromImport,

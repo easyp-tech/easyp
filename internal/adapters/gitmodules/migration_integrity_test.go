@@ -22,10 +22,11 @@ func TestFetchMigrationMatchingWholeTreePinBypassesProtoArchive(t *testing.T) {
 
 	require.NoError(t, err)
 	assert.Equal(t, commit, fetched.Lock.Commit)
-	assert.Equal(t, expectedHash, fetched.Lock.Hash)
+	assert.Equal(t, snapshotTestHash(t, files), fetched.Lock.Hash)
+	assert.NotEqual(t, expectedHash, fetched.Lock.Hash, "historical proof and native projection have separate scopes")
 }
 
-func TestFetchMigrationInitialResolutionRejectsWholeTreeCollision(t *testing.T) {
+func TestFetchMigrationInitialResolutionIgnoresUnrelatedFileCollision(t *testing.T) {
 	t.Parallel()
 
 	repository, _ := migrationTestRepository(t, map[string]string{
@@ -38,8 +39,8 @@ func TestFetchMigrationInitialResolutionRejectsWholeTreeCollision(t *testing.T) 
 
 	fetched, err := (&Cache{root: cacheDir}).FetchMigration(t.Context(), repository, "", "")
 
-	require.ErrorContains(t, err, "legacy file collision")
-	assert.Empty(t, fetched.Lock.Source)
+	require.NoError(t, err)
+	assert.Equal(t, repository, fetched.Lock.Source)
 	migrationTestAssertNoCheckout(t, cacheDir)
 }
 

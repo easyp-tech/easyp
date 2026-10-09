@@ -4,9 +4,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"os"
 	"strings"
 
+	"github.com/easyp-tech/easyp/internal/adapters/gitcommand"
 	moduleconfig "github.com/easyp-tech/easyp/internal/adapters/module_config"
 	v1 "github.com/easyp-tech/easyp/internal/config/v1"
 	"github.com/easyp-tech/easyp/internal/modules"
@@ -42,6 +44,9 @@ func (c *Cache) FetchForRootResolution(ctx context.Context, source, version stri
 }
 
 func (c *Cache) fetchWithRootSelection(ctx context.Context, source, version string, roots []string, inspect bool) (fetched modules.Fetched, err error) {
+	ctx = c.operationContext(ctx, source, version)
+	finish := gitcommand.Start(ctx, "resolve module")
+	defer func() { finish(err) }()
 	checkout, err := checkoutV1ModuleWithRoots(ctx, source, version, c.root, roots, inspect)
 	if err != nil {
 		return modules.Fetched{}, fmt.Errorf("checkoutV1ModuleWithRoots: %w", err)
@@ -78,6 +83,9 @@ func (c *Cache) fetchWithRootSelection(ctx context.Context, source, version stri
 // checkoutV1ModuleWithRoots retains Git objects and an index for historical
 // proofs, plus a bounded logical snapshot or deferred source inspection.
 func checkoutV1ModuleWithRoots(ctx context.Context, source, version, cacheRoot string, roots []string, inspect bool) (checkout v1ModuleCheckout, err error) {
+	if _, err := gitcommand.Timeout(); err != nil {
+		return v1ModuleCheckout{}, fmt.Errorf("Timeout: %w", err)
+	}
 	if err := v1.ValidateModuleRoots(roots); err != nil {
 		return v1ModuleCheckout{}, fmt.Errorf("ValidateModuleRoots: %w", err)
 	}
@@ -109,13 +117,17 @@ func checkoutV1ModuleWithRoots(ctx context.Context, source, version, cacheRoot s
 		if err != nil {
 			return v1ModuleCheckout{}, fmt.Errorf("MkdirTemp: %w", err)
 		}
-		checkout, cloned, candidateErr := checkoutSnapshotCandidate(ctx, dir, source, version, candidate, roots, inspect)
+		candidateContext := gitcommand.WithAttributes(ctx, slog.String("repository", candidate.remote), slog.String("module_directory", candidate.subdir))
+		checkout, cloned, candidateErr := checkoutSnapshotCandidate(candidateContext, dir, source, version, candidate, roots, inspect)
 		if candidateErr == nil {
 			return checkout, nil
 		}
 		removeErr := os.RemoveAll(dir)
 		if removeErr != nil {
 			return v1ModuleCheckout{}, errors.Join(fmt.Errorf("checkoutSnapshotCandidate: %w", candidateErr), fmt.Errorf("RemoveAll: %w", removeErr))
+		}
+		if gitcommand.Interrupted(candidateErr) {
+			return v1ModuleCheckout{}, fmt.Errorf("checkoutSnapshotCandidate: %w", candidateErr)
 		}
 		if firstErr == nil {
 			firstErr = candidateErr
@@ -193,6 +205,9 @@ func fetchPinnedV1Module(ctx context.Context, entry v1.LockedModule, cacheRoot, 
 	}
 	if err := moduleconfig.ValidateLegacyMajor(checkout.snapshot, entry.Source, entry.Version); err != nil {
 		return fmt.Errorf("ValidateLegacyMajor: %w", err)
+	}
+	if err := writeSourceBinding(ctx, cacheRoot, checkout.dir, entry); err != nil {
+		return fmt.Errorf("writeSourceBinding: %w", err)
 	}
 	if err := os.Rename(checkout.snapshot, installed); err != nil {
 		return fmt.Errorf("Rename: %w", err)

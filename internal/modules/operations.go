@@ -114,6 +114,13 @@ func Download(ctx context.Context, root string, repository Cache) error {
 	if err := repository.Install(ctx, lock); err != nil {
 		return err
 	}
+	if repair, ok := repository.(interface {
+		RepairPolicySources(context.Context, v1.Lock) error
+	}); ok {
+		if err := repair.RepairPolicySources(ctx, lock); err != nil {
+			return fmt.Errorf("RepairPolicySources: %w", err)
+		}
+	}
 	_, err = CachedSources(lock, repository)
 	return err
 }
