@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io/fs"
 	"os"
+	"path"
 	"path/filepath"
 
 	"golang.org/x/mod/sumdb/dirhash"
@@ -24,7 +25,16 @@ type cacheVerificationStamp struct {
 	Roots       string `json:"roots,omitempty"`
 }
 
-func verifyInstalledV1Module(installed string, entry v1.LockedModule) error {
+func verifyInstalledV1Module(installed string, entry v1.LockedModule, writeStamp bool) error {
+	files, err := snapshotV1Files(installed)
+	if err != nil {
+		return fmt.Errorf("snapshotV1Files: %w", err)
+	}
+	for _, name := range files {
+		if path.Ext(name) != ".proto" && !snapshotConfigFile(name) {
+			return fmt.Errorf("unrelated snapshot file %q; regenerate the unreleased v1 lock with easyp mod tidy", name)
+		}
+	}
 	fingerprint, fast, err := cacheTreeFingerprint(installed)
 	if err != nil {
 		return fmt.Errorf("cacheTreeFingerprint: %w", err)
@@ -52,12 +62,14 @@ func verifyInstalledV1Module(installed string, entry v1.LockedModule) error {
 		if !afterFast || after != fingerprint {
 			return fmt.Errorf("cached %s@%s changed while its lock hash was being verified; retry after concurrent cache writes stop", entry.Source, entry.Commit)
 		}
-		_ = writeCacheVerificationStamp(installed, cacheVerificationStamp{
-			Version:     cacheVerificationVersion,
-			Hash:        entry.Hash,
-			Fingerprint: after,
-			Roots:       v1RootSelectionKey(entry.Roots),
-		})
+		if writeStamp {
+			_ = writeCacheVerificationStamp(installed, cacheVerificationStamp{
+				Version:     cacheVerificationVersion,
+				Hash:        entry.Hash,
+				Fingerprint: after,
+				Roots:       v1RootSelectionKey(entry.Roots),
+			})
+		}
 	}
 	return nil
 }

@@ -25,7 +25,7 @@ func verifyMigrationLegacyHash(ctx context.Context, checkout v1ModuleCheckout, t
 	if !tracked.hasSymlinks {
 		// Raw committed bytes are only a whole-tree proof when their recorded
 		// digest matches; no host checkout/filter representation is assumed.
-		treeHash, treeErr = hashMigrationLegacyFiles(checkout.snapshot, tracked.regularFiles)
+		treeHash, treeErr = migrationPinnedTreeHash(ctx, checkout, tracked.regularFiles)
 		if treeErr != nil {
 			treeErr = fmt.Errorf("hashMigrationLegacyFiles: %w", treeErr)
 		}
@@ -77,16 +77,16 @@ func validateMigrationInitialSelection(ctx context.Context, checkout v1ModuleChe
 			return fmt.Errorf("validateMigrationLogicalOwnership: %w", err)
 		}
 	} else {
-		_, err := hashMigrationLegacyFiles(checkout.snapshot, tracked.regularFiles)
-		if err != nil {
-			return fmt.Errorf("hashMigrationLegacyFiles: %w", err)
-		}
-		err = validateMigrationSelection(checkout.snapshot, tracked.regularFiles, checkout.module)
+		err := validateMigrationSelection(checkout.snapshot, tracked.regularFiles, checkout.module)
 		if err != nil {
 			return fmt.Errorf("validateMigrationSelection: %w", err)
 		}
 	}
-	nodes, err := readMigrationProtoArchive(ctx, checkout.dir, checkout.commit, tracked.trackedFiles)
+	roots, err := readMigrationLegacyRoots(checkout.snapshot, tracked.trackedFiles)
+	if err != nil {
+		return fmt.Errorf("readMigrationLegacyRoots: %w", err)
+	}
+	nodes, err := readMigrationSourceArchive(ctx, checkout.dir, checkout.commit, tracked.trackedFiles, roots)
 	if err != nil {
 		return fmt.Errorf("readMigrationProtoArchive: %w", err)
 	}
@@ -95,6 +95,20 @@ func validateMigrationInitialSelection(ctx context.Context, checkout v1ModuleChe
 		return fmt.Errorf("validateMigrationArchiveRegularSources: %w", err)
 	}
 	return nil
+}
+
+// Whole-tree digests belong only to actual historical locks. Their bytes come
+// from the pinned repository, independently of the smaller native snapshot.
+func migrationPinnedTreeHash(ctx context.Context, checkout v1ModuleCheckout, files []string) (string, error) {
+	roots, err := readMigrationLegacyRoots(checkout.snapshot, files)
+	if err != nil {
+		return "", fmt.Errorf("readMigrationLegacyRoots: %w", err)
+	}
+	view, err := sourceV1SnapshotView(ctx, checkout.dir, checkout.commit)
+	if err != nil {
+		return "", fmt.Errorf("sourceV1SnapshotView: %w", err)
+	}
+	return hashMigrationRenamedFiles(files, roots, func(name string) (io.ReadCloser, error) { return view.Open(ctx, name) })
 }
 
 // hashMigrationLegacyFiles calculates the whole-tree legacy hash without

@@ -88,11 +88,29 @@ func (c *Cache) installEntry(ctx context.Context, entry v1.LockedModule, acquire
 	if !info.IsDir() {
 		return fmt.Errorf("%s: cached path %q is not a directory; inspect this path and keep protobuf.lock unchanged", entry.Source, installed)
 	}
-	if err := verifyInstalledV1Module(installed, entry); err != nil {
+	if err := verifyInstalledV1Module(installed, entry, acquire); err != nil {
 		return fmt.Errorf("verify cached %s at %q: %w", entry.Source, installed, err)
 	}
 	if err := moduleconfig.ValidateLegacyMajor(installed, entry.Source, entry.Version); err != nil {
 		return fmt.Errorf("ValidateLegacyMajor: %w", err)
+	}
+	return nil
+}
+
+// RepairPolicySources is reserved for explicit mod download. Ordinary native
+// source use does not require objects for unselected producer policy fragments.
+func (c *Cache) RepairPolicySources(ctx context.Context, lock v1.Lock) error {
+	for _, entry := range lock.Modules {
+		if err := c.ensurePinnedSource(c.operationContext(ctx, entry.Source, entry.Commit), entry, true); err != nil {
+			return fmt.Errorf("ensurePinnedSource: %w", err)
+		}
+	}
+	// A corrupted shared store may have been quarantined after an earlier pin
+	// passed verification. Restore every pin additively after all quarantines.
+	for _, entry := range lock.Modules {
+		if err := c.ensurePinnedSource(c.operationContext(ctx, entry.Source, entry.Commit), entry, false); err != nil {
+			return fmt.Errorf("ensurePinnedSource: %w", err)
+		}
 	}
 	return nil
 }

@@ -58,10 +58,7 @@ func TestPinnedTreeReusesObjectMetadataDuringConcurrentReads(t *testing.T) {
 	}
 	bodies := slices.Clone(store.bodies)
 	store.mu.Unlock()
-	require.Len(t, bodies, 1)
-	runtime.GC()
-	assert.Nil(t, bodies[0].Value(), "metadata reads must not retain decoded blob bodies")
-	runtime.KeepAlive(tree)
+	assert.Empty(t, bodies, "metadata reads must not decode blob bodies")
 	t.Run("concurrent contents", func(t *testing.T) {
 		for i := range 32 {
 			t.Run(fmt.Sprint(i), func(t *testing.T) {
@@ -76,6 +73,42 @@ func TestPinnedTreeReusesObjectMetadataDuringConcurrentReads(t *testing.T) {
 			})
 		}
 	})
+	store.mu.Lock()
+	bodies = slices.Clone(store.bodies)
+	store.mu.Unlock()
+	require.Len(t, bodies, 32)
+	runtime.GC()
+	for _, body := range bodies {
+		assert.Nil(t, body.Value(), "closed readers must not retain decoded blob bodies")
+	}
+	runtime.KeepAlive(tree)
+}
+
+func TestDirectoryListingDoesNotReadBlobBodies(t *testing.T) {
+	t.Parallel()
+	directory := t.TempDir()
+	require.NoError(t, os.WriteFile(filepath.Join(directory, "README.md"), []byte("unrelated bytes"), 0o644))
+	runGit(t, directory, "init", "-q")
+	runGit(t, directory, "add", ".")
+	runGit(t, directory, "-c", "user.name=Test", "-c", "user.email=test@example.test", "commit", "-qm", "initial")
+	repo, err := git.PlainOpen(directory)
+	require.NoError(t, err)
+	store := &countingObjectStore{Storer: repo.Storer, reads: make(map[plumbing.Hash]int)}
+	repo, err = git.Open(store, nil)
+	require.NoError(t, err)
+	tree, err := New(repo, plumbing.NewHash(runGit(t, directory, "rev-parse", "HEAD")))
+	require.NoError(t, err)
+	entries, err := tree.ReadDir(".")
+	require.NoError(t, err)
+	require.Len(t, entries, 1)
+	assert.Equal(t, "README.md", entries[0].Name())
+	assert.False(t, entries[0].IsDir())
+	info, err := entries[0].Info()
+	require.NoError(t, err)
+	assert.Equal(t, int64(len("unrelated bytes")), info.Size())
+	store.mu.Lock()
+	defer store.mu.Unlock()
+	assert.Empty(t, store.bodies, "directory/file metadata must not decode file contents")
 }
 
 type countingObjectStore struct {

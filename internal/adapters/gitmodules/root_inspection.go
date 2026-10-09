@@ -39,7 +39,7 @@ func inspectV1Snapshot(ctx context.Context, view *sourceview.View, directory str
 		boundaries = append(boundaries, inspectionSourceBoundary{logical: logical, physical: resolved.Path})
 	}
 	inspection := &modules.RootInspection{}
-	err := view.Walk(ctx, ".", func(logical string, resolved sourceview.Resolution, walkErr error) error {
+	err := view.WalkSelected(ctx, ".", snapshotProtoCandidate, func(logical string, resolved sourceview.Resolution, walkErr error) error {
 		if err := ctx.Err(); err != nil {
 			return fmt.Errorf("Err: %w", err)
 		}

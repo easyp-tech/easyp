@@ -23,7 +23,17 @@ stops further repository candidates and full-history fallback. Dependency phases
 report elapsed progress every 15 seconds; <code>--debug</code> adds commands,
 snapshot/source/archive timings and file counts. Immutable Git trees and blob
 metadata are indexed and reused to avoid repeated object reads in large mirrors.
-Pinned revisions, archive proofs and snapshot hashes retain their existing rules.
+Native snapshots now retain proto files and canonical EasyP/Buf metadata,
+omitting unrelated source, documentation and build outputs. Arbitrarily named
+producer-policy fragments are read on demand from verified pinned Git objects.
+Read-only policy validation does not fetch or write verification stamps; explicit
+mod download repairs missing policy objects. Existing nightly locks whose hashes
+covered unrelated files must be regenerated with the updated CLI: preserve the
+old protobuf.lock as a backup, then run easyp mod tidy. Existing immutable-hash
+guards intentionally reject reusing that old lock unchanged. There is one
+v1 hash policy and no backward-compatibility cache namespace. Actual legacy lock
+digests still use the original pinned tree/archive; no-lock migrations do not
+hash the entire repository.
 
 Breaking checks can read a v0 baseline's own <code>easyp.lock</code>, including in
 frozen mode. They verify the historical hashes and never borrow the current

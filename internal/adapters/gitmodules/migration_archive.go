@@ -53,6 +53,14 @@ func hashMigrationProtoArchive(ctx context.Context, checkout string, files []str
 // pointer strings; they are never extracted onto, or resolved against, the host.
 // Git reproduces the released *.proto pathspec and export-ignore/export-subst.
 func readMigrationProtoArchive(ctx context.Context, checkout, commit string, files []string) (nodes []migrationArchiveNode, resultErr error) {
+	return readMigrationArchive(ctx, checkout, commit, files, nil, true)
+}
+
+func readMigrationSourceArchive(ctx context.Context, checkout, commit string, files, roots []string) ([]migrationArchiveNode, error) {
+	return readMigrationArchive(ctx, checkout, commit, files, roots, false)
+}
+
+func readMigrationArchive(ctx context.Context, checkout, commit string, files, roots []string, fullDigest bool) (nodes []migrationArchiveNode, resultErr error) {
 	directory, err := os.MkdirTemp("", "easyp-migration-archive-")
 	if err != nil {
 		return nil, fmt.Errorf("MkdirTemp: %w", err)
@@ -99,7 +107,7 @@ func readMigrationProtoArchive(ctx context.Context, checkout, commit string, fil
 			return nil, fmt.Errorf("unsupported untracked archive file %q", name)
 		}
 		var data []byte
-		if !mode.IsDir() {
+		if !mode.IsDir() && (fullDigest || path.Ext(name) == ".proto" || mode&fs.ModeSymlink != 0) {
 			data, err = readMigrationArchiveFile(file)
 			if err != nil {
 				return nil, fmt.Errorf("readMigrationArchiveFile: %w", err)
@@ -107,7 +115,59 @@ func readMigrationProtoArchive(ctx context.Context, checkout, commit string, fil
 		}
 		nodes = append(nodes, migrationArchiveNode{name: file.Name, mode: mode, data: data})
 	}
+	if !fullDigest {
+		if err := loadMigrationArchiveAliasTargets(ctx, archive.File, nodes, roots); err != nil {
+			return nil, fmt.Errorf("loadMigrationArchiveAliasTargets: %w", err)
+		}
+	}
 	return nodes, nil
+}
+
+// A proto alias can point to an archived file with another extension. Load only
+// those target bodies needed under an evidenced installer namespace.
+func loadMigrationArchiveAliasTargets(ctx context.Context, files []*zip.File, nodes []migrationArchiveNode, roots []string) error {
+	indices := make(map[string]int, len(nodes))
+	archives := make(map[string]*zip.File, len(files))
+	for i, node := range nodes {
+		indices[node.name] = i
+	}
+	for _, file := range files {
+		archives[file.Name] = file
+	}
+	for _, rewrite := range []bool{false, true} {
+		installed, _, err := installMigrationArchive(nodes, roots, rewrite)
+		if err != nil {
+			continue
+		}
+		originals := make(map[string]string, len(nodes))
+		for _, node := range nodes {
+			originals[renameMigrationLegacyFile(node.name, roots)] = node.name
+		}
+		view := sourceview.New(installed)
+		for _, node := range nodes {
+			if node.mode.IsDir() || path.Ext(node.name) != ".proto" {
+				continue
+			}
+			resolved, err := view.Resolve(ctx, renameMigrationLegacyFile(node.name, roots))
+			if err != nil {
+				if ctx.Err() != nil {
+					return ctx.Err()
+				}
+				continue
+			}
+			original := originals[resolved.Path]
+			index, exists := indices[original]
+			if !exists || !nodes[index].mode.IsRegular() || nodes[index].data != nil {
+				continue
+			}
+			data, err := readMigrationArchiveFile(archives[original])
+			if err != nil {
+				return fmt.Errorf("readMigrationArchiveFile: %w", err)
+			}
+			nodes[index].data = data
+		}
+	}
+	return nil
 }
 
 // migrationArchiveHashes independently reconstructs released installer layouts:

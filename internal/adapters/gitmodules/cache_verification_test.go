@@ -22,7 +22,7 @@ func TestCacheVerificationStampInvalidatesOnContentChange(t *testing.T) {
 	require.NoError(t, err)
 	entry := v1.LockedModule{Source: "example.test/cache", Version: "v1.0.0", Commit: "1111111111111111111111111111111111111111", Hash: hash}
 
-	require.NoError(t, verifyInstalledV1Module(root, entry))
+	require.NoError(t, verifyInstalledV1Module(root, entry, true))
 	assert.FileExists(t, cacheVerificationStampPath(root))
 
 	info, err := os.Stat(name)
@@ -31,7 +31,7 @@ func TestCacheVerificationStampInvalidatesOnContentChange(t *testing.T) {
 	require.NoError(t, os.WriteFile(name, []byte("evil"), 0o644))
 	require.NoError(t, os.Chtimes(name, time.Now().Add(-time.Hour), originalModTime))
 
-	err = verifyInstalledV1Module(root, entry)
+	err = verifyInstalledV1Module(root, entry, true)
 	require.ErrorContains(t, err, "hash mismatch")
 }
 
