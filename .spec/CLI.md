@@ -102,6 +102,7 @@ Generates according to the selected <code>easyp.gen.yaml</code> files. [internal
 
 | Flag | Type | Default | Meaning |
 |---|---|---|---|
+| <code>--gen-config</code> | string file path | automatic discovery | Select one native generation file with any name; relative paths start at the working directory. Exclusive with <code>--project</code> and <code>--all</code>. |
 | <code>--project</code> | repeatable string | nearest ancestor generator | Select a consumer project directory containing <code>easyp.gen.yaml</code>; relative paths start at the working directory. |
 | <code>--all</code> | bool | <code>false</code> | Recursively select generation projects below the working directory; exclusive with <code>--project</code>. |
 | <code>--workspace</code> | string | discovered workspace boundary | Set the root for repository-relative module selectors and bounded ancestor lookup; it must contain the working directory. |
@@ -111,12 +112,24 @@ Generates according to the selected <code>easyp.gen.yaml</code> files. [internal
 
 ~~~bash
 easyp generate
+easyp generate --gen-config private.easyp.gen.yaml
+easyp generate --gen-config public.easyp.gen.yaml
 easyp generate --project services/backend --project services/frontend
 easyp generate --all --descriptor_set_out_dir descriptors --include_imports
 easyp generate --project services/backend --descriptor_set_out descriptors.pb
 ~~~
 
 Automatic selection finds the nearest ancestor generator within the workspace boundary. It does not recursively execute all generators; use <code>--all</code> for that. Recursive discovery skips hidden directories, <code>easyp_vendor</code>, <code>node_modules</code>, and nested Git repositories. The global config flag does not select a generator. This command has no <code>--path</code>, <code>--root</code>, or <code>EASYP_ROOT_GENERATE_PATH</code> input.
+
+<code>--gen-config</code> selects exactly one file within the workspace, including
+an absolute path. Missing or invalid files fail without falling back to
+<code>easyp.gen.yaml</code>. Logical config paths are retained for output/module
+coordinates; metadata aliases cannot escape the selected workspace boundary.
+Selecting a named file leaves source and output rules unchanged: colocated
+profiles need no path adjustments, output directories are relative to the
+selected file, and module paths keep their module/workspace coordinates.
+Options still inherit only from canonical <code>easyp.gen.yaml</code> files in
+ancestor directories; a canonical sibling is an independent profile.
 
 Generation targets come from <code>generate.modules</code>, or from the local module enclosing the selected generator when the list is empty. Native <code>protobuf.mod</code> supplies roots and dependencies; <code>generate.inputs</code> is removed. Plugin output directories are relative to the generator file. Relative descriptor destinations are relative to the working directory. Export still runs configured plugins; an empty plugin list permits descriptor-only export.
 

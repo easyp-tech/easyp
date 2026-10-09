@@ -80,7 +80,7 @@ The native dependency format is documented in [`.spec/config/dependency.md`](.sp
 
 The current command behavior is documented in [`.spec/CLI.md`](.spec/CLI.md):
 
-- generation discovery is nearest-project by default and recursive only with `--all`;
+- generation discovery is nearest-project by default and recursive only with `--all`; `generate --gen-config <file>` explicitly selects a named native profile such as `private.easyp.gen.yaml` without relocating it. Relative file paths start at the working directory; plugin output and module coordinates retain their existing rules. The flag is exclusive with `--project`/`--all`, and missing or invalid profiles never fall back to the standard file;
 - `generate.modules` selects module identities or workspace module paths; object entries add per-module paths/packages, intersected with global filters;
 - `generate.packages` selects exact protobuf package names;
 - `generate.paths` selects literal module-directory-relative files or directory subtrees, intersecting packages; it remains available without a module list;
