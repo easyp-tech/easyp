@@ -6,9 +6,11 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
+	"log/slog"
 	"path"
 	"path/filepath"
 
+	"github.com/easyp-tech/easyp/internal/adapters/gitcommand"
 	"github.com/easyp-tech/easyp/internal/adapters/gitsnapshot"
 	v1 "github.com/easyp-tech/easyp/internal/config/v1"
 	"github.com/easyp-tech/easyp/internal/core/path_helpers"
@@ -16,7 +18,14 @@ import (
 	"github.com/easyp-tech/easyp/internal/sourceview"
 )
 
-func inspectV1Snapshot(ctx context.Context, view *sourceview.View, directory string, module v1.Module, commit string) (*modules.RootInspection, error) {
+func inspectV1Snapshot(ctx context.Context, view *sourceview.View, directory string, module v1.Module, commit string) (result *modules.RootInspection, resultErr error) {
+	finish := gitcommand.Start(ctx, "source inspection", slog.String("commit", commit))
+	defer func() {
+		if result != nil {
+			gitcommand.Debug(ctx, "Source inspection result", slog.Int("proto_files", len(result.Files)), slog.Int("path_problems", len(result.Problems)))
+		}
+		finish(resultErr)
+	}()
 	var boundaries []inspectionSourceBoundary
 	for _, root := range module.Roots {
 		logical := filepath.ToSlash(root)

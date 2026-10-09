@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
+	"log/slog"
 	"os"
 	"path"
 	"path/filepath"
@@ -17,6 +18,7 @@ import (
 	"github.com/go-git/go-git/v5/plumbing/cache"
 	"github.com/go-git/go-git/v5/storage/filesystem"
 
+	"github.com/easyp-tech/easyp/internal/adapters/gitcommand"
 	"github.com/easyp-tech/easyp/internal/adapters/gitsnapshot"
 	moduleconfig "github.com/easyp-tech/easyp/internal/adapters/module_config"
 	v1 "github.com/easyp-tech/easyp/internal/config/v1"
@@ -28,6 +30,8 @@ import (
 // Metadata is materialized before passing it to the existing metadata readers.
 // The caller owns and removes the returned directory.
 func prepareV1Snapshot(ctx context.Context, checkout, commit, source, subdir string, roots []string, inspect bool) (directory string, module v1.Module, inspection *modules.RootInspection, err error) {
+	finish := gitcommand.Start(ctx, "snapshot", slog.String("commit", commit))
+	defer func() { finish(err) }()
 	tree, err := sourceV1SnapshotTree(ctx, checkout, commit)
 	if err != nil {
 		return "", v1.Module{}, nil, fmt.Errorf("sourceV1SnapshotTree: %w", err)
@@ -51,6 +55,7 @@ func prepareV1Snapshot(ctx context.Context, checkout, commit, source, subdir str
 		return "", v1.Module{}, nil, fmt.Errorf("stageSnapshotMetadata: %w", err)
 	}
 	aliases, regular, metadataFailures := inventory.aliases, inventory.regular, inventory.metadataFailures
+	gitcommand.Debug(ctx, "Snapshot inventory", slog.Int("regular_files", len(regular)), slog.Int("aliases", len(aliases)), slog.Int("metadata_failures", len(metadataFailures)))
 	module, err = moduleconfig.ReadGitDependencyAt(directory, source, subdir)
 	if err != nil {
 		for _, failure := range metadataFailures {
@@ -64,6 +69,7 @@ func prepareV1Snapshot(ctx context.Context, checkout, commit, source, subdir str
 	if err != nil {
 		return "", v1.Module{}, nil, fmt.Errorf("applyV1ModuleRoots: %w", err)
 	}
+	gitcommand.Debug(ctx, "Snapshot source selection", slog.Any("roots", module.Roots), slog.Any("proto_filters", module.ProtoFilters), slog.Bool("roots_from_metadata", module.RootsFromMetadata))
 	provisional := inspect && !module.RootsFromMetadata && len(roots) == 0
 	ignoredMetadata := make(map[string]bool, len(metadataFailures))
 	for _, failure := range metadataFailures {

@@ -56,7 +56,8 @@ Section-scoped <code>extends</code> is implemented in <code>internal/policy</cod
 | Package | Main files / contract |
 |---------|-----------------------|
 | <code>internal/sourceview</code> | Bounded logical resolve/open/walk over standard io/fs; local os.Root reads and alias topology checks |
-| <code>internal/adapters/gitsnapshot</code> | Immutable Git tree/blob filesystem, SHA-1/SHA-256 repository support and host path collision checks |
+| <code>internal/adapters/gitcommand</code> | Per-command/lock deadlines, cancellation with bounded pipe cleanup, and scoped dependency phase diagnostics; no module or lock interpretation |
+| <code>internal/adapters/gitsnapshot</code> | Immutable Git tree/blob filesystem, indexed directories and cached sizes without retaining blob bodies, SHA-1/SHA-256 repository support and host path collision checks |
 | <code>internal/adapters/gitmodules</code> | <code>cache.go</code>, <code>git.go</code>: cache layout and Git execution; <code>object_cache.go</code>, <code>object_lock_unix.go</code>, <code>object_lock_windows.go</code>: reusable Git object repositories and OS locks; <code>checkout.go</code>, <code>git_source.go</code>: revision/candidate selection; <code>download.go</code>, <code>files.go</code>: installation and materialized snapshot hashing; <code>identity.go</code>: optional Git origin identity; <code>migration.go</code>, <code>migration_config.go</code>, <code>migration_selection.go</code>: historical revision/hash verification |
 | <code>internal/adapters/plugin</code> | Local, remote, built-in WASM and command executors; <code>Info</code> carries the explicit local execution directory |
 | <code>internal/adapters/go_git</code> | Historical project-tree walkers for breaking checks |

@@ -7,11 +7,12 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
-	"os/exec"
 	"path"
 	"slices"
 	"strconv"
 	"strings"
+
+	"github.com/easyp-tech/easyp/internal/adapters/gitcommand"
 )
 
 type repositoryEntry struct {
@@ -109,14 +110,9 @@ func objectID(value string) bool {
 }
 
 func (f *repositoryFS) command(stdin io.Reader, args ...string) ([]byte, error) {
-	cmd := exec.CommandContext(f.ctx, "git", append([]string{"-C", f.directory}, args...)...)
-	cmd.Stdin = stdin
-	raw, err := cmd.Output()
+	raw, err := gitcommand.Run(f.ctx, f.directory, stdin, args...)
 	if err != nil {
-		if f.ctx.Err() != nil {
-			return nil, f.ctx.Err()
-		}
-		return nil, fmt.Errorf("Output: %w", err)
+		return nil, fmt.Errorf("Run: %w", err)
 	}
 	return raw, nil
 }

@@ -6,12 +6,14 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"path"
 	"slices"
 	"strings"
 
 	"golang.org/x/mod/sumdb/dirhash"
 
+	"github.com/easyp-tech/easyp/internal/adapters/gitcommand"
 	"github.com/easyp-tech/easyp/internal/sourceview"
 )
 
@@ -21,7 +23,14 @@ type migrationLegacyLayout struct {
 	files map[string]string
 }
 
-func proveMigrationLegacyLayout(ctx context.Context, checkout v1ModuleCheckout, tracked migrationFiles, request migrationRequest) (migrationLegacyLayout, error) {
+func proveMigrationLegacyLayout(ctx context.Context, checkout v1ModuleCheckout, tracked migrationFiles, request migrationRequest) (result migrationLegacyLayout, resultErr error) {
+	finish := gitcommand.Start(ctx, "legacy archive proof", slog.Int("tracked_files", len(tracked.trackedFiles)), slog.Bool("verify_legacy_hash", request.legacyHash != ""))
+	defer func() {
+		if resultErr == nil {
+			gitcommand.Debug(ctx, "Legacy archive mapping", slog.Int("mapped_files", len(result.files)))
+		}
+		finish(resultErr)
+	}()
 	switch request.proof {
 	case migrationWholeNamespaceProof, migrationRetainedRootsProof, migrationExplicitRootsProof:
 	default:

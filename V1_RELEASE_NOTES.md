@@ -17,6 +17,14 @@ BSR compatibility snapshots prefer a verified historical Git pin during migratio
 Exact BSR resolutions and explicit Git requirements are not overridden. The
 original BSR request and the selected Git pin remain recorded in the native lock.
 
+Git commands and cache-lock acquisition have a five-minute per-operation limit,
+configurable through <code>EASYP_GIT_TIMEOUT</code>. Cancellation or a timeout
+stops further repository candidates and full-history fallback. Dependency phases
+report elapsed progress every 15 seconds; <code>--debug</code> adds commands,
+snapshot/source/archive timings and file counts. Immutable Git trees and blob
+metadata are indexed and reused to avoid repeated object reads in large mirrors.
+Pinned revisions, archive proofs and snapshot hashes retain their existing rules.
+
 Breaking checks can read a v0 baseline's own <code>easyp.lock</code>, including in
 frozen mode. They verify the historical hashes and never borrow the current
 project's dependency pins or resolve an unpinned HEAD. Missing historical locks
