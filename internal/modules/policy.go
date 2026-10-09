@@ -19,6 +19,27 @@ type PolicyModule struct {
 	Name      string
 	Directory string
 	Replaced  bool
+	Files     PolicyFiles
+}
+
+// PolicyFile is one explicitly selected configuration from a pinned source.
+// Path preserves its logical module-relative spelling; Canonical identifies its
+// immutable physical source for cache and cycle detection.
+type PolicyFile struct {
+	Path      string
+	Canonical string
+	Content   []byte
+}
+
+// PolicyFiles reads selected policy files without acquiring dependencies.
+type PolicyFiles interface {
+	Read(context.Context, string) (PolicyFile, error)
+}
+
+// PolicyFilesCache optionally exposes the immutable files behind a verified pin.
+// The prefix is the manifest directory relative to the installed repository.
+type PolicyFilesCache interface {
+	PolicyFiles(v1.LockedModule, string) PolicyFiles
 }
 
 // PolicyGraph contains only module identities reached through the consumer's
@@ -75,13 +96,13 @@ func ResolvePolicyGraphAt(ctx context.Context, moduleDir string, cache Cache, fr
 		}
 		visited[requirement.Module] = true
 		var directory string
+		var pin v1.LockedModule
 		if local {
 			directory = locals.modules[requirement.Module].Directory
 		} else {
 			if cache == nil {
 				return nil, fmt.Errorf("policy dependency %s requires cached locked contents; run easyp mod download", requirement.Module)
 			}
-			var pin v1.LockedModule
 			for _, entry := range lock.Modules {
 				if entry.Source == requirement.Module {
 					pin = entry
@@ -103,7 +124,15 @@ func ResolvePolicyGraphAt(ctx context.Context, moduleDir string, cache Cache, fr
 		if err != nil {
 			return nil, fmt.Errorf("DependencyManifestDirectory: %w", err)
 		}
-		result[requirement.Module] = PolicyModule{Name: requirement.Module, Directory: manifestDir, Replaced: local}
+		policyModule := PolicyModule{Name: requirement.Module, Directory: manifestDir, Replaced: local}
+		if provider, ok := cache.(PolicyFilesCache); ok && !local {
+			prefix, err := filepath.Rel(directory, manifestDir)
+			if err != nil {
+				return nil, fmt.Errorf("Rel: %w", err)
+			}
+			policyModule.Files = provider.PolicyFiles(pin, filepath.ToSlash(prefix))
+		}
+		result[requirement.Module] = policyModule
 		// Only the main module supplies replacements. Dependency replaces are not
 		// inherited, just as for the ordinary source graph.
 		queue = append(queue, dependency.Requires...)

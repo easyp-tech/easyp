@@ -3,6 +3,7 @@ package gitmodules
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -11,6 +12,7 @@ import (
 
 	"golang.org/x/mod/semver"
 
+	"github.com/easyp-tech/easyp/internal/adapters/gitcommand"
 	v1 "github.com/easyp-tech/easyp/internal/config/v1"
 )
 
@@ -134,6 +136,9 @@ func findV1GitModuleTag(ctx context.Context, source, version string) (v1GitModul
 		}
 		versions, err := listV1CandidateTags(ctx, candidate)
 		if err != nil {
+			if gitcommand.Interrupted(err) {
+				return v1GitModuleCandidate{}, fmt.Errorf("listV1CandidateTags: %w", err)
+			}
 			if firstErr == nil {
 				firstErr = err
 			}
@@ -163,6 +168,9 @@ func listV1ModuleTags(ctx context.Context, source string) ([]string, error) {
 		}
 		versions, err := listV1CandidateTags(ctx, candidate)
 		if err != nil {
+			if gitcommand.Interrupted(err) {
+				return nil, fmt.Errorf("listV1CandidateTags: %w", err)
+			}
 			if firstErr == nil {
 				firstErr = err
 			}
@@ -194,6 +202,7 @@ func listV1ModuleTags(ctx context.Context, source string) ([]string, error) {
 }
 
 func listV1CandidateTags(ctx context.Context, candidate v1GitModuleCandidate) ([]string, error) {
+	ctx = gitcommand.WithAttributes(ctx, slog.String("repository", candidate.remote), slog.String("module_directory", candidate.subdir))
 	raw, err := gitV1(ctx, "", "ls-remote", "--tags", "--", candidate.remote)
 	if err != nil {
 		return nil, fmt.Errorf("ls-remote %s: %w", candidate.remote, err)

@@ -3,14 +3,19 @@ package gitmodules
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"strings"
 
+	"github.com/easyp-tech/easyp/internal/adapters/gitcommand"
 	v1 "github.com/easyp-tech/easyp/internal/config/v1"
 )
 
 // ResolveTag resolves a named Git tag to a commit before get writes a requirement.
 // Semantic version selection continues to use Versions and Fetch.
-func (c *Cache) ResolveTag(ctx context.Context, source, tag string) (string, error) {
+func (c *Cache) ResolveTag(ctx context.Context, source, tag string) (resolved string, err error) {
+	ctx = c.operationContext(ctx, source, tag)
+	finish := gitcommand.Start(ctx, "resolve tag")
+	defer func() { finish(err) }()
 	if _, err := gitV1(ctx, "", "check-ref-format", "refs/tags/"+tag); err != nil {
 		return "", fmt.Errorf("gitV1: %w", err)
 	}
@@ -25,8 +30,12 @@ func (c *Cache) ResolveTag(ctx context.Context, source, tag string) (string, err
 			return "", fmt.Errorf("Err: %w", err)
 		}
 		ref := "refs/tags/" + candidate.tag(tag)
-		raw, err := gitV1(ctx, "", "ls-remote", "--tags", "--", candidate.remote, ref, ref+"^{}")
+		candidateContext := gitcommand.WithAttributes(ctx, slog.String("repository", candidate.remote), slog.String("module_directory", candidate.subdir))
+		raw, err := gitV1(candidateContext, "", "ls-remote", "--tags", "--", candidate.remote, ref, ref+"^{}")
 		if err != nil {
+			if gitcommand.Interrupted(err) {
+				return "", fmt.Errorf("gitV1: %w", err)
+			}
 			if firstErr == nil {
 				firstErr = err
 			}

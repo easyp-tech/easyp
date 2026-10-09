@@ -21,7 +21,7 @@ func snapshotGit(t *testing.T, root string, args ...string) {
 func TestSnapshotRevisionUsesCommittedInputs(t *testing.T) {
 	t.Parallel()
 	root := t.TempDir()
-	for name, body := range map[string]string{"proto/item.proto": "old proto", "protobuf.mod": "module example.com/root\nroots proto\n", "protobuf.lock": "old lock", ".deps/common.proto": "old dependency", "README.md": "not an input"} {
+	for name, body := range map[string]string{"proto/item.proto": "old proto", "protobuf.mod": "module example.com/root\nroots proto\n", "protobuf.lock": "old lock", "easyp.lock": "historical legacy lock", ".deps/common.proto": "old dependency", "README.md": "not an input"} {
 		target := filepath.Join(root, name)
 		require.NoError(t, os.MkdirAll(filepath.Dir(target), 0o755))
 		require.NoError(t, os.WriteFile(target, []byte(body), 0o644))
@@ -39,6 +39,9 @@ func TestSnapshotRevisionUsesCommittedInputs(t *testing.T) {
 	raw, err = os.ReadFile(filepath.Join(snapshot.Root, ".deps/common.proto"))
 	require.NoError(t, err)
 	assert.Equal(t, "old dependency", string(raw))
+	raw, err = os.ReadFile(filepath.Join(snapshot.Root, "easyp.lock"))
+	require.NoError(t, err)
+	assert.Equal(t, "historical legacy lock", string(raw))
 	assert.NoFileExists(t, filepath.Join(snapshot.Root, "README.md"))
 	raw, err = os.ReadFile(filepath.Join(root, "proto/item.proto"))
 	require.NoError(t, err)

@@ -15,29 +15,14 @@ var _ Handler = (*Generate)(nil)
 // Generate is a handler for generate command.
 type Generate struct{}
 
-var (
-	flagGenerateDescriptorSetOut = &cli.StringFlag{
-		Name:     "descriptor_set_out",
-		Usage:    "output path for the binary FileDescriptorSet",
-		Required: false,
-	}
-
-	flagGenerateDescriptorSetOutDir = &cli.StringFlag{
-		Name:  "descriptor_set_out_dir",
-		Usage: "output directory for one binary FileDescriptorSet per project and module (exclusive with descriptor_set_out)",
-	}
-
-	flagGenerateAll            = &cli.BoolFlag{Name: "all", Usage: "explicitly select all generation projects below the working directory"}
-	flagGenerateWorkspace      = &cli.StringFlag{Name: "workspace", Usage: "explicit workspace root for repository-relative module paths"}
-	flagGenerateIncludeImports = &cli.BoolFlag{
-		Name:     "include_imports",
-		Usage:    "include all transitive dependencies in the FileDescriptorSet",
-		Required: false,
-	}
-	flagGenerateProject = &cli.StringSliceFlag{
-		Name:  "project",
-		Usage: "select a consumer project directory (repeatable)",
-	}
+const (
+	flagGenerateDescriptorSetOut    = "descriptor_set_out"
+	flagGenerateDescriptorSetOutDir = "descriptor_set_out_dir"
+	flagGenerateAll                 = "all"
+	flagGenerateWorkspace           = "workspace"
+	flagGenerateIncludeImports      = "include_imports"
+	flagGenerateProject             = "project"
+	flagGenerateConfig              = "gen-config"
 )
 
 // Command implements Handler.
@@ -51,12 +36,13 @@ func (g Generate) Command() *cli.Command {
 		Action:      g.Action,
 		Flags: []cli.Flag{
 			flags.Frozen(),
-			flagGenerateDescriptorSetOut,
-			flagGenerateDescriptorSetOutDir,
-			flagGenerateIncludeImports,
-			flagGenerateProject,
-			flagGenerateAll,
-			flagGenerateWorkspace,
+			&cli.StringFlag{Name: flagGenerateConfig, TakesFile: true, Usage: "select a native generation config file (exclusive with --project and --all)"},
+			&cli.StringFlag{Name: flagGenerateDescriptorSetOut, Usage: "output path for the binary FileDescriptorSet"},
+			&cli.StringFlag{Name: flagGenerateDescriptorSetOutDir, Usage: "output directory for one binary FileDescriptorSet per project and module (exclusive with descriptor_set_out)"},
+			&cli.BoolFlag{Name: flagGenerateIncludeImports, Usage: "include all transitive dependencies in the FileDescriptorSet"},
+			&cli.StringSliceFlag{Name: flagGenerateProject, Usage: "select a consumer project directory (repeatable)"},
+			&cli.BoolFlag{Name: flagGenerateAll, Usage: "explicitly select all generation projects below the working directory"},
+			&cli.StringFlag{Name: flagGenerateWorkspace, Usage: "explicit workspace root for repository-relative module paths"},
 		},
 		HelpName: "help",
 	}
@@ -64,7 +50,10 @@ func (g Generate) Command() *cli.Command {
 
 // Action implements Handler.
 func (g Generate) Action(ctx *cli.Context) error {
-	if ctx.String(flagGenerateDescriptorSetOut.Name) != "" && ctx.String(flagGenerateDescriptorSetOutDir.Name) != "" {
+	if ctx.IsSet(flagGenerateConfig) && ctx.String(flagGenerateConfig) == "" {
+		return fmt.Errorf("--gen-config must not be empty")
+	}
+	if ctx.String(flagGenerateDescriptorSetOut) != "" && ctx.String(flagGenerateDescriptorSetOutDir) != "" {
 		return fmt.Errorf("--descriptor_set_out and --descriptor_set_out_dir are mutually exclusive")
 	}
 	root, err := os.Getwd()
@@ -76,8 +65,9 @@ func (g Generate) Action(ctx *cli.Context) error {
 		return fmt.Errorf("moduleCache: %w", err)
 	}
 	return generation.Run(ctx.Context, getLogger(ctx), cache, generation.Request{
-		Frozen: flags.IsFrozen(ctx), WorkDir: root, Projects: ctx.StringSlice(flagGenerateProject.Name), AllProjects: ctx.Bool(flagGenerateAll.Name), WorkspaceRoot: ctx.String(flagGenerateWorkspace.Name),
-		DescriptorSetOut:    ctx.String(flagGenerateDescriptorSetOut.Name),
-		DescriptorSetOutDir: ctx.String(flagGenerateDescriptorSetOutDir.Name), IncludeImports: ctx.Bool(flagGenerateIncludeImports.Name),
+		Frozen: flags.IsFrozen(ctx), WorkDir: root, GenConfig: ctx.String(flagGenerateConfig),
+		Projects: ctx.StringSlice(flagGenerateProject), AllProjects: ctx.Bool(flagGenerateAll), WorkspaceRoot: ctx.String(flagGenerateWorkspace),
+		DescriptorSetOut:    ctx.String(flagGenerateDescriptorSetOut),
+		DescriptorSetOutDir: ctx.String(flagGenerateDescriptorSetOutDir), IncludeImports: ctx.Bool(flagGenerateIncludeImports),
 	})
 }

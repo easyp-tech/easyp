@@ -137,7 +137,9 @@ func migrationBufRoots(root *yaml.Node) ([]string, error) {
 	}
 	roots := make([]string, 0, len(modules.Content))
 	for _, module := range modules.Content {
-		fields, err := migrationMapping(module, "path", "name", "lint", "breaking")
+		// The v0 archive reader used module paths but ignored Buf source filters.
+		// Accept those fields without applying them to the historical hash layout.
+		fields, err := migrationMapping(module, "path", "name", "lint", "breaking", "includes", "excludes")
 		if err != nil {
 			return nil, fmt.Errorf("migrationMapping: %w", err)
 		}

@@ -245,7 +245,7 @@ func TestSnapshotNeverRunsCheckoutFilters(t *testing.T) {
 	cache := &Cache{root: t.TempDir()}
 	fetched, err := cache.Fetch(t.Context(), repository, "")
 	require.NoError(t, err)
-	assert.Equal(t, migrationTestHash(t, files), fetched.Lock.Hash)
+	assert.Equal(t, migrationTestHash(t, map[string]string{"file.proto": files["file.proto"]}), fetched.Lock.Hash)
 	require.NoError(t, cache.Install(t.Context(), v1.Lock{Version: 1, Modules: []v1.LockedModule{fetched.Lock}}))
 }
 
@@ -300,16 +300,22 @@ func TestSnapshotCachedPolicyResolvesCustomAliases(t *testing.T) {
 			require.NoError(t, cache.Install(t.Context(), v1.Lock{Version: 1, Modules: []v1.LockedModule{fetched.Lock}}))
 			installed, _, err := cache.Cached(fetched.Lock)
 			require.NoError(t, err)
-			cfg, err := v1.ParsePolicyLiteral(strings.NewReader(string(raw)))
+			consumer := t.TempDir()
+			consumerRaw := []byte("version: v1\nlinters:\n  extends: " + repository + "\n")
+			require.NoError(t, os.WriteFile(filepath.Join(consumer, v1.PolicyFile), consumerRaw, 0o644))
+			cfg, err := v1.ParsePolicyLiteral(strings.NewReader(string(consumerRaw)))
 			require.NoError(t, err)
-			presence, err := v1.ParsePolicyPresence(raw)
+			presence, err := v1.ParsePolicyPresence(consumerRaw)
 			require.NoError(t, err)
-			resolved, err := policyresolver.NewResolver(installed, nil).ResolveLint(t.Context(), policyresolver.LintInput{PolicyPath: filepath.Join(installed, "easyp.yaml"), Policy: cfg, Presence: presence, ModuleDir: installed})
+			resolver := policyresolver.NewResolver(consumer, func(context.Context, string) (modules.PolicyGraph, error) {
+				return modules.PolicyGraph{repository: {Name: repository, Directory: installed, Files: cache.PolicyFiles(fetched.Lock, ".")}}, nil
+			})
+			resolved, err := resolver.ResolveLint(t.Context(), policyresolver.LintInput{PolicyPath: filepath.Join(consumer, v1.PolicyFile), Policy: cfg, Presence: presence, ModuleDir: consumer})
 			require.NoError(t, err)
 			require.Equal(t, "MINIMAL", resolved.Policy.Linters.Default)
-			info, err := os.Lstat(filepath.Join(installed, filepath.FromSlash(strings.TrimPrefix(tt.reference, "./"))))
+			file, err := cache.PolicyFiles(fetched.Lock, ".").Read(t.Context(), strings.TrimPrefix(tt.reference, "./"))
 			require.NoError(t, err)
-			require.True(t, info.Mode().IsRegular())
+			require.Contains(t, string(file.Content), "default: MINIMAL")
 		})
 	}
 }
@@ -342,6 +348,9 @@ func TestSnapshotReferencedPolicyAliasMustResolve(t *testing.T) {
 func snapshotPolicyFixture(t *testing.T, files, links map[string]string) string {
 	t.Helper()
 	repository := t.TempDir()
+	if files == nil {
+		files = make(map[string]string)
+	}
 	files[v1.ModuleFile] = "module " + repository + "\nroots proto\n"
 	files["proto/main.proto"] = "syntax = \"proto3\";\n"
 	for name, data := range files {
@@ -383,7 +392,7 @@ func TestSnapshotRemoteCustomPolicyAliasesWithoutRootPolicy(t *testing.T) {
 			presence, err := v1.ParsePolicyPresence(raw)
 			require.NoError(t, err)
 			resolver := policyresolver.NewResolver(consumer, func(context.Context, string) (modules.PolicyGraph, error) {
-				return modules.PolicyGraph{repository: {Name: repository, Directory: installed}}, nil
+				return modules.PolicyGraph{repository: {Name: repository, Directory: installed, Files: cache.PolicyFiles(fetched.Lock, ".")}}, nil
 			})
 			resolved, err := resolver.ResolveLint(t.Context(), policyresolver.LintInput{PolicyPath: filepath.Join(consumer, v1.PolicyFile), Policy: cfg, Presence: presence, ModuleDir: consumer})
 			require.NoError(t, err)

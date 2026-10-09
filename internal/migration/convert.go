@@ -1,6 +1,7 @@
 package migration
 
 import (
+	"errors"
 	"fmt"
 	"path"
 	"path/filepath"
@@ -237,22 +238,28 @@ func convertGenerate(cfg legacyConfig, selected []v1.GenerateModule, packages, p
 		Version: "v1", Generate: targetsOutput{Modules: selected, Packages: packages, Paths: paths, Managed: cfg.Generate.Managed},
 		Plugins: []pluginOutput{},
 	}
+	var pluginErrors []error
 	for i, plugin := range cfg.Generate.Plugins {
 		converted := pluginOutput{Name: plugin.Name, Path: plugin.Path, Command: plugin.Command,
 			Remote: plugin.Remote, Out: plugin.Out, Opts: plugin.Opts, WithImports: plugin.WithImports}
 		if plugin.Remote != "" {
 			colon := strings.LastIndexByte(plugin.Remote, ':')
 			if colon <= strings.LastIndexByte(plugin.Remote, '/') || !semver.IsValid(plugin.Remote[colon+1:]) {
-				return nil, fmt.Errorf("generate.plugins[%d].remote needs a pinned semantic version (remote:version); a placeholder hiding the version requires manual migration", i)
+				pluginErrors = append(pluginErrors, fmt.Errorf("generate.plugins[%d].remote %q needs a pinned semantic version (remote:version); a placeholder hiding the version requires manual migration", i, plugin.Remote))
+				continue
 			}
 			converted.Remote, converted.Version = plugin.Remote[:colon], plugin.Remote[colon+1:]
 		}
 		candidate := v1.Plugin{Name: converted.Name, Path: converted.Path, Command: converted.Command,
 			Remote: converted.Remote, Version: converted.Version, Out: converted.Out, Opts: v1.PluginOptions(converted.Opts), WithImports: converted.WithImports}
 		if err := candidate.Validate(); err != nil {
-			return nil, fmt.Errorf("Validate: %w", err)
+			pluginErrors = append(pluginErrors, fmt.Errorf("generate.plugins[%d]: Validate: %w", i, err))
+			continue
 		}
 		output.Plugins = append(output.Plugins, converted)
+	}
+	if err := errors.Join(pluginErrors...); err != nil {
+		return nil, err
 	}
 	raw, err := yaml.Marshal(output)
 	if err != nil {

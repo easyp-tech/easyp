@@ -5,6 +5,46 @@ versions; the default installation remains the stable v0.17.0 release. The
 implementation and the current `.spec` documents are the source of truth for
 the v1 contract.
 
+## Nightly migration regression fixes
+
+Migration accepts Buf v2 <code>includes</code> and <code>excludes</code> metadata.
+Historical archive hashes are verified against the pinned Git revision, before
+producer filters are applied to the native source snapshot. Filtered import-only
+dependencies are checked against the consumer generation/import closure; a used
+excluded source still stops migration rather than silently changing its binding.
+
+BSR compatibility snapshots prefer a verified historical Git pin during migration.
+Exact BSR resolutions and explicit Git requirements are not overridden. The
+original BSR request and the selected Git pin remain recorded in the native lock.
+
+Git commands and cache-lock acquisition have a five-minute per-operation limit,
+configurable through <code>EASYP_GIT_TIMEOUT</code>. Cancellation or a timeout
+stops further repository candidates and full-history fallback. Dependency phases
+report elapsed progress every 15 seconds; <code>--debug</code> adds commands,
+snapshot/source/archive timings and file counts. Immutable Git trees and blob
+metadata are indexed and reused to avoid repeated object reads in large mirrors.
+Native snapshots now retain proto files and canonical EasyP/Buf metadata,
+omitting unrelated source, documentation and build outputs. Arbitrarily named
+producer-policy fragments are read on demand from verified pinned Git objects.
+Read-only policy validation does not fetch or write verification stamps; explicit
+mod download repairs missing policy objects. Existing nightly locks whose hashes
+covered unrelated files must be regenerated with the updated CLI: preserve the
+old protobuf.lock as a backup, then run easyp mod tidy. Existing immutable-hash
+guards intentionally reject reusing that old lock unchanged. There is one
+v1 hash policy and no backward-compatibility cache namespace. Actual legacy lock
+digests still use the original pinned tree/archive; no-lock migrations do not
+hash the entire repository.
+
+Breaking checks can read a v0 baseline's own <code>easyp.lock</code>, including in
+frozen mode. They verify the historical hashes and never borrow the current
+project's dependency pins or resolve an unpinned HEAD. Missing historical locks
+and unverifiable legacy local replacements fail explicitly. Baseline plugins are
+not executed and neither baseline nor current project files are migrated.
+
+Lint range directives retain standalone comments at EOF and before closing
+braces. Migration reports all invalid remote-plugin pins together and does not
+produce a partial generator candidate.
+
 ## Distribution and Go module compatibility
 
 After the v1 branch is merged into `main`, v1 is published only with
@@ -58,7 +98,7 @@ The native dependency format is documented in [`.spec/config/dependency.md`](.sp
 
 The current command behavior is documented in [`.spec/CLI.md`](.spec/CLI.md):
 
-- generation discovery is nearest-project by default and recursive only with `--all`;
+- generation discovery is nearest-project by default and recursive only with `--all`; `generate --gen-config <file>` explicitly selects a named native profile such as `private.easyp.gen.yaml` without relocating it. Relative file paths start at the working directory; plugin output and module coordinates retain their existing rules. The flag is exclusive with `--project`/`--all`, and missing or invalid profiles never fall back to the standard file;
 - `generate.modules` selects module identities or workspace module paths; object entries add per-module paths/packages, intersected with global filters;
 - `generate.packages` selects exact protobuf package names;
 - `generate.paths` selects literal module-directory-relative files or directory subtrees, intersecting packages; it remains available without a module list;

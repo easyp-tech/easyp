@@ -50,8 +50,7 @@ func TestFetchMigrationVerifiesV0ProtoArchiveHash(t *testing.T) {
 			require.NoError(t, err)
 			assert.Equal(t, commit, fetched.Lock.Commit)
 			assert.Equal(t, commit, fetched.Lock.Version)
-			assert.Equal(t, migrationTestHash(t, tt.files), fetched.Lock.Hash)
-			assert.NotEqual(t, legacyHash, fetched.Lock.Hash)
+			assert.Equal(t, snapshotTestHash(t, tt.files), fetched.Lock.Hash)
 		})
 	}
 }

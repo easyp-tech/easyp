@@ -20,6 +20,7 @@ import (
 type Request struct {
 	Frozen              bool
 	WorkDir             string
+	GenConfig           string
 	Project             string
 	Projects            []string
 	AllProjects         bool
@@ -70,7 +71,7 @@ func Run(ctx context.Context, log logger.Logger, cache modules.Cache, request Re
 	}
 	configs, err := selectGenerateConfigs(request)
 	if err != nil {
-		return fmt.Errorf("discoverV1GenerateConfigs: %w", err)
+		return fmt.Errorf("selectGenerateConfigs: %w", err)
 	}
 	if len(configs) == 0 {
 		return fmt.Errorf("no easyp.gen.yaml found in %s", workDir)
@@ -78,7 +79,7 @@ func Run(ctx context.Context, log logger.Logger, cache modules.Cache, request Re
 
 	var descriptorTargets []generationTarget
 	for _, configPath := range configs {
-		gen, err := readV1GenerateConfig(configPath)
+		gen, err := readV1GenerateConfig(request.WorkspaceRoot, configPath)
 		if err != nil {
 			return fmt.Errorf("readV1GenerateConfig: %w", err)
 		}
@@ -157,7 +158,7 @@ func Run(ctx context.Context, log logger.Logger, cache modules.Cache, request Re
 }
 
 func emptyGenerationSelectionError(request Request, selected []string) error {
-	if request.AllProjects || request.Project != "" || len(request.Projects) > 0 {
+	if request.GenConfig != "" || request.AllProjects || request.Project != "" || len(request.Projects) > 0 {
 		return nil
 	}
 	discovered, err := discoverV1GenerateConfigs(request.WorkDir, "")
@@ -277,8 +278,8 @@ func discoverV1GenerateConfigs(root, project string) ([]string, error) {
 	return paths, err
 }
 
-func readV1GenerateConfig(path string) (v1.Generate, error) {
-	raw, err := workspace.ReadFileAt(path)
+func readV1GenerateConfig(workspaceRoot, path string) (v1.Generate, error) {
+	raw, err := workspace.ReadFile(workspaceRoot, path)
 	if err != nil {
 		return v1.Generate{}, fmt.Errorf("ReadFile: %w", err)
 	}

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
+	"log/slog"
 	"os"
 	"path"
 	"path/filepath"
@@ -14,9 +15,8 @@ import (
 	"github.com/go-git/go-billy/v5/osfs"
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
-	"github.com/go-git/go-git/v5/plumbing/cache"
-	"github.com/go-git/go-git/v5/storage/filesystem"
 
+	"github.com/easyp-tech/easyp/internal/adapters/gitcommand"
 	"github.com/easyp-tech/easyp/internal/adapters/gitsnapshot"
 	moduleconfig "github.com/easyp-tech/easyp/internal/adapters/module_config"
 	v1 "github.com/easyp-tech/easyp/internal/config/v1"
@@ -28,6 +28,8 @@ import (
 // Metadata is materialized before passing it to the existing metadata readers.
 // The caller owns and removes the returned directory.
 func prepareV1Snapshot(ctx context.Context, checkout, commit, source, subdir string, roots []string, inspect bool) (directory string, module v1.Module, inspection *modules.RootInspection, err error) {
+	finish := gitcommand.Start(ctx, "snapshot", slog.String("commit", commit))
+	defer func() { finish(err) }()
 	tree, err := sourceV1SnapshotTree(ctx, checkout, commit)
 	if err != nil {
 		return "", v1.Module{}, nil, fmt.Errorf("sourceV1SnapshotTree: %w", err)
@@ -51,6 +53,7 @@ func prepareV1Snapshot(ctx context.Context, checkout, commit, source, subdir str
 		return "", v1.Module{}, nil, fmt.Errorf("stageSnapshotMetadata: %w", err)
 	}
 	aliases, regular, metadataFailures := inventory.aliases, inventory.regular, inventory.metadataFailures
+	gitcommand.Debug(ctx, "Snapshot inventory", slog.Int("regular_files", len(regular)), slog.Int("aliases", len(aliases)), slog.Int("metadata_failures", len(metadataFailures)))
 	module, err = moduleconfig.ReadGitDependencyAt(directory, source, subdir)
 	if err != nil {
 		for _, failure := range metadataFailures {
@@ -64,6 +67,7 @@ func prepareV1Snapshot(ctx context.Context, checkout, commit, source, subdir str
 	if err != nil {
 		return "", v1.Module{}, nil, fmt.Errorf("applyV1ModuleRoots: %w", err)
 	}
+	gitcommand.Debug(ctx, "Snapshot source selection", slog.Any("roots", module.Roots), slog.Any("proto_filters", module.ProtoFilters), slog.Bool("roots_from_metadata", module.RootsFromMetadata))
 	provisional := inspect && !module.RootsFromMetadata && len(roots) == 0
 	ignoredMetadata := make(map[string]bool, len(metadataFailures))
 	for _, failure := range metadataFailures {
@@ -193,8 +197,10 @@ func stageSnapshotMetadata(ctx context.Context, tree *gitsnapshot.FS, view *sour
 			}
 			return nil
 		}
-		if !moduleconfig.IsGitDependencyConfigFile(path.Base(name)) {
-			regular = append(regular, name)
+		if !snapshotConfigFile(name) {
+			if path.Ext(name) == ".proto" {
+				regular = append(regular, name)
+			}
 			return nil
 		}
 		return materializeSnapshotFile(ctx, view, directory, name)
@@ -226,7 +232,7 @@ func stageSnapshotMetadata(ctx context.Context, tree *gitsnapshot.FS, view *sour
 			continue
 		}
 		if resolution.Info.IsDir() {
-			walkErr := view.Walk(ctx, name, func(logical string, resolved sourceview.Resolution, walkErr error) error {
+			walkErr := view.WalkSelected(ctx, name, snapshotSourceCandidate, func(logical string, resolved sourceview.Resolution, walkErr error) error {
 				if walkErr != nil {
 					if moduleconfig.IsGitDependencyConfigFile(path.Base(logical)) && !snapshotMetadataExcluded(logical, subdir) {
 						if err := failedMarker(logical, walkErr); err != nil {
@@ -281,7 +287,7 @@ func materializeSelectedSnapshotAliases(ctx context.Context, view *sourceview.Vi
 		if err := makeSnapshotDirectory(directory, root); err != nil {
 			return fmt.Errorf("MkdirAll: %w", err)
 		}
-		err := view.Walk(ctx, logicalRoot, func(logical string, resolved sourceview.Resolution, walkErr error) error {
+		err := view.WalkSelected(ctx, logicalRoot, snapshotSourceCandidate, func(logical string, resolved sourceview.Resolution, walkErr error) error {
 			if ignoredMetadata[logical] {
 				return nil
 			}
@@ -336,7 +342,10 @@ func sourceV1SnapshotTree(ctx context.Context, checkout, commit string) (*gitsna
 		}
 		return tree, nil
 	}
-	storage := filesystem.NewStorageWithOptions(osfs.New(filepath.Join(checkout, ".git")), cache.NewObjectLRUDefault(), filesystem.Options{AlternatesFS: osfs.New(string(filepath.Separator))})
+	storage, err := snapshotStorage(checkout)
+	if err != nil {
+		return nil, fmt.Errorf("snapshotStorage: %w", err)
+	}
 	repo, err := git.Open(storage, osfs.New(checkout))
 	if err != nil {
 		return nil, fmt.Errorf("Open: %w", err)
@@ -421,11 +430,11 @@ func materializeSnapshotAuxiliaryAliases(ctx context.Context, view *sourceview.V
 			continue
 		}
 		if resolved.Info.IsDir() {
-			err = view.Walk(ctx, name, func(logical string, resolved sourceview.Resolution, walkErr error) error {
+			err = view.WalkSelected(ctx, name, snapshotSourceCandidate, func(logical string, resolved sourceview.Resolution, walkErr error) error {
 				if walkErr != nil {
 					return nil
 				}
-				if resolved.Info.IsDir() || path.Ext(logical) == ".proto" {
+				if resolved.Info.IsDir() || !snapshotConfigFile(logical) {
 					return nil
 				}
 				return materializeSnapshotFile(ctx, view, directory, logical)
@@ -435,7 +444,7 @@ func materializeSnapshotAuxiliaryAliases(ctx context.Context, view *sourceview.V
 			}
 			continue
 		}
-		if path.Ext(name) == ".proto" {
+		if !snapshotConfigFile(name) {
 			continue
 		}
 		if err := materializeSnapshotFile(ctx, view, directory, name); err != nil {
