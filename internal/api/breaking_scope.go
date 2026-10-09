@@ -14,6 +14,7 @@ import (
 	"github.com/easyp-tech/easyp/internal/core"
 	"github.com/easyp-tech/easyp/internal/core/path_helpers"
 	disk "github.com/easyp-tech/easyp/internal/fs/fs"
+	"github.com/easyp-tech/easyp/internal/migration"
 	"github.com/easyp-tech/easyp/internal/modules"
 	"github.com/easyp-tech/easyp/internal/sourceview"
 	"github.com/easyp-tech/easyp/internal/workspace"
@@ -65,7 +66,11 @@ func discoverBreakingScopes(replacements *policyReplacementSources, scanRelative
 		if directory != "" {
 			module, known := manifests[directory]
 			if !known {
-				_, module, err = modules.ReadManifest(directory)
+				if replacements.projectRoot != replacements.repositoryRoot {
+					module, err = replacements.replacementManifest(directory)
+				} else {
+					_, module, err = modules.ReadManifest(directory)
+				}
 				if err != nil {
 					return err
 				}
@@ -148,6 +153,15 @@ func breakingImportRootsMode(ctx context.Context, cache modules.Cache, root, mod
 		}
 		if _, err := os.Stat(filepath.Join(directory, v1.ModuleFile)); os.IsNotExist(err) {
 			return nil, nil
+		}
+	}
+	if snapshot != nil {
+		roots, legacy, err := migration.LegacyBaselineSources(ctx, directory, cache)
+		if err != nil {
+			return nil, fmt.Errorf("LegacyBaselineSources: %w", err)
+		}
+		if legacy {
+			return roots, nil
 		}
 	}
 	if frozen {

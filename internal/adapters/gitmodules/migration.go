@@ -65,7 +65,27 @@ func (c *Cache) FetchMigration(ctx context.Context, source, version, legacyHash 
 // FetchMigrationWithRoots verifies the historical installed layout before root
 // selection. Non-nil roots request a consumer selection proof and return its
 // immutable legacy-to-repository mapping; nil retains whole-namespace checks.
-func (c *Cache) FetchMigrationWithRoots(ctx context.Context, source, version, legacyHash string, roots []string) (fetched modules.Fetched, err error) {
+func (c *Cache) FetchMigrationWithRoots(ctx context.Context, source, version, legacyHash string, roots []string) (modules.Fetched, error) {
+	fetched, err := c.fetchMigration(ctx, source, version, legacyHash, roots, false)
+	if err != nil {
+		return modules.Fetched{}, fmt.Errorf("fetchMigration: %w", err)
+	}
+	return fetched, nil
+}
+
+// FetchMigrationImports verifies the complete legacy archive before adapting a
+// dependency's Buf source filters. The returned archive mapping retains excluded
+// files as unavailable sources; callers must prove their consumer import bindings.
+// Repositories without producer filters retain the whole-namespace guarantee.
+func (c *Cache) FetchMigrationImports(ctx context.Context, source, version, legacyHash string) (modules.Fetched, error) {
+	fetched, err := c.fetchMigration(ctx, source, version, legacyHash, nil, true)
+	if err != nil {
+		return modules.Fetched{}, fmt.Errorf("fetchMigration: %w", err)
+	}
+	return fetched, nil
+}
+
+func (c *Cache) fetchMigration(ctx context.Context, source, version, legacyHash string, roots []string, imports bool) (fetched modules.Fetched, err error) {
 	if (version != "" || legacyHash != "") && !v1.IsCommitRef(version) && !semver.IsValid(version) {
 		return modules.Fetched{}, fmt.Errorf("migration version %q must be a full Git commit or SemVer tag", version)
 	}
@@ -103,6 +123,12 @@ func (c *Cache) FetchMigrationWithRoots(ctx context.Context, source, version, le
 	request.nativeModule, err = hasNativeMigrationModule(checkout.snapshot, files, request.source)
 	if err != nil {
 		return modules.Fetched{}, fmt.Errorf("hasNativeMigrationModule: %w", err)
+	}
+	// Buf-filtered snapshots omit excluded source bytes. Reproduce their old
+	// archive from the immutable Git view, never from the filtered v1 snapshot.
+	// A consumer proof decides whether any omitted file is actually required.
+	if imports && !request.nativeModule && len(checkout.module.ProtoFilters) > 0 {
+		request.proof = migrationRetainedRootsProof
 	}
 	var layout migrationLegacyLayout
 	if request.proof != migrationWholeNamespaceProof {

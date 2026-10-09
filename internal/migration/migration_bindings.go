@@ -11,6 +11,7 @@ import (
 
 	"github.com/bufbuild/protocompile"
 
+	v1 "github.com/easyp-tech/easyp/internal/config/v1"
 	"github.com/easyp-tech/easyp/internal/modules"
 )
 
@@ -19,14 +20,28 @@ import (
 // proof with compilation deferred, using the same immutable Git observations.
 func proveGitSourceBindings(ctx context.Context, localRoot string, local *localSelectionProof, proof *gitSelectionProof, compile bool) (map[string]migrationProtoSource, error) {
 	witnesses := make(map[string]migrationProtoSource)
-	if proof == nil || len(proof.selections) == 0 {
+	if proof == nil {
 		return witnesses, nil
 	}
+	filtered := false
+	for _, dependency := range proof.fetched {
+		filtered = filtered || len(dependency.Module.ProtoFilters) > 0
+	}
+	if len(proof.selections) == 0 && !filtered {
+		return witnesses, nil
+	}
+	entries := slices.Clone(proof.entries)
+	// Import-only Buf dependencies can omit fixtures that v0 archived. Prove the
+	// local generation/import closure even without any git_repo generation input.
+	if filtered && len(local.inputs) > 0 && !slices.ContainsFunc(entries, func(entry v1.GenerateModule) bool { return entry.Module == local.module }) {
+		entries = append(entries, v1.GenerateModule{Module: local.module})
+	}
+
 	namespaces, err := observeMigrationNamespaces(localRoot, local, proof)
 	if err != nil {
 		return nil, fmt.Errorf("observeMigrationNamespaces: %w", err)
 	}
-	for _, entry := range proof.entries {
+	for _, entry := range entries {
 		legacy := migrationImportNamespace{primary: namespaces.legacyLocal}
 		current := migrationImportNamespace{primary: namespaces.currentLocal}
 		var targets []string

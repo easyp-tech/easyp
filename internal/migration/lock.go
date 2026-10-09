@@ -18,9 +18,7 @@ import (
 // Repository verifies the v0 installed-tree hash (when supplied), then returns
 // independently hashed v1 tracked contents and metadata for that same commit.
 // It is called only when Options.ResolveLock explicitly permits resolution.
-type Repository interface {
-	FetchMigration(context.Context, string, string, string) (modules.Fetched, error)
-}
+type Repository = modules.MigrationRepository
 
 type legacyPin struct{ source, version, hash string }
 
@@ -79,6 +77,23 @@ func migrateSelectionLock(ctx context.Context, module v1.Module, pins map[string
 	}
 	if repository == nil {
 		return v1.Lock{}, nil, fmt.Errorf("--resolve-lock requires a dependency repository")
+	}
+	// Compatibility snapshots are fallback Git choices, not proven BSR revisions.
+	// Scope their resolution to historical pins before adding BSR-derived edges,
+	// so explicit native requirements are never rewritten or weakened.
+	if scoped, ok := repository.(interface {
+		WithMigrationPins([]v1.Requirement) modules.MigrationRepository
+	}); ok && hadLock {
+		names := make([]string, 0, len(pins))
+		for name := range pins {
+			names = append(names, name)
+		}
+		slices.Sort(names)
+		historical := make([]v1.Requirement, 0, len(names))
+		for _, name := range names {
+			historical = append(historical, v1.Requirement{Module: name, Version: pins[name].version})
+		}
+		repository = scoped.WithMigrationPins(historical)
 	}
 	source := migrationSource{repository: repository, metadata: make(map[migrationRevision]v1.Module), fetched: make(map[migrationRevision]modules.Fetched), selections: selections}
 	for _, selection := range selections {
@@ -208,6 +223,18 @@ func (s migrationSource) fetchMigration(ctx context.Context, source, version, ha
 			}
 			return fetched, nil
 		}
+	}
+	if repository, ok := s.repository.(interface {
+		FetchMigrationImports(context.Context, string, string, string) (modules.Fetched, error)
+	}); ok {
+		fetched, err := repository.FetchMigrationImports(ctx, source, version, hash)
+		if err != nil {
+			return modules.Fetched{}, fmt.Errorf("FetchMigrationImports: %w", err)
+		}
+		if len(fetched.Module.ProtoFilters) > 0 && (fetched.Inspection == nil || fetched.Inspection.LegacyFiles == nil) {
+			return modules.Fetched{}, fmt.Errorf("dependency %s requires verified archive mappings for its filtered sources", source)
+		}
+		return fetched, nil
 	}
 	fetched, err := s.repository.FetchMigration(ctx, source, version, hash)
 	if err != nil {

@@ -39,7 +39,10 @@ type parsedDirective struct {
 // commentSuppressions uses parser comments, not textual substring matching, so
 // marker-like text inside strings is never interpreted as a directive.
 func (c *Core) commentSuppressions(info ProtoInfo) (suppressionRanges, error) {
-	comments := collectDirectiveComments(info.Info)
+	comments := info.directiveComments
+	if comments == nil {
+		comments = collectDirectiveComments(info.Info)
+	}
 	known := make(map[string]bool)
 	for _, name := range c.knownLintRules {
 		known[name] = true
