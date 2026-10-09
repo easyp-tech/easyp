@@ -186,6 +186,20 @@ plugins:
 
 A plugin can select one source: `name` for a local or bundled plugin, `path` for an explicit binary, `command` for an executable and its arguments, or `remote` with a pinned `version`. Relative binary paths and commands run from the directory where `easyp generate` starts.
 
+Keep generation profiles such as `private.easyp.gen.yaml` and
+`public.easyp.gen.yaml` alongside the module and select one explicitly:
+
+```sh
+easyp generate --gen-config private.easyp.gen.yaml
+easyp generate --gen-config public.easyp.gen.yaml
+```
+
+`--gen-config` accepts a working-directory-relative or absolute file path within
+the workspace and cannot be combined with `--project` or `--all`. Plugin output
+paths stay relative to the selected file's directory; module selectors keep
+their existing module/workspace coordinates. Without the flag, discovery still
+uses `easyp.gen.yaml`. Global `--cfg`/`--config` does not select a generation file.
+
 ```yaml
 # easyp.yaml
 version: v1
