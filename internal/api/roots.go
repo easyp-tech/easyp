@@ -7,6 +7,7 @@ import (
 
 	"github.com/urfave/cli/v2"
 
+	v1 "github.com/easyp-tech/easyp/internal/config/v1"
 	"github.com/easyp-tech/easyp/internal/flags"
 	"github.com/easyp-tech/easyp/internal/workspace"
 )
@@ -19,8 +20,15 @@ func resolveRoots(ctx *cli.Context, rootFlagName string) (string, string, string
 	}
 
 	root := ctx.String(rootFlagName)
-	configPath := ctx.String(flags.Config.Name)
-	if !ctx.IsSet(flags.Config.Name) {
+	configPath, explicit, err := flags.ExplicitConfig(ctx)
+	if err != nil {
+		return "", "", "", err
+	}
+	if explicit {
+		if err := v1.RequireKind(configPath, v1.PolicyFileKind); err != nil {
+			return "", "", "", err
+		}
+	} else {
 		lookupDir := workingDir
 		if root != "" {
 			lookupDir = root

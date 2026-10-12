@@ -42,7 +42,7 @@ Also check the binary: `easyp --version`. `brew` and `go install …@latest` sti
 | `easyp validate-config` | Validate all v1 files in the tree (hidden dirs too) |
 | `easyp ls-files`, `easyp schema-gen --out-dir` | Inspect sources; JSON Schemas |
 
-Global flags: `--cfg`, `--debug`, `--format text|json`, `--frozen` (use the committed lock exactly; always in CI).
+Global flags: `--debug`, `--format text|json`, `--frozen` (use the committed lock exactly; always in CI). `--config <file>` is per command: a policy file for `lint`/`breaking`, a generation file for `generate`, a file or directory for `validate-config`.
 
 ## Decision flow
 

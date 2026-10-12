@@ -5,6 +5,31 @@ versions; the default installation remains the stable v0.17.0 release. The
 implementation and the current `.spec` documents are the source of truth for
 the v1 contract.
 
+## Command-local configuration selection
+
+The global <code>--cfg</code>/<code>--config</code> flag and the
+<code>EASYP_CFG</code> environment variable are removed. Each command that reads
+a configuration file has its own <code>--config</code> flag, placed after the
+command name:
+
+~~~sh
+easyp lint --config strict.easyp.yaml
+easyp breaking --config strict.easyp.yaml --against main
+easyp generate --config private.easyp.gen.yaml
+easyp validate-config --config ./services
+~~~
+
+<code>lint</code> and <code>breaking</code> select a policy file,
+<code>generate</code> selects a generation file and replaces the former
+<code>--gen-config</code> flag, and <code>validate-config</code> selects a file
+or directory. <code>mod</code>, <code>get</code>, <code>ls-files</code>,
+<code>init</code> and <code>migrate</code> keep their directory-based discovery.
+Names ending in <code>.easyp.yaml</code> are policy files and names ending in
+<code>.easyp.gen.yaml</code> are generation files. A command rejects a file of
+another recognized kind; other names are read as the format the command expects.
+<code>validate-config</code> validates such named profiles, both when selected
+explicitly and when scanning a directory.
+
 ## Nightly migration regression fixes
 
 Migration accepts Buf v2 <code>includes</code> and <code>excludes</code> metadata.
@@ -98,7 +123,7 @@ The native dependency format is documented in [`.spec/config/dependency.md`](.sp
 
 The current command behavior is documented in [`.spec/CLI.md`](.spec/CLI.md):
 
-- generation discovery is nearest-project by default and recursive only with `--all`; `generate --gen-config <file>` explicitly selects a named native profile such as `private.easyp.gen.yaml` without relocating it. Relative file paths start at the working directory; plugin output and module coordinates retain their existing rules. The flag is exclusive with `--project`/`--all`, and missing or invalid profiles never fall back to the standard file;
+- generation discovery is nearest-project by default and recursive only with `--all`; `generate --config <file>` explicitly selects a named native profile such as `private.easyp.gen.yaml` without relocating it. Relative file paths start at the working directory; plugin output and module coordinates retain their existing rules. The flag is exclusive with `--project`/`--all`, and missing or invalid profiles never fall back to the standard file;
 - `generate.modules` selects module identities or workspace module paths; object entries add per-module paths/packages, intersected with global filters;
 - `generate.packages` selects exact protobuf package names;
 - `generate.paths` selects literal module-directory-relative files or directory subtrees, intersecting packages; it remains available without a module list;

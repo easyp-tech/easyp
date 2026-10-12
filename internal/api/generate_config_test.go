@@ -71,7 +71,7 @@ func TestGenerateExplicitConfigPreservesSourceAndOutputPaths(t *testing.T) {
 				argument, err = filepath.Rel(workDir, profile)
 				require.NoError(t, err)
 			}
-			args := []string{"easyp", "generate", "--gen-config", argument}
+			args := []string{"easyp", "generate", "--config", argument}
 			if tt.frozen {
 				args = append(args, "--frozen")
 			}
@@ -123,7 +123,7 @@ func TestGenerateExplicitConfigPreservesReadErrors(t *testing.T) {
 				writeV1GenerateFixture(t, root, "private.easyp.gen.yaml", tt.content)
 			}
 
-			err := explicitGenerateApp().RunContext(t.Context(), []string{"easyp", "generate", "--gen-config", "private.easyp.gen.yaml"})
+			err := explicitGenerateApp().RunContext(t.Context(), []string{"easyp", "generate", "--config", "private.easyp.gen.yaml"})
 
 			require.Error(t, err)
 			if tt.wantErr != nil {
@@ -147,9 +147,11 @@ func TestGenerateExplicitConfigRejectsSelectorConflicts(t *testing.T) {
 		args []string
 		want string
 	}{
-		{name: "empty file", args: []string{"--gen-config", ""}, want: "--gen-config must not be empty"},
-		{name: "with all", args: []string{"--gen-config", "private.yaml", "--all"}, want: "--gen-config"},
-		{name: "with project", args: []string{"--gen-config", "private.yaml", "--project", "."}, want: "--gen-config"},
+		{name: "empty file", args: []string{"--config", ""}, want: "--config must not be empty"},
+		{name: "with all", args: []string{"--config", "private.yaml", "--all"}, want: "--config cannot be combined with --project or --all"},
+		{name: "with project", args: []string{"--config", "private.yaml", "--project", "."}, want: "--config cannot be combined with --project or --all"},
+		{name: "policy file", args: []string{"--config", "strict.easyp.yaml"}, want: "strict.easyp.yaml is a policy config; this command expects a generation config"},
+		{name: "module manifest", args: []string{"--config", "protobuf.mod"}, want: "protobuf.mod is a module manifest"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -188,7 +190,7 @@ func TestGenerateExplicitConfigRejectsWorkspaceEscape(t *testing.T) {
 				require.NoError(t, os.Symlink(outside, filepath.Join(workspace, argument)))
 			}
 
-			err := explicitGenerateApp().RunContext(t.Context(), []string{"easyp", "generate", "--workspace", ".", "--gen-config", argument})
+			err := explicitGenerateApp().RunContext(t.Context(), []string{"easyp", "generate", "--workspace", ".", "--config", argument})
 
 			require.ErrorIs(t, err, sourceview.ErrOutsideRoot)
 			require.NoDirExists(t, filepath.Join(root, "sdk"))
@@ -203,7 +205,7 @@ func TestGenerateExplicitConfigDoesNotDiscoverUnrelatedChildren(t *testing.T) {
 	writeV1GenerateFixture(t, root, "private.easyp.gen.yaml", "version: v1\nplugins: []\n")
 	writeV1GenerateFixture(t, root, "child/easyp.gen.yaml", "version: v1\nplugins:\n  - name: python\n    out: sdk/child\n")
 
-	err := explicitGenerateApp().RunContext(t.Context(), []string{"easyp", "generate", "--gen-config", "private.easyp.gen.yaml"})
+	err := explicitGenerateApp().RunContext(t.Context(), []string{"easyp", "generate", "--config", "private.easyp.gen.yaml"})
 
 	require.NoError(t, err)
 	require.NoDirExists(t, filepath.Join(root, "child", "sdk"))
@@ -227,7 +229,7 @@ func TestGenerateExplicitConfigInheritsOnlyAncestorOptions(t *testing.T) {
 			writeV1GenerateFixture(t, root, v1.GenerateFile, "version: v1\nplugins: []\noptions:\n  go:\n    package_prefix: example.test/shared\n")
 			writeV1GenerateFixture(t, root, tt.profile, "version: v1\nplugins: []\n")
 
-			err := explicitGenerateApp().RunContext(t.Context(), []string{"easyp", "generate", "--gen-config", tt.profile, "--descriptor_set_out", "private.pb"})
+			err := explicitGenerateApp().RunContext(t.Context(), []string{"easyp", "generate", "--config", tt.profile, "--descriptor_set_out", "private.pb"})
 
 			require.NoError(t, err)
 			raw, err := os.ReadFile(filepath.Join(root, "private.pb"))

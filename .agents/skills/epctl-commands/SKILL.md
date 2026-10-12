@@ -88,7 +88,7 @@ For engine work, follow <code>buildCore</code> and [core.New(core.Options)](../.
 
 ## Output, Logging, and Errors
 
-- The root defines <code>--cfg</code> (alias <code>--config</code>), <code>--debug</code>, and <code>--format</code> (alias <code>-f</code>). Text/JSON support and default format are command-specific; use <code>flags.GetFormat</code> where appropriate.
+- The root defines <code>--frozen</code>, <code>--debug</code>, and <code>--format</code> (alias <code>-f</code>). There is no global config flag: commands that read a configuration file register <code>flags.Config(usage)</code> locally and read it through <code>flags.ExplicitConfig</code>, checking the file kind with <code>v1.RequireKind</code>. Text/JSON support and default format are command-specific; use <code>flags.GetFormat</code> where appropriate.
 - Follow the target command's existing output contract. For writer-based output, use <code>ctx.App.Writer</code> and <code>ctx.App.ErrWriter</code>, with appropriate standard-stream fallbacks when actions can be invoked directly. <code>Validate.Action</code> demonstrates reports through the application writer.
 - Preserve output write failures with <code>%w</code>, including buffered flush/JSON encode failures. EasyP has no universal printer abstraction or global <code>--output</code> mode.
 - Use <code>getLogger(ctx)</code> for the repository logger. The root installs it in application metadata; do not introduce unrelated global logger state.

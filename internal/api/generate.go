@@ -6,6 +6,7 @@ import (
 
 	"github.com/urfave/cli/v2"
 
+	v1 "github.com/easyp-tech/easyp/internal/config/v1"
 	"github.com/easyp-tech/easyp/internal/flags"
 	"github.com/easyp-tech/easyp/internal/generation"
 )
@@ -22,7 +23,6 @@ const (
 	flagGenerateWorkspace           = "workspace"
 	flagGenerateIncludeImports      = "include_imports"
 	flagGenerateProject             = "project"
-	flagGenerateConfig              = "gen-config"
 )
 
 // Command implements Handler.
@@ -36,7 +36,7 @@ func (g Generate) Command() *cli.Command {
 		Action:      g.Action,
 		Flags: []cli.Flag{
 			flags.Frozen(),
-			&cli.StringFlag{Name: flagGenerateConfig, TakesFile: true, Usage: "select a native generation config file (exclusive with --project and --all)"},
+			flags.Config("select a generation config file instead of discovering easyp.gen.yaml (exclusive with --project and --all)"),
 			&cli.StringFlag{Name: flagGenerateDescriptorSetOut, Usage: "output path for the binary FileDescriptorSet"},
 			&cli.StringFlag{Name: flagGenerateDescriptorSetOutDir, Usage: "output directory for one binary FileDescriptorSet per project and module (exclusive with descriptor_set_out)"},
 			&cli.BoolFlag{Name: flagGenerateIncludeImports, Usage: "include all transitive dependencies in the FileDescriptorSet"},
@@ -50,8 +50,14 @@ func (g Generate) Command() *cli.Command {
 
 // Action implements Handler.
 func (g Generate) Action(ctx *cli.Context) error {
-	if ctx.IsSet(flagGenerateConfig) && ctx.String(flagGenerateConfig) == "" {
-		return fmt.Errorf("--gen-config must not be empty")
+	genConfig, explicit, err := flags.ExplicitConfig(ctx)
+	if err != nil {
+		return err
+	}
+	if explicit {
+		if err := v1.RequireKind(genConfig, v1.GenerateFileKind); err != nil {
+			return err
+		}
 	}
 	if ctx.String(flagGenerateDescriptorSetOut) != "" && ctx.String(flagGenerateDescriptorSetOutDir) != "" {
 		return fmt.Errorf("--descriptor_set_out and --descriptor_set_out_dir are mutually exclusive")
@@ -65,7 +71,7 @@ func (g Generate) Action(ctx *cli.Context) error {
 		return fmt.Errorf("moduleCache: %w", err)
 	}
 	return generation.Run(ctx.Context, getLogger(ctx), cache, generation.Request{
-		Frozen: flags.IsFrozen(ctx), WorkDir: root, GenConfig: ctx.String(flagGenerateConfig),
+		Frozen: flags.IsFrozen(ctx), WorkDir: root, GenConfig: genConfig,
 		Projects: ctx.StringSlice(flagGenerateProject), AllProjects: ctx.Bool(flagGenerateAll), WorkspaceRoot: ctx.String(flagGenerateWorkspace),
 		DescriptorSetOut:    ctx.String(flagGenerateDescriptorSetOut),
 		DescriptorSetOutDir: ctx.String(flagGenerateDescriptorSetOutDir), IncludeImports: ctx.Bool(flagGenerateIncludeImports),

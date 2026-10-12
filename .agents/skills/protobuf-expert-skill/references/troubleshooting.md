@@ -66,7 +66,9 @@ easyp --debug <command>                 # verbose logs on stderr
 
 | Symptom | Fix |
 |---|---|
-| `multiple independent policies found` | Choose one with `easyp --cfg path/easyp.yaml lint` |
+| `multiple independent policies found` | Choose one with `easyp lint --config path/easyp.yaml` |
+| `X is a generation config; this command expects a policy config` (or the reverse) | `--config` got a file of the other kind; names `*.easyp.yaml` are policies, `*.easyp.gen.yaml` are generation files |
+| `flag provided but not defined: -cfg` | The global `--cfg` was removed; put `--config` after the command |
 | More lint findings after switching to `default: STANDARD` | v0 `use: [DEFAULT]` meant only 8 rules; STANDARD is 32. Disable rules or keep the migrated lists. |
 | `symbol "…" already defined at …` in breaking | Module root `.` contains duplicate example/test protos. Scope with `--path proto`, or narrow `roots`. |
 | Breaking: ref not found (exit 2) | Fetch history: `git fetch origin main`, `fetch-depth: 0` in CI. Check the branch name: `master` vs `main`. |
@@ -97,7 +99,6 @@ easyp schema-gen --out-dir /tmp/easyp-schemas    # current JSON Schemas
 
 | Variable | Meaning |
 |---|---|
-| `EASYP_CFG` | Same as `--cfg` |
 | `EASYP_DEBUG` | Same as `--debug` |
 | `EASYP_FORMAT` | Same as `--format` |
 | `EASYP_INIT_DIR` | Default for `init --dir` |
