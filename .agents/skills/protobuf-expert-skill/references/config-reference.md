@@ -142,7 +142,7 @@ Presets (`linters.default`):
 - `./path.yaml` or a directory, meaning the `easyp.yaml` inside it;
 - `module#path/in/module.yaml` for a policy shipped in a declared, locked dependency.
 
-**Policy discovery.** `lint`/`breaking` use the nearest ancestor `easyp.yaml`. Descendant `easyp.yaml` files apply to their own subtrees. Pass `--cfg` when several independent policies exist.
+**Policy discovery.** `lint`/`breaking` use the nearest ancestor `easyp.yaml`. Descendant `easyp.yaml` files apply to their own subtrees. Pass `easyp lint --config path/easyp.yaml` when several independent policies exist.
 
 ## easyp.gen.yaml — generation
 

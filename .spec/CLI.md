@@ -47,14 +47,13 @@ The framework also provides help and <code>--version</code>; there is no registe
 
 | Flag | Type | Default | Environment variable | Meaning |
 |---|---|---|---|---|
-| <code>--cfg</code>, <code>--config</code> | string | <code>easyp.yaml</code> | <code>EASYP_CFG</code> | Explicit policy path for lint/breaking, or validation target. Discovery applies when unset. |
 | <code>--debug</code>, <code>-d</code> | bool | <code>false</code> | <code>EASYP_DEBUG</code> | Enable debug logs. |
 | <code>--format</code>, <code>-f</code> | enum | <code>text</code> in flag definition | <code>EASYP_FORMAT</code> | Select <code>text</code> or <code>json</code> for commands supporting structured output. |
 | <code>--frozen</code> | bool | <code>false</code> | — | Require the selected native manifest and locked graph without dependency re-resolution or manifest/lock writes. |
 | <code>--version</code> | bool | <code>false</code> | — | Framework version output from <code>internal/version</code>. |
 | <code>--help</code> | bool | <code>false</code> | — | Framework help. |
 
-The application registers config, debug, format, and frozen; their definitions are in [internal/flags/flags.go](../internal/flags/flags.go) and [frozen.go](../internal/flags/frozen.go). Config is optional. Put global flags before the command; <code>ls-files</code> also registers format locally, and <code>validate-config</code> registers both config and format locally. <code>flags.GetFormat</code> in [internal/flags/format.go](../internal/flags/format.go) selects the nearest explicitly set format, including an explicit global or environment value. Without an explicit selection, lint/breaking use text and ls-files/validate-config use JSON.
+The application registers debug, format, and frozen; their definitions are in [internal/flags/flags.go](../internal/flags/flags.go) and [frozen.go](../internal/flags/frozen.go). Put global flags before the command; <code>ls-files</code> and <code>validate-config</code> also register format locally. There is no global configuration selector: <code>lint</code>, <code>breaking</code>, <code>generate</code> and <code>validate-config</code> each register a command-local <code>--config</code>, described in [Configuration and Command Context](#configuration-and-command-context). <code>flags.GetFormat</code> in [internal/flags/format.go](../internal/flags/format.go) selects the nearest explicitly set format, including an explicit global or environment value. Without an explicit selection, lint/breaking use text and ls-files/validate-config use JSON.
 
 ## Frozen dependency mode
 
@@ -86,10 +85,12 @@ Lints sources with the effective v1 policy. Flags come from [internal/api/lint.g
 
 | Flag | Type | Default | Meaning |
 |---|---|---|---|
+| <code>--config</code> | string file path | policy discovery | Select a policy file instead of discovering <code>easyp.yaml</code>. |
 | <code>--path</code>, <code>-p</code> | string | <code>.</code> | Source path relative to the operation root. The definition is marked required but its default is already marked set, so an explicit argument is optional. |
 | <code>--root</code>, <code>-r</code> | string | selected policy's directory | Override the operation root; a relative value is resolved from the working directory. |
 
 ~~~bash
+easyp lint --config strict.easyp.yaml
 easyp lint --path proto
 easyp --format json lint --path api
 ~~~
@@ -102,7 +103,7 @@ Generates according to the selected <code>easyp.gen.yaml</code> files. [internal
 
 | Flag | Type | Default | Meaning |
 |---|---|---|---|
-| <code>--gen-config</code> | string file path | automatic discovery | Select one native generation file with any name; relative paths start at the working directory. Exclusive with <code>--project</code> and <code>--all</code>. |
+| <code>--config</code> | string file path | automatic discovery | Select one native generation file with any name; relative paths start at the working directory. Exclusive with <code>--project</code> and <code>--all</code>. |
 | <code>--project</code> | repeatable string | nearest ancestor generator | Select a consumer project directory containing <code>easyp.gen.yaml</code>; relative paths start at the working directory. |
 | <code>--all</code> | bool | <code>false</code> | Recursively select generation projects below the working directory; exclusive with <code>--project</code>. |
 | <code>--workspace</code> | string | discovered workspace boundary | Set the root for repository-relative module selectors and bounded ancestor lookup; it must contain the working directory. |
@@ -112,16 +113,16 @@ Generates according to the selected <code>easyp.gen.yaml</code> files. [internal
 
 ~~~bash
 easyp generate
-easyp generate --gen-config private.easyp.gen.yaml
-easyp generate --gen-config public.easyp.gen.yaml
+easyp generate --config private.easyp.gen.yaml
+easyp generate --config public.easyp.gen.yaml
 easyp generate --project services/backend --project services/frontend
 easyp generate --all --descriptor_set_out_dir descriptors --include_imports
 easyp generate --project services/backend --descriptor_set_out descriptors.pb
 ~~~
 
-Automatic selection finds the nearest ancestor generator within the workspace boundary. It does not recursively execute all generators; use <code>--all</code> for that. Recursive discovery skips hidden directories, <code>easyp_vendor</code>, <code>node_modules</code>, and nested Git repositories. The global config flag does not select a generator. This command has no <code>--path</code>, <code>--root</code>, or <code>EASYP_ROOT_GENERATE_PATH</code> input.
+Automatic selection finds the nearest ancestor generator within the workspace boundary. It does not recursively execute all generators; use <code>--all</code> for that. Recursive discovery skips hidden directories, <code>easyp_vendor</code>, <code>node_modules</code>, and nested Git repositories. This command has no <code>--path</code>, <code>--root</code>, or <code>EASYP_ROOT_GENERATE_PATH</code> input.
 
-<code>--gen-config</code> selects exactly one file within the workspace, including
+<code>--config</code> selects exactly one file within the workspace, including
 an absolute path. Missing or invalid files fail without falling back to
 <code>easyp.gen.yaml</code>. Logical config paths are retained for output/module
 coordinates; metadata aliases cannot escape the selected workspace boundary.
@@ -141,6 +142,7 @@ Checks compatibility against a Git revision. Flags and exit handling are in [int
 
 | Flag | Type | Default | Meaning |
 |---|---|---|---|
+| <code>--config</code> | string file path | policy discovery | Select a policy file instead of discovering <code>easyp.yaml</code>. |
 | <code>--path</code>, <code>-p</code> | string | <code>.</code> | Source path relative to the operation root; shares lint's already-set default. |
 | <code>--against</code> | string | <code>master</code> fallback | Explicit Git ref overrides <code>breaking.baseline</code>; an explicitly empty value is an error. |
 | <code>--root</code>, <code>-r</code> | string | selected policy's directory | Override the operation root. |
@@ -296,7 +298,7 @@ separately; it never substitutes the new snapshot hash for a v0 input hash.
 
 ### <code>easyp ls-files [flags]</code>
 
-Lists sources from the working directory's native manifest, or a default local <code>.</code> root if that directory has no manifest. Unlike <code>mod</code>/<code>get</code>, this handler does not search upward for a module. The global config flag does not choose its root.
+Lists sources from the working directory's native manifest, or a default local <code>.</code> root if that directory has no manifest. Unlike <code>mod</code>/<code>get</code>, this handler does not search upward for a module.
 
 | Flag | Type | Default | Meaning |
 |---|---|---|---|
@@ -314,11 +316,11 @@ After printing the report, collected parse/import errors return <code>cli.Exit(.
 
 ### <code>easyp validate-config [flags]</code>
 
-Recursively validates <code>easyp.yaml</code>, <code>easyp.gen.yaml</code>, <code>protobuf.mod</code>, and <code>protobuf.lock</code> below the current directory. An explicit config argument or environment value chooses one file or a directory instead. Directory scanning reports an error if no recognized configuration files are found.
+Recursively validates <code>easyp.yaml</code>, <code>easyp.gen.yaml</code>, <code>protobuf.mod</code>, <code>protobuf.lock</code>, and named profiles matching <code>*.easyp.yaml</code> or <code>*.easyp.gen.yaml</code> below the current directory. An explicit <code>--config</code> chooses one file or a directory instead. A file's format comes from its name; other names are validated as policy files. Directory scanning reports an error if no recognized configuration files are found.
 
 | Flag | Type | Default | Meaning |
 |---|---|---|---|
-| <code>--cfg</code>, <code>--config</code> | string | current directory when unset | Command-local registration of the global config selector. |
+| <code>--config</code> | string | current directory when unset | File or directory to validate. |
 | <code>--format</code>, <code>-f</code> | enum | <code>json</code> when unset | Command-local registration of the shared format selector. |
 
 ~~~bash
@@ -363,22 +365,21 @@ These shell-specific examples assume an existing completion installation and wri
 
 ## Configuration and Command Context
 
-Explicit config selection follows flag, then <code>EASYP_CFG</code>; relative values resolve from the working directory. The flag's nominal <code>easyp.yaml</code> default does not mean every command reads that file from the working directory:
+Configuration selection is command-local: <code>lint</code>, <code>breaking</code>, <code>generate</code> and <code>validate-config</code> accept <code>--config</code> after the command name; relative values resolve from the working directory. There is no global selector or environment variable. File kinds come from names: <code>easyp.yaml</code> and <code>*.easyp.yaml</code> are policy files, <code>easyp.gen.yaml</code> and <code>*.easyp.gen.yaml</code> are generation files. A command rejects a recognized file of another kind, for example <code>lint --config easyp.gen.yaml</code>; other names are read as the format the command expects.
 
 | Command | Context resolution |
 |---|---|
-| lint / breaking | Explicit config wins. Otherwise search for an ancestor policy from cwd or <code>--root</code>, then accept one unambiguous outermost descendant policy. Multiple independent policies require selection. The policy directory becomes project root; <code>--root</code> overrides the operation root. |
-| generate | Discover the nearest generator or explicitly select projects; <code>--all</code> opts into recursive discovery. <code>--workspace</code> sets its boundary. |
+| lint / breaking | Explicit <code>--config</code> policy file wins. Otherwise search for an ancestor policy from cwd or <code>--root</code>, then accept one unambiguous outermost descendant policy. Multiple independent policies require selection. The policy directory becomes project root; <code>--root</code> overrides the operation root. |
+| generate | Explicit <code>--config</code> generation file, or discover the nearest generator, or explicitly select projects; <code>--all</code> opts into recursive discovery. <code>--workspace</code> sets its boundary. |
 | mod / get | Find the nearest ancestor native module within the workspace. |
 | ls-files | Read the working directory's manifest or use its default local root. |
-| validate-config | Scan cwd unless an explicit config selector chooses a file/directory. |
+| validate-config | Scan cwd unless <code>--config</code> chooses a file/directory. |
 | init / migrate | Use <code>--dir</code>. |
 
 [internal/workspace/discovery.go](../internal/workspace/discovery.go) bounds searches at the nearest Git repository. Without Git metadata, it uses the outermost EasyP ancestor below the home directory. Policy root handling is in [internal/api/roots.go](../internal/api/roots.go).
 
 | Environment variable | Meaning | Default |
 |---|---|---|
-| <code>EASYP_CFG</code> | Explicit config selection for the relevant commands | unset; command discovery applies |
 | <code>EASYP_DEBUG</code> | Debug logging | <code>false</code> |
 | <code>EASYP_FORMAT</code> | Shared explicit output format | command-specific default |
 | <code>EASYP_INIT_DIR</code> | Init directory | <code>.</code> |
@@ -416,7 +417,8 @@ easyp validate-config --format json > validation.json
 | Message / condition | Interpretation and next step |
 |---|---|
 | <code>no selected easyp.gen.yaml</code> | Select a consumer directory with <code>--project</code>, or intentionally opt into recursive generation with <code>--all</code>. |
-| <code>multiple independent policies found</code> | Select the intended policy with global <code>--cfg</code>. |
+| <code>multiple independent policies found</code> | Select the intended policy with <code>lint --config</code> or <code>breaking --config</code>. |
+| <code>X is a generation config; this command expects a policy config</code> | The selected file's name marks another format. Pass a policy file, or rename the profile. |
 | Missing <code>protobuf.lock</code> during download | Resolve the manifest explicitly with <code>mod tidy</code> before downloading its pinned graph. |
 | Frozen rejects missing/stale locks or local replacements | Remove replacements and prepare the manifest/lock with <code>mod tidy</code> outside frozen mode; commit both files before retrying. |
 | Legacy configuration rejection | Use <code>migrate</code> to inspect a concrete v1 conversion; generation does not silently convert v0 inputs. |

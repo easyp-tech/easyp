@@ -21,7 +21,7 @@ easyp --frozen generate && git diff --exit-code     # generated code is up to da
 [easyp-tech/actions](https://github.com/easyp-tech/actions) run the Docker image `ghcr.io/easyp-tech/easyp:<version>`. They take these inputs:
 - `version`: the image tag;
 - `directory`: passed as `--path`;
-- `config`: passed as `--cfg`;
+- `config`: passed as the global `--cfg`, which newer v1 nightlies removed; leave it unset with v1 images until the actions pass `--config` after the command;
 - `against`: breaking only, default `origin/main`.
 
 Each action runs `mod download`, then `lint` or `breaking`. **Always set `version`.** The default is `latest`, which is v0.

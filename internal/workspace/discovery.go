@@ -127,7 +127,7 @@ func Policy(start string) (string, error) {
 		return found[0], nil
 	}
 	if len(found) > 1 {
-		return "", fmt.Errorf("multiple independent policies found: %v; select one with --cfg", found)
+		return "", fmt.Errorf("multiple independent policies found: %v; select one with --config", found)
 	}
 	return "", fmt.Errorf("no easyp.yaml found within %s", boundary)
 }

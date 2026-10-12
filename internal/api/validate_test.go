@@ -245,9 +245,9 @@ func validationContext(t *testing.T, path, format string, output io.Writer) *cli
 	t.Helper()
 
 	set := flag.NewFlagSet("validate-config", flag.ContinueOnError)
-	set.String(flags.Config.Name, "", "")
+	set.String(flags.ConfigName, "", "")
 	set.String(flags.Format.Name, "", "")
-	require.NoError(t, set.Set(flags.Config.Name, path))
+	require.NoError(t, set.Set(flags.ConfigName, path))
 	require.NoError(t, set.Set(flags.Format.Name, format))
 	ctx := cli.NewContext(&cli.App{Writer: output}, set, nil)
 	ctx.Context = t.Context()
