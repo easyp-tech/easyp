@@ -97,7 +97,7 @@ func (c *Cache) fetchMigration(ctx context.Context, source, version, legacyHash 
 		return modules.Fetched{}, fmt.Errorf("ValidateModuleRoots: %w", err)
 	}
 	request := migrationRequestForRoots(source, version, legacyHash, roots)
-	checkout, err := checkoutV1ModuleWithRoots(ctx, request.source, request.version, c.root, nil, true)
+	checkout, err := checkoutV1ModuleWithRoots(ctx, request.source, request.version, c.root, nil, true, c.proxy)
 	if err != nil {
 		return modules.Fetched{}, fmt.Errorf("checkoutV1ModuleWithRoots: %w", err)
 	}
