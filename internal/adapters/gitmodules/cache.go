@@ -16,6 +16,7 @@ import (
 type Cache struct {
 	root        string
 	bsrResolver modules.BSRResolver
+	proxy       string
 }
 
 // New places the v1 Git cache below the supplied EasyP storage directory.
@@ -26,7 +27,17 @@ func New(storageDir string) *Cache {
 // NewWithBSRResolver supplies the backend used when fetching Buf dependency metadata.
 // Cached and frozen operations replay the lock's bindings without calling this backend.
 func NewWithBSRResolver(storageDir string, resolver modules.BSRResolver) *Cache {
-	return &Cache{root: filepath.Join(storageDir, "v1", "git"), bsrResolver: resolver}
+	return NewWithDependencyProxy(storageDir, resolver, "")
+}
+
+// NewWithDependencyProxy places the v1 Git cache below storageDir.
+// A non-empty proxy replaces the host used to fetch Git dependencies.
+func NewWithDependencyProxy(storageDir string, resolver modules.BSRResolver, proxy string) *Cache {
+	return &Cache{
+		root:        filepath.Join(storageDir, "v1", "git"),
+		bsrResolver: resolver,
+		proxy:       proxy,
+	}
 }
 
 // Cached reads installed metadata without downloading or changing files.
@@ -52,12 +63,12 @@ func (c *Cache) Cached(entry v1.LockedModule) (string, v1.Module, error) {
 
 // Versions lists semantic versions available for a module, including nested modules.
 func (c *Cache) Versions(ctx context.Context, source string) ([]string, error) {
-	return listV1ModuleTags(ctx, source)
+	return listV1ModuleTags(ctx, source, c.proxy)
 }
 
 // ValidateSource checks whether a module identity can identify a Git repository.
 func ValidateSource(source string) error {
-	_, err := v1GitModuleCandidates(source)
+	_, err := v1GitModuleCandidates(source, "")
 	return err
 }
 
@@ -71,7 +82,7 @@ func readCachedV1Module(directory, source string) (v1.Module, error) {
 	if major == "" {
 		return moduleconfig.ReadGitDependency(directory, source)
 	}
-	candidates, err := v1GitModuleCandidates(source)
+	candidates, err := v1GitModuleCandidates(source, "")
 	if err != nil {
 		return v1.Module{}, fmt.Errorf("v1GitModuleCandidates: %w", err)
 	}

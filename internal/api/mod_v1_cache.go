@@ -7,6 +7,7 @@ import (
 
 	"github.com/easyp-tech/easyp/internal/adapters/bsr"
 	"github.com/easyp-tech/easyp/internal/adapters/gitmodules"
+	"github.com/easyp-tech/easyp/internal/config"
 )
 
 func moduleCache(ctx *cli.Context) (*gitmodules.Cache, error) {
@@ -14,5 +15,9 @@ func moduleCache(ctx *cli.Context) (*gitmodules.Cache, error) {
 	if err != nil {
 		return nil, fmt.Errorf("getEasypPath: %w", err)
 	}
-	return gitmodules.NewWithBSRResolver(root, bsr.StaticResolver{Logger: getLogger(ctx)}), nil
+	var cfg config.Config
+	if err := cfg.LoadEnvironment(); err != nil {
+		return nil, fmt.Errorf("LoadEnvironment: %w", err)
+	}
+	return gitmodules.NewWithDependencyProxy(root, bsr.StaticResolver{Logger: getLogger(ctx)}, cfg.Proxy), nil
 }

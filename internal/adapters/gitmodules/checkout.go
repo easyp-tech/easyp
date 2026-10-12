@@ -14,7 +14,7 @@ import (
 // Fetch reads one revision and hashes its tracked contents. Temporary checkouts are removed before returning.
 func (c *Cache) Fetch(ctx context.Context, source, version string) (modules.Fetched, error) {
 	cacheRoot := c.root
-	checkout, err := checkoutV1Module(ctx, source, version, cacheRoot)
+	checkout, err := checkoutV1Module(ctx, source, version, cacheRoot, c.proxy)
 	if err != nil {
 		return modules.Fetched{}, fmt.Errorf("checkoutV1Module: %w", err)
 	}
@@ -51,7 +51,7 @@ type v1ModuleCheckout struct {
 
 // checkoutV1Module selects a repository revision. The caller owns the returned
 // directory and removes it after reading its metadata and tracked contents.
-func checkoutV1Module(ctx context.Context, source, version, cacheRoot string) (checkout v1ModuleCheckout, err error) {
+func checkoutV1Module(ctx context.Context, source, version, cacheRoot, proxy string) (checkout v1ModuleCheckout, err error) {
 	if err := v1.ValidateModuleVersion(source, version); err != nil {
 		return v1ModuleCheckout{}, fmt.Errorf("ValidateModuleVersion: %w", err)
 	}
@@ -59,7 +59,7 @@ func checkoutV1Module(ctx context.Context, source, version, cacheRoot string) (c
 		return v1ModuleCheckout{}, fmt.Errorf("MkdirAll: %w", err)
 	}
 	if version == "" {
-		dir, module, commit, err := cloneHeadV1GitModule(ctx, source, cacheRoot)
+		dir, module, commit, err := cloneHeadV1GitModule(ctx, source, cacheRoot, proxy)
 		if err != nil {
 			return v1ModuleCheckout{}, fmt.Errorf("cloneHeadV1GitModule: %w", err)
 		}
@@ -74,7 +74,7 @@ func checkoutV1Module(ctx context.Context, source, version, cacheRoot string) (c
 		}
 	}()
 	if v1.IsCommitRef(version) {
-		dir, err = clonePinnedV1GitModule(ctx, v1.LockedModule{Source: source, Commit: version}, cacheRoot)
+		dir, err = clonePinnedV1GitModule(ctx, v1.LockedModule{Source: source, Commit: version}, cacheRoot, proxy)
 		if err != nil {
 			return v1ModuleCheckout{}, fmt.Errorf("clonePinnedV1GitModule: %w", err)
 		}
@@ -89,7 +89,7 @@ func checkoutV1Module(ctx context.Context, source, version, cacheRoot string) (c
 		return v1ModuleCheckout{dir: dir, module: module, commit: strings.TrimSpace(commit)}, nil
 	}
 
-	candidate, err := findV1GitModuleTag(ctx, source, version)
+	candidate, err := findV1GitModuleTag(ctx, source, version, proxy)
 	if err != nil {
 		return v1ModuleCheckout{}, fmt.Errorf("findV1GitModuleTag: %w", err)
 	}

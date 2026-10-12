@@ -65,7 +65,7 @@ func (c *Cache) installEntry(ctx context.Context, entry v1.LockedModule, acquire
 		// rather than racing a second rename into the same cache directory.
 		info, err = os.Lstat(installed)
 		if errors.Is(err, os.ErrNotExist) {
-			if err := fetchPinnedV1Module(ctx, entry, c.root, installed); err != nil {
+			if err := fetchPinnedV1Module(ctx, entry, c.root, installed, c.proxy); err != nil {
 				return err
 			}
 			info, err = os.Lstat(installed)
@@ -86,11 +86,11 @@ func (c *Cache) installEntry(ctx context.Context, entry v1.LockedModule, acquire
 	return nil
 }
 
-func fetchPinnedV1Module(ctx context.Context, entry v1.LockedModule, cacheRoot, installed string) error {
+func fetchPinnedV1Module(ctx context.Context, entry v1.LockedModule, cacheRoot, installed, proxy string) error {
 	if err := os.MkdirAll(cacheRoot, 0o755); err != nil {
 		return err
 	}
-	checkout, err := clonePinnedV1GitModule(ctx, entry, cacheRoot)
+	checkout, err := clonePinnedV1GitModule(ctx, entry, cacheRoot, proxy)
 	if err != nil {
 		return fmt.Errorf("clonePinnedV1GitModule: %w", err)
 	}

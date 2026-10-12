@@ -157,6 +157,10 @@ type Config struct {
 
 	// BreakingCheck `breaking` command's configuration
 	BreakingCheck BreakingCheck `json:"breaking,omitempty" yaml:"breaking,omitempty"`
+
+	// Proxy replaces the Git host used to fetch dependencies.
+	// It is read from EASYP_PROXY and is not a project-file setting.
+	Proxy string `json:"-" yaml:"-"`
 }
 
 func (d *InputFilesDir) UnmarshalYAML(value *yaml.Node) error {
