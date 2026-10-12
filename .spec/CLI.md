@@ -302,6 +302,7 @@ Explicit config selection follows flag, then <code>EASYP_CFG</code>; relative va
 | <code>EASYP_DEBUG</code> | Debug logging | <code>false</code> |
 | <code>EASYP_FORMAT</code> | Shared explicit output format | command-specific default |
 | <code>EASYP_INIT_DIR</code> | Init directory | <code>.</code> |
+| <code>EASYP_PROXY</code> | Host substituted when fetching Git dependencies. Module identities in <code>protobuf.mod</code> and <code>protobuf.lock</code> stay unchanged. | unset |
 | <code>EASYPPATH</code> | Module cache root | <code>$HOME/.easyp</code> |
 
 The cache path is resolved to an absolute path by [internal/api/runtime.go](../internal/api/runtime.go). Import consumers may install missing locked sources in that cache. Native dependency declarations belong in <code>protobuf.mod</code>, not the removed generation input configuration.

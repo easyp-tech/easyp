@@ -14,7 +14,7 @@ func (c *Cache) ResolveTag(ctx context.Context, source, tag string) (string, err
 	if _, err := gitV1(ctx, "", "check-ref-format", "refs/tags/"+tag); err != nil {
 		return "", fmt.Errorf("gitV1: %w", err)
 	}
-	candidates, err := v1GitModuleCandidates(source)
+	candidates, err := v1GitModuleCandidates(source, c.proxy)
 	if err != nil {
 		return "", fmt.Errorf("v1GitModuleCandidates: %w", err)
 	}

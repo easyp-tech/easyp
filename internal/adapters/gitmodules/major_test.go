@@ -154,7 +154,7 @@ func TestMajorLegacyMarkerIsNotAGitTag(t *testing.T) {
 
 func TestMajorURLCandidatePreservesTransport(t *testing.T) {
 	t.Parallel()
-	candidates, err := v1GitModuleCandidates("ssh://git@example.com:2222/repo%20space/v%32")
+	candidates, err := v1GitModuleCandidates("ssh://git@example.com:2222/repo%20space/v%32", "")
 	require.NoError(t, err)
 	require.Equal(t, "ssh://git@example.com:2222/repo%20space", candidates[0].remote)
 	require.Empty(t, candidates[0].subdir)

@@ -27,7 +27,7 @@ func (c *Cache) FetchMigration(ctx context.Context, source, version, legacyHash 
 	if (version != "" || legacyHash != "") && !v1.IsCommitRef(version) && !semver.IsValid(version) {
 		return modules.Fetched{}, fmt.Errorf("migration version %q must be a full Git commit or SemVer tag", version)
 	}
-	checkout, err := checkoutV1Module(ctx, source, version, c.root)
+	checkout, err := checkoutV1Module(ctx, source, version, c.root, c.proxy)
 	if err != nil {
 		return modules.Fetched{}, fmt.Errorf("checkoutV1Module: %w", err)
 	}
