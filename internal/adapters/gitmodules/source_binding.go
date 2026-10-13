@@ -129,7 +129,7 @@ func (c *Cache) ensurePinnedSource(ctx context.Context, entry v1.LockedModule, q
 			refetchRepository = repository
 		}
 	}
-	candidates, err := v1GitModuleCandidates(entry.Source)
+	candidates, err := v1GitModuleCandidates(entry.Source, c.proxy)
 	if err != nil {
 		return fmt.Errorf("v1GitModuleCandidates: %w", err)
 	}

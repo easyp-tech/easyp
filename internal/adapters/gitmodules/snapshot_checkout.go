@@ -47,7 +47,7 @@ func (c *Cache) fetchWithRootSelection(ctx context.Context, source, version stri
 	ctx = c.operationContext(ctx, source, version)
 	finish := gitcommand.Start(ctx, "resolve module")
 	defer func() { finish(err) }()
-	checkout, err := checkoutV1ModuleWithRoots(ctx, source, version, c.root, roots, inspect)
+	checkout, err := checkoutV1ModuleWithRoots(ctx, source, version, c.root, roots, inspect, c.proxy)
 	if err != nil {
 		return modules.Fetched{}, fmt.Errorf("checkoutV1ModuleWithRoots: %w", err)
 	}
@@ -82,7 +82,7 @@ func (c *Cache) fetchWithRootSelection(ctx context.Context, source, version stri
 
 // checkoutV1ModuleWithRoots retains Git objects and an index for historical
 // proofs, plus a bounded logical snapshot or deferred source inspection.
-func checkoutV1ModuleWithRoots(ctx context.Context, source, version, cacheRoot string, roots []string, inspect bool) (checkout v1ModuleCheckout, err error) {
+func checkoutV1ModuleWithRoots(ctx context.Context, source, version, cacheRoot string, roots []string, inspect bool, proxy string) (checkout v1ModuleCheckout, err error) {
 	if _, err := gitcommand.Timeout(); err != nil {
 		return v1ModuleCheckout{}, fmt.Errorf("Timeout: %w", err)
 	}
@@ -97,13 +97,13 @@ func checkoutV1ModuleWithRoots(ctx context.Context, source, version, cacheRoot s
 	}
 	var candidates []v1GitModuleCandidate
 	if version != "" && !v1.IsCommitRef(version) {
-		candidate, err := findV1GitModuleTag(ctx, source, version)
+		candidate, err := findV1GitModuleTag(ctx, source, version, proxy)
 		if err != nil {
 			return v1ModuleCheckout{}, fmt.Errorf("findV1GitModuleTag: %w", err)
 		}
 		candidates = []v1GitModuleCandidate{candidate}
 	} else {
-		candidates, err = v1GitModuleCandidates(source)
+		candidates, err = v1GitModuleCandidates(source, proxy)
 		if err != nil {
 			return v1ModuleCheckout{}, fmt.Errorf("v1GitModuleCandidates: %w", err)
 		}
@@ -180,8 +180,8 @@ func checkoutSnapshotCandidate(ctx context.Context, dir, source, version string,
 	return v1ModuleCheckout{dir: dir, module: module, commit: commit, snapshot: stage, inspection: inspection}, true, nil
 }
 
-func fetchPinnedV1Module(ctx context.Context, entry v1.LockedModule, cacheRoot, installed string) (err error) {
-	checkout, err := checkoutV1ModuleWithRoots(ctx, entry.Source, entry.Commit, cacheRoot, entry.Roots, false)
+func fetchPinnedV1Module(ctx context.Context, entry v1.LockedModule, cacheRoot, installed, proxy string) (err error) {
+	checkout, err := checkoutV1ModuleWithRoots(ctx, entry.Source, entry.Commit, cacheRoot, entry.Roots, false, proxy)
 	if err != nil {
 		return fmt.Errorf("checkoutV1ModuleWithRoots: %w", err)
 	}
