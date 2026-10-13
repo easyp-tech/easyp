@@ -20,6 +20,7 @@ type Cache struct {
 	root        string
 	bsrResolver modules.BSRResolver
 	logger      logger.Logger
+	proxy       string
 }
 
 // WithLogger returns an isolated cache handle with dependency progress logging.
@@ -45,7 +46,17 @@ func New(storageDir string) *Cache {
 // NewWithBSRResolver supplies the backend used when fetching Buf dependency metadata.
 // Cached and frozen operations replay the lock's bindings without calling this backend.
 func NewWithBSRResolver(storageDir string, resolver modules.BSRResolver) *Cache {
-	return &Cache{root: filepath.Join(storageDir, "v1", "git"), bsrResolver: resolver}
+	return NewWithDependencyProxy(storageDir, resolver, "")
+}
+
+// NewWithDependencyProxy places the v1 Git cache below storageDir.
+// A non-empty proxy replaces the host used to fetch Git dependencies.
+func NewWithDependencyProxy(storageDir string, resolver modules.BSRResolver, proxy string) *Cache {
+	return &Cache{
+		root:        filepath.Join(storageDir, "v1", "git"),
+		bsrResolver: resolver,
+		proxy:       proxy,
+	}
 }
 
 // SourceCacheDirectories returns repository-owned storage that consumer source
@@ -87,12 +98,12 @@ func (c *Cache) Versions(ctx context.Context, source string) (versions []string,
 	ctx = c.operationContext(ctx, source, "")
 	finish := gitcommand.Start(ctx, "list module versions")
 	defer func() { finish(err) }()
-	return listV1ModuleTags(ctx, source)
+	return listV1ModuleTags(ctx, source, c.proxy)
 }
 
 // ValidateSource checks whether a module identity can identify a Git repository.
 func ValidateSource(source string) error {
-	_, err := v1GitModuleCandidates(source)
+	_, err := v1GitModuleCandidates(source, "")
 	return err
 }
 
@@ -106,7 +117,7 @@ func readCachedV1Module(directory, source string) (v1.Module, error) {
 	if major == "" {
 		return moduleconfig.ReadGitDependency(directory, source)
 	}
-	candidates, err := v1GitModuleCandidates(source)
+	candidates, err := v1GitModuleCandidates(source, "")
 	if err != nil {
 		return v1.Module{}, fmt.Errorf("v1GitModuleCandidates: %w", err)
 	}

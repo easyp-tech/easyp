@@ -31,7 +31,8 @@ func (candidate v1GitModuleCandidate) tag(version string) string {
 // v1GitModuleCandidates tries the complete module identity first, then each
 // parent Git URL with the removed suffix as its module directory. The module
 // manifest at that suffix confirms the candidate at the requested revision.
-func v1GitModuleCandidates(source string) ([]v1GitModuleCandidate, error) {
+// A non-empty proxy replaces the remote host and leaves the module identity unchanged.
+func v1GitModuleCandidates(source, proxy string) ([]v1GitModuleCandidate, error) {
 	major, err := v1.ModulePathMajor(source)
 	if err != nil {
 		return nil, fmt.Errorf("ModulePathMajor: %w", err)
@@ -59,6 +60,9 @@ func v1GitModuleCandidates(source string) ([]v1GitModuleCandidate, error) {
 			candidate := *parsed
 			candidate.Path = "/" + strings.Join(prefix, "/")
 			candidate.RawPath = ""
+			if proxy != "" {
+				candidate.Host = proxy
+			}
 			return candidate.String()
 		}, 1), nil
 	}
@@ -67,8 +71,16 @@ func v1GitModuleCandidates(source string) ([]v1GitModuleCandidate, error) {
 		return nil, fmt.Errorf("invalid Git module identity %q", source)
 	}
 	return pathV1GitModuleCandidates(parts, func(prefix []string) string {
-		return "https://" + strings.Join(prefix, "/")
+		return "https://" + strings.Join(proxyModulePrefix(prefix, proxy), "/")
 	}, 2), nil
+}
+
+// proxyModulePrefix replaces the first path component when a fetch host is configured.
+func proxyModulePrefix(prefix []string, proxy string) []string {
+	if proxy == "" || len(prefix) == 0 {
+		return prefix
+	}
+	return append([]string{proxy}, prefix[1:]...)
 }
 
 func validV1GitModuleParts(parts []string) bool {
@@ -123,8 +135,8 @@ func pathV1GitModuleCandidates(parts []string, remote func([]string) string, min
 	return candidates
 }
 
-func findV1GitModuleTag(ctx context.Context, source, version string) (v1GitModuleCandidate, error) {
-	candidates, err := v1GitModuleCandidates(source)
+func findV1GitModuleTag(ctx context.Context, source, version, proxy string) (v1GitModuleCandidate, error) {
+	candidates, err := v1GitModuleCandidates(source, proxy)
 	if err != nil {
 		return v1GitModuleCandidate{}, fmt.Errorf("v1GitModuleCandidates: %w", err)
 	}
@@ -155,8 +167,8 @@ func findV1GitModuleTag(ctx context.Context, source, version string) (v1GitModul
 	return v1GitModuleCandidate{}, fmt.Errorf("git tag %s@%s was not found", source, version)
 }
 
-func listV1ModuleTags(ctx context.Context, source string) ([]string, error) {
-	candidates, err := v1GitModuleCandidates(source)
+func listV1ModuleTags(ctx context.Context, source, proxy string) ([]string, error) {
+	candidates, err := v1GitModuleCandidates(source, proxy)
 	if err != nil {
 		return nil, fmt.Errorf("v1GitModuleCandidates: %w", err)
 	}
