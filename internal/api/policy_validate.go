@@ -38,8 +38,8 @@ func (c policyReadCache) Install(ctx context.Context, lock v1.Lock) error {
 
 func policyReferenceValidator(ctx *cli.Context) func(string) ([]config.ValidationIssue, error) {
 	return func(path string) ([]config.ValidationIssue, error) {
-		switch filepath.Base(path) {
-		case v1.GenerateFile, v1.ModuleFile, v1.LockFile:
+		switch v1.KindOf(path) {
+		case v1.GenerateFileKind, v1.ModuleFileKind, v1.LockFileKind:
 			return nil, nil
 		}
 		file, found, err := readV1PolicyFile(path)

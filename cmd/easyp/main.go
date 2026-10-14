@@ -34,7 +34,13 @@ func initLogger(isDebug bool) logger.Logger {
 }
 
 func main() {
-	app := &cli.App{
+	if err := newApp().Run(os.Args); err != nil {
+		log.Fatal(err)
+	}
+}
+
+func newApp() *cli.App {
+	return &cli.App{
 		Name:        "easyp",
 		HelpName:    "easyp",
 		Usage:       "modern Protocol Buffers toolkit",
@@ -56,7 +62,6 @@ func main() {
 		),
 		Flags: []cli.Flag{
 			flags.Frozen(),
-			flags.Config,
 			flags.DebugMode,
 			flags.Format,
 		},
@@ -68,10 +73,6 @@ func main() {
 			return nil
 		},
 		EnableBashCompletion: true,
-	}
-
-	if err := app.Run(os.Args); err != nil {
-		log.Fatal(err)
 	}
 }
 

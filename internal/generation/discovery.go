@@ -18,7 +18,7 @@ func selectGenerateConfigs(request Request) ([]string, error) {
 	}
 	if request.GenConfig != "" {
 		if request.AllProjects || len(projects) > 0 {
-			return nil, fmt.Errorf("--gen-config cannot be combined with --project or --all")
+			return nil, fmt.Errorf("--config cannot be combined with --project or --all")
 		}
 		path := request.GenConfig
 		if !filepath.IsAbs(path) {

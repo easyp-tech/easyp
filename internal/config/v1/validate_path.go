@@ -68,12 +68,7 @@ func findConfigFiles(root string) ([]string, error) {
 }
 
 func isEasyPConfigFile(name string) bool {
-	switch name {
-	case PolicyFile, GenerateFile, ModuleFile, LockFile:
-		return true
-	default:
-		return false
-	}
+	return KindOf(name) != UnknownFileKind
 }
 
 func validateNamedFileWith(path, name string, extra func(string) ([]config.ValidationIssue, error)) ([]config.ValidationIssue, error) {

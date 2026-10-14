@@ -66,9 +66,9 @@ func TestValidateActionReportExample(t *testing.T) {
 			require.NoError(t, os.WriteFile(path, []byte(tt.contents), 0o600))
 			var output bytes.Buffer
 			set := flag.NewFlagSet("validate-config", flag.ContinueOnError)
-			set.String(flags.Config.Name, "", "")
+			set.String(flags.ConfigName, "", "")
 			set.String(flags.Format.Name, "", "")
-			require.NoError(t, set.Set(flags.Config.Name, path))
+			require.NoError(t, set.Set(flags.ConfigName, path))
 			require.NoError(t, set.Set(flags.Format.Name, flags.TextFormat))
 			ctx := cli.NewContext(&cli.App{Writer: &output}, set, nil)
 			ctx.Context = t.Context()

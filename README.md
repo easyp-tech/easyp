@@ -190,15 +190,21 @@ Keep generation profiles such as `private.easyp.gen.yaml` and
 `public.easyp.gen.yaml` alongside the module and select one explicitly:
 
 ```sh
-easyp generate --gen-config private.easyp.gen.yaml
-easyp generate --gen-config public.easyp.gen.yaml
+easyp generate --config private.easyp.gen.yaml
+easyp generate --config public.easyp.gen.yaml
 ```
 
-`--gen-config` accepts a working-directory-relative or absolute file path within
+`--config` accepts a working-directory-relative or absolute file path within
 the workspace and cannot be combined with `--project` or `--all`. Plugin output
 paths stay relative to the selected file's directory; module selectors keep
 their existing module/workspace coordinates. Without the flag, discovery still
-uses `easyp.gen.yaml`. Global `--cfg`/`--config` does not select a generation file.
+uses `easyp.gen.yaml`.
+
+`--config` is a command flag, not a global one. `lint` and `breaking` select a
+policy file with it, `generate` selects a generation file, and `validate-config`
+selects a file or directory to validate. Profiles named `*.easyp.yaml` are
+policy files and `*.easyp.gen.yaml` are generation files; passing a file of the
+other kind fails instead of being parsed as the wrong format.
 
 ```yaml
 # easyp.yaml
@@ -211,7 +217,7 @@ breaking:
 
 # Configuration validation
 
-`easyp validate-config` recursively validates every `easyp.yaml`, `easyp.gen.yaml`, `protobuf.mod`, and `protobuf.lock` under the current directory. Use `--config` to validate one file or all matching files under a selected directory. Errors include the file path and, for YAML structure errors, the line and column. The command exits with a non-zero status when errors are found.
+`easyp validate-config` recursively validates every `easyp.yaml`, `easyp.gen.yaml`, `protobuf.mod`, and `protobuf.lock` under the current directory, plus named profiles matching `*.easyp.yaml` and `*.easyp.gen.yaml`. Use `--config` to validate one file or all matching files under a selected directory. Errors include the file path and, for YAML structure errors, the line and column. The command exits with a non-zero status when errors are found.
 
 ```sh
 # Validate all EasyP configuration and module files below the current directory
