@@ -31,6 +31,24 @@ func TestValidatePathSelectsConfigFiles(t *testing.T) {
 			expectedFiles: []string{"api/deep/protobuf.lock", "api/deep/protobuf.mod", "api/easyp.gen.yaml", "easyp.yaml"},
 		},
 		{
+			name: "named profiles are discovered by suffix",
+			files: map[string]string{
+				"private.easyp.gen.yaml": "plugins:\n  - name: go\n    out: gen\n    unknown: true\n",
+				"public.easyp.gen.yaml":  "version: v1\nplugins: []\n",
+				"strict.easyp.yaml":      "linters:\n  unknown: true\n",
+				"notes.yaml":             "anything: true\n",
+			},
+			selectedPath:  ".",
+			expectedFiles: []string{"private.easyp.gen.yaml", "strict.easyp.yaml"},
+		},
+		{
+			name: "explicit generation profile is validated as generation config",
+			files: map[string]string{
+				"private.easyp.gen.yaml": "version: v1\nplugins:\n  - name: go\n    out: gen\n",
+			},
+			selectedPath: "private.easyp.gen.yaml",
+		},
+		{
 			name: "explicit file excludes other configs",
 			files: map[string]string{
 				"easyp.yaml":            "version: v1\n",

@@ -17,16 +17,16 @@ func ValidateFile(path string) ([]config.ValidationIssue, error) {
 		return nil, fmt.Errorf("ReadFile: %w", err)
 	}
 	name := filepath.Base(path)
-	switch name {
-	case GenerateFile:
+	switch KindOf(path) {
+	case GenerateFileKind:
 		return validateGenerate(raw), nil
-	case ModuleFile:
+	case ModuleFileKind:
 		var module Module
 		module, err = ParseModule(bytes.NewReader(raw))
 		if err == nil {
 			err = validateReplacementDirectories(filepath.Dir(path), module)
 		}
-	case LockFile:
+	case LockFileKind:
 		_, err = ParseLock(bytes.NewReader(raw))
 	default:
 		return validatePolicy(raw, name), nil

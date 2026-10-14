@@ -62,6 +62,7 @@ func (l Lint) Command() *cli.Command {
 		Subcommands:  nil,
 		Flags: []cli.Flag{
 			flags.Frozen(),
+			flags.Config("select a policy config file instead of discovering easyp.yaml"),
 			flagLintDirectoryPath,
 			flagLintRoot,
 		},

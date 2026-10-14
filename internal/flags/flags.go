@@ -1,28 +1,35 @@
 package flags
 
 import (
+	"fmt"
+
 	"github.com/urfave/cli/v2"
-
-	v1 "github.com/easyp-tech/easyp/internal/config/v1"
 )
 
-const (
-	globalCategory = "global"
-)
+// ConfigName is the name of the command-local configuration file selector.
+const ConfigName = "config"
+
+// Config returns a fresh command-local --config flag. Each command decides
+// which configuration format the selected file must contain.
+func Config(usage string) *cli.StringFlag {
+	return &cli.StringFlag{Name: ConfigName, Usage: usage, TakesFile: true}
+}
+
+// ExplicitConfig returns the --config value when it was set and rejects an
+// explicitly empty selection.
+func ExplicitConfig(ctx *cli.Context) (string, bool, error) {
+	if !ctx.IsSet(ConfigName) {
+		return "", false, nil
+	}
+	path := ctx.String(ConfigName)
+	if path == "" {
+		return "", false, fmt.Errorf("--%s must not be empty", ConfigName)
+	}
+	return path, true, nil
+}
 
 // Flags.
 var (
-	Config = &cli.StringFlag{
-		Name:        "cfg",
-		Category:    globalCategory,
-		DefaultText: "specify the path to the configuration file",
-		Usage:       "Specify the absolute or relative path to the configuration file for setting up the application.",
-		Value:       v1.PolicyFile,
-		Aliases:     []string{"config"},
-		EnvVars:     []string{"EASYP_CFG"},
-		TakesFile:   true,
-	}
-
 	DebugMode = &cli.BoolFlag{
 		Name:     "debug",
 		Usage:    "Enable debug mode to get more detailed information in logs.",

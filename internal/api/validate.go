@@ -27,7 +27,7 @@ func (v Validate) Command() *cli.Command {
 		Description: "recursively validate v1 EasyP files in the current directory or a selected path",
 		UsageText:   "validate-config [--config file-or-directory] [--format json|text]",
 		Flags: []cli.Flag{
-			flags.Config,
+			flags.Config("validate one configuration file or every configuration file below a directory"),
 			flags.Format,
 		},
 		Action: v.Action,
@@ -42,7 +42,13 @@ type validateResult struct {
 
 // Action implements Handler.
 func (v Validate) Action(ctx *cli.Context) error {
-	configPath := validationTarget(ctx)
+	configPath, explicit, err := flags.ExplicitConfig(ctx)
+	if err != nil {
+		return err
+	}
+	if !explicit {
+		configPath = "."
+	}
 	if !filepath.IsAbs(configPath) {
 		wd, err := os.Getwd()
 		if err != nil {
@@ -90,15 +96,6 @@ func (v Validate) Action(ctx *cli.Context) error {
 		return ErrHasValidateIssue
 	}
 	return nil
-}
-
-func validationTarget(ctx *cli.Context) string {
-	for _, scope := range ctx.Lineage() {
-		if scope.IsSet(flags.Config.Name) {
-			return scope.String(flags.Config.Name)
-		}
-	}
-	return "."
 }
 
 func writeValidationText(output io.Writer, report validateResult) error {

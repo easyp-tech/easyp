@@ -27,7 +27,6 @@ Put them before the command: `easyp --format json lint`.
 
 | Flag | Short | Default | Env | Meaning |
 |---|---|---|---|---|
-| `--cfg`, `--config` | — | discovery | `EASYP_CFG` | Explicit `easyp.yaml` for lint/breaking; file or directory for `validate-config` |
 | `--debug` | `-d` | `false` | `EASYP_DEBUG` | Debug logs on stderr |
 | `--format` | `-f` | `text` (`json` for ls-files, validate-config) | `EASYP_FORMAT` | `text` or `json` |
 | `--frozen` | — | `false` | — | Use the existing `protobuf.mod` + `protobuf.lock` exactly. No resolution, no file writes. **Never** inferred from `CI=true`. |
@@ -46,6 +45,7 @@ easyp --format json lint > issues.jsonl
 
 | Flag | Default | Meaning |
 |---|---|---|
+| `--config` | discovery | Policy file to use instead of the nearest `easyp.yaml` (e.g. `strict.easyp.yaml`) |
 | `--path`, `-p` | `.` | Source path relative to the operation root |
 | `--root`, `-r` | policy directory | Override the operation root |
 | `--frozen` | `false` | See global flag |
@@ -70,6 +70,7 @@ easyp generate --all --descriptor_set_out_dir descriptors
 
 | Flag | Meaning |
 |---|---|
+| `--config FILE` | Use one generation file with any name, e.g. `private.easyp.gen.yaml`. Exclusive with `--project`/`--all`. Outputs stay relative to that file. |
 | `--project DIR` | Select a generator directory (repeatable). Exclusive with `--all`. |
 | `--all` | Recursively run every generator below the working directory. Skips hidden dirs, `easyp_vendor`, `node_modules`, nested Git repos. |
 | `--workspace DIR` | Root for repository-relative module selectors (default: enclosing Git repo) |
@@ -93,6 +94,7 @@ easyp --format json breaking --against HEAD~1
 | Flag | Default | Meaning |
 |---|---|---|
 | `--against` | `breaking.baseline`, then `master` | Raw Git ref (no `git:` prefix on the CLI) |
+| `--config` | discovery | Policy file, as for lint |
 | `--path`, `-p` / `--root`, `-r` | `.` / policy dir | Same as lint |
 
 - **How revisions are compared:** each revision is compiled with its *own* manifest and lock. A baseline that still has v0 config works only for projects without dependencies; otherwise the run fails with `compile baseline descriptors: … Resolve …`.
@@ -195,7 +197,7 @@ easyp validate-config --format text                     # VALID: true|false + ta
 easyp validate-config --config ./services/api           # one file or directory
 ```
 
-- **Scope:** validates `easyp.yaml`, `easyp.gen.yaml`, `protobuf.mod` and `protobuf.lock` under the selected path, **hidden directories included**. A template named `easyp.yaml` under `.agents/` or `docs/` counts as config.
+- **Scope:** validates `easyp.yaml`, `easyp.gen.yaml`, `protobuf.mod`, `protobuf.lock` and named profiles (`*.easyp.yaml`, `*.easyp.gen.yaml`) under the selected path, **hidden directories included**. A template named `easyp.yaml` under `.agents/` or `docs/` counts as config.
 - **Checks:** structure and semantics only. It does not fetch dependencies or run plugins.
 - **Exit code:** 1 when invalid. Legacy files report `legacy EasyP configuration detected`.
 
@@ -242,3 +244,4 @@ easyp completion zsh  > "${fpath[1]}/_easyp"
 | `easyp validate-config` checks one `easyp.yaml` | recursive over all v1 files |
 | `breaking --against` defaults to `master` | `breaking.baseline`, then `master` |
 | `lint/breaking -p/-r` | unchanged |
+| `easyp --cfg strict.yaml lint` (global flag) | `easyp lint --config strict.easyp.yaml` (per command) |
