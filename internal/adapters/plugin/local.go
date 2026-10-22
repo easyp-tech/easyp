@@ -56,9 +56,9 @@ func (e *LocalPluginExecutor) Execute(ctx context.Context, plugin Info, request 
 		request.Parameter = proto.String(parameter)
 	}
 
-	reqData, err := proto.Marshal(request)
+	reqData, err := marshalRequest(request)
 	if err != nil {
-		return nil, fmt.Errorf("proto.Marshal request: %w", err)
+		return nil, fmt.Errorf("marshalRequest: %w", err)
 	}
 
 	workDir, err := filepath.Abs(plugin.WorkDir)
