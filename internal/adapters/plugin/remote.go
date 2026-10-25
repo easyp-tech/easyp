@@ -5,6 +5,7 @@ import (
 	"crypto/x509"
 	"fmt"
 	"log/slog"
+	"net"
 	"net/url"
 	"strings"
 	"time"
@@ -66,7 +67,7 @@ func (e *RemotePluginExecutor) Execute(ctx context.Context, plugin Info, request
 		transportCreds = insecure.NewCredentials()
 	}
 
-	conn, err := grpc.NewClient(host, grpc.WithTransportCredentials(transportCreds))
+	conn, err := grpc.NewClient(dialTarget(host), grpc.WithTransportCredentials(transportCreds))
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to gRPC server %s: %w", host, err)
 	}
@@ -101,6 +102,20 @@ func (e *RemotePluginExecutor) Execute(ctx context.Context, plugin Info, request
 	}
 
 	return resp.CodeGeneratorResponse, nil
+}
+
+// dialTarget is the gRPC target for a plugin host: passthrough, so the system
+// resolver answers the name when the connection is made. grpc-go's default dns
+// resolver queries the nameservers itself, and on a machine whose first one
+// does not answer (a VPN's, typically) it waited about twenty seconds on every
+// connection, localhost included. A host without a port gets 443, which is
+// what that resolver assumed.
+func dialTarget(host string) string {
+	if _, _, err := net.SplitHostPort(host); err != nil {
+		host = net.JoinHostPort(strings.Trim(host, "[]"), "443")
+	}
+
+	return "passthrough:///" + host
 }
 
 // - localhost:8080/python:v1.35
