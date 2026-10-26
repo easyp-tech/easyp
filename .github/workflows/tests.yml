@@ -79,4 +79,4 @@ jobs:
           ./internal/sourceview
           ./internal/core
           ./internal/generation
-          -run 'Test(InstalledSnapshot|SnapshotVerificationWait|SourceFilesDistinguishes|FetchRetainsSnapshotForOfflineInstall|DestinationValidatorRetains|SnapshotSourceIndex|LocalSourceIndex|ImmutableWalk|MutableWalk|PrepareGenerationUsesVerifiedInventory|PrepareGenerationWithoutInventoryKeepsLocalSourcesFresh|GenerationSelectsIndexedDependencyInputs)'
+          -run 'Test(InstalledSnapshot|SnapshotVerificationWait|SnapshotStorageReadsSharedObjects|SourceFilesDistinguishes|FetchRetainsSnapshotForOfflineInstall|DestinationValidatorRetains|SnapshotSourceIndex|LocalSourceIndex|ImmutableWalk|MutableWalk|PrepareGenerationUsesVerifiedInventory|PrepareGenerationWithoutInventoryKeepsLocalSourcesFresh|GenerationSelectsIndexedDependencyInputs)'
