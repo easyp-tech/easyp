@@ -79,7 +79,7 @@ func SnapshotRevision(ctx context.Context, directory, ref string) (_ *Snapshot, 
 			_ = snapshot.Close()
 		}
 	}()
-	view := sourceview.New(tree)
+	view := sourceview.NewImmutable(tree)
 	err = view.Walk(ctx, ".", func(name string, resolved sourceview.Resolution, walkErr error) error {
 		if walkErr != nil {
 			if !snapshotInput(name) || snapshotAdditionalPolicy(name) {

@@ -87,11 +87,13 @@ mod vendor
 
 <code>EnsureLockedSources</code> may install dependencies. <code>ReadManifest</code>, <code>ReadLock</code>, <code>LocalSources</code>, and <code>CachedSources</code> do not download or rewrite project files. <code>CachedSources</code> assumes installation/hash verification has already occurred.
 
+Verified installed modules can supply an immutable regular-file inventory through the optional <code>SourceFiles</code> cache capability. <code>SourceRoots</code> uses it for dependency discovery and nested boundaries without repeated filesystem traversal. Local roots and replacements continue to resolve current filesystem state. Generation computes collision checks and file ownership together and shares the result with managed options and descriptor output.
+
 Generation, policy commands, and module operations share root/collision checks. <code>WalkProtoFiles</code> owns dependency-source traversal, including exclusion of hidden directories, vendored sources and nested module boundaries. Generator discovery and policy ancestor traversal remain separate: their inclusion and inheritance rules differ.
 
 Nested protobuf module roots are rebased by <code>module_config</code> from the nested manifest directory into the checkout directory. Import names remain relative to those roots; repository/module prefixes do not become part of an import.
 
-The Git cache lives beneath the CLI-supplied EasyP directory in <code>v1/git</code>; <code>internal/adapters/gitmodules/object_cache.go</code> maintains reusable bare object repositories with OS locks. <code>Cache.Cached</code> reads installed metadata; <code>Install</code> supplies content verification before cached metadata is trusted.
+The Git cache lives beneath the CLI-supplied EasyP directory in <code>v1/git</code>; <code>internal/adapters/gitmodules/object_cache.go</code> maintains reusable bare object repositories with OS locks. <code>Cache.Cached</code> reads installed metadata; <code>Install</code> supplies content verification before cached metadata is trusted. Successful verification and the inventory are reused within one cache handle, keyed by source, commit, content hash and selected roots. A new handle rechecks the snapshot; explicit <code>VerifyCached</code> bypasses the in-memory result. Revision resolution atomically retains completed snapshots so installation does not materialize them a second time.
 
 Local replacements use an ephemeral main-module overlay graph and never alter the shared lock. Tidy validates the overlay; get/update may edit explicit manifest requirements. Vendor copies the effective local graph without touching the lock. Explicit frozen operation verifies existing native manifests and locked graphs; automatic unknown-import-to-module discovery is intentionally not implemented.
 

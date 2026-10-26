@@ -241,6 +241,9 @@ func (r *fakeRepository) Install(context.Context, v1.Lock) error {
 	r.installed = true
 	return r.installErr
 }
+func (r *fakeRepository) VerifyCached(context.Context, v1.Lock) error {
+	return r.installErr
+}
 func (r *fakeRepository) Cached(v1.LockedModule) (string, v1.Module, error) {
 	return r.directory, r.module, r.cachedErr
 }

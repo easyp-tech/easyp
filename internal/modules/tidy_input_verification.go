@@ -3,7 +3,12 @@ package modules
 import (
 	"context"
 	"fmt"
+	"io"
+	"io/fs"
+	"os"
 	"path/filepath"
+
+	"golang.org/x/mod/sumdb/dirhash"
 
 	v1 "github.com/easyp-tech/easyp/internal/config/v1"
 )
@@ -111,12 +116,66 @@ func verifyTidyCache(ctx context.Context, lock v1.Lock, repository Repository) e
 			return fmt.Errorf("VerifyCached: %w", err)
 		}
 	} else {
-		// The base Cache contract verifies installed bytes against the lock.
-		// Callers recheck snapshots after this potentially repairing operation.
+		// Install may reuse an immutable snapshot verified earlier in the
+		// command. Tidy requires a fresh content check before rewriting inputs,
+		// including when a wrapper hides the optional explicit verifier.
 		err = repository.Install(ctx, lock)
 		if err != nil {
 			return fmt.Errorf("Install: %w", err)
 		}
+		for _, entry := range lock.Modules {
+			directory, _, err := repository.Cached(entry)
+			if err != nil {
+				return fmt.Errorf("Cached: %w", err)
+			}
+			if err := verifyTidySnapshot(ctx, directory, entry); err != nil {
+				return fmt.Errorf("verifyTidySnapshot: %w", err)
+			}
+		}
+	}
+	return nil
+}
+
+func verifyTidySnapshot(ctx context.Context, directory string, entry v1.LockedModule) error {
+	var files []string
+	err := filepath.WalkDir(directory, func(path string, item fs.DirEntry, walkErr error) error {
+		if walkErr != nil {
+			return walkErr
+		}
+		if err := ctx.Err(); err != nil {
+			return fmt.Errorf("Err: %w", err)
+		}
+		if item.IsDir() {
+			return nil
+		}
+		if !item.Type().IsRegular() {
+			return fmt.Errorf("non-regular cached path %q", path)
+		}
+		name, err := filepath.Rel(directory, path)
+		if err != nil {
+			return fmt.Errorf("Rel: %w", err)
+		}
+		files = append(files, filepath.ToSlash(name))
+		return nil
+	})
+	if err != nil {
+		return fmt.Errorf("WalkDir: %w", err)
+	}
+	actual, err := dirhash.Hash1(files, func(name string) (io.ReadCloser, error) {
+		if err := ctx.Err(); err != nil {
+			return nil, fmt.Errorf("Err: %w", err)
+		}
+		file, err := os.Open(filepath.Join(directory, filepath.FromSlash(name)))
+		if err != nil {
+			return nil, fmt.Errorf("Open: %w", err)
+		}
+		return file, nil
+	})
+	if err != nil {
+		return fmt.Errorf("Hash1: %w", err)
+	}
+	if actual != entry.Hash {
+		return fmt.Errorf("cached %s@%s hash mismatch: got %s, want %s; keep protobuf.lock unchanged", entry.Source, entry.Commit, actual, entry.Hash)
 	}
 	return nil
 }
