@@ -327,7 +327,7 @@ func sameSnapshot(before, after snapshot) bool {
 }
 
 func checkRelativeName(name string) error {
-	if !filepath.IsLocal(name) || name == "." || filepath.Clean(name) != name || strings.Contains(name, "\\") {
+	if !filepath.IsLocal(name) || name == "." || filepath.Clean(name) != name || (filepath.Separator != '\\' && strings.Contains(name, "\\")) {
 		return fmt.Errorf("unsafe relative file name %q", name)
 	}
 	return nil

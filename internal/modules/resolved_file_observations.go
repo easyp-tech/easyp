@@ -127,7 +127,7 @@ func (tx *resolvedFileObservations) capture(name string, allowed SourceRoots) (r
 }
 
 func (tx *resolvedFileObservations) readState(name string, allowed SourceRoots) (_ resolvedFileState, resultErr error) {
-	if !filepath.IsLocal(name) || name == "." || filepath.Clean(name) != name || strings.Contains(name, "\\") {
+	if !filepath.IsLocal(name) || name == "." || filepath.Clean(name) != name || (filepath.Separator != '\\' && strings.Contains(name, "\\")) {
 		return resolvedFileState{}, fmt.Errorf("unsafe relative file name %q", name)
 	}
 	view, err := sourceview.NewLocal(tx.root.FS(), tx.canonicalRoot, tx.requestedRoot)
