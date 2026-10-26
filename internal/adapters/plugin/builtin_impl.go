@@ -69,9 +69,9 @@ func (e *BuiltinPluginExecutor) Execute(ctx context.Context, plugin Info, reques
 	}
 
 	// Marshal request to protobuf
-	reqData, err := proto.Marshal(request)
+	reqData, err := marshalRequest(request)
 	if err != nil {
-		return nil, fmt.Errorf("proto.Marshal request: %w", err)
+		return nil, fmt.Errorf("marshalRequest: %w", err)
 	}
 
 	// Create buffer for stdin
