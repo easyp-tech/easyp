@@ -31,6 +31,7 @@ var (
 type View struct {
 	fsys          fs.FS
 	absoluteRoots []string
+	immutable     bool
 }
 
 // Resolution describes a target and the physical links followed to reach it.
@@ -57,6 +58,13 @@ type WalkFunc func(logical string, resolved Resolution, err error) error
 // New borrows fsys and rejects all absolute symbolic link targets.
 func New(fsys fs.FS) *View {
 	return &View{fsys: fsys}
+}
+
+// NewImmutable borrows an immutable filesystem, such as a pinned Git tree.
+// Walk may reuse resolved parent paths and directory-entry metadata. The caller
+// must keep the filesystem unchanged for the lifetime of the view.
+func NewImmutable(fsys fs.FS) *View {
+	return &View{fsys: fsys, immutable: true}
 }
 
 // NewLocal borrows fsys and accepts absolute links beneath canonicalRoot.
@@ -282,12 +290,12 @@ func (v *View) WalkSelected(ctx context.Context, logicalRoot string, selectEntry
 }
 
 func (v *View) walk(ctx context.Context, logical string, selectEntry func(string, fs.DirEntry) bool, fn WalkFunc, active map[string]bool) error {
-	err := ctx.Err()
-	if err != nil {
-		return &fs.PathError{Op: "Walk", Path: logical, Err: err}
-	}
 	resolved, resolveErr := v.Resolve(ctx, logical)
-	err = ctx.Err()
+	return v.walkResolved(ctx, logical, resolved, resolveErr, selectEntry, fn, active)
+}
+
+func (v *View) walkResolved(ctx context.Context, logical string, resolved Resolution, resolveErr error, selectEntry func(string, fs.DirEntry) bool, fn WalkFunc, active map[string]bool) error {
+	err := ctx.Err()
 	if err != nil {
 		return &fs.PathError{Op: "Walk", Path: logical, Err: err}
 	}
@@ -335,7 +343,28 @@ func (v *View) walk(ctx context.Context, logical string, selectEntry func(string
 			if selectEntry != nil && !selectEntry(child, entry) {
 				continue
 			}
-			err = v.walk(ctx, child, selectEntry, fn, active)
+			if !v.immutable || entry.Type()&fs.ModeSymlink != 0 {
+				err = v.walk(ctx, child, selectEntry, fn, active)
+			} else {
+				info, infoErr := entry.Info()
+				if infoErr == nil && info.Mode()&fs.ModeSymlink != 0 {
+					// The entry became a link after ReadDir. Resolve it through
+					// the full bounded path instead of trusting stale metadata.
+					err = v.walk(ctx, child, selectEntry, fn, active)
+				} else {
+					childResolution := Resolution{Path: joinName(resolved.Path, name), Info: info, Links: slices.Clone(resolved.Links)}
+					if infoErr == nil {
+						infoErr = validatePointer(child)
+						if infoErr == nil && !info.IsDir() && !info.Mode().IsRegular() {
+							infoErr = ErrUnsupported
+						}
+					}
+					if infoErr != nil {
+						infoErr = &fs.PathError{Op: "Walk", Path: child, Err: infoErr}
+					}
+					err = v.walkResolved(ctx, child, childResolution, infoErr, selectEntry, fn, active)
+				}
+			}
 		}
 		if errors.Is(err, fs.SkipDir) {
 			return nil

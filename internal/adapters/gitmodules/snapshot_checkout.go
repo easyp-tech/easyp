@@ -64,10 +64,15 @@ func (c *Cache) fetchWithRootSelection(ctx context.Context, source, version stri
 		return modules.Fetched{}, fmt.Errorf("ValidateLegacyMajor: %w", err)
 	}
 	var hash string
+	var files []string
 	if checkout.inspection == nil || !checkout.inspection.Provisional {
-		hash, err = hashSnapshotV1Files(checkout.snapshot)
+		files, err = snapshotV1Files(checkout.snapshot)
 		if err != nil {
-			return modules.Fetched{}, fmt.Errorf("hashSnapshotV1Files: %w", err)
+			return modules.Fetched{}, fmt.Errorf("snapshotV1Files: %w", err)
+		}
+		hash, err = hashV1Files(checkout.snapshot, files)
+		if err != nil {
+			return modules.Fetched{}, fmt.Errorf("hashV1Files: %w", err)
 		}
 	}
 	if version == "" {
@@ -77,7 +82,13 @@ func (c *Cache) fetchWithRootSelection(ctx context.Context, source, version stri
 	if err != nil {
 		return modules.Fetched{}, fmt.Errorf("resolveBSRDependencies: %w", err)
 	}
-	return modules.Fetched{Module: module, Lock: v1.LockedModule{Source: source, Version: version, Commit: checkout.commit, Hash: hash, Roots: lockedV1ModuleRoots(module, roots), BSR: bindings}, Inspection: checkout.inspection}, nil
+	entry := v1.LockedModule{Source: source, Version: version, Commit: checkout.commit, Hash: hash, Roots: lockedV1ModuleRoots(module, roots), BSR: bindings}
+	if hash != "" {
+		if err := c.retainFetchedSnapshot(ctx, checkout, entry, files); err != nil {
+			return modules.Fetched{}, fmt.Errorf("retainFetchedSnapshot: %w", err)
+		}
+	}
+	return modules.Fetched{Module: module, Lock: entry, Inspection: checkout.inspection}, nil
 }
 
 // checkoutV1ModuleWithRoots retains Git objects and an index for historical
@@ -180,10 +191,10 @@ func checkoutSnapshotCandidate(ctx context.Context, dir, source, version string,
 	return v1ModuleCheckout{dir: dir, module: module, commit: commit, snapshot: stage, inspection: inspection}, true, nil
 }
 
-func fetchPinnedV1Module(ctx context.Context, entry v1.LockedModule, cacheRoot, installed, proxy string) (err error) {
+func fetchPinnedV1Module(ctx context.Context, entry v1.LockedModule, cacheRoot, installed, proxy string) (files []string, err error) {
 	checkout, err := checkoutV1ModuleWithRoots(ctx, entry.Source, entry.Commit, cacheRoot, entry.Roots, false, proxy)
 	if err != nil {
-		return fmt.Errorf("checkoutV1ModuleWithRoots: %w", err)
+		return nil, fmt.Errorf("checkoutV1ModuleWithRoots: %w", err)
 	}
 	defer func() {
 		for _, directory := range []string{checkout.snapshot, checkout.dir} {
@@ -193,24 +204,28 @@ func fetchPinnedV1Module(ctx context.Context, entry v1.LockedModule, cacheRoot, 
 			}
 		}
 	}()
-	actual, err := hashSnapshotV1Files(checkout.snapshot)
+	files, err = snapshotV1Files(checkout.snapshot)
 	if err != nil {
-		return fmt.Errorf("hashSnapshotV1Files: %w", err)
+		return nil, fmt.Errorf("snapshotV1Files: %w", err)
+	}
+	actual, err := hashV1Files(checkout.snapshot, files)
+	if err != nil {
+		return nil, fmt.Errorf("hashV1Files: %w", err)
 	}
 	if !strings.EqualFold(checkout.commit, entry.Commit) {
-		return fmt.Errorf("%s: snapshot commit does not match lock", entry.Source)
+		return nil, fmt.Errorf("%s: snapshot commit does not match lock", entry.Source)
 	}
 	if actual != entry.Hash {
-		return fmt.Errorf("%s@%s hash mismatch: got %s, want %s; downloaded contents do not match the pinned hash; investigate repository integrity and keep protobuf.lock unchanged", entry.Source, entry.Commit, actual, entry.Hash)
+		return nil, fmt.Errorf("%s@%s hash mismatch: got %s, want %s; downloaded contents do not match the pinned hash; investigate repository integrity and keep protobuf.lock unchanged", entry.Source, entry.Commit, actual, entry.Hash)
 	}
 	if err := moduleconfig.ValidateLegacyMajor(checkout.snapshot, entry.Source, entry.Version); err != nil {
-		return fmt.Errorf("ValidateLegacyMajor: %w", err)
+		return nil, fmt.Errorf("ValidateLegacyMajor: %w", err)
 	}
 	if err := writeSourceBinding(ctx, cacheRoot, checkout.dir, entry); err != nil {
-		return fmt.Errorf("writeSourceBinding: %w", err)
+		return nil, fmt.Errorf("writeSourceBinding: %w", err)
 	}
 	if err := os.Rename(checkout.snapshot, installed); err != nil {
-		return fmt.Errorf("Rename: %w", err)
+		return nil, fmt.Errorf("Rename: %w", err)
 	}
-	return nil
+	return files, nil
 }
