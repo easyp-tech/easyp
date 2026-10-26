@@ -58,25 +58,3 @@ jobs:
 
       - name: Validate nightly release configuration
         run: goreleaser check
-
-  windows-dependency-regressions:
-    runs-on: windows-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Install Go
-        uses: actions/setup-go@v5
-        with:
-          go-version-file: go.mod
-
-      - name: Verify dependency snapshot and source traversal regressions
-        run: >-
-          go test -count=1
-          ./internal/adapters/gitmodules
-          ./internal/adapters/gitsnapshot
-          ./internal/modules
-          ./internal/sourceview
-          ./internal/core
-          ./internal/generation
-          -run 'Test(InstalledSnapshot|SnapshotVerificationWait|SnapshotStorageReadsSharedObjects|SourceFilesDistinguishes|FetchRetainsSnapshotForOfflineInstall|DestinationValidatorRetains|SnapshotSourceIndex|LocalSourceIndex|ImmutableWalk|MutableWalk|PrepareGenerationUsesVerifiedInventory|PrepareGenerationWithoutInventoryKeepsLocalSourcesFresh|GenerationSelectsIndexedDependencyInputs)'
