@@ -34,7 +34,7 @@ func prepareV1Snapshot(ctx context.Context, checkout, commit, source, subdir str
 	if err != nil {
 		return "", v1.Module{}, nil, fmt.Errorf("sourceV1SnapshotTree: %w", err)
 	}
-	view := sourceview.New(tree)
+	view := sourceview.NewImmutable(tree)
 	directory, err = os.MkdirTemp(filepath.Dir(checkout), "snapshot-*")
 	if err != nil {
 		return "", v1.Module{}, nil, fmt.Errorf("MkdirTemp: %w", err)
@@ -48,7 +48,8 @@ func prepareV1Snapshot(ctx context.Context, checkout, commit, source, subdir str
 			}
 		}
 	}()
-	inventory, err := stageSnapshotMetadata(ctx, tree, view, directory, subdir)
+	writer := newSnapshotWriter(view, directory)
+	inventory, err := stageSnapshotMetadata(ctx, tree, writer, subdir)
 	if err != nil {
 		return "", v1.Module{}, nil, fmt.Errorf("stageSnapshotMetadata: %w", err)
 	}
@@ -85,21 +86,23 @@ func prepareV1Snapshot(ctx context.Context, checkout, commit, source, subdir str
 			return "", v1.Module{}, nil, fmt.Errorf("pruneEmptySnapshotParents: %w", err)
 		}
 	}
+	// Ignored metadata may have removed directories with a different host spelling.
+	writer.destination.Reset()
 	// Stage ordinary files only after metadata has selected Buf source paths.
 	// Discarded proto names must not collide with retained names on the host.
 	for _, name := range regular {
 		if path.Ext(name) == ".proto" && len(selectV1ProtoFiles([]string{name}, module.ProtoFilters)) == 0 {
 			continue
 		}
-		if err := materializeSnapshotFile(ctx, view, directory, name); err != nil {
-			return "", v1.Module{}, nil, fmt.Errorf("materializeSnapshotFile: %w", err)
+		if err := writer.file(ctx, name); err != nil {
+			return "", v1.Module{}, nil, fmt.Errorf("file: %w", err)
 		}
 	}
-	if err := materializeSnapshotAuxiliaryAliases(ctx, view, directory, aliases); err != nil {
+	if err := materializeSnapshotAuxiliaryAliases(ctx, writer, aliases); err != nil {
 		return "", v1.Module{}, nil, fmt.Errorf("materializeSnapshotAuxiliaryAliases: %w", err)
 	}
 	if !provisional {
-		if err := materializeSelectedSnapshotAliases(ctx, view, directory, module, ignoredMetadata); err != nil {
+		if err := materializeSelectedSnapshotAliases(ctx, writer, module, ignoredMetadata, len(aliases) > 0); err != nil {
 			return "", v1.Module{}, nil, fmt.Errorf("materializeSelectedSnapshotAliases: %w", err)
 		}
 	}
@@ -109,26 +112,6 @@ func prepareV1Snapshot(ctx context.Context, checkout, commit, source, subdir str
 			return "", v1.Module{}, nil, fmt.Errorf("inspectV1Snapshot: %w", err)
 		}
 		inspection.Provisional = provisional
-	}
-	// Buf filters select the same logical paths for hashing and installation.
-	err = filepath.WalkDir(directory, func(file string, entry fs.DirEntry, walkErr error) error {
-		if walkErr != nil {
-			return walkErr
-		}
-		if entry.IsDir() || filepath.Ext(file) != ".proto" {
-			return nil
-		}
-		name, err := filepath.Rel(directory, file)
-		if err != nil {
-			return fmt.Errorf("Rel: %w", err)
-		}
-		if len(selectV1ProtoFiles([]string{filepath.ToSlash(name)}, module.ProtoFilters)) == 0 {
-			return os.Remove(file)
-		}
-		return nil
-	})
-	if err != nil {
-		return "", v1.Module{}, nil, fmt.Errorf("WalkDir: %w", err)
 	}
 	return directory, module, inspection, nil
 }
@@ -160,18 +143,19 @@ func pruneEmptySnapshotParents(directory, name string) error {
 
 // stageSnapshotMetadata discovers immutable metadata before source filtering.
 // Failed markers preserve ownership and parser precedence without pointer reads.
-func stageSnapshotMetadata(ctx context.Context, tree *gitsnapshot.FS, view *sourceview.View, directory, subdir string) (snapshotInventory, error) {
+func stageSnapshotMetadata(ctx context.Context, tree *gitsnapshot.FS, writer *snapshotWriter, subdir string) (snapshotInventory, error) {
+	view := writer.view
 	var aliases, regular []string
 	var metadataFailures []snapshotMetadataFailure
 	failedMarker := func(name string, cause error) error {
 		failure := snapshotMetadataFailure{name: name, err: cause}
-		err := makeSnapshotDirectory(directory, name)
+		err := writer.mkdir(name)
 		if errors.Is(err, gitsnapshot.ErrPathCollision) {
 			// A failed alias has no retained bytes. Keep its witness separate
 			// if the host cannot represent it beside staged metadata.
 			failure.unstaged = true
 		} else if err != nil {
-			return fmt.Errorf("makeSnapshotDirectory: %w", err)
+			return fmt.Errorf("mkdir: %w", err)
 		}
 		metadataFailures = append(metadataFailures, failure)
 		return nil
@@ -203,7 +187,7 @@ func stageSnapshotMetadata(ctx context.Context, tree *gitsnapshot.FS, view *sour
 			}
 			return nil
 		}
-		return materializeSnapshotFile(ctx, view, directory, name)
+		return writer.file(ctx, name)
 	})
 	if err != nil {
 		return snapshotInventory{}, fmt.Errorf("WalkDir: %w", err)
@@ -248,7 +232,7 @@ func stageSnapshotMetadata(ctx context.Context, tree *gitsnapshot.FS, view *sour
 					return nil
 				}
 				if moduleconfig.IsGitDependencyConfigFile(path.Base(logical)) && !snapshotMetadataExcluded(logical, subdir) {
-					return materializeSnapshotFile(ctx, view, directory, logical)
+					return writer.file(ctx, logical)
 				}
 				return nil
 			})
@@ -258,8 +242,8 @@ func stageSnapshotMetadata(ctx context.Context, tree *gitsnapshot.FS, view *sour
 			continue
 		}
 		if moduleconfig.IsGitDependencyConfigFile(path.Base(name)) {
-			if err := materializeSnapshotFile(ctx, view, directory, name); err != nil {
-				return snapshotInventory{}, fmt.Errorf("materializeSnapshotFile: %w", err)
+			if err := writer.file(ctx, name); err != nil {
+				return snapshotInventory{}, fmt.Errorf("file: %w", err)
 			}
 		}
 	}
@@ -268,13 +252,14 @@ func stageSnapshotMetadata(ctx context.Context, tree *gitsnapshot.FS, view *sour
 
 // materializeSelectedSnapshotAliases validates declared roots and copies aliases
 // selected by source ownership and Buf filters. Auxiliary links are handled separately.
-func materializeSelectedSnapshotAliases(ctx context.Context, view *sourceview.View, directory string, module v1.Module, ignoredMetadata map[string]bool) error {
+func materializeSelectedSnapshotAliases(ctx context.Context, writer *snapshotWriter, module v1.Module, ignoredMetadata map[string]bool, hasAliases bool) error {
+	view, directory := writer.view, writer.directory
 	for _, root := range module.Roots {
 		logicalRoot := filepath.ToSlash(root)
 		resolution, resolveErr := view.Resolve(ctx, logicalRoot)
 		if resolveErr != nil {
 			if errors.Is(resolveErr, fs.ErrNotExist) && len(resolution.Links) == 0 {
-				if err := makeSnapshotDirectory(directory, root); err != nil {
+				if err := writer.mkdir(root); err != nil {
 					return fmt.Errorf("MkdirAll: %w", err)
 				}
 				continue
@@ -284,8 +269,11 @@ func materializeSelectedSnapshotAliases(ctx context.Context, view *sourceview.Vi
 		if !resolution.Info.IsDir() {
 			return fmt.Errorf("module %s has invalid root %q: not a directory", module.Name, root)
 		}
-		if err := makeSnapshotDirectory(directory, root); err != nil {
+		if err := writer.mkdir(root); err != nil {
 			return fmt.Errorf("MkdirAll: %w", err)
+		}
+		if !hasAliases {
+			continue
 		}
 		err := view.WalkSelected(ctx, logicalRoot, snapshotSourceCandidate, func(logical string, resolved sourceview.Resolution, walkErr error) error {
 			if ignoredMetadata[logical] {
@@ -317,7 +305,7 @@ func materializeSelectedSnapshotAliases(ctx context.Context, view *sourceview.Vi
 			if !snapshotSelectedAlias(logical, module) {
 				return nil
 			}
-			return materializeSnapshotFile(ctx, view, directory, logical)
+			return writer.file(ctx, logical)
 		})
 		if err != nil {
 			return fmt.Errorf("Walk: root %q: %w", root, err)
@@ -331,7 +319,7 @@ func sourceV1SnapshotView(ctx context.Context, checkout, commit string) (*source
 	if err != nil {
 		return nil, fmt.Errorf("sourceV1SnapshotTree: %w", err)
 	}
-	return sourceview.New(tree), nil
+	return sourceview.NewImmutable(tree), nil
 }
 
 func sourceV1SnapshotTree(ctx context.Context, checkout, commit string) (*gitsnapshot.FS, error) {
@@ -420,7 +408,8 @@ func snapshotFailedMetadataOwnsSources(name, directory string, module v1.Module)
 // materializeSnapshotAuxiliaryAliases retains bounded regular non-proto aliases.
 // Consumers can select arbitrary policy fragments; Fetch has no consumer context
 // with which to narrow those paths. Failed auxiliary aliases remain omitted.
-func materializeSnapshotAuxiliaryAliases(ctx context.Context, view *sourceview.View, directory string, aliases []string) error {
+func materializeSnapshotAuxiliaryAliases(ctx context.Context, writer *snapshotWriter, aliases []string) error {
+	view := writer.view
 	for _, name := range aliases {
 		resolved, err := view.Resolve(ctx, name)
 		if err != nil {
@@ -437,7 +426,7 @@ func materializeSnapshotAuxiliaryAliases(ctx context.Context, view *sourceview.V
 				if resolved.Info.IsDir() || !snapshotConfigFile(logical) {
 					return nil
 				}
-				return materializeSnapshotFile(ctx, view, directory, logical)
+				return writer.file(ctx, logical)
 			})
 			if err != nil {
 				return fmt.Errorf("Walk: %w", err)
@@ -447,8 +436,8 @@ func materializeSnapshotAuxiliaryAliases(ctx context.Context, view *sourceview.V
 		if !snapshotConfigFile(name) {
 			continue
 		}
-		if err := materializeSnapshotFile(ctx, view, directory, name); err != nil {
-			return fmt.Errorf("materializeSnapshotFile: %w", err)
+		if err := writer.file(ctx, name); err != nil {
+			return fmt.Errorf("file: %w", err)
 		}
 	}
 	return nil
@@ -528,8 +517,18 @@ func snapshotExcludedDirectory(name, root, directory string, module v1.Module) b
 	return true
 }
 
-func materializeSnapshotFile(ctx context.Context, view *sourceview.View, directory, name string) error {
-	file, err := view.Open(ctx, name)
+type snapshotWriter struct {
+	view        *sourceview.View
+	directory   string
+	destination *gitsnapshot.DestinationValidator
+}
+
+func newSnapshotWriter(view *sourceview.View, directory string) *snapshotWriter {
+	return &snapshotWriter{view: view, directory: directory, destination: gitsnapshot.NewDestinationValidator(directory)}
+}
+
+func (writer *snapshotWriter) file(ctx context.Context, name string) error {
+	file, err := writer.view.Open(ctx, name)
 	if err != nil {
 		return fmt.Errorf("Open: %w", err)
 	}
@@ -542,8 +541,8 @@ func materializeSnapshotFile(ctx context.Context, view *sourceview.View, directo
 		_ = file.Close()
 		return fmt.Errorf("non-regular snapshot file %q", name)
 	}
-	destination := filepath.Join(directory, filepath.FromSlash(name))
-	if err := gitsnapshot.ValidateDestination(directory, name); err != nil {
+	destination := filepath.Join(writer.directory, filepath.FromSlash(name))
+	if err := writer.destination.Validate(name); err != nil {
 		closeErr := file.Close()
 		return errors.Join(fmt.Errorf("ValidateDestination: %w", err), closeErr)
 	}
@@ -561,16 +560,18 @@ func materializeSnapshotFile(ctx context.Context, view *sourceview.View, directo
 	if err := errors.Join(copyErr, closeErr, ctx.Err()); err != nil {
 		return fmt.Errorf("Copy: %w", err)
 	}
+	writer.destination.Record(name)
 	return nil
 }
 
-func makeSnapshotDirectory(directory, name string) error {
-	if err := gitsnapshot.ValidateDestination(directory, name); err != nil {
+func (writer *snapshotWriter) mkdir(name string) error {
+	if err := writer.destination.Validate(name); err != nil {
 		return fmt.Errorf("ValidateDestination: %w", err)
 	}
-	if err := os.MkdirAll(filepath.Join(directory, filepath.FromSlash(name)), 0o755); err != nil {
+	if err := os.MkdirAll(filepath.Join(writer.directory, filepath.FromSlash(name)), 0o755); err != nil {
 		return fmt.Errorf("MkdirAll: %w", err)
 	}
+	writer.destination.Record(name)
 	return nil
 }
 

@@ -50,13 +50,15 @@ func resolveFrozenGenerationModule(ctx context.Context, cache modules.Cache, rep
 		if err != nil {
 			return v1GenerationModule{}, fmt.Errorf("Cached: %w", err)
 		}
-		var others modules.SourceRoots
+		var sources, others modules.SourceRoots
 		for _, root := range consumer.dependencies {
 			if root.Module != selection.source {
 				others = append(others, root)
+			} else {
+				sources = append(sources, root)
 			}
 		}
-		return v1GenerationModule{directory: directory, resolutionDir: consumerDir, module: module, dependencies: others}, nil
+		return v1GenerationModule{directory: directory, resolutionDir: consumerDir, module: module, sources: sources, dependencies: others}, nil
 	}
 	localDir, err := findV1LocalModuleByName(repoRoot, selection.source)
 	if err != nil {

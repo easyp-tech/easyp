@@ -91,6 +91,7 @@ type v1GenerationModule struct {
 	resolutionDir string
 	directory     string
 	module        v1.Module
+	sources       modules.SourceRoots
 	dependencies  modules.SourceRoots
 }
 
@@ -134,13 +135,15 @@ func resolveV1GenerationModule(ctx context.Context, cache modules.Cache, repoRoo
 			return v1GenerationModule{}, fmt.Errorf("EnsureEffectiveGraph: %w", err)
 		}
 		if selected, ok := graph.Modules[selection.source]; ok {
-			var others modules.SourceRoots
+			var sources, others modules.SourceRoots
 			for _, root := range graph.Sources {
 				if root.Module != selection.source {
 					others = append(others, root)
+				} else {
+					sources = append(sources, root)
 				}
 			}
-			return v1GenerationModule{directory: selected.Directory, resolutionDir: consumerDir, module: selected.Module, dependencies: others}, nil
+			return v1GenerationModule{directory: selected.Directory, resolutionDir: consumerDir, module: selected.Module, sources: sources, dependencies: others}, nil
 		}
 		for _, replacement := range consumer.Replaces {
 			if replacement.Module == selection.source {
@@ -180,12 +183,15 @@ func resolveV1GenerationModule(ctx context.Context, cache modules.Cache, repoRoo
 	}
 
 	otherRoots := make(modules.SourceRoots, 0, len(dependencyRoots))
+	var sources modules.SourceRoots
 	for _, root := range dependencyRoots {
 		if root.Module != selection.source {
 			otherRoots = append(otherRoots, root)
+		} else {
+			sources = append(sources, root)
 		}
 	}
-	return v1GenerationModule{directory: moduleDir, resolutionDir: consumerDir, module: module, dependencies: otherRoots}, nil
+	return v1GenerationModule{directory: moduleDir, resolutionDir: consumerDir, module: module, sources: sources, dependencies: otherRoots}, nil
 }
 
 func readV1GenerationModule(ctx context.Context, cache modules.Cache, directory string) (v1GenerationModule, error) {

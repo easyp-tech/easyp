@@ -20,8 +20,8 @@ func v1ModuleCachePath(cacheRoot string, entry v1.LockedModule) string {
 	return filepath.Join(cacheRoot, "modules", v1CacheSourceKey(entry.Source), v1CacheSourceKey(identity))
 }
 
-// Install installs each locked Git commit, verifying its content hash
-// before accepting a downloaded or already cached module.
+// Install installs each locked Git commit and verifies its contents once per
+// cache handle. Installed snapshots are immutable for the command's lifetime.
 func (c *Cache) Install(ctx context.Context, lock v1.Lock) error {
 	return c.install(ctx, lock, true)
 }
@@ -57,7 +57,20 @@ func (c *Cache) installEntry(ctx context.Context, entry v1.LockedModule, acquire
 	finish := gitcommand.Start(ctx, "install module")
 	defer func() { finish(err) }()
 	installed := v1ModuleCachePath(c.root, entry)
+	snapshot := c.snapshotState(installed)
+	if err := snapshot.lock(ctx); err != nil {
+		return fmt.Errorf("lock: %w", err)
+	}
+	defer snapshot.unlock()
+	if !acquire {
+		// Explicit read-only verification must not reuse an earlier success.
+		// A failed check also invalidates later Install and SourceFiles calls.
+		snapshot.verified = false
+	}
 	info, err := os.Lstat(installed)
+	if err != nil || !os.SameFile(snapshot.identity, info) {
+		snapshot.verified = false
+	}
 	if errors.Is(err, os.ErrNotExist) {
 		if !acquire {
 			return fmt.Errorf("policy module %s@%s is not cached; run easyp mod download before validate-config: %w", entry.Source, entry.Commit, err)
@@ -76,8 +89,12 @@ func (c *Cache) installEntry(ctx context.Context, entry v1.LockedModule, acquire
 		// rather than racing a second rename into the same cache directory.
 		info, err = os.Lstat(installed)
 		if errors.Is(err, os.ErrNotExist) {
-			if err := fetchPinnedV1Module(ctx, entry, c.root, installed, c.proxy); err != nil {
-				return err
+			files, fetchErr := fetchPinnedV1Module(ctx, entry, c.root, installed, c.proxy)
+			if fetchErr != nil {
+				return fetchErr
+			}
+			if err := snapshot.accept(installed, files); err != nil {
+				return fmt.Errorf("accept: %w", err)
 			}
 			info, err = os.Lstat(installed)
 		}
@@ -88,10 +105,16 @@ func (c *Cache) installEntry(ctx context.Context, entry v1.LockedModule, acquire
 	if !info.IsDir() {
 		return fmt.Errorf("%s: cached path %q is not a directory; inspect this path and keep protobuf.lock unchanged", entry.Source, installed)
 	}
-	if err := verifyInstalledV1Module(installed, entry, acquire); err != nil {
-		return fmt.Errorf("verify cached %s at %q: %w", entry.Source, installed, err)
+	if !snapshot.verified {
+		files, err := verifiedSnapshotFiles(installed, entry, acquire)
+		if err != nil {
+			return fmt.Errorf("verify cached %s at %q: %w", entry.Source, installed, err)
+		}
+		snapshot.files, snapshot.identity = files, info
+		snapshot.verified = true
 	}
 	if err := moduleconfig.ValidateLegacyMajor(installed, entry.Source, entry.Version); err != nil {
+		snapshot.verified = false
 		return fmt.Errorf("ValidateLegacyMajor: %w", err)
 	}
 	return nil

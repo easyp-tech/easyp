@@ -25,7 +25,6 @@ import (
 
 	pluginexecutor "github.com/easyp-tech/easyp/internal/adapters/plugin"
 	"github.com/easyp-tech/easyp/internal/core/path_helpers"
-	"github.com/easyp-tech/easyp/internal/fs/fs"
 	"github.com/easyp-tech/easyp/internal/sourceview"
 	"github.com/easyp-tech/easyp/internal/version"
 )
@@ -85,14 +84,15 @@ func (c *Core) prepareGeneration(ctx context.Context, root string, selected []st
 	found := make(map[string]bool)
 
 	for _, inputFilesDir := range c.inputs.InputFilesDir {
-		searchPath := filepath.Join(inputFilesDir.Root, inputFilesDir.Path)
-		fsWalker := fs.NewFSWalker(root, searchPath)
 		importRoot := filepath.Join(root, inputFilesDir.Root)
 		if !slices.Contains(imports, importRoot) {
 			imports = append(imports, importRoot)
 		}
 
-		err := fsWalker.WalkDir(func(walkPath string, err error) error {
+		err := c.walkGenerationInputs(root, inputFilesDir, func(walkPath string, err error, indexed bool) error {
+			if err := ctx.Err(); err != nil {
+				return err
+			}
 			addedFile := stripPrefix(walkPath, inputFilesDir.Root)
 			if selected != nil && filepath.Ext(walkPath) == ".proto" && !selection[addedFile] {
 				return nil
@@ -108,7 +108,7 @@ func (c *Core) prepareGeneration(ctx context.Context, root string, selected []st
 				return err
 			case ctx.Err() != nil:
 				return ctx.Err()
-			case path_helpers.ShouldSkipV1SourceDir(importRoot, filepath.Join(root, walkPath)):
+			case !indexed && path_helpers.ShouldSkipV1SourceDir(importRoot, filepath.Join(root, walkPath)):
 				return stdfs.SkipDir
 			case filepath.Ext(walkPath) != ".proto":
 				return nil
@@ -130,7 +130,7 @@ func (c *Core) prepareGeneration(ctx context.Context, root string, selected []st
 			return nil
 		})
 		if err != nil {
-			return nil, fmt.Errorf("WalkDir: %w", err)
+			return nil, fmt.Errorf("walkGenerationInputs: %w", err)
 		}
 	}
 

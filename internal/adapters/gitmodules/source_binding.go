@@ -48,6 +48,10 @@ func writeSourceBinding(ctx context.Context, root, checkout string, entry v1.Loc
 		return fmt.Errorf("gitV1: %w", err)
 	}
 	repository := strings.TrimSpace(data)
+	return writeSourceBindingRepository(root, repository, entry)
+}
+
+func writeSourceBindingRepository(root, repository string, entry v1.LockedModule) (err error) {
 	objectsRoot, err := filepath.Abs(filepath.Join(root, "objects"))
 	if err != nil {
 		return fmt.Errorf("Abs: %w", err)

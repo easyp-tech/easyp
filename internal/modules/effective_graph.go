@@ -63,8 +63,14 @@ func ensureEffectiveGraphWithRoots(ctx context.Context, root string, module v1.M
 	if err != nil {
 		return graph, fmt.Errorf("finalizeEffectiveImportRoots: %w", err)
 	}
-	appendModule := func(name string, entry EffectiveModule) error {
-		roots, err := ModuleSources(entry.Directory, entry.Module)
+	appendModule := func(name string, entry EffectiveModule, locked *v1.LockedModule) error {
+		var roots SourceRoots
+		var err error
+		if locked == nil {
+			roots, err = ModuleSources(entry.Directory, entry.Module)
+		} else {
+			roots, err = cachedModuleSources(entry.Directory, entry.Module, *locked, cache)
+		}
 		if err != nil {
 			return fmt.Errorf("ModuleSources: %s: %w", name, err)
 		}
@@ -73,7 +79,7 @@ func ensureEffectiveGraphWithRoots(ctx context.Context, root string, module v1.M
 		return nil
 	}
 	for _, name := range pass.locals {
-		if err := appendModule(name, locals.modules[name]); err != nil {
+		if err := appendModule(name, locals.modules[name], nil); err != nil {
 			return graph, err
 		}
 	}
@@ -82,7 +88,7 @@ func ensureEffectiveGraphWithRoots(ctx context.Context, root string, module v1.M
 		if err != nil {
 			return graph, fmt.Errorf("installed: %w", err)
 		}
-		if err := appendModule(entry.Source, selected); err != nil {
+		if err := appendModule(entry.Source, selected, &entry); err != nil {
 			return graph, err
 		}
 	}
