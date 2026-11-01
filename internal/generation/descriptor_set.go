@@ -55,6 +55,7 @@ func generateV1DescriptorSet(ctx context.Context, log logger.Logger, cache modul
 }
 
 func prepareDescriptorTargets(ctx context.Context, log logger.Logger, cache modules.Cache, request Request, targets []generationTarget) ([]preparedDescriptorTarget, error) {
+	index := newV1WorkspaceModuleIndex(request.WorkspaceRoot)
 	prepared := make([]preparedDescriptorTarget, 0, len(targets))
 	seen := make(map[string]v1ModuleSelection)
 	requested := make(map[string]*sourceSelectorMatches)
@@ -67,7 +68,7 @@ func prepareDescriptorTargets(ctx context.Context, log logger.Logger, cache modu
 		if err := ctx.Err(); err != nil {
 			return nil, err
 		}
-		selected, err := resolveV1GenerationModule(ctx, cache, request.WorkspaceRoot, filepath.Dir(target.configPath), target.module, request.Frozen)
+		selected, err := resolveV1GenerationModuleWithIndex(ctx, cache, request.WorkspaceRoot, filepath.Dir(target.configPath), target.module, request.Frozen, index)
 		if err != nil {
 			return nil, fmt.Errorf("resolveV1GenerationModule for %s: %w", target.configPath, err)
 		}

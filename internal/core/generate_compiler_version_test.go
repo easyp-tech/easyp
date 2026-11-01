@@ -6,6 +6,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
 
 	"google.golang.org/protobuf/proto"
@@ -16,11 +17,20 @@ import (
 )
 
 type captureExecutor struct {
-	requests []*pluginpb.CodeGeneratorRequest
+	mu               sync.Mutex
+	requests         []*pluginpb.CodeGeneratorRequest
+	requestsBySource map[string]*pluginpb.CodeGeneratorRequest
 }
 
-func (c *captureExecutor) Execute(_ context.Context, _ pluginexecutor.Info, request *pluginpb.CodeGeneratorRequest) (*pluginpb.CodeGeneratorResponse, error) {
-	c.requests = append(c.requests, proto.Clone(request).(*pluginpb.CodeGeneratorRequest))
+func (c *captureExecutor) Execute(_ context.Context, info pluginexecutor.Info, request *pluginpb.CodeGeneratorRequest) (*pluginpb.CodeGeneratorResponse, error) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	request = proto.Clone(request).(*pluginpb.CodeGeneratorRequest)
+	c.requests = append(c.requests, request)
+	if c.requestsBySource == nil {
+		c.requestsBySource = make(map[string]*pluginpb.CodeGeneratorRequest)
+	}
+	c.requestsBySource[info.Source] = request
 	return &pluginpb.CodeGeneratorResponse{}, nil
 }
 

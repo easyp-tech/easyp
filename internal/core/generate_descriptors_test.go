@@ -2,6 +2,7 @@ package core
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
@@ -72,7 +73,7 @@ func TestGenerateDescriptors(t *testing.T) {
 			writeGenerationSources(t, root, tt.files)
 			plugins := make([]Plugin, len(tt.withImports))
 			for i, withImports := range tt.withImports {
-				plugins[i] = Plugin{Source: PluginSource{Name: "custom-plugin"}, WithImports: withImports}
+				plugins[i] = Plugin{Source: PluginSource{Name: fmt.Sprintf("custom-plugin-%d", i)}, WithImports: withImports}
 			}
 			executor := &captureExecutor{}
 			app := testCoreWithPlugins(plugins, executor)
@@ -82,7 +83,9 @@ func TestGenerateDescriptors(t *testing.T) {
 
 			require.NoError(t, err)
 			require.Len(t, executor.requests, len(tt.wantGenerated))
-			for i, request := range executor.requests {
+			for i, plugin := range plugins {
+				request := executor.requestsBySource[plugin.Source.Name]
+				require.NotNil(t, request)
 				assert.Equal(t, tt.wantOrder, descriptorNames(request.GetProtoFile()))
 				assert.Equal(t, tt.wantGenerated[i], request.GetFileToGenerate())
 			}

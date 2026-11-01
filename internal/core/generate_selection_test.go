@@ -20,8 +20,8 @@ func TestPrepareGenerationFilesKeepsClosureAndPluginSelections(t *testing.T) {
 	})
 	executor := &captureExecutor{}
 	app := New(Options{Logger: logger.NewNop(), Inputs: Inputs{InputFilesDir: []InputFilesDir{{Root: ".", Path: "."}}}, Plugins: []Plugin{
-		{Source: PluginSource{Name: "custom-plugin"}, WithImports: true},
-		{Source: PluginSource{Name: "custom-plugin"}},
+		{Source: PluginSource{Name: "with-imports"}, WithImports: true},
+		{Source: PluginSource{Name: "without-imports"}},
 	}})
 	app.localExecutor = executor
 	plan, err := app.PrepareGenerationFiles(t.Context(), root, []string{"api/first.proto", "api/second.proto"})
@@ -30,8 +30,8 @@ func TestPrepareGenerationFilesKeepsClosureAndPluginSelections(t *testing.T) {
 	assert.Equal(t, []string{"api/first.proto", "api/second.proto"}, descriptorNames(plan.DescriptorSet(false).File))
 	require.NoError(t, plan.Execute(t.Context()))
 	require.Len(t, executor.requests, 2)
-	assert.ElementsMatch(t, []string{"api/first.proto", "api/second.proto", "shared.proto"}, executor.requests[0].FileToGenerate)
-	assert.Equal(t, []string{"api/first.proto", "api/second.proto"}, executor.requests[1].FileToGenerate)
+	assert.ElementsMatch(t, []string{"api/first.proto", "api/second.proto", "shared.proto"}, executor.requestsBySource["with-imports"].FileToGenerate)
+	assert.Equal(t, []string{"api/first.proto", "api/second.proto"}, executor.requestsBySource["without-imports"].FileToGenerate)
 	_, err = app.PrepareGenerationFiles(t.Context(), root, []string{"absent.proto"})
 	require.ErrorContains(t, err, "outside the module inputs")
 	_, err = app.PrepareGenerationFiles(t.Context(), root, nil)

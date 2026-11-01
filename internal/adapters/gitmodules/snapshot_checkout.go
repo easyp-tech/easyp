@@ -43,7 +43,15 @@ func (c *Cache) FetchForRootResolution(ctx context.Context, source, version stri
 	return fetched, nil
 }
 
-func (c *Cache) fetchWithRootSelection(ctx context.Context, source, version string, roots []string, inspect bool) (fetched modules.Fetched, err error) {
+func (c *Cache) fetchWithRootSelection(ctx context.Context, source, version string, roots []string, inspect bool) (modules.Fetched, error) {
+	fetched, err := c.fetchSnapshot(ctx, source, version, roots, inspect, false)
+	if err != nil {
+		return modules.Fetched{}, fmt.Errorf("fetchSnapshot: %w", err)
+	}
+	return fetched, nil
+}
+
+func (c *Cache) fetchSnapshot(ctx context.Context, source, version string, roots []string, inspect, deferBSR bool) (fetched modules.Fetched, err error) {
 	ctx = c.operationContext(ctx, source, version)
 	finish := gitcommand.Start(ctx, "resolve module")
 	defer func() { finish(err) }()
@@ -78,14 +86,24 @@ func (c *Cache) fetchWithRootSelection(ctx context.Context, source, version stri
 	if version == "" {
 		version = checkout.commit
 	}
-	module, bindings, err := c.resolveBSRDependencies(ctx, checkout.module)
-	if err != nil {
-		return modules.Fetched{}, fmt.Errorf("resolveBSRDependencies: %w", err)
+	module := checkout.module
+	var bindings []v1.BSRResolution
+	if !deferBSR {
+		module, bindings, err = c.resolveBSRDependencies(ctx, module)
+		if err != nil {
+			return modules.Fetched{}, fmt.Errorf("resolveBSRDependencies: %w", err)
+		}
 	}
 	entry := v1.LockedModule{Source: source, Version: version, Commit: checkout.commit, Hash: hash, Roots: lockedV1ModuleRoots(module, roots), BSR: bindings}
 	if hash != "" {
 		if err := c.retainFetchedSnapshot(ctx, checkout, entry, files); err != nil {
 			return modules.Fetched{}, fmt.Errorf("retainFetchedSnapshot: %w", err)
+		}
+	} else if deferBSR {
+		// Root inference consumes this same exact revision later. Retain its
+		// immutable objects even though no complete snapshot can be installed.
+		if err := retainFetchedSource(ctx, c.root, checkout.dir, entry); err != nil {
+			return modules.Fetched{}, fmt.Errorf("retainFetchedSource: %w", err)
 		}
 	}
 	return modules.Fetched{Module: module, Lock: entry, Inspection: checkout.inspection}, nil

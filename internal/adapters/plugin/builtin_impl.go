@@ -10,10 +10,8 @@ import (
 	"log/slog"
 
 	"github.com/tetratelabs/wazero"
-	"github.com/tetratelabs/wazero/api"
 	"github.com/tetratelabs/wazero/experimental"
 	"github.com/tetratelabs/wazero/imports/wasi_snapshot_preview1"
-	"github.com/tetratelabs/wazero/sys"
 	"github.com/wasilibs/wazero-helpers/allocator"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/pluginpb"
@@ -94,40 +92,82 @@ func (e *BuiltinPluginExecutor) Execute(ctx context.Context, plugin Info, reques
 
 // runWasmPlugin runs WASM module with custom stdin/stdout
 func (e *BuiltinPluginExecutor) runWasmPlugin(ctx context.Context, pluginName string, stdin io.Reader) (output []byte, runErr error) {
-	// Get WASM module and arguments for the plugin
 	wasmBin, args, err := getWasmModule(pluginName)
 	if err != nil {
-		return nil, fmt.Errorf("get wasm module for plugin %s: %w", pluginName, err)
+		return nil, fmt.Errorf("getWasmModule: %w", err)
+	}
+	return runBuiltinModule(ctx, wasmBin, args, stdin)
+}
+
+func runBuiltinModule(ctx context.Context, binary []byte, args []string, stdin io.Reader) (output []byte, runErr error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+	ctx, owner := EnsureBuiltinRun(ctx)
+	if owner != nil {
+		defer func() {
+			err := owner.Close(context.WithoutCancel(ctx))
+			if err != nil {
+				output = nil
+				runErr = errors.Join(runErr, fmt.Errorf("Close: %w", err))
+			}
+		}()
+	}
+	run := ctx.Value(builtinRunContextKey{}).(*BuiltinRun)
+	err := run.acquire(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("acquire: %w", err)
+	}
+	defer run.work.Done()
+
+	ctx, cancel := context.WithCancel(ctx)
+	stop := context.AfterFunc(run.ctx, cancel)
+	defer func() {
+		stop()
+		cancel()
+	}()
+
+	var memory wazero.CompiledModule
+	if len(wasmMemory) > 0 {
+		memory, err = run.compiledModule(ctx, wasmMemory)
+		if err != nil {
+			return nil, fmt.Errorf("compiledModule: %w", err)
+		}
+	}
+	module, err := run.compiledModule(ctx, binary)
+	if err != nil {
+		return nil, fmt.Errorf("compiledModule: %w", err)
 	}
 
-	// Create context with allocator
 	ctx = experimental.WithMemoryAllocator(ctx, allocator.NewNonMoving())
-
-	// Create wazero runtime
-	rt := wazero.NewRuntimeWithConfig(ctx, wazero.NewRuntimeConfig().WithCoreFeatures(api.CoreFeaturesV2|experimental.CoreFeaturesThreads))
+	rt := run.runtimeFactory(ctx, run.config)
 
 	// A failed runtime close must not turn into successful generated output.
 	defer func() {
-		if err := rt.Close(ctx); err != nil {
+		err := rt.Close(context.WithoutCancel(ctx))
+		if err != nil {
 			output = nil
 			runErr = errors.Join(runErr, fmt.Errorf("Close: %w", err))
 		}
 	}()
 
-	// Instantiate WASI
-	wasi_snapshot_preview1.MustInstantiate(ctx, rt)
+	_, err = wasi_snapshot_preview1.Instantiate(ctx, rt)
+	if err != nil {
+		return nil, fmt.Errorf("Instantiate: %w", err)
+	}
 
-	// Instantiate memory module
-	if len(wasmMemory) > 0 {
-		if _, err = rt.InstantiateWithConfig(ctx, wasmMemory, wazero.NewModuleConfig().WithName("env")); err != nil {
-			return nil, fmt.Errorf("failed to instantiate memory module: %w", err)
+	if memory != nil {
+		_, err = rt.InstantiateModule(ctx, memory, wazero.NewModuleConfig().WithName("env"))
+		if err != nil {
+			return nil, fmt.Errorf("InstantiateModule: %w", err)
 		}
 	}
 
 	// Read stdin into buffer
 	var stdinBuf bytes.Buffer
-	if _, err = io.Copy(&stdinBuf, stdin); err != nil {
-		return nil, fmt.Errorf("failed to read stdin: %w", err)
+	_, err = io.Copy(&stdinBuf, stdin)
+	if err != nil {
+		return nil, fmt.Errorf("Copy: %w", err)
 	}
 
 	// Create buffer for stdout
@@ -145,12 +185,12 @@ func (e *BuiltinPluginExecutor) runWasmPlugin(ctx context.Context, pluginName st
 		WithArgs(args...)
 
 	// Instantiate WASM module
-	_, err = rt.InstantiateWithConfig(ctx, wasmBin, cfg)
+	_, err = rt.InstantiateModule(ctx, module, cfg)
 	if err != nil {
-		if sErr, ok := err.(*sys.ExitError); ok { //nolint:errorlint
-			return nil, fmt.Errorf("wasm plugin exited with code %d", sErr.ExitCode())
+		if ctx.Err() != nil {
+			err = errors.Join(err, ctx.Err())
 		}
-		return nil, fmt.Errorf("failed to instantiate wasm module: %w", err)
+		return nil, fmt.Errorf("InstantiateModule: %w", err)
 	}
 
 	return stdoutBuf.Bytes(), nil

@@ -10,7 +10,10 @@ import (
 	"github.com/easyp-tech/easyp/internal/adapters/gitcommand"
 	moduleconfig "github.com/easyp-tech/easyp/internal/adapters/module_config"
 	v1 "github.com/easyp-tech/easyp/internal/config/v1"
+	"github.com/easyp-tech/easyp/internal/parallel"
 )
+
+const moduleAcquisitionLimit = 8
 
 func v1ModuleCachePath(cacheRoot string, entry v1.LockedModule) string {
 	identity := entry.Commit + ":" + entry.Hash
@@ -41,13 +44,11 @@ func (c *Cache) install(ctx context.Context, lock v1.Lock, acquire bool) error {
 	if err := lock.Validate(); err != nil {
 		return fmt.Errorf("Validate: %w", err)
 	}
-	for _, entry := range lock.Modules {
-		if err := ctx.Err(); err != nil {
-			return fmt.Errorf("Err: %w", err)
-		}
-		if err := c.installEntry(ctx, entry, acquire); err != nil {
-			return err
-		}
+	err := parallel.Run(ctx, len(lock.Modules), moduleAcquisitionLimit, func(index int) error {
+		return c.installEntry(ctx, lock.Modules[index], acquire)
+	})
+	if err != nil {
+		return fmt.Errorf("Run: %w", err)
 	}
 	return nil
 }

@@ -76,6 +76,11 @@ func (source *importRootSource) Fetch(ctx context.Context, name, version string)
 	if err != nil {
 		return Fetched{}, fmt.Errorf("Fetch: %w", err)
 	}
+	return source.acceptRootFetch(ctx, name, version, fetched)
+}
+
+func (source *importRootSource) acceptRootFetch(ctx context.Context, name, version string, fetched Fetched) (Fetched, error) {
+	hint := source.hints[name]
 	fetched = cloneRootFetched(fetched)
 	if v1.IsCommitRef(version) && !strings.EqualFold(version, fetched.Lock.Commit) {
 		return Fetched{}, fmt.Errorf("module %s: fetched commit %s differs from requested commit %s", name, fetched.Lock.Commit, version)

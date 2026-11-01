@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"go/parser"
 	"go/token"
+	"maps"
 	"os"
 	"path/filepath"
 	"slices"
@@ -81,13 +82,21 @@ func (b *GenerateBucket) insertionOutputPath(originalPath string) (string, error
 	}
 }
 
-func (b *GenerateBucket) DumpToFs(_ context.Context) error {
+func (b *GenerateBucket) DumpToFs(ctx context.Context) error {
 	b.lock.Lock()
 	defer b.lock.Unlock()
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	paths := slices.Sorted(maps.Keys(b.filesToWrite))
 
 	// Validate the complete generated Go layout before writing any file.
 	packages := make(map[string]string)
-	for path, file := range b.filesToWrite {
+	for _, path := range paths {
+		if err := ctx.Err(); err != nil {
+			return err
+		}
+		file := b.filesToWrite[path]
 		if !strings.HasSuffix(path, ".go") {
 			continue
 		}
@@ -104,8 +113,12 @@ func (b *GenerateBucket) DumpToFs(_ context.Context) error {
 		}
 		packages[key] = parsed.Name.Name
 	}
-	// TODO: Есть возможность писать файлы асинхронно (MkdirAll до)
-	for path, file := range b.filesToWrite {
+	// Apply the completed bucket in path order so write failures are deterministic too.
+	for _, path := range paths {
+		if err := ctx.Err(); err != nil {
+			return err
+		}
+		file := b.filesToWrite[path]
 		dir := filepath.Dir(path)
 		if err := os.MkdirAll(dir, 0755); err != nil {
 			return fmt.Errorf("os.MkdirAll %s: %w", dir, err)
