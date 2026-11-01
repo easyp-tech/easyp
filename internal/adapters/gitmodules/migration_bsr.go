@@ -16,9 +16,9 @@ func (c *Cache) WithMigrationPins(pins []v1.Requirement) modules.MigrationReposi
 	for _, pin := range pins {
 		historical[pin.Module] = pin.Version
 	}
-	scoped := *c
+	scoped := c.scoped()
 	scoped.bsrResolver = migrationBSRResolver{base: c.bsrResolver, pins: historical}
-	return &scoped
+	return scoped
 }
 
 type migrationBSRResolver struct {

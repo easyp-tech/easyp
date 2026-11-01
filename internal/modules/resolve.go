@@ -34,6 +34,7 @@ type revisionLoader struct {
 	source   Source
 	fetched  map[string]Fetched
 	failures map[string]error
+	prepared map[string]preparedRevision
 	pins     map[string]v1.LockedModule
 	local    func(string, string) (v1.Module, bool, error)
 }
@@ -59,7 +60,17 @@ func (l *revisionLoader) fetch(ctx context.Context, source, version string) (Fet
 			}
 		}
 	}
-	result, err := l.source.Fetch(ctx, source, version)
+	var result Fetched
+	var err error
+	if prepared, exists := l.prepared[key]; exists {
+		delete(l.prepared, key)
+		err = prepared.err
+		if err == nil {
+			result, err = prepared.complete(ctx)
+		}
+	} else {
+		result, err = l.source.Fetch(ctx, source, version)
+	}
 	if err != nil {
 		if l.failures == nil {
 			l.failures = make(map[string]error)
@@ -158,73 +169,81 @@ func (l *revisionLoader) resolvePass(ctx context.Context, root v1.Module, hints 
 	queue := slices.Clone(root.Requires)
 	for {
 		for len(queue) > 0 {
-			if err := ctx.Err(); err != nil {
+			if err := l.prepareFetches(ctx, queue, requirements, visited); err != nil {
 				pass.deferError(err)
 				return pass
 			}
-			requirement := queue[0]
-			queue = queue[1:]
-			if err := v1.ValidateModuleVersion(requirement.Module, requirement.Version); err != nil {
-				pass.deferError(fmt.Errorf("ValidateModuleVersion: %w", err))
-				continue
-			}
-			if l.local != nil {
-				// The main module and replaced nodes have no remote revision.
-				if requirement.Module == root.Name {
+			// Consume this frontier in its original FIFO order. New dependency
+			// edges form the next preparation frontier, without changing MVS.
+			for range len(queue) {
+				if err := ctx.Err(); err != nil {
+					pass.deferError(err)
+					return pass
+				}
+				requirement := queue[0]
+				queue = queue[1:]
+				if err := v1.ValidateModuleVersion(requirement.Module, requirement.Version); err != nil {
+					pass.deferError(fmt.Errorf("ValidateModuleVersion: %w", err))
 					continue
 				}
-				module, local, err := l.local(requirement.Module, requirement.Version)
+				if l.local != nil {
+					// The main module and replaced nodes have no remote revision.
+					if requirement.Module == root.Name {
+						continue
+					}
+					module, local, err := l.local(requirement.Module, requirement.Version)
+					if err != nil {
+						pass.deferError(err)
+						continue
+					}
+					if local {
+						if localVisited[requirement.Module] {
+							continue
+						}
+						localVisited[requirement.Module] = true
+						pass.locals = append(pass.locals, requirement.Module)
+						queue = append(queue, module.Requires...)
+						continue
+					}
+				}
+				version := requirement.Version
+				if version != "" && !v1.IsCommitRef(version) && !semver.IsValid(version) {
+					pass.deferError(fmt.Errorf("require %s: expected semantic version or full Git commit, got %q", requirement.Module, version))
+					continue
+				}
+				r := requirements[requirement.Module]
+				if r == nil {
+					r = &versionRequirements{}
+					requirements[requirement.Module] = r
+				}
+				switch {
+				case version == "":
+					r.weak = true
+					continue
+				case v1.IsCommitRef(version):
+					version = strings.ToLower(version)
+					if r.commit != "" && r.commit != version {
+						pass.deferError(fmt.Errorf("module %s has conflicting requirements %s and %s", requirement.Module, r.commit, version))
+						continue
+					}
+					r.commit = version
+				default:
+					if r.minimum == "" || semver.Compare(version, r.minimum) > 0 || (semver.Compare(version, r.minimum) == 0 && version > r.minimum) {
+						r.minimum = version
+					}
+				}
+				key := requirement.Module + "@" + version
+				if visited[key] {
+					continue
+				}
+				visited[key] = true
+				result, err := l.fetch(ctx, requirement.Module, version)
 				if err != nil {
 					pass.deferError(err)
 					continue
 				}
-				if local {
-					if localVisited[requirement.Module] {
-						continue
-					}
-					localVisited[requirement.Module] = true
-					pass.locals = append(pass.locals, requirement.Module)
-					queue = append(queue, module.Requires...)
-					continue
-				}
+				queue = append(queue, result.Module.Requires...)
 			}
-			version := requirement.Version
-			if version != "" && !v1.IsCommitRef(version) && !semver.IsValid(version) {
-				pass.deferError(fmt.Errorf("require %s: expected semantic version or full Git commit, got %q", requirement.Module, version))
-				continue
-			}
-			r := requirements[requirement.Module]
-			if r == nil {
-				r = &versionRequirements{}
-				requirements[requirement.Module] = r
-			}
-			switch {
-			case version == "":
-				r.weak = true
-				continue
-			case v1.IsCommitRef(version):
-				version = strings.ToLower(version)
-				if r.commit != "" && r.commit != version {
-					pass.deferError(fmt.Errorf("module %s has conflicting requirements %s and %s", requirement.Module, r.commit, version))
-					continue
-				}
-				r.commit = version
-			default:
-				if r.minimum == "" || semver.Compare(version, r.minimum) > 0 || (semver.Compare(version, r.minimum) == 0 && version > r.minimum) {
-					r.minimum = version
-				}
-			}
-			key := requirement.Module + "@" + version
-			if visited[key] {
-				continue
-			}
-			visited[key] = true
-			result, err := l.fetch(ctx, requirement.Module, version)
-			if err != nil {
-				pass.deferError(err)
-				continue
-			}
-			queue = append(queue, result.Module.Requires...)
 		}
 		pending := make([]string, 0)
 		for name, r := range requirements {

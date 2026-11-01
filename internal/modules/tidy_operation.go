@@ -41,7 +41,7 @@ func TidyWithReport(ctx context.Context, root string, repository Repository) (_ 
 		return TidyResult{}, fmt.Errorf("captureTidyInputs: %w", err)
 	}
 	if len(inputs.module.Replaces) > 0 {
-		err = validateLocalOverlay(ctx, inputs.root, inputs.module, repository, false)
+		err = validateTidyOverlay(ctx, &inputs, repository)
 		return TidyResult{}, err
 	}
 	if inputs.completeCacheOwnership {
@@ -88,13 +88,13 @@ func TidyWithReport(ctx context.Context, root string, repository Repository) (_ 
 		return TidyResult{}, fmt.Errorf("excludePreviousPinSources: %w", err)
 	}
 	roots := append(slices.Clone(inputs.roots), dependencies...)
-	err = CheckSourceCollisions(roots)
-	if err != nil {
-		return TidyResult{}, fmt.Errorf("CheckSourceCollisions: %w", err)
-	}
 	view.roots = roots
 	tx.validateInputs = func() error {
-		err := checkTidySourceSelection(inputs.observations, inputs.roots, inputs.files)
+		err := view.verifyImportCandidates(ctx)
+		if err != nil {
+			return fmt.Errorf("verifyImportCandidates: %w", err)
+		}
+		err = checkTidySourceSelection(inputs.observations, inputs.roots, inputs.files)
 		if err != nil {
 			return fmt.Errorf("checkTidySourceSelection: %w", err)
 		}
@@ -102,7 +102,11 @@ func TidyWithReport(ctx context.Context, root string, repository Repository) (_ 
 		if err != nil {
 			return fmt.Errorf("verifyOldNamespaces: %w", err)
 		}
-		return verifyTidyCache(ctx, lock, repository)
+		err = verifyTidyCache(ctx, lock, repository)
+		if err != nil {
+			return fmt.Errorf("verifyTidyCache: %w", err)
+		}
+		return view.verifyImportCandidates(ctx)
 	}
 	report, err := bindings.planRewrites(tx, inputs.files, view)
 	if err != nil {

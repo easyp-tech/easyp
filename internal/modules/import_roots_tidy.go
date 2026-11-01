@@ -1,6 +1,7 @@
 package modules
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"slices"
@@ -25,11 +26,14 @@ type tidyImportBinding struct {
 	before Fetched
 	after  Fetched
 	file   RootProtoFile
-	names  map[string]RootProtoFile
+	names  map[string][]RootProtoFile
 }
 
 func (planner tidyImportPlanner) tidyImportBindings(ctx context.Context, needed map[string]v1UnresolvedImport, view *tidySourceView) (tidyImportBindings, error) {
 	bindings := make(tidyImportBindings)
+	keepCurrent := make(map[string]bool)
+	var currentImports map[string]bool
+	currentImportsChecked := false
 	if len(needed) == 0 {
 		return bindings, nil
 	}
@@ -39,12 +43,19 @@ func (planner tidyImportPlanner) tidyImportBindings(ctx context.Context, needed 
 	for _, entry := range after.Modules {
 		current[entry.Source] = entry
 	}
+	changed := slices.ContainsFunc(before.Modules, func(old v1.LockedModule) bool {
+		entry, retained := current[old.Source]
+		return !retained || !sameTidyImportScope(old, entry)
+	})
+	if !changed {
+		return bindings, nil
+	}
 	for _, old := range before.Modules {
 		entry, retained := current[old.Source]
-		if retained && strings.EqualFold(old.Commit, entry.Commit) && slices.Equal(old.Roots, entry.Roots) {
-			continue
-		}
 		if !supported {
+			if retained && sameTidyImportScope(old, entry) {
+				continue
+			}
 			imported, used, err := planner.uninspectedTidyBinding(ctx, old, needed, view)
 			if err != nil {
 				return nil, fmt.Errorf("uninspectedTidyBinding: %w", err)
@@ -69,7 +80,7 @@ func (planner tidyImportPlanner) tidyImportBindings(ctx context.Context, needed 
 		if previous.Inspection == nil || previous.Inspection.Provisional || (retained && (next.Inspection == nil || next.Inspection.Provisional || next.Lock.Hash == "" || next.Lock.Hash != entry.Hash)) {
 			return nil, fmt.Errorf("module %s: cannot verify old %s commit %s roots %v and new %s commit %s roots %v from complete pinned inspections; restore the old pin or verify explicit producer roots before running easyp mod tidy", old.Source, old.Version, old.Commit, previous.Module.Roots, entry.Version, entry.Commit, next.Module.Roots)
 		}
-		names := make(map[string]RootProtoFile)
+		names := make(map[string][]RootProtoFile)
 		if retained {
 			names, err = tidyRootNamespace(next)
 			if err != nil {
@@ -80,12 +91,46 @@ func (planner tidyImportPlanner) tidyImportBindings(ctx context.Context, needed 
 		if err != nil {
 			return nil, fmt.Errorf("tidyRootNamespace: %w", err)
 		}
-		for name, file := range previousNames {
+		for name, files := range previousNames {
 			if _, used := needed[name]; !used {
 				continue
 			}
-			if prior, exists := bindings[name]; exists && prior.before.Lock.Source != old.Source {
-				return nil, fmt.Errorf("old locked namespace has duplicate import %q from %s and %s", name, prior.before.Lock.Source, old.Source)
+			if keepCurrent[name] {
+				continue
+			}
+			file := files[0]
+			var conflict error
+			for _, other := range files[1:] {
+				if !bytes.Equal(file.Content, other.Content) {
+					conflict = fmt.Errorf("module %s has conflicting historical import %q: %s and %s have different contents", old.Source, name, file.Path, other.Path)
+					break
+				}
+			}
+			prior, exists := bindings[name]
+			if conflict == nil && exists && !bytes.Equal(prior.file.Content, file.Content) {
+				conflict = fmt.Errorf("old locked namespace has conflicting import %q from %s and %s: different contents", name, prior.before.Lock.Source, old.Source)
+			}
+			if conflict != nil {
+				if !currentImportsChecked {
+					currentImports, err = planner.unambiguousCurrentImports(ctx)
+					if err != nil {
+						return nil, fmt.Errorf("unambiguousCurrentImports: %w", err)
+					}
+					currentImportsChecked = true
+				}
+				if !currentImports[name] {
+					return nil, conflict
+				}
+				// An unused old collision supplies no canonical rename evidence.
+				// Keep a name proved by every current selected module instead.
+				delete(bindings, name)
+				keepCurrent[name] = true
+				continue
+			}
+			if exists {
+				// Previous lock and root order chooses the owner of equal copies.
+				// A changed noncanonical producer cannot rename another's import.
+				continue
 			}
 			bindings[name] = tidyImportBinding{before: previous, after: next, file: file, names: names}
 		}
@@ -93,8 +138,49 @@ func (planner tidyImportPlanner) tidyImportBindings(ctx context.Context, needed 
 	return bindings, nil
 }
 
+func (planner tidyImportPlanner) unambiguousCurrentImports(ctx context.Context) (map[string]bool, error) {
+	contents := make(map[string][]byte)
+	unambiguous := make(map[string]bool)
+	for _, entry := range planner.current.lockFile().Modules {
+		err := ctx.Err()
+		if err != nil {
+			return nil, fmt.Errorf("Err: %w", err)
+		}
+		fetched, exists := planner.current.currentRevision(entry)
+		if !exists || fetched.Inspection == nil || fetched.Inspection.Provisional || fetched.Lock.Hash == "" {
+			return nil, nil
+		}
+		names, err := tidyRootNamespace(fetched)
+		if err != nil {
+			return nil, fmt.Errorf("tidyRootNamespace: %w", err)
+		}
+		for name, candidates := range names {
+			for _, candidate := range candidates {
+				content, found := contents[name]
+				if !found {
+					contents[name] = candidate.Content
+					unambiguous[name] = true
+					continue
+				}
+				if !bytes.Equal(content, candidate.Content) {
+					unambiguous[name] = false
+				}
+			}
+		}
+	}
+	return unambiguous, nil
+}
+
+func sameTidyImportScope(before, after v1.LockedModule) bool {
+	return strings.EqualFold(before.Commit, after.Commit) && slices.Equal(before.Roots, after.Roots)
+}
+
 func (planner tidyImportPlanner) lockedRootScope(ctx context.Context, selector rootSelectionSource, entry v1.LockedModule) (Fetched, error) {
 	if previous, exists := planner.current.previousRootScope(entry); exists {
+		return previous, nil
+	}
+	if previous, exists := planner.current.currentRevision(entry); exists && sameTidyImportScope(entry, previous.Lock) && previous.Inspection != nil {
+		// An unchanged verified pin also proves its historical namespace.
 		return previous, nil
 	}
 	previous, err := fetchLockedRootScope(ctx, selector, entry, entry.Roots)
@@ -126,11 +212,11 @@ func (planner tidyImportPlanner) uninspectedTidyBinding(ctx context.Context, ent
 	return v1UnresolvedImport{}, false, nil
 }
 
-func tidyRootNamespace(fetched Fetched) (map[string]RootProtoFile, error) {
-	names := make(map[string]RootProtoFile)
+func tidyRootNamespace(fetched Fetched) (map[string][]RootProtoFile, error) {
+	names := make(map[string][]RootProtoFile)
 	prefix := fetched.Lock.Source + "@" + fetched.Lock.Commit + ":"
-	for _, file := range fetched.Inspection.Files {
-		for _, root := range fetched.Module.Roots {
+	for _, root := range fetched.Module.Roots {
+		for _, file := range fetched.Inspection.Files {
 			name, within := importRootRelative(root, file.Path)
 			if !within {
 				continue
@@ -138,10 +224,7 @@ func tidyRootNamespace(fetched Fetched) (map[string]RootProtoFile, error) {
 			if !strings.HasPrefix(file.Identity, prefix) || !ValidProtoImportPath(strings.TrimPrefix(file.Identity, prefix)) {
 				return nil, fmt.Errorf("module %s has an unverified pinned source identity for %s at commit %s", fetched.Lock.Source, file.Path, fetched.Lock.Commit)
 			}
-			if previous, exists := names[name]; exists && previous.Path != file.Path {
-				return nil, fmt.Errorf("module %s has duplicate import path %q: %s and %s", fetched.Lock.Source, name, previous.Path, file.Path)
-			}
-			names[name] = file
+			names[name] = append(names[name], file)
 		}
 	}
 	return names, nil
@@ -150,12 +233,15 @@ func tidyRootNamespace(fetched Fetched) (map[string]RootProtoFile, error) {
 func (binding tidyImportBinding) replacement(path, name string) (string, error) {
 	physical := rootGitSourcePath(binding.file, binding.before.Lock)
 	var names []string
-	for current, file := range binding.names {
-		if physical == rootGitSourcePath(file, binding.after.Lock) {
-			names = append(names, current)
+	for current, files := range binding.names {
+		for _, file := range files {
+			if physical == rootGitSourcePath(file, binding.after.Lock) {
+				names = append(names, current)
+				break
+			}
 		}
 	}
-	if current, retained := binding.names[name]; retained && (len(names) == 0 || rootGitSourcePath(current, binding.after.Lock) == physical) {
+	if current, retained := binding.names[name]; retained && (len(names) == 0 || slices.ContainsFunc(current, func(file RootProtoFile) bool { return rootGitSourcePath(file, binding.after.Lock) == physical })) {
 		// A moved source retaining its public name remains ordinary producer
 		// evolution. A surviving source under a new name has priority instead.
 		return name, nil

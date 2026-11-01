@@ -39,7 +39,7 @@ func TestCacheIntegrityDiagnosticIdentifiesRecoveryPath(t *testing.T) {
 	require.NoError(t, err)
 	name := filepath.Join(installed, "api.proto")
 	require.NoError(t, os.WriteFile(name, []byte("tampered"), 0o644))
-	err = cache.Install(t.Context(), lock)
+	err = (&Cache{root: cache.root}).Install(t.Context(), lock)
 	require.ErrorContains(t, err, "hash mismatch")
 	assert.Contains(t, err.Error(), installed)
 	assert.Contains(t, err.Error(), "protobuf.lock unchanged")

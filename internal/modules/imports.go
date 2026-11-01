@@ -179,35 +179,46 @@ func findUnresolvedV1ImportsWithSources(moduleDir string, roots []string, depend
 
 func resolveV1ImportSource(importPath string, roots SourceRoots, allowed func(string) bool) (v1ImportSource, error) {
 	for _, root := range roots {
-		candidate := filepath.Join(root.Path, filepath.FromSlash(importPath))
-		if allowed != nil {
-			// The shared filter checks both owners. This root still needs to own
-			// the import's spelling, but a selected target may belong to another root.
-			if !allowed(candidate) || !root.allowsPath(candidate, root.Path) {
-				continue
-			}
-		} else if !root.allows(candidate, root.Path) {
-			continue
-		}
-		relative, err := filepath.Rel(root.boundary(), candidate)
-		if err != nil {
-			return v1ImportSource{}, fmt.Errorf("Rel: %w", err)
-		}
-		resolved, err := sourceview.ResolveLocal(context.Background(), root.boundary(), relative)
-		info := resolved.Info
-		if errors.Is(err, sourceview.ErrNestedRepository) && roots.ownsSelectedPhysical(filepath.Join(physicalSourcePath(root.boundary()), filepath.FromSlash(resolved.Path))) {
-			err = nil
-		}
+		source, err := resolveV1ImportInRoot(importPath, root, roots, allowed)
 		if errors.Is(err, os.ErrNotExist) {
 			continue
 		}
 		if err != nil {
-			return v1ImportSource{}, fmt.Errorf("Stat: %w", err)
+			return v1ImportSource{}, fmt.Errorf("resolveV1ImportInRoot: %w", err)
 		}
-		if info.Mode().IsRegular() {
-			return v1ImportSource{path: candidate}, nil
-		}
+		return source, nil
 	}
+	return resolveV1BuiltinImport(importPath)
+}
+
+// Each candidate retains the complete graph's ownership and alias checks.
+func resolveV1ImportInRoot(importPath string, root SourceRoot, roots SourceRoots, allowed func(string) bool) (v1ImportSource, error) {
+	candidate := filepath.Join(root.Path, filepath.FromSlash(importPath))
+	if allowed != nil {
+		if !allowed(candidate) || !root.allowsPath(candidate, root.Path) {
+			return v1ImportSource{}, os.ErrNotExist
+		}
+	} else if !root.allows(candidate, root.Path) {
+		return v1ImportSource{}, os.ErrNotExist
+	}
+	relative, err := filepath.Rel(root.boundary(), candidate)
+	if err != nil {
+		return v1ImportSource{}, fmt.Errorf("Rel: %w", err)
+	}
+	resolved, err := sourceview.ResolveLocalOptional(context.Background(), root.boundary(), relative)
+	if errors.Is(err, sourceview.ErrNestedRepository) && roots.ownsSelectedPhysical(filepath.Join(physicalSourcePath(root.boundary()), filepath.FromSlash(resolved.Path))) {
+		err = nil
+	}
+	if err != nil {
+		return v1ImportSource{}, fmt.Errorf("ResolveLocalOptional: %w", err)
+	}
+	if resolved.Info == nil || !resolved.Info.Mode().IsRegular() {
+		return v1ImportSource{}, os.ErrNotExist
+	}
+	return v1ImportSource{path: candidate}, nil
+}
+
+func resolveV1BuiltinImport(importPath string) (v1ImportSource, error) {
 	info, err := fs.Stat(wellknownimports.Content, importPath)
 	if err != nil {
 		return v1ImportSource{}, fmt.Errorf("Stat: %w", err)

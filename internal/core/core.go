@@ -26,6 +26,7 @@ type Core struct {
 	importRoots           []string
 	importFileAllowed     func(string) bool
 	sourceFileOpen        func(string) (io.ReadCloser, error)
+	sourceFilesWalk       func(string, func(string) error) (bool, error)
 	sourceBoundary        string
 	fileModules           map[string]string
 	managedMode           ManagedModeConfig
@@ -62,7 +63,11 @@ type Options struct {
 	// files selected by dependency metadata. Nil permits every file.
 	ImportFileAllowed func(string) bool
 	// OpenSourceFile opens logical sources within their owning bounded roots.
-	OpenSourceFile          func(string) (io.ReadCloser, error)
+	OpenSourceFile func(string) (io.ReadCloser, error)
+	// WalkSourceFiles optionally visits verified immutable proto inputs under an
+	// absolute import root. Paths passed to the visitor are absolute. Returning
+	// false selects the normal local filesystem walk instead.
+	WalkSourceFiles         func(string, func(string) error) (bool, error)
 	FileModules             map[string]string
 	CurrentProjectGitWalker CurrentProjectGitWalker
 	BreakingCheckConfig     BreakingCheckConfig
@@ -88,6 +93,7 @@ func New(options Options) *Core {
 		importRoots:             slices.Clone(options.ImportRoots),
 		importFileAllowed:       options.ImportFileAllowed,
 		sourceFileOpen:          options.OpenSourceFile,
+		sourceFilesWalk:         options.WalkSourceFiles,
 		fileModules:             maps.Clone(options.FileModules),
 		currentProjectGitWalker: options.CurrentProjectGitWalker,
 		breakingCheckConfig:     options.BreakingCheckConfig,

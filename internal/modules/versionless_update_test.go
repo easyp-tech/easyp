@@ -203,6 +203,8 @@ func (r *movingHeadRepository) Fetch(_ context.Context, source, version string) 
 
 func (r *movingHeadRepository) Install(context.Context, v1.Lock) error { return nil }
 
+func (r *movingHeadRepository) VerifyCached(context.Context, v1.Lock) error { return nil }
+
 func (r *movingHeadRepository) Cached(entry v1.LockedModule) (string, v1.Module, error) {
 	switch entry.Source {
 	case "example.com/A":

@@ -11,8 +11,6 @@ import (
 	"path"
 	"path/filepath"
 
-	"golang.org/x/mod/sumdb/dirhash"
-
 	v1 "github.com/easyp-tech/easyp/internal/config/v1"
 )
 
@@ -26,41 +24,42 @@ type cacheVerificationStamp struct {
 }
 
 func verifyInstalledV1Module(installed string, entry v1.LockedModule, writeStamp bool) error {
-	files, err := snapshotV1Files(installed)
+	_, err := verifiedSnapshotFiles(installed, entry, writeStamp)
+	return err
+}
+
+func verifiedSnapshotFiles(installed string, entry v1.LockedModule, writeStamp bool) ([]string, error) {
+	files, fingerprint, fast, err := cacheTreeInventory(installed)
 	if err != nil {
-		return fmt.Errorf("snapshotV1Files: %w", err)
+		return nil, fmt.Errorf("cacheTreeInventory: %w", err)
 	}
 	for _, name := range files {
 		if path.Ext(name) != ".proto" && !snapshotConfigFile(name) {
-			return fmt.Errorf("unrelated snapshot file %q; regenerate the unreleased v1 lock with easyp mod tidy", name)
+			return nil, fmt.Errorf("unrelated snapshot file %q; regenerate the unreleased v1 lock with easyp mod tidy", name)
 		}
-	}
-	fingerprint, fast, err := cacheTreeFingerprint(installed)
-	if err != nil {
-		return fmt.Errorf("cacheTreeFingerprint: %w", err)
 	}
 	if fast {
 		stamp, readErr := readCacheVerificationStamp(installed)
 		if readErr == nil && stamp.Version == cacheVerificationVersion && stamp.Hash == entry.Hash && stamp.Roots == v1RootSelectionKey(entry.Roots) && stamp.Fingerprint == fingerprint {
-			return nil
+			return files, nil
 		}
 	}
 
-	actual, err := dirhash.HashDir(installed, "", dirhash.Hash1)
+	actual, err := hashV1Files(installed, files)
 	if err != nil {
-		return fmt.Errorf("HashDir: %w", err)
+		return nil, fmt.Errorf("hashV1Files: %w", err)
 	}
 	if actual != entry.Hash {
-		return fmt.Errorf("cached %s@%s hash mismatch: got %s, want %s; inspect or quarantine only cache directory %q, then rerun easyp mod download; keep protobuf.lock unchanged", entry.Source, entry.Commit, actual, entry.Hash, installed)
+		return nil, fmt.Errorf("cached %s@%s hash mismatch: got %s, want %s; inspect or quarantine only cache directory %q, then rerun easyp mod download; keep protobuf.lock unchanged", entry.Source, entry.Commit, actual, entry.Hash, installed)
 	}
 
 	if fast {
 		after, afterFast, fingerprintErr := cacheTreeFingerprint(installed)
 		if fingerprintErr != nil {
-			return fmt.Errorf("cacheTreeFingerprint after hash: %w", fingerprintErr)
+			return nil, fmt.Errorf("cacheTreeFingerprint after hash: %w", fingerprintErr)
 		}
 		if !afterFast || after != fingerprint {
-			return fmt.Errorf("cached %s@%s changed while its lock hash was being verified; retry after concurrent cache writes stop", entry.Source, entry.Commit)
+			return nil, fmt.Errorf("cached %s@%s changed while its lock hash was being verified; retry after concurrent cache writes stop", entry.Source, entry.Commit)
 		}
 		if writeStamp {
 			_ = writeCacheVerificationStamp(installed, cacheVerificationStamp{
@@ -71,7 +70,7 @@ func verifyInstalledV1Module(installed string, entry v1.LockedModule, writeStamp
 			})
 		}
 	}
-	return nil
+	return files, nil
 }
 
 func cacheVerificationStampPath(installed string) string {
@@ -120,6 +119,12 @@ func writeCacheVerificationStamp(installed string, stamp cacheVerificationStamp)
 }
 
 func cacheTreeFingerprint(root string) (string, bool, error) {
+	_, fingerprint, supported, err := cacheTreeInventory(root)
+	return fingerprint, supported, err
+}
+
+func cacheTreeInventory(root string) ([]string, string, bool, error) {
+	var files []string
 	hash := sha256.New()
 	supported := true
 	err := filepath.WalkDir(root, func(path string, entry fs.DirEntry, walkErr error) error {
@@ -145,6 +150,9 @@ func cacheTreeFingerprint(root string) (string, bool, error) {
 			relative = ""
 		}
 		name := filepath.ToSlash(relative)
+		if info.Mode().IsRegular() {
+			files = append(files, name)
+		}
 		if err := binary.Write(hash, binary.LittleEndian, uint32(len(name))); err != nil {
 			return err
 		}
@@ -167,7 +175,7 @@ func cacheTreeFingerprint(root string) (string, bool, error) {
 		return nil
 	})
 	if err != nil {
-		return "", false, err
+		return nil, "", false, err
 	}
-	return "m1:" + base64.StdEncoding.EncodeToString(hash.Sum(nil)), supported, nil
+	return files, "m1:" + base64.StdEncoding.EncodeToString(hash.Sum(nil)), supported, nil
 }

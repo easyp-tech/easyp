@@ -87,11 +87,15 @@ mod vendor
 
 <code>EnsureLockedSources</code> may install dependencies. <code>ReadManifest</code>, <code>ReadLock</code>, <code>LocalSources</code>, and <code>CachedSources</code> do not download or rewrite project files. <code>CachedSources</code> assumes installation/hash verification has already occurred.
 
+Verified installed modules can supply an immutable regular-file inventory through the optional <code>SourceFiles</code> cache capability. <code>SourceRoots</code> uses it for dependency discovery and nested boundaries without repeated filesystem traversal. Local roots and replacements continue to resolve current filesystem state. Generation computes collision checks and file ownership together and shares the result with managed options and descriptor output.
+
 Generation, policy commands, and module operations share root/collision checks. <code>WalkProtoFiles</code> owns dependency-source traversal, including exclusion of hidden directories, vendored sources and nested module boundaries. Generator discovery and policy ancestor traversal remain separate: their inclusion and inheritance rules differ.
 
 Nested protobuf module roots are rebased by <code>module_config</code> from the nested manifest directory into the checkout directory. Import names remain relative to those roots; repository/module prefixes do not become part of an import.
 
-The Git cache lives beneath the CLI-supplied EasyP directory in <code>v1/git</code>; <code>internal/adapters/gitmodules/object_cache.go</code> maintains reusable bare object repositories with OS locks. <code>Cache.Cached</code> reads installed metadata; <code>Install</code> supplies content verification before cached metadata is trusted.
+The Git cache lives beneath the CLI-supplied EasyP directory in <code>v1/git</code>; <code>internal/adapters/gitmodules/object_cache.go</code> maintains reusable bare object repositories with OS locks. <code>Cache.Cached</code> reads installed metadata; <code>Install</code> supplies content verification before cached metadata is trusted. Successful verification and the inventory are reused within one cache handle, keyed by source, commit, content hash and selected roots. A new handle rechecks the snapshot; explicit <code>VerifyCached</code> bypasses the in-memory result. Revision resolution atomically retains completed snapshots so installation does not materialize them a second time.
+
+Independent locked entries are installed with at most eight workers, retaining snapshot and repository locks. Sources that explicitly support independent fetch preparation also acquire known revisions concurrently during normal resolution. The solver consumes prepared metadata in FIFO request order; versionless selection, import-root validation, BSR expansion and mutable graph bookkeeping remain serial. Generic sources and local-overlay resolution keep their existing serial fetch contract. A permanently unavailable repository skips the same-remote full-history fallback; distinct parent candidates remain available for nested-module discovery.
 
 Local replacements use an ephemeral main-module overlay graph and never alter the shared lock. Tidy validates the overlay; get/update may edit explicit manifest requirements. Vendor copies the effective local graph without touching the lock. Explicit frozen operation verifies existing native manifests and locked graphs; automatic unknown-import-to-module discovery is intentionally not implemented.
 
@@ -114,6 +118,12 @@ api.Generate.Action: flags + cwd + cache
 <code>internal/generation/config.go</code> owns translation to engine types, including output locations and managed-option priority. Managed rule slices are independently constructed for each module. <code>core.New</code> receives and copies import roots and file-module mappings; there are no follow-up <code>SetImportRoots</code>/<code>SetFileModules</code> calls.
 
 <code>Request.WorkDir</code> controls discovery, relative descriptor output and local plugin execution. Plugin output remains relative to the generator config. Default discovery chooses the nearest ancestor generator within the workspace; repeatable <code>--project</code> selects consumers explicitly and <code>--all</code> enables recursive discovery. Generation builds no unrelated lint rules. Only generation options inherit; plugins and module selections remain local to the consumer.
+
+Each generation run lazily indexes workspace module declarations once for normal and frozen target lookup. The index stores declaration locations and lookup errors, never consumer dependency graphs or selected versions. A later run reads the workspace again.
+
+Within each prepared target, at most four plugin invocations run concurrently with independent requests. Workers store indexed responses; the caller applies responses, insertion points and conflicts in configured plugin order, and targets retain their original order. The completed bucket validates and writes paths in sorted order. <code>internal/parallel</code> supplies bounded atomic-index scheduling and input-ordered errors; cancellation stops new tasks and joins active work.
+
+<code>generation.Run</code> owns one lazy builtin WASM compilation scope across all target cores. It compiles each distinct embedded binary once with a shared wazero cache, then creates independent runtime, memory, module instances and I/O per invocation. Standalone core execution owns a temporary scope when no command scope exists. Closing a scope cancels and joins active work before releasing compiled code and the cache; cleanup failures remain command errors.
 
 ## Policy and validation commands
 

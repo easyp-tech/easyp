@@ -14,11 +14,26 @@ import (
 	"github.com/go-git/go-git/v5/storage/filesystem"
 )
 
-// Go-git's blob reads follow alternates, but EncodedObjectSize does not. Keep
-// header-only size queries working for our shared pinned-commit checkouts too.
+// Shared checkouts resolve both objects and their sizes through explicitly
+// rooted stores. Go-git's alternate filesystem can lose Windows drive names or
+// reinterpret relative paths, and EncodedObjectSize never follows alternates.
 type snapshotObjectStorage struct {
 	storage.Storer
 	alternates []storage.Storer
+}
+
+func (s snapshotObjectStorage) EncodedObject(kind plumbing.ObjectType, hash plumbing.Hash) (plumbing.EncodedObject, error) {
+	object, err := s.Storer.EncodedObject(kind, hash)
+	if !errors.Is(err, plumbing.ErrObjectNotFound) {
+		return object, err
+	}
+	for _, alternate := range s.alternates {
+		object, err = alternate.EncodedObject(kind, hash)
+		if !errors.Is(err, plumbing.ErrObjectNotFound) {
+			return object, err
+		}
+	}
+	return nil, err
 }
 
 func (s snapshotObjectStorage) EncodedObjectSize(hash plumbing.Hash) (int64, error) {

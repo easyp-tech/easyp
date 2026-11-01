@@ -56,7 +56,11 @@ func TestFetchBSRDependencies(t *testing.T) {
 			entries, readErr := os.ReadDir(cache.root)
 			require.NoError(t, readErr)
 			for _, entry := range entries {
-				assert.Equal(t, "objects", entry.Name(), "temporary checkout survived Fetch")
+				allowed := []string{"objects"}
+				if err == nil {
+					allowed = append(allowed, "modules", "sources")
+				}
+				assert.Contains(t, allowed, entry.Name(), "temporary checkout survived Fetch")
 			}
 			if tt.wantErrIs != nil {
 				require.ErrorIs(t, err, tt.wantErrIs)
