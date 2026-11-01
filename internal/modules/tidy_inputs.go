@@ -169,6 +169,10 @@ func tidySourceFiles(tx *resolvedFileObservations, roots SourceRoots) ([]string,
 }
 
 func (inputs tidyInputs) capturedImports() (map[string]v1UnresolvedImport, error) {
+	owned, err := inputs.consumerImportNames()
+	if err != nil {
+		return nil, fmt.Errorf("consumerImportNames: %w", err)
+	}
 	needed := make(map[string]v1UnresolvedImport)
 	for _, file := range inputs.files {
 		observed, captured := inputs.observations.capturedFile(file)
@@ -180,10 +184,33 @@ func (inputs tidyInputs) capturedImports() (map[string]v1UnresolvedImport, error
 			return nil, fmt.Errorf("ParseProtoImports: %w", err)
 		}
 		for _, name := range imports {
+			// Consumer roots precede dependencies. A producer update must not
+			// rename an import supplied by an observed consumer source.
+			if owned[name] {
+				continue
+			}
 			if _, exists := needed[name]; !exists {
 				needed[name] = v1UnresolvedImport{owner: file, path: name}
 			}
 		}
 	}
 	return needed, nil
+}
+
+func (inputs tidyInputs) consumerImportNames() (map[string]bool, error) {
+	names := make(map[string]bool)
+	for _, file := range inputs.files {
+		path := filepath.Join(inputs.root, file)
+		for _, root := range inputs.roots {
+			if !sourcePathWithin(path, root.Path) || !root.allowsPath(path, root.Path) {
+				continue
+			}
+			name, err := filepath.Rel(root.Path, path)
+			if err != nil {
+				return nil, fmt.Errorf("Rel: %w", err)
+			}
+			names[filepath.ToSlash(name)] = true
+		}
+	}
+	return names, nil
 }

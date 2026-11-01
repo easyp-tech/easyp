@@ -56,6 +56,22 @@ func TestDeclaredDependencyAliasAcrossNestedRepository(t *testing.T) {
 	require.NoError(t, Tidy(t.Context(), root, nil))
 }
 
+func TestTidyMissingImportThroughDeclaredNestedRepositoryAlias(t *testing.T) {
+	t.Parallel()
+	root := t.TempDir()
+	writeV1GenerateFixture(t, root, "protobuf.mod", "module example.test/app\nroots .\nrequire example.test/dep\nreplace example.test/dep => ./dep\n")
+	writeV1GenerateFixture(t, root, "dep/.git", "gitdir: /unused\n")
+	writeV1GenerateFixture(t, root, "dep/buf.yaml", "version: v2\nmodules:\n  - path: .\n    includes: [selected]\n")
+	writeV1GenerateFixture(t, root, "dep/selected/model.proto", "syntax = \"proto3\";\n")
+	writeV1GenerateFixture(t, root, "client.proto", "syntax = \"proto3\"; import \"alias/missing.proto\";\n")
+	require.NoError(t, os.Symlink("dep/selected", filepath.Join(root, "alias")))
+
+	err := Tidy(t.Context(), root, nil)
+
+	require.ErrorContains(t, err, "cannot resolve imports")
+	require.NoFileExists(t, filepath.Join(root, v1.LockFile))
+}
+
 func TestImportRootAliasPreservesPhysicalBufExclusions(t *testing.T) {
 	t.Parallel()
 	directory := t.TempDir()
