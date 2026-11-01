@@ -1,11 +1,9 @@
 package generation
 
 import (
-	"bytes"
 	"context"
 	"errors"
 	"fmt"
-	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -104,13 +102,17 @@ func generateSelectedV1Module(ctx context.Context, log logger.Logger, cache modu
 }
 
 func resolveV1GenerationModule(ctx context.Context, cache modules.Cache, repoRoot, configDir string, selection v1ModuleSelection, frozen bool) (v1GenerationModule, error) {
+	return resolveV1GenerationModuleWithIndex(ctx, cache, repoRoot, configDir, selection, frozen, newV1WorkspaceModuleIndex(repoRoot))
+}
+
+func resolveV1GenerationModuleWithIndex(ctx context.Context, cache modules.Cache, repoRoot, configDir string, selection v1ModuleSelection, frozen bool, index *v1WorkspaceModuleIndex) (v1GenerationModule, error) {
 	if frozen {
-		return resolveFrozenGenerationModule(ctx, cache, repoRoot, configDir, selection)
+		return resolveFrozenGenerationModuleWithIndex(ctx, cache, repoRoot, configDir, selection, index)
 	}
 	if selection.directory != "" {
 		return readV1GenerationModule(ctx, cache, selection.directory)
 	}
-	localDir, err := findV1LocalModuleByName(repoRoot, selection.source)
+	localDir, err := index.find(selection.source)
 	if err != nil {
 		return v1GenerationModule{}, fmt.Errorf("findV1LocalModuleByName: %w", err)
 	}
@@ -207,42 +209,5 @@ func readV1GenerationModule(ctx context.Context, cache modules.Cache, directory 
 }
 
 func findV1LocalModuleByName(repoRoot, name string) (string, error) {
-	var found string
-	err := workspace.Walk(repoRoot, func(path string, entry fs.DirEntry, walkErr error) error {
-		if walkErr != nil {
-			// Module lookup reads declarations; source aliases are validated after selection.
-			if filepath.Base(path) != v1.ModuleFile {
-				return nil
-			}
-			return walkErr
-		}
-		if entry.IsDir() {
-			if workspace.SkipDirectory(repoRoot, path) {
-				return filepath.SkipDir
-			}
-			return nil
-		}
-		if entry.Name() != v1.ModuleFile {
-			return nil
-		}
-		manifest, err := workspace.ReadFile(repoRoot, path)
-		if err != nil {
-			return fmt.Errorf("ReadFile: %w", err)
-		}
-		if !v1.IsModuleManifest(manifest) {
-			return nil
-		}
-		module, parseErr := v1.ParseModule(bytes.NewReader(manifest))
-		if parseErr != nil {
-			return fmt.Errorf("%s: %w", path, parseErr)
-		}
-		if module.Name == name {
-			if found != "" {
-				return fmt.Errorf("module identity %q is declared in both %s and %s", name, found, filepath.Dir(path))
-			}
-			found = filepath.Dir(path)
-		}
-		return nil
-	})
-	return found, err
+	return newV1WorkspaceModuleIndex(repoRoot).find(name)
 }

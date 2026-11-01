@@ -198,6 +198,8 @@ for the distinction between such errors and CLI exit classification.
 
 The resolver accepts <code>Source.Fetch</code>, independent of Git/cache. It selects the highest required semantic version, treats versionless requirements as weak constraints, and rejects incompatible exact commits (including tag/commit disagreement). It caches revision fetches within a resolution, rebuilds provisional HEAD edges when stronger requirements appear, and sorts resulting entries. <code>Update</code> additionally needs version enumeration; vendor and published download only need the cache contract; local-overlay download additionally uses Source when a new remote requirement needs resolution.
 
+The Git adapter installs independent entries of a validated lock with at most eight workers. Normal resolution can also prepare independent known revisions concurrently through an optional source capability, then consume their metadata in the original request order. Weak versionless requests wait for stronger constraints; graph selection, root validation and BSR metadata callbacks remain serial. Generic sources and local replacement overlays retain serial fetch semantics. Snapshot and object-store locks still protect shared cache publication. Definite missing-repository or authentication failures skip the redundant full-history fetch of the same remote; other candidate repository URLs and valid historical-commit fallback remain supported.
+
 ## Frozen graph validation
 
 Metadata-free module resolution may record canonical repository-snapshot-relative `roots` in
