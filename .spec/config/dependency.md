@@ -29,6 +29,31 @@ require (
 
 Nested modules get separate lock entries even when their commits match. The Git adapter tries repository candidates and the metadata reader confirms the requested module name at the candidate directory. A root manifest does not hide named nested modules.
 
+## Minimal version selection
+
+Each semantic <code>require</code> declares a minimum for that exact module
+identity. EasyP selects the highest of the direct and transitive minima and
+records one revision of that module in <code>protobuf.lock</code>. If a consumer
+requires <code>common v1.2.0</code> and its dependency requires
+<code>common v1.5.0</code>, both use <code>v1.5.0</code>. An available
+<code>v1.9.0</code> is not selected unless the graph requires it.
+
+Only the selected revision supplies source roots and proto contents to tidy,
+generation and frozen replay. The <code>v1.2.0</code> and <code>v1.5.0</code>
+files may differ: unselected versions are not competing import candidates.
+The reachable byte comparison below applies to multiple copies in the final
+selected graph, not to alternative versions of one module.
+
+Module identity includes the major suffix described below; MVS does not select
+the lowest major or merge different identities. Full Git commits are exact
+constraints, not semantic minima: different exact commits for one module remain
+a conflict, and a tag combined with an exact commit must resolve to that commit.
+
+The real-Git regression
+<code>internal/generation/mvs_integration_test.go</code> covers both directions
+of a direct/transitive version difference, requirement ordering, an existing
+lower lock, idempotent tidy, and warm/cold frozen generation.
+
 ## Major versions and Git mapping
 
 EasyP uses Go-style semantic import versioning for module identities. Native <code>module</code>, <code>require</code>, <code>replace</code> source identities, fetched metadata and lock entries are checked; changing only the consumer manifest cannot bypass the check.
@@ -46,7 +71,7 @@ EasyP uses Go-style semantic import versioning for module identities. Native <co
 
 The final slash major suffix is logical: it is excluded from the repository candidate and the tag prefix. A tag alone does not establish module identity; the manifest at an allowed location must declare the exact requested source. Lightweight and annotated tags resolve to commits. A <code>v2/v2.0.0</code> tag does not release <code>repo/v2</code>.
 
-<code>repo</code> and <code>repo/v2</code> are separate MVS, lock, cache and replacement identities. They may coexist when their protobuf import paths are distinct. Major-version identities do not rename protobuf packages or disambiguate import paths; duplicates still fail, even for identical content. Checked tidy may repair consumer import declarations after a verified dependency namespace change, as described below. Same-identity maximum-minimum selection, exact SHA/tag agreement, immutable tags, local overlays and explicit frozen checks remain in force.
+<code>repo</code> and <code>repo/v2</code> are separate MVS, lock, cache and replacement identities. They may coexist when their protobuf import paths are distinct. Major-version identities do not rename protobuf packages or disambiguate import paths. Generation, lint, breaking and other module operations reject duplicate import paths; tidy uses the reachable exact-byte comparison described below. Checked tidy may repair consumer import declarations after a verified dependency namespace change. Same-identity maximum-minimum selection, exact SHA/tag agreement, immutable tags, local overlays and explicit frozen checks remain in force.
 
 The Go pre-module <code>+incompatible</code> exception is supported for an unsuffixed v2+ requirement whose exact Git revision has no native root <code>protobuf.mod</code> and no matching nested native manifest. <code>easyp get repo@v2.0.0</code> adds the marker after verifying this boundary; a manually written manifest must include it explicitly. For example, <code>repo v2.0.0+incompatible</code> resolves the root tag <code>v2.0.0</code>, never a tag literally ending in <code>+incompatible</code>. Fetch, migration, cold installation and warm cache reads verify this metadata boundary. Update preserves the marker for eligible legacy releases and rejects a selected revision that has become native. Markers on v0/v1 or on suffixed identities are rejected. An unmarked unsuffixed v2+ requirement remains invalid.
 
@@ -118,6 +143,33 @@ marker. Its regression case is <code>TestTidyPromotesIndirectWithoutChangingLock
 in <code>internal/modules/operations_test.go</code>.
 Sources: <code>internal/modules/get.go</code>, <code>internal/modules/update.go</code>,
 <code>internal/modules/operations.go</code>, <code>internal/modules/manifest_requirements.go</code>.
+
+### Tidy import collisions
+
+<code>mod tidy</code> checks consumer targets and their reachable import closure.
+Duplicate import paths that are unused by that closure do not fail tidy. For a
+used name, every allowed candidate must contain exactly the same proto bytes;
+identical copies resolve as one logical source, and different contents fail with
+the import name and conflicting paths before project writes. Comments count as
+bytes, so descriptor or package equality alone is insufficient. No physical
+proto file is deleted or deduplicated in the installed snapshots.
+
+Consumer roots precede dependency roots; dependencies retain lock order and
+each module's declared root order. Tidy validates all equal copies, including
+noncanonical candidates, and rechecks their bytes, alias identities and used-name
+membership before committing. Producer exclusions and module boundaries still
+apply. Used-name rechecks bypass cached snapshot inventories so newly added
+candidates remain observable after explicit cache verification. Verified
+historical import repairs preserve the previous canonical owner
+and physical source, so updating a noncanonical copy cannot rename another
+producer's import. Local replacements use the same checks without writes.
+
+Conflicting copies in an old lock may have been unused. If the current selected
+modules prove that the unchanged logical name now has byte-identical candidates,
+tidy keeps that name without using the ambiguous history as rename evidence.
+This includes removal of the conflicting provider. An absent or conflicting
+current name still cannot be repaired from ambiguous history; equal historical
+copies retain their previous canonical owner and physical-source binding.
 
 ### Local effective graph
 
@@ -224,9 +276,9 @@ The usual Git lock entry and verified <code>h1:</code> hash still pin the instal
 
 The backend is wired in [internal/api/mod_v1_cache.go](../../internal/api/mod_v1_cache.go) through <code>gitmodules.NewWithBSRResolver</code>. A future EasyP Service implementation replaces <code>bsr.StaticResolver</code> there and implements the same <code>modules.BSRResolver</code>; it need not change the dependency graph. The temporary backend has no BSR API requests, Buf executable dependency, HTTP client, implicit latest or universal BSR-to-Git inference. Other BSR revisions can require features absent from the compatibility snapshot. Separate manifests that require incompatible exact Git commits retain the existing conflict diagnostic.
 
-A nested module root <code>proto</code> becomes <code>&lt;checkout&gt;/&lt;module-directory&gt;/proto</code>. A file below that root is imported without either physical prefix. <code>modules.SourceRoots</code> preserves module identity for managed selectors. Common import paths in different physical roots are rejected rather than silently selecting one.
+A nested module root <code>proto</code> becomes <code>&lt;checkout&gt;/&lt;module-directory&gt;/proto</code>. A file below that root is imported without either physical prefix. <code>modules.SourceRoots</code> preserves module identity for managed selectors. Common import paths in different physical roots follow the strict collision check, except for tidy's reachable comparison above.
 
-Generation, lint, breaking and module operations share root/collision rules. Source traversal excludes hidden directories, vendored output and nested-module boundaries via <code>internal/core/path_helpers/v1_source.go</code>. Config discovery and policy inheritance use their own traversal rules.
+Generation, lint, breaking and module operations share source ownership and root rules. Tidy has its own reachable collision check; generation, lint, breaking, download, get/update, vendor and frozen checks retain strict namespace validation. Source traversal excludes hidden directories, vendored output and nested-module boundaries via <code>internal/core/path_helpers/v1_source.go</code>. Config discovery and policy inheritance use their own traversal rules.
 
 ## Persistence guarantees
 

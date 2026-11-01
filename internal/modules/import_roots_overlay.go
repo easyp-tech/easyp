@@ -12,7 +12,7 @@ func finalizeEffectiveImportRoots(ctx context.Context, pass resolutionPass, loca
 	var candidates []importRootModule
 	for _, name := range pass.locals {
 		entry := locals.modules[name]
-		candidate, err := inspectLocalRootCandidates(ctx, entry.Directory, entry.Module, len(locals.hints[name]) > 0)
+		candidate, err := locals.inspect(ctx, entry.Directory, entry.Module, len(locals.hints[name]) > 0)
 		if err != nil {
 			return v1.Lock{}, fmt.Errorf("inspectLocalRootCandidates: %s: %w", name, err)
 		}

@@ -62,6 +62,38 @@ func TestResolvePreservesComponentOrderAndLinkTrace(t *testing.T) {
 	assert.Equal(t, "message File {}", string(data))
 }
 
+func TestResolveOptionalDistinguishesMissingCandidateFromDanglingAlias(t *testing.T) {
+	t.Parallel()
+	view := New(fstest.MapFS{
+		"sources/file.proto": {Data: []byte("message File {}")},
+		"proto":              {Mode: fs.ModeSymlink, Data: []byte("sources")},
+		"dangling.proto":     {Mode: fs.ModeSymlink, Data: []byte("missing.proto")},
+		"dangling_dir":       {Mode: fs.ModeSymlink, Data: []byte("missing_dir")},
+	})
+	tests := []struct {
+		name    string
+		path    string
+		wantErr error
+	}{
+		{name: "missing leaf below directory alias", path: "proto/missing.proto", wantErr: fs.ErrNotExist},
+		{name: "missing subtree below directory alias", path: "proto/other/file.proto", wantErr: fs.ErrNotExist},
+		{name: "dangling file alias", path: "dangling.proto", wantErr: ErrUnsupported},
+		{name: "dangling directory alias", path: "dangling_dir/file.proto", wantErr: ErrUnsupported},
+		{name: "present file below directory alias", path: "proto/file.proto"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			resolved, err := view.ResolveOptional(t.Context(), tt.path)
+			require.ErrorIs(t, err, tt.wantErr)
+			assert.NotEmpty(t, resolved.Links)
+			if tt.wantErr == ErrUnsupported {
+				assert.NotErrorIs(t, err, fs.ErrNotExist, "dangling aliases must not be skipped as absent imports")
+			}
+		})
+	}
+}
+
 func TestResolveLinkCyclesUsePhysicalPaths(t *testing.T) {
 	t.Parallel()
 	view := New(fstest.MapFS{

@@ -112,6 +112,26 @@ func (v *View) Resolve(ctx context.Context, logical string) (Resolution, error) 
 	return resolved, nil
 }
 
+// ResolveOptional distinguishes ordinary absence beneath valid directory
+// aliases from dangling aliases. Missing candidates can be skipped by import
+// lookup; a present alias whose own target is missing must still fail.
+func (v *View) ResolveOptional(ctx context.Context, logical string) (Resolution, error) {
+	resolved, err := v.Resolve(ctx, logical)
+	if !errors.Is(err, fs.ErrNotExist) {
+		return resolved, err
+	}
+	for _, link := range resolved.Links {
+		target, linkErr := v.Resolve(ctx, link.Path)
+		if errors.Is(linkErr, fs.ErrNotExist) || (linkErr == nil && !target.Info.IsDir()) {
+			return resolved, localResolutionError(logical, resolved, err)
+		}
+		if linkErr != nil {
+			return resolved, fmt.Errorf("Resolve: %w", linkErr)
+		}
+	}
+	return resolved, err
+}
+
 func (v *View) resolveComponents(ctx context.Context, base string, components []string, active map[string]bool, resolved *Resolution) error {
 	err := ctx.Err()
 	if err != nil {

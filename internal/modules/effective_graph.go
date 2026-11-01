@@ -23,6 +23,8 @@ type EffectiveModule struct {
 type EffectiveGraph struct {
 	Modules map[string]EffectiveModule
 	Sources SourceRoots
+	// Remote pins remain internal validation evidence, never a replacement lock.
+	remoteLock v1.Lock
 }
 
 // EnsureEffectiveGraph resolves main-module replacements at every graph depth.
@@ -37,6 +39,12 @@ func ensureEffectiveGraph(ctx context.Context, root string, module v1.Module, ca
 }
 
 func ensureEffectiveGraphWithRoots(ctx context.Context, root string, module v1.Module, cache Cache, localPath func(string) (string, error), refresh bool, hints map[string][]string) (EffectiveGraph, error) {
+	locals := newLocalReplacements(root, module, localPath)
+	locals.hints = hints
+	return resolveEffectiveGraph(ctx, root, module, cache, locals, refresh)
+}
+
+func resolveEffectiveGraph(ctx context.Context, root string, module v1.Module, cache Cache, locals *localReplacements, refresh bool) (EffectiveGraph, error) {
 	graph := EffectiveGraph{Modules: make(map[string]EffectiveModule)}
 	existing, err := ReadLock(filepath.Join(root, v1.LockFile))
 	if err != nil && !errors.Is(err, os.ErrNotExist) {
@@ -46,11 +54,9 @@ func ensureEffectiveGraphWithRoots(ctx context.Context, root string, module v1.M
 	for _, entry := range existing.Modules {
 		pins[entry.Source] = entry
 	}
-	locals := newLocalReplacements(root, module, localPath)
-	locals.hints = hints
-	remote := &effectiveRemoteSource{cache: cache, pins: pins, refresh: refresh, historical: localPath != nil, modules: make(map[[4]string]cachedEffectiveModule)}
+	remote := &effectiveRemoteSource{cache: cache, pins: pins, refresh: refresh, historical: locals.localPath != nil, modules: make(map[[4]string]cachedEffectiveModule)}
 	source, _ := cache.(Source)
-	remote.roots = newImportRootSource(source, existing, hints)
+	remote.roots = newImportRootSource(source, existing, locals.hints)
 	loader := revisionLoader{source: remote, fetched: make(map[string]Fetched), pins: pins, local: locals.lookupRequirement}
 	if refresh {
 		loader.pins = nil
@@ -63,6 +69,7 @@ func ensureEffectiveGraphWithRoots(ctx context.Context, root string, module v1.M
 	if err != nil {
 		return graph, fmt.Errorf("finalizeEffectiveImportRoots: %w", err)
 	}
+	graph.remoteLock = pass.lock
 	appendModule := func(name string, entry EffectiveModule, locked *v1.LockedModule) error {
 		var roots SourceRoots
 		var err error
@@ -146,6 +153,10 @@ func (s *effectiveRemoteSource) installed(ctx context.Context, entry v1.LockedMo
 	dir, module, err := s.cache.Cached(entry)
 	if err != nil {
 		return EffectiveModule{}, fmt.Errorf("Cached: %w", err)
+	}
+	dir, err = filepath.Abs(dir)
+	if err != nil {
+		return EffectiveModule{}, fmt.Errorf("Abs: %w", err)
 	}
 	selected := EffectiveModule{Directory: dir, Module: module}
 	s.modules[key] = cachedEffectiveModule{module: selected, bsr: slices.Clone(entry.BSR), roots: slices.Clone(entry.Roots)}
