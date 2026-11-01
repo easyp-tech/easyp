@@ -35,7 +35,7 @@ func TestPinnedObjectCacheWorksWithoutRemote(t *testing.T) {
 	dir, _, err := cache.Cached(first.Lock)
 	require.NoError(t, err)
 	require.NoError(t, os.WriteFile(filepath.Join(dir, "api.proto"), []byte("tampered"), 0o644))
-	require.ErrorContains(t, cache.Install(t.Context(), v1.Lock{Version: 1, Modules: []v1.LockedModule{first.Lock}}), "hash mismatch")
+	require.ErrorContains(t, cache.VerifyCached(t.Context(), v1.Lock{Version: 1, Modules: []v1.LockedModule{first.Lock}}), "hash mismatch")
 }
 
 func TestObjectRepositoryLockHonorsCancellation(t *testing.T) {

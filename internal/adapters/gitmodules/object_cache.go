@@ -51,7 +51,7 @@ func checkoutCachedCommit(ctx context.Context, checkout string, entry v1.LockedM
 		// requesting its object ID. Do not silently replace an unavailable pin by HEAD.
 		_, fetchErr := gitV1(ctx, repository, "-c", "fetch.fsckObjects=true", "fetch", "--quiet", "--no-tags", "--no-write-fetch-head", "--depth=1", "--", candidate.remote, commit)
 		if fetchErr != nil {
-			if gitcommand.Interrupted(fetchErr) {
+			if gitcommand.Interrupted(fetchErr) || unavailableObjectRepository(fetchErr) {
 				return false, fmt.Errorf("gitV1: %w", fetchErr)
 			}
 			// Some servers only expose advertised refs. Fetch reachable history as a
@@ -90,6 +90,20 @@ func checkoutCachedCommit(ctx context.Context, checkout string, entry v1.LockedM
 		return true, err
 	}
 	return true, nil
+}
+
+// unavailableObjectRepository recognizes diagnostics that fetching more history
+// from the same remote cannot fix. Unknown and transport failures retain the
+// advertised-ref fallback; callers still try distinct parent repositories.
+func unavailableObjectRepository(err error) bool {
+	diagnostic := strings.ToLower(err.Error())
+	return strings.Contains(diagnostic, "repository not found") ||
+		(strings.Contains(diagnostic, "fatal: repository '") && strings.Contains(diagnostic, "' not found")) ||
+		strings.Contains(diagnostic, "does not appear to be a git repository") ||
+		strings.Contains(diagnostic, "authentication failed for") ||
+		(strings.Contains(diagnostic, "could not read username for") && strings.Contains(diagnostic, "terminal prompts disabled")) ||
+		(strings.Contains(diagnostic, "could not read password for") && strings.Contains(diagnostic, "terminal prompts disabled")) ||
+		strings.Contains(diagnostic, "permission denied (publickey")
 }
 
 // OS locks are released on process exit and shared across concurrent CLI runs.

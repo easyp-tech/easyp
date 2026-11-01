@@ -56,9 +56,13 @@ func (s *sourceSelectorMatches) validateMatches(section string) error {
 // names without compiling unrelated files. Package declarations are read only
 // when needed and after the path filter; required imports are compiled later.
 func selectedSourceFiles(ctx context.Context, selected v1GenerationModule, project, module *sourceSelectorMatches) ([]string, error) {
-	roots, err := modules.ModuleSources(selected.directory, selected.module)
-	if err != nil {
-		return nil, fmt.Errorf("ModuleSources: %w", err)
+	roots := selected.sources
+	if roots == nil {
+		var err error
+		roots, err = modules.ModuleSources(selected.directory, selected.module)
+		if err != nil {
+			return nil, fmt.Errorf("ModuleSources: %w", err)
+		}
 	}
 	allRoots := append(append(modules.SourceRoots(nil), roots...), selected.dependencies...)
 	seen := make(map[string]bool)

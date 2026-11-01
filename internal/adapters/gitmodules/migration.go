@@ -156,7 +156,7 @@ func (c *Cache) fetchMigration(ctx context.Context, source, version, legacyHash 
 	if err != nil {
 		return modules.Fetched{}, fmt.Errorf("sourceV1SnapshotView: %w", err)
 	}
-	if err := materializeSelectedSnapshotAliases(ctx, view, checkout.snapshot, checkout.module, nil); err != nil {
+	if err := materializeSelectedSnapshotAliases(ctx, newSnapshotWriter(view, checkout.snapshot), checkout.module, nil, true); err != nil {
 		return modules.Fetched{}, fmt.Errorf("materializeSelectedSnapshotAliases: %w", err)
 	}
 	checkout.inspection, err = inspectV1Snapshot(ctx, view, checkout.snapshot, checkout.module, checkout.commit)

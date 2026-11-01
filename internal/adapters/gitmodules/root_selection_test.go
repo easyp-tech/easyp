@@ -56,6 +56,8 @@ func TestFetchWithRootsReplaysColdAndWarmSelections(t *testing.T) {
 		lock := v1.Lock{Version: 1, Modules: []v1.LockedModule{entry}}
 		require.NoError(t, cache.Install(t.Context(), lock))
 		require.NoError(t, cache.Install(t.Context(), lock))
+		// A new command independently verifies the published tree and may stamp it.
+		require.NoError(t, (&Cache{root: cache.root}).Install(t.Context(), lock))
 		require.NoError(t, cache.VerifyCached(t.Context(), lock))
 		directory, module, err := cache.Cached(entry)
 		require.NoError(t, err)

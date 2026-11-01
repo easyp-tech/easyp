@@ -55,6 +55,7 @@ func generateV1DescriptorSet(ctx context.Context, log logger.Logger, cache modul
 }
 
 func prepareDescriptorTargets(ctx context.Context, log logger.Logger, cache modules.Cache, request Request, targets []generationTarget) ([]preparedDescriptorTarget, error) {
+	index := newV1WorkspaceModuleIndex(request.WorkspaceRoot)
 	prepared := make([]preparedDescriptorTarget, 0, len(targets))
 	seen := make(map[string]v1ModuleSelection)
 	requested := make(map[string]*sourceSelectorMatches)
@@ -67,7 +68,7 @@ func prepareDescriptorTargets(ctx context.Context, log logger.Logger, cache modu
 		if err := ctx.Err(); err != nil {
 			return nil, err
 		}
-		selected, err := resolveV1GenerationModule(ctx, cache, request.WorkspaceRoot, filepath.Dir(target.configPath), target.module, request.Frozen)
+		selected, err := resolveV1GenerationModuleWithIndex(ctx, cache, request.WorkspaceRoot, filepath.Dir(target.configPath), target.module, request.Frozen, index)
 		if err != nil {
 			return nil, fmt.Errorf("resolveV1GenerationModule for %s: %w", target.configPath, err)
 		}
@@ -99,7 +100,7 @@ func prepareDescriptorTargets(ctx context.Context, log logger.Logger, cache modu
 			}
 		}
 		label := fmt.Sprintf("project %q, module %q (%s)", relativeDescriptorPath(request.WorkDir, filepath.Dir(target.configPath)), selected.module.Name, relativeDescriptorPath(request.WorkDir, selected.directory))
-		app, err := prepareV1ModuleCore(log, request, target.configPath, selected.directory, target.config, selected.module, selected.dependencies)
+		app, owners, err := prepareV1ModuleCore(log, request, target.configPath, selected.directory, target.config, selected.module, selected.dependencies, selected.sources)
 		if err != nil {
 			return nil, fmt.Errorf("prepareV1ModuleCore for %s: %w", label, err)
 		}
@@ -115,15 +116,6 @@ func prepareDescriptorTargets(ctx context.Context, log logger.Logger, cache modu
 		full := plan.DescriptorSet(true)
 		if _, err := protodesc.NewFiles(full); err != nil {
 			return nil, fmt.Errorf("validate descriptor set for %s: %w", label, err)
-		}
-		roots, err := modules.ModuleSources(selected.directory, selected.module)
-		if err != nil {
-			return nil, fmt.Errorf("ModuleSources: %w", err)
-		}
-		roots = append(roots, selected.dependencies...)
-		owners, err := roots.FileModules()
-		if err != nil {
-			return nil, fmt.Errorf("FileModules: %w", err)
 		}
 		versions := descriptorVersions(request, selected)
 		prepared = append(prepared, preparedDescriptorTarget{target: target, selected: selected, plan: plan, full: full, owners: owners, versions: versions, label: label})

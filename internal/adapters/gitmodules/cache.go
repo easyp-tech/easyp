@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 	"path/filepath"
+	"sync"
 
 	"github.com/easyp-tech/easyp/internal/adapters/bsr"
 	"github.com/easyp-tech/easyp/internal/adapters/gitcommand"
@@ -21,14 +22,16 @@ type Cache struct {
 	bsrResolver modules.BSRResolver
 	logger      logger.Logger
 	proxy       string
+	stateMu     sync.Mutex
+	state       *cacheRunState
 }
 
 // WithLogger returns an isolated cache handle with dependency progress logging.
-// Historical-pin scopes preserve this logger through their existing shallow copy.
+// Logger and historical-pin scopes share verified immutable snapshot state.
 func (c *Cache) WithLogger(log logger.Logger) *Cache {
-	scoped := *c
+	scoped := c.scoped()
 	scoped.logger = log
-	return &scoped
+	return scoped
 }
 
 func (c *Cache) operationContext(ctx context.Context, source, version string) context.Context {

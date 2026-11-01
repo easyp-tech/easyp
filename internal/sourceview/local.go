@@ -118,6 +118,24 @@ func ResolveLocal(ctx context.Context, rootPath, logical string) (_ Resolution, 
 	return resolved, localResolutionError(logical, resolved, err)
 }
 
+// ResolveLocalOptional supports absent import candidates beneath directory
+// aliases while preserving the local boundary and nested-repository checks.
+func ResolveLocalOptional(ctx context.Context, rootPath, logical string) (_ Resolution, resultErr error) {
+	root, view, err := localView(rootPath)
+	if err != nil {
+		return Resolution{}, fmt.Errorf("localView: %w", err)
+	}
+	defer func() { resultErr = errors.Join(resultErr, root.Close()) }()
+	resolved, err := view.ResolveOptional(ctx, filepath.ToSlash(logical))
+	if err == nil || errors.Is(err, fs.ErrNotExist) {
+		checkErr := CheckLocalResolution(root, resolved)
+		if checkErr != nil {
+			return resolved, checkErr
+		}
+	}
+	return resolved, err
+}
+
 func localView(rootPath string) (*os.Root, *View, error) {
 	canonical, err := filepath.EvalSymlinks(rootPath)
 	if err != nil {

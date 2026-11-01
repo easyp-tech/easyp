@@ -138,6 +138,15 @@ func (tx *resolvedFileObservations) readState(name string, allowed SourceRoots) 
 	if errors.Is(err, os.ErrNotExist) && len(resolved.Links) == 0 {
 		return resolvedFileState{name: name, resolution: sourceview.Resolution{Path: filepath.ToSlash(name)}, allowed: slices.Clone(allowed)}, nil
 	}
+	if errors.Is(err, os.ErrNotExist) {
+		missing, checkErr := tx.missingFileThroughDirectoryAlias(view, name, resolved)
+		if checkErr != nil {
+			return resolvedFileState{}, fmt.Errorf("missingFileThroughDirectoryAlias: %w", checkErr)
+		}
+		if missing {
+			return resolvedFileState{name: name, resolution: resolved, allowed: slices.Clone(allowed)}, nil
+		}
+	}
 	if err != nil {
 		return resolvedFileState{}, fmt.Errorf("Resolve: %w", err)
 	}
@@ -186,16 +195,41 @@ func (tx *resolvedFileObservations) readState(name string, allowed SourceRoots) 
 	return resolvedFileState{name: name, data: data, exists: true, resolution: resolved, allowed: slices.Clone(allowed)}, nil
 }
 
+// Optional metadata can be absent beneath an existing directory alias. Resolve
+// the complete parent to distinguish that case from a dangling alias target.
+// Keep the link trace so retargeting an equally empty directory is still caught.
+func (tx *resolvedFileObservations) missingFileThroughDirectoryAlias(view *sourceview.View, name string, resolved sourceview.Resolution) (bool, error) {
+	parent, err := view.Resolve(context.Background(), filepath.ToSlash(filepath.Dir(name)))
+	if errors.Is(err, os.ErrNotExist) {
+		return false, nil
+	}
+	if err != nil {
+		return false, fmt.Errorf("Resolve: %w", err)
+	}
+	if !parent.Info.IsDir() || resolved.Path != filepath.ToSlash(filepath.Join(parent.Path, filepath.Base(name))) || !sameResolvedLinks(resolved.Links, parent.Links) {
+		return false, nil
+	}
+	err = sourceview.CheckLocalResolution(tx.root, parent)
+	if err != nil {
+		return false, fmt.Errorf("CheckLocalResolution: %w", err)
+	}
+	return true, nil
+}
+
 func sameResolvedInfo(before, after os.FileInfo) bool {
 	return before != nil && after != nil && os.SameFile(before, after) && before.Mode() == after.Mode() && before.Size() == after.Size() && before.ModTime().Equal(after.ModTime())
 }
 
 func sameResolvedPath(before, after sourceview.Resolution) bool {
-	if before.Path != after.Path || len(before.Links) != len(after.Links) || !sameResolvedInfo(before.Info, after.Info) {
+	return before.Path == after.Path && sameResolvedInfo(before.Info, after.Info) && sameResolvedLinks(before.Links, after.Links)
+}
+
+func sameResolvedLinks(before, after []sourceview.Link) bool {
+	if len(before) != len(after) {
 		return false
 	}
-	for i, link := range before.Links {
-		other := after.Links[i]
+	for i, link := range before {
+		other := after[i]
 		if link.Path != other.Path || link.Target != other.Target || !sameResolvedInfo(link.Info, other.Info) {
 			return false
 		}
@@ -204,7 +238,10 @@ func sameResolvedPath(before, after sourceview.Resolution) bool {
 }
 
 func sameResolvedFile(before, after resolvedFileState) bool {
-	return before.exists == after.exists && (!before.exists || (sameResolvedPath(before.resolution, after.resolution) && bytes.Equal(before.data, after.data)))
+	if before.exists != after.exists || before.resolution.Path != after.resolution.Path || !sameResolvedLinks(before.resolution.Links, after.resolution.Links) {
+		return false
+	}
+	return !before.exists || (sameResolvedInfo(before.resolution.Info, after.resolution.Info) && bytes.Equal(before.data, after.data))
 }
 
 func (tx *resolvedFileObservations) captureParents(name string) error {

@@ -102,9 +102,9 @@ func cachedSources(lock v1.Lock, replaced map[string]bool, repository Cache) (So
 		if err := ValidateRequirements(unreplacedRequirements(dependency.Requires, replaced), lock); err != nil {
 			return nil, fmt.Errorf("dependency %s: %w", dependency.Name, err)
 		}
-		dependencyRoots, err := ModuleSources(installDir, dependency)
+		dependencyRoots, err := cachedModuleSources(installDir, dependency, entry, repository)
 		if err != nil {
-			return nil, fmt.Errorf("ModuleSources: %w", err)
+			return nil, fmt.Errorf("cachedModuleSources: %w", err)
 		}
 		roots = append(roots, dependencyRoots...)
 	}

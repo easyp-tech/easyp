@@ -21,6 +21,8 @@ type localReplacements struct {
 	paths     map[string]string
 	localPath func(string) (string, error)
 	hints     map[string][]string
+	read      func(string, string) (EffectiveModule, error)
+	inspect   func(context.Context, string, v1.Module, bool) (importRootModule, error)
 }
 
 func newLocalReplacements(directory string, module v1.Module, localPath func(string) (string, error)) *localReplacements {
@@ -28,7 +30,10 @@ func newLocalReplacements(directory string, module v1.Module, localPath func(str
 	for _, replacement := range module.Replaces {
 		targets[replacement.Module] = replacement.Target
 	}
-	return &localReplacements{directory: directory, targets: targets, modules: make(map[string]EffectiveModule), paths: make(map[string]string), localPath: localPath}
+	return &localReplacements{
+		directory: directory, targets: targets, modules: make(map[string]EffectiveModule), paths: make(map[string]string), localPath: localPath,
+		read: readLocalReplacement, inspect: inspectLocalRootCandidates,
+	}
 }
 
 func (l *localReplacements) lookupRequirement(name, version string) (v1.Module, bool, error) {
@@ -57,7 +62,7 @@ func (l *localReplacements) lookup(name string) (v1.Module, bool, error) {
 			return v1.Module{}, true, fmt.Errorf("local replacement %s => %s: %w", name, target, err)
 		}
 	}
-	entry, err := readLocalReplacement(directory, name)
+	entry, err := l.read(directory, name)
 	if err != nil {
 		return v1.Module{}, true, fmt.Errorf("local replacement %s => %s: %w", name, target, err)
 	}
@@ -78,6 +83,16 @@ func (l *localReplacements) lookup(name string) (v1.Module, bool, error) {
 }
 
 func readLocalReplacement(directory, name string) (EffectiveModule, error) {
+	return readLocalReplacementWithReader(directory, name, nil)
+}
+
+func readLocalReplacementWithReader(directory, name string, readFile func(string) ([]byte, error)) (EffectiveModule, error) {
+	observed := readFile != nil
+	if !observed {
+		readFile = func(file string) ([]byte, error) {
+			return sourceview.ReadLocal(context.Background(), directory, file)
+		}
+	}
 	info, err := os.Stat(directory)
 	if err != nil {
 		return EffectiveModule{}, fmt.Errorf("Stat: %w", err)
@@ -85,9 +100,9 @@ func readLocalReplacement(directory, name string) (EffectiveModule, error) {
 	if !info.IsDir() {
 		return EffectiveModule{}, fmt.Errorf("%s is not a directory", directory)
 	}
-	raw, err := sourceview.ReadLocal(context.Background(), directory, v1.ModuleFile)
+	raw, err := readFile(v1.ModuleFile)
 	if err != nil && !errors.Is(err, os.ErrNotExist) {
-		return EffectiveModule{}, fmt.Errorf("ReadFile: %w", err)
+		return EffectiveModule{}, fmt.Errorf("readFile: %w", err)
 	}
 	var module v1.Module
 	if v1.IsModuleManifest(raw) {
@@ -100,9 +115,16 @@ func readLocalReplacement(directory, name string) (EffectiveModule, error) {
 		}
 	} else {
 		// Compatibility reads only roots/requirements, never dependency plugins.
-		module, err = moduleconfig.ReadLocalDependency(directory, name)
-		if err != nil {
-			return EffectiveModule{}, fmt.Errorf("ReadGitDependency: %w", err)
+		if observed {
+			module, err = moduleconfig.ReadLocalDependencyWithReader(directory, name, readFile)
+			if err != nil {
+				return EffectiveModule{}, fmt.Errorf("ReadLocalDependencyWithReader: %w", err)
+			}
+		} else {
+			module, err = moduleconfig.ReadLocalDependency(directory, name)
+			if err != nil {
+				return EffectiveModule{}, fmt.Errorf("ReadLocalDependency: %w", err)
+			}
 		}
 	}
 	if _, err := ModuleSources(directory, module); err != nil {

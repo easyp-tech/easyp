@@ -89,9 +89,9 @@ func frozenCachedSources(ctx context.Context, module v1.Module, lock v1.Lock, re
 		if err != nil {
 			return nil, fmt.Errorf("dependency %s: validateFrozenRequirements: %w", dependency.Name, err)
 		}
-		dependencyRoots, err := ModuleSources(directory, dependency)
+		dependencyRoots, err := cachedModuleSources(directory, dependency, entry, repository)
 		if err != nil {
-			return nil, fmt.Errorf("ModuleSources: %w", err)
+			return nil, fmt.Errorf("cachedModuleSources: %w", err)
 		}
 		sources[requirement.Module] = dependencyRoots
 		queue = append(queue, dependency.Requires...)

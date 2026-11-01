@@ -25,9 +25,8 @@ import (
 
 	pluginexecutor "github.com/easyp-tech/easyp/internal/adapters/plugin"
 	"github.com/easyp-tech/easyp/internal/core/path_helpers"
-	"github.com/easyp-tech/easyp/internal/fs/fs"
+	"github.com/easyp-tech/easyp/internal/parallel"
 	"github.com/easyp-tech/easyp/internal/sourceview"
-	"github.com/easyp-tech/easyp/internal/version"
 )
 
 // GenerationPlan holds a compiled graph with managed options already applied.
@@ -85,14 +84,15 @@ func (c *Core) prepareGeneration(ctx context.Context, root string, selected []st
 	found := make(map[string]bool)
 
 	for _, inputFilesDir := range c.inputs.InputFilesDir {
-		searchPath := filepath.Join(inputFilesDir.Root, inputFilesDir.Path)
-		fsWalker := fs.NewFSWalker(root, searchPath)
 		importRoot := filepath.Join(root, inputFilesDir.Root)
 		if !slices.Contains(imports, importRoot) {
 			imports = append(imports, importRoot)
 		}
 
-		err := fsWalker.WalkDir(func(walkPath string, err error) error {
+		err := c.walkGenerationInputs(root, inputFilesDir, func(walkPath string, err error, indexed bool) error {
+			if err := ctx.Err(); err != nil {
+				return err
+			}
 			addedFile := stripPrefix(walkPath, inputFilesDir.Root)
 			if selected != nil && filepath.Ext(walkPath) == ".proto" && !selection[addedFile] {
 				return nil
@@ -108,7 +108,7 @@ func (c *Core) prepareGeneration(ctx context.Context, root string, selected []st
 				return err
 			case ctx.Err() != nil:
 				return ctx.Err()
-			case path_helpers.ShouldSkipV1SourceDir(importRoot, filepath.Join(root, walkPath)):
+			case !indexed && path_helpers.ShouldSkipV1SourceDir(importRoot, filepath.Join(root, walkPath)):
 				return stdfs.SkipDir
 			case filepath.Ext(walkPath) != ".proto":
 				return nil
@@ -130,7 +130,7 @@ func (c *Core) prepareGeneration(ctx context.Context, root string, selected []st
 			return nil
 		})
 		if err != nil {
-			return nil, fmt.Errorf("WalkDir: %w", err)
+			return nil, fmt.Errorf("walkGenerationInputs: %w", err)
 		}
 	}
 
@@ -204,104 +204,39 @@ func (p *GenerationPlan) Execute(ctx context.Context) error {
 	return bucket.DumpToFs(ctx)
 }
 
-// ExecuteInto stages plugin results in a shared bucket, rejecting conflicting outputs.
-func (p *GenerationPlan) ExecuteInto(ctx context.Context, filesToWrite *GenerateBucket) error {
-	c, root := p.core, p.root
-	files, fileDescriptors, dependencyFiles := p.files, p.descriptors, p.dependencyFiles
-
-	for _, plugin := range c.plugins {
-		filesToGenerate := slices.Clone(files)
-
-		if plugin.WithImports {
-			for _, dependency := range dependencyFiles {
-				if !slices.Contains(filesToGenerate, dependency) {
-					filesToGenerate = append(filesToGenerate, dependency)
-				}
+// ExecuteInto stages plugin results in configuration order after bounded parallel execution.
+func (p *GenerationPlan) ExecuteInto(ctx context.Context, filesToWrite *GenerateBucket) (resultErr error) {
+	ctx, builtinRun := pluginexecutor.EnsureBuiltinRun(ctx)
+	if builtinRun != nil {
+		defer func() {
+			err := builtinRun.Close(context.WithoutCancel(ctx))
+			if err != nil {
+				resultErr = errors.Join(resultErr, fmt.Errorf("Close: %w", err))
 			}
-		}
-
-		req := &pluginpb.CodeGeneratorRequest{
-			FileToGenerate:  filesToGenerate,
-			ProtoFile:       fileDescriptors,
-			CompilerVersion: version.CompilerVersion(),
-		}
-
-		// Executors receive independent requests; prepared descriptors stay immutable.
-		req = proto.Clone(req).(*pluginpb.CodeGeneratorRequest)
-
-		executor := c.getExecutor(plugin)
-
-		source := plugin.Source.Name
-		if plugin.Source.Remote != "" {
-			source = plugin.Source.Remote
-		}
-
-		if plugin.Source.Path != "" {
-			source = plugin.Source.Path
-		}
-
-		resp, err := executor.Execute(ctx, pluginexecutor.Info{
-			Source:  source,
-			WorkDir: c.pluginWorkDir,
-			Command: plugin.Source.Command,
-			Options: plugin.Options,
-		}, req)
-		if err != nil {
-			return fmt.Errorf("execute plugin %s: %w, executor: %s", source, err, executor.GetName())
-		}
-
-		if resp.Error != nil {
-			return fmt.Errorf("plugin %s error: %s, executor: %s", plugin.Source, *resp.Error, executor.GetName())
-		}
-
-		outputDir := root
-		if plugin.Out != "" {
-			outputDir = filepath.Join(root, plugin.Out)
-		}
-		var goOutputDirs map[string]string
-		paths := plugin.Options["paths"]
-		if c.goPackageOutputPrefix != "" && len(paths) > 0 && paths[len(paths)-1] == "source_relative" {
-			goOutputDirs = goPackageOutputDirs(c.goPackageOutputPrefix, filesToGenerate, fileDescriptors, plugin.Options)
-		}
-		for _, file := range resp.File {
-			originalName := file.GetName()
-			if !filepath.IsLocal(filepath.FromSlash(originalName)) {
-				return fmt.Errorf("plugin returned invalid output path %q", originalName)
-			}
-			outputName := originalName
-			if file.GetInsertionPoint() == "" {
-				outputName = goPackageOutputPath(file, goOutputDirs)
-			}
-			if !filepath.IsLocal(filepath.FromSlash(outputName)) {
-				return fmt.Errorf("plugin returned invalid output path %q", outputName)
-			}
-			path := filepath.Join(outputDir, filepath.FromSlash(outputName))
-			originalPath := filepath.Join(outputDir, filepath.FromSlash(originalName))
-			if file.GetInsertionPoint() != "" {
-				path, err = filesToWrite.insertionOutputPath(originalPath)
-				if err != nil {
-					return fmt.Errorf("insertionOutputPath: %w", err)
-				}
-			}
-
-			c.logger.Debug(ctx, "generated file",
-				slog.String("plugin", source),
-				slog.String("file", outputName),
-				slog.String("plugin_out", plugin.Out),
-				slog.String("full_path", path),
-			)
-
-			if err := addFileWithInsertionPoint(ctx, path, file, filesToWrite); err != nil {
-				return fmt.Errorf("addFileWithInsertionPoint: %w", err)
-			}
-			if file.GetInsertionPoint() == "" {
-				filesToWrite.recordOutputPath(originalPath, path)
-			}
-		}
+		}()
 	}
-
-	c.logger.Info(ctx, "code generation completed")
-
+	results := make([]pluginResult, len(p.core.plugins))
+	err := parallel.Run(ctx, len(results), maxPluginWorkers, func(index int) error {
+		results[index] = p.invokePlugin(ctx, p.core.plugins[index])
+		return nil
+	})
+	if err != nil {
+		return fmt.Errorf("Run: %w", err)
+	}
+	for index, result := range results {
+		if err := ctx.Err(); err != nil {
+			return err
+		}
+		if result.err != nil {
+			return result.err
+		}
+		err := p.applyPluginResponse(ctx, p.core.plugins[index], result, filesToWrite)
+		if err != nil {
+			return err
+		}
+		results[index] = pluginResult{}
+	}
+	p.core.logger.Info(ctx, "code generation completed")
 	return nil
 }
 

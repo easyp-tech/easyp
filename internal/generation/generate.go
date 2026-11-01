@@ -3,11 +3,13 @@ package generation
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"io/fs"
 	"os"
 	"path/filepath"
 
+	"github.com/easyp-tech/easyp/internal/adapters/plugin"
 	v1 "github.com/easyp-tech/easyp/internal/config/v1"
 	"github.com/easyp-tech/easyp/internal/core/path_helpers"
 	"github.com/easyp-tech/easyp/internal/logger"
@@ -38,7 +40,16 @@ type generationTarget struct {
 
 // Run discovers generator files, prepares selected modules, and executes each generation.
 // Missing locked dependencies are installed in the supplied cache.
-func Run(ctx context.Context, log logger.Logger, cache modules.Cache, request Request) error {
+func Run(ctx context.Context, log logger.Logger, cache modules.Cache, request Request) (resultErr error) {
+	ctx, builtinRun := plugin.EnsureBuiltinRun(ctx)
+	if builtinRun != nil {
+		defer func() {
+			err := builtinRun.Close(context.WithoutCancel(ctx))
+			if err != nil {
+				resultErr = errors.Join(resultErr, fmt.Errorf("Close: %w", err))
+			}
+		}()
+	}
 	if request.DescriptorSetOut != "" && request.DescriptorSetOutDir != "" {
 		return fmt.Errorf("--descriptor_set_out and --descriptor_set_out_dir are mutually exclusive")
 	}
