@@ -28,6 +28,7 @@
 | <code>internal/migration</code> | <code>build_candidates.go</code> | Preflight output conflicts and synchronize candidate previews with transaction write proposals |
 | <code>internal/workspace</code> | <code>discovery.go</code> | Repository boundary, ancestor config/module selection, recursive discovery exclusions |
 | <code>internal/core</code> | <code>core.go</code>, <code>dom.go</code>, <code>proto_info_read.go</code>, <code>lint.go</code> | Engine options, proto representations and lint execution |
+| <code>internal/compiler</code> | <code>compile.go</code>, <code>resolver.go</code> | Separate native compiler integration, authoritative source resolution, checked option-aware reflection, ordered targets and returned diagnostics |
 | <code>internal/core</code> | <code>generate.go</code>, <code>managed_mode.go</code>, <code>generate_bucket.go</code>, <code>generate_insertion_point.go</code> | Descriptor compilation, managed mode, plugins and output |
 | <code>internal/core</code> | <code>comment_suppressions.go</code>, <code>instruction_parser.go</code>, <code>unstable_package_matcher.go</code> | Per-engine lint directives, protobuf instruction names and unstable package matching |
 | <code>internal/core/path_helpers</code> | <code>is_target_path.go</code>, <code>v1_source.go</code> | Target path matching and v1 source exclusions |

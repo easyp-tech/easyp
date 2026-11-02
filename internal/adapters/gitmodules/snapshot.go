@@ -69,6 +69,8 @@ func prepareV1Snapshot(ctx context.Context, checkout, commit, source, subdir str
 		return "", v1.Module{}, nil, fmt.Errorf("applyV1ModuleRoots: %w", err)
 	}
 	gitcommand.Debug(ctx, "Snapshot source selection", slog.Any("roots", module.Roots), slog.Any("proto_filters", module.ProtoFilters), slog.Bool("roots_from_metadata", module.RootsFromMetadata))
+	selection := module
+	selection.ProtoFilters = snapshotPhysicalProtoFilters(ctx, view, module.ProtoFilters)
 	provisional := inspect && !module.RootsFromMetadata && len(roots) == 0
 	ignoredMetadata := make(map[string]bool, len(metadataFailures))
 	for _, failure := range metadataFailures {
@@ -91,7 +93,7 @@ func prepareV1Snapshot(ctx context.Context, checkout, commit, source, subdir str
 	// Stage ordinary files only after metadata has selected Buf source paths.
 	// Discarded proto names must not collide with retained names on the host.
 	for _, name := range regular {
-		if path.Ext(name) == ".proto" && len(selectV1ProtoFiles([]string{name}, module.ProtoFilters)) == 0 {
+		if path.Ext(name) == ".proto" && !v1SourcePathSelected(name, selection.ProtoFilters) {
 			continue
 		}
 		if err := writer.file(ctx, name); err != nil {
@@ -102,12 +104,12 @@ func prepareV1Snapshot(ctx context.Context, checkout, commit, source, subdir str
 		return "", v1.Module{}, nil, fmt.Errorf("materializeSnapshotAuxiliaryAliases: %w", err)
 	}
 	if !provisional {
-		if err := materializeSelectedSnapshotAliases(ctx, writer, module, ignoredMetadata, len(aliases) > 0); err != nil {
+		if err := materializeSelectedSnapshotAliases(ctx, writer, selection, ignoredMetadata, len(aliases) > 0); err != nil {
 			return "", v1.Module{}, nil, fmt.Errorf("materializeSelectedSnapshotAliases: %w", err)
 		}
 	}
 	if inspect {
-		inspection, err = inspectV1Snapshot(ctx, view, directory, module, commit)
+		inspection, err = inspectV1Snapshot(ctx, view, directory, selection, commit)
 		if err != nil {
 			return "", v1.Module{}, nil, fmt.Errorf("inspectV1Snapshot: %w", err)
 		}
@@ -279,6 +281,9 @@ func materializeSelectedSnapshotAliases(ctx context.Context, writer *snapshotWri
 			if ignoredMetadata[logical] {
 				return nil
 			}
+			if resolved.Info != nil && resolved.Info.IsDir() && (!v1SourceDirectorySelected(logical, module.ProtoFilters) || !v1SourceDirectorySelected(resolved.Path, module.ProtoFilters)) {
+				return fs.SkipDir
+			}
 			if walkErr != nil {
 				if logical != logicalRoot && snapshotExcludedDirectory(logical, logicalRoot, directory, module) {
 					return nil
@@ -303,6 +308,9 @@ func materializeSelectedSnapshotAliases(ctx context.Context, writer *snapshotWri
 				return nil
 			}
 			if !snapshotSelectedAlias(logical, module) {
+				return nil
+			}
+			if path.Ext(logical) == ".proto" && !v1SourcePathSelected(resolved.Path, module.ProtoFilters) {
 				return nil
 			}
 			return writer.file(ctx, logical)
@@ -452,7 +460,7 @@ func snapshotSelectedAlias(name string, module v1.Module) bool {
 	}
 	for _, root := range module.Roots {
 		if v1FileWithin(name, root) {
-			return len(selectV1ProtoFiles([]string{name}, module.ProtoFilters)) != 0
+			return v1SourcePathSelected(name, module.ProtoFilters)
 		}
 	}
 	return false

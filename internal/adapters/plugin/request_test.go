@@ -1,14 +1,17 @@
 package plugin
 
 import (
+	"io"
+	"os"
+	"strings"
 	"testing"
 
-	"github.com/bufbuild/protocompile"
-	"github.com/bufbuild/protocompile/protoutil"
-	"github.com/bufbuild/protocompile/wellknownimports"
 	"github.com/stretchr/testify/require"
+	"google.golang.org/protobuf/reflect/protodesc"
 	"google.golang.org/protobuf/types/descriptorpb"
 	"google.golang.org/protobuf/types/pluginpb"
+
+	"github.com/easyp-tech/easyp/internal/compiler"
 )
 
 func TestMarshalRequestIsDeterministic(t *testing.T) {
@@ -30,14 +33,20 @@ message Item {
 }
 `,
 	}
-	compiler := protocompile.Compiler{Resolver: wellknownimports.WithStandardImports(&protocompile.SourceResolver{
-		Accessor: protocompile.SourceAccessorFromMap(sources),
-	})}
-	files, err := compiler.Compile(t.Context(), "api.proto")
+	resolve := func(name string) (io.ReadCloser, error) {
+		source, ok := sources[name]
+		if !ok {
+			return nil, &os.PathError{Op: "open", Path: name, Err: os.ErrNotExist}
+		}
+		return io.NopCloser(strings.NewReader(source)), nil
+	}
+	files, err := compiler.Compile(t.Context(), []string{"api.proto"}, compiler.Options{
+		Resolve: compiler.StandardImports(resolve),
+	})
 	require.NoError(t, err)
 	request := &pluginpb.CodeGeneratorRequest{
 		FileToGenerate: []string{"api.proto"},
-		ProtoFile:      []*descriptorpb.FileDescriptorProto{protoutil.ProtoFromFileDescriptor(files[0])},
+		ProtoFile:      []*descriptorpb.FileDescriptorProto{protodesc.ToFileDescriptorProto(files[0])},
 	}
 
 	want, err := marshalRequest(request)

@@ -121,7 +121,7 @@ func TestGenerateStopsBeforePlugins(t *testing.T) {
 			name:           "invalid_source",
 			files:          map[string]string{"api/item.proto": `syntax = "proto3"; message {}`},
 			descriptorPath: "descriptors.pb",
-			wantMessage:    "syntax error",
+			wantMessage:    "expected message name",
 		},
 		{
 			name:           "descriptor_write_failure",

@@ -9,8 +9,7 @@ import (
 	"maps"
 	"slices"
 
-	"github.com/bufbuild/protocompile"
-
+	"github.com/easyp-tech/easyp/internal/compiler"
 	v1 "github.com/easyp-tech/easyp/internal/config/v1"
 	"github.com/easyp-tech/easyp/internal/modules"
 )
@@ -105,14 +104,17 @@ func proveMigrationImportBindings(ctx context.Context, module string, targets []
 		queue = append(queue, imports...)
 	}
 	if compile && len(targets) > 0 {
-		compiler := protocompile.Compiler{MaxParallelism: 1, Resolver: &protocompile.SourceResolver{Accessor: func(name string) (io.ReadCloser, error) {
-			file, err := current.resolve(name)
-			if err != nil {
-				return nil, fmt.Errorf("resolve: %w", err)
-			}
-			return io.NopCloser(bytes.NewReader(file.content)), nil
-		}}}
-		if _, err := compiler.Compile(ctx, targets...); err != nil {
+		_, err := compiler.Compile(ctx, targets, compiler.Options{
+			MaxParallelism: 1,
+			Resolve: func(name string) (io.ReadCloser, error) {
+				file, err := current.resolve(name)
+				if err != nil {
+					return nil, fmt.Errorf("resolve: %w", err)
+				}
+				return io.NopCloser(bytes.NewReader(file.content)), nil
+			},
+		})
+		if err != nil {
 			return nil, fmt.Errorf("Compile: generation module %s: %w", module, err)
 		}
 	}

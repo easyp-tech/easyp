@@ -134,7 +134,7 @@ func TestTidyRewriteFailuresLeaveAllProjectBytes(t *testing.T) {
 	}{
 		{name: "missing_needed_source", remove: true, wantError: "no longer exported"},
 		{name: "ambiguous_source_names", alias: true, wantError: "ambiguous current names"},
-		{name: "changed_symbol_contract", newService: `syntax = "proto3"; package service; message Different {}`, wantError: "unknown type service.Service"},
+		{name: "changed_symbol_contract", newService: `syntax = "proto3"; package service; message Different {}`, wantError: `"service.Service" is not defined.`},
 		{name: "bad_old_hash", wrongHash: true, wantError: "locked version changed"},
 		{name: "retagged_current_version", retag: true, wantError: "locked version changed"},
 	}
