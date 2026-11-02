@@ -10,14 +10,12 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/bufbuild/protocompile"
-	"github.com/bufbuild/protocompile/linker"
-	"github.com/bufbuild/protocompile/protoutil"
-	"github.com/bufbuild/protocompile/wellknownimports"
 	"github.com/yoheimuta/go-protoparser/v4/parser/meta"
+	"google.golang.org/protobuf/reflect/protodesc"
 	"google.golang.org/protobuf/reflect/protoreflect"
 	"google.golang.org/protobuf/types/descriptorpb"
 
+	"github.com/easyp-tech/easyp/internal/compiler"
 	"github.com/easyp-tech/easyp/internal/config"
 	"github.com/easyp-tech/easyp/internal/core/path_helpers"
 	"github.com/easyp-tech/easyp/internal/sourceview"
@@ -118,11 +116,10 @@ func (c *Core) compileBreakingGraph(ctx context.Context, walker DirWalker) (*bre
 	if len(imports) == 0 {
 		imports = []string{root}
 	}
-	compiler := protocompile.Compiler{
-		Resolver:       wellknownimports.WithStandardImports(&protocompile.SourceResolver{ImportPaths: imports, Accessor: c.breakingSourceAccessor(ctx, root)}),
-		SourceInfoMode: protocompile.SourceInfoStandard,
-	}
-	compiled, err := compiler.Compile(ctx, targets...)
+	compiled, err := compiler.Compile(ctx, targets, compiler.Options{
+		Resolve:    compiler.SourceResolver(imports, c.breakingSourceAccessor(ctx, root), true),
+		SourceInfo: true,
+	})
 	if err != nil {
 		return nil, fmt.Errorf("Compile: %w", err)
 	}
@@ -185,7 +182,7 @@ func newBreakingGraph() *breakingGraph {
 	}
 }
 
-func buildBreakingGraph(files linker.Files, targetPaths map[string]string) *breakingGraph {
+func buildBreakingGraph(files []protoreflect.FileDescriptor, targetPaths map[string]string) *breakingGraph {
 	graph := newBreakingGraph()
 	for name := range targetPaths {
 		graph.targets[name] = true
@@ -835,8 +832,8 @@ func compareBreakingFilePair(oldFile, newFile protoreflect.FileDescriptor, profi
 	if oldFile.Syntax() != newFile.Syntax() {
 		report(oldFile, "FILE_SAME_SYNTAX", fmt.Sprintf("File %q changed syntax from %s to %s.", name, oldFile.Syntax(), newFile.Syntax()))
 	}
-	oldProto := protoutil.ProtoFromFileDescriptor(oldFile)
-	newProto := protoutil.ProtoFromFileDescriptor(newFile)
+	oldProto := protodesc.ToFileDescriptorProto(oldFile)
+	newProto := protodesc.ToFileDescriptorProto(newFile)
 	if oldProto.GetEdition() != newProto.GetEdition() {
 		report(oldFile, "FILE_SAME_SYNTAX", fmt.Sprintf("File %q changed edition from %s to %s.", name, oldProto.GetEdition(), newProto.GetEdition()))
 	}

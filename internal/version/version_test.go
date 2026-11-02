@@ -8,6 +8,25 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func TestBuildMetadataUsesNativeCompilerDependency(t *testing.T) {
+	t.Parallel()
+
+	info := &debug.BuildInfo{
+		Deps: []*debug.Module{
+			{Path: "github.com/bufbuild/protocompile", Version: "v0.14.1"},
+			{Path: "github.com/easyp-tech/easyp-test-compiler", Version: "v1.2.3-native"},
+		},
+	}
+
+	metadata := buildMetadataFromBuildInfo(info, "v1.0.0")
+
+	require.NotNil(t, metadata.compilerVersion)
+	assert.Equal(t, int32(1), metadata.compilerVersion.GetMajor())
+	assert.Equal(t, int32(2), metadata.compilerVersion.GetMinor())
+	assert.Equal(t, int32(3), metadata.compilerVersion.GetPatch())
+	assert.Equal(t, "v1.0.0-easyp-protoc-native-easyp", metadata.compilerVersion.GetSuffix())
+}
+
 func TestBuildMetadataFromBuildInfoReleaseVersion(t *testing.T) {
 	t.Parallel()
 
@@ -26,44 +45,44 @@ func TestBuildMetadataFromBuildInfoReleaseVersion(t *testing.T) {
 		{
 			name: "stable release overrides local VCS", release: "v1.0.0", mainVersion: develMainVersion,
 			revision: "abcdef1234567890", modified: true, dependency: "v0.14.1",
-			wantVersion: "v1.0.0", wantDependency: "v0.14.1", wantSuffix: "v1.0.0-bufbuild-protocompile-easyp",
+			wantVersion: "v1.0.0", wantDependency: "v0.14.1", wantSuffix: "v1.0.0-easyp-protoc-easyp",
 		},
 		{
 			name: "nightly release overrides main module", release: "v1.0.0-nightly.20261005", mainVersion: "v0.17.1",
 			revision: "abcdef1234567890", modified: true, dependency: "v0.14.1",
-			wantVersion: "v1.0.0-nightly.20261005", wantDependency: "v0.14.1", wantSuffix: "v1.0.0-bufbuild-protocompile-easyp-nightly.20261005",
+			wantVersion: "v1.0.0-nightly.20261005", wantDependency: "v0.14.1", wantSuffix: "v1.0.0-easyp-protoc-easyp-nightly.20261005",
 		},
 		{
 			name: "stable release without build info", release: "v1.0.0", missingInfo: true,
-			wantVersion: "v1.0.0", wantDependency: unknownVersion, wantSuffix: "v1.0.0-bufbuild-protocompile-easyp",
+			wantVersion: "v1.0.0", wantDependency: unknownVersion, wantSuffix: "v1.0.0-easyp-protoc-easyp",
 		},
 		{
 			name: "nightly release without build info", release: "v1.0.0-nightly.20261005", missingInfo: true,
-			wantVersion: "v1.0.0-nightly.20261005", wantDependency: unknownVersion, wantSuffix: "v1.0.0-bufbuild-protocompile-easyp-nightly.20261005",
+			wantVersion: "v1.0.0-nightly.20261005", wantDependency: unknownVersion, wantSuffix: "v1.0.0-easyp-protoc-easyp-nightly.20261005",
 		},
 		{
 			name: "empty override preserves go install version", mainVersion: "v1.2.3", dependency: "v0.14.1-rc1",
-			wantVersion: "v1.2.3", wantDependency: "v0.14.1-rc1", wantSuffix: "v1.2.3-bufbuild-protocompile-rc1-easyp",
+			wantVersion: "v1.2.3", wantDependency: "v0.14.1-rc1", wantSuffix: "v1.2.3-easyp-protoc-rc1-easyp",
 		},
 		{
 			name: "empty override preserves VCS revision", mainVersion: develMainVersion, revision: "abcdef1234567890", dependency: "v0.14.1",
-			wantVersion: "abcdef1", wantDependency: "v0.14.1", wantSuffix: "abcdef1-bufbuild-protocompile-easyp",
+			wantVersion: "abcdef1", wantDependency: "v0.14.1", wantSuffix: "abcdef1-easyp-protoc-easyp",
 		},
 		{
 			name: "empty override preserves modified VCS revision", mainVersion: develMainVersion, revision: "abcdef1234567890", modified: true, dependency: "v0.14.1",
-			wantVersion: "abcdef1-modified", wantDependency: "v0.14.1", wantSuffix: "abcdef1-bufbuild-protocompile-easyp-modified",
+			wantVersion: "abcdef1-modified", wantDependency: "v0.14.1", wantSuffix: "abcdef1-easyp-protoc-easyp-modified",
 		},
 		{
 			name: "empty override preserves main dirty marker normalization", mainVersion: "v1.2.3+dirty", dependency: "v0.14.1",
-			wantVersion: "v1.2.3+modified", wantDependency: "v0.14.1", wantSuffix: "v1.2.3-bufbuild-protocompile-easyp-modified",
+			wantVersion: "v1.2.3+modified", wantDependency: "v0.14.1", wantSuffix: "v1.2.3-easyp-protoc-easyp-modified",
 		},
 		{
 			name: "empty override without build info", missingInfo: true,
-			wantVersion: develVersion, wantDependency: unknownVersion, wantSuffix: "devel-bufbuild-protocompile-easyp",
+			wantVersion: develVersion, wantDependency: unknownVersion, wantSuffix: "devel-easyp-protoc-easyp",
 		},
 		{
 			name:        "empty override without module or VCS metadata",
-			wantVersion: develVersion, wantDependency: unknownVersion, wantSuffix: "devel-bufbuild-protocompile-easyp",
+			wantVersion: develVersion, wantDependency: unknownVersion, wantSuffix: "devel-easyp-protoc-easyp",
 		},
 	}
 	for _, tt := range tests {
@@ -80,14 +99,14 @@ func TestBuildMetadataFromBuildInfoReleaseVersion(t *testing.T) {
 					info.Settings = append(info.Settings, debug.BuildSetting{Key: "vcs.modified", Value: "true"})
 				}
 				if tt.dependency != "" {
-					info.Deps = []*debug.Module{{Path: protocompileModulePath, Version: tt.dependency}}
+					info.Deps = []*debug.Module{{Path: compilerModulePath, Version: tt.dependency}}
 				}
 			}
 
 			metadata := buildMetadataFromBuildInfo(info, tt.release)
 
 			assert.Equal(t, tt.wantVersion, metadata.easypVersion)
-			assert.Equal(t, tt.wantDependency, metadata.protocompileVersion)
+			assert.Equal(t, tt.wantDependency, metadata.nativeCompilerVersion)
 			require.NotNil(t, metadata.compilerVersion)
 			assert.Equal(t, tt.wantSuffix, metadata.compilerVersion.GetSuffix())
 			if tt.dependency != "" {
@@ -189,10 +208,10 @@ func TestDependencyVersion(t *testing.T) {
 		t.Parallel()
 
 		bi := &debug.BuildInfo{
-			Deps: []*debug.Module{{Path: protocompileModulePath, Version: "v0.14.1"}},
+			Deps: []*debug.Module{{Path: compilerModulePath, Version: "v0.14.1"}},
 		}
 
-		if got, want := dependencyVersion(bi, protocompileModulePath), "v0.14.1"; got != want {
+		if got, want := dependencyVersion(bi, compilerModulePath), "v0.14.1"; got != want {
 			t.Fatalf("dependencyVersion() = %q, want %q", got, want)
 		}
 	})
@@ -202,13 +221,13 @@ func TestDependencyVersion(t *testing.T) {
 
 		bi := &debug.BuildInfo{
 			Deps: []*debug.Module{{
-				Path:    protocompileModulePath,
+				Path:    compilerModulePath,
 				Version: "",
 				Replace: &debug.Module{Version: "v0.15.0"},
 			}},
 		}
 
-		if got, want := dependencyVersion(bi, protocompileModulePath), "v0.15.0"; got != want {
+		if got, want := dependencyVersion(bi, compilerModulePath), "v0.15.0"; got != want {
 			t.Fatalf("dependencyVersion() = %q, want %q", got, want)
 		}
 	})
@@ -217,7 +236,7 @@ func TestDependencyVersion(t *testing.T) {
 		t.Parallel()
 
 		bi := &debug.BuildInfo{}
-		if got, want := dependencyVersion(bi, protocompileModulePath), unknownVersion; got != want {
+		if got, want := dependencyVersion(bi, compilerModulePath), unknownVersion; got != want {
 			t.Fatalf("dependencyVersion() = %q, want %q", got, want)
 		}
 	})
@@ -225,7 +244,7 @@ func TestDependencyVersion(t *testing.T) {
 	t.Run("nil build info", func(t *testing.T) {
 		t.Parallel()
 
-		if got, want := dependencyVersion(nil, protocompileModulePath), unknownVersion; got != want {
+		if got, want := dependencyVersion(nil, compilerModulePath), unknownVersion; got != want {
 			t.Fatalf("dependencyVersion(nil) = %q, want %q", got, want)
 		}
 	})
@@ -301,7 +320,7 @@ func TestCompilerVersionFromVersions(t *testing.T) {
 		t.Fatalf("patch = %d, want %d", got, want)
 	}
 
-	wantSuffix := "v0.13.1-bufbuild-protocompile-easyp"
+	wantSuffix := "v0.13.1-easyp-protoc-easyp"
 	if got := version.GetSuffix(); got != wantSuffix {
 		t.Fatalf("suffix = %q, want %q", got, wantSuffix)
 	}
@@ -322,7 +341,7 @@ func TestCompilerVersionFromVersionsWithSuffixes(t *testing.T) {
 		t.Fatalf("patch = %d, want %d", got, want)
 	}
 
-	wantSuffix := "v0.13.0-bufbuild-protocompile-rc1-easyp-11-g6549e94-modified"
+	wantSuffix := "v0.13.0-easyp-protoc-rc1-easyp-11-g6549e94-modified"
 	if got := version.GetSuffix(); got != wantSuffix {
 		t.Fatalf("suffix = %q, want %q", got, wantSuffix)
 	}

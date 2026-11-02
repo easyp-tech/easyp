@@ -10,9 +10,7 @@ import (
 	"path/filepath"
 	"sync"
 
-	"github.com/bufbuild/protocompile"
-	compilerimports "github.com/bufbuild/protocompile/wellknownimports"
-
+	"github.com/easyp-tech/easyp/internal/compiler"
 	"github.com/easyp-tech/easyp/wellknownimports"
 )
 
@@ -225,8 +223,9 @@ func (view *tidySourceView) compileChanges(ctx context.Context, files []string, 
 		}
 		// Independent consumer targets (including owned build copies) are
 		// compiled separately; only each target's reachable closure is linked.
-		compiler := protocompile.Compiler{Resolver: compilerimports.WithStandardImports(view.compilerResolver(ctx, name, physical))}
-		_, err := compiler.Compile(ctx, name)
+		_, err := compiler.Compile(ctx, []string{name}, compiler.Options{
+			Resolve: compiler.StandardImports(view.compilerResolver(ctx, name, physical)),
+		})
 		if err != nil {
 			return fmt.Errorf("Compile: %s: %w", change.File, err)
 		}
@@ -236,27 +235,27 @@ func (view *tidySourceView) compileChanges(ctx context.Context, files []string, 
 
 // Bind the changed target to its observed physical source. Its imports use the
 // same canonical decision and equality proof as reachable validation.
-func (view *tidySourceView) compilerResolver(ctx context.Context, targetName, targetPath string) protocompile.Resolver {
-	return protocompile.ResolverFunc(func(name string) (protocompile.SearchResult, error) {
+func (view *tidySourceView) compilerResolver(ctx context.Context, targetName, targetPath string) compiler.Resolver {
+	return func(name string) (io.ReadCloser, error) {
 		path := targetPath
 		if name != targetName {
 			resolved, err := view.resolveImport(ctx, name)
 			if err != nil {
-				return protocompile.SearchResult{}, fmt.Errorf("resolveImport: %w", err)
+				return nil, fmt.Errorf("resolveImport: %w", err)
 			}
 			if resolved.source.builtin {
 				data, err := wellknownimports.Content.ReadFile(resolved.source.path)
 				if err != nil {
-					return protocompile.SearchResult{}, fmt.Errorf("ReadFile: %w", err)
+					return nil, fmt.Errorf("ReadFile: %w", err)
 				}
-				return protocompile.SearchResult{Source: bytes.NewReader(data)}, nil
+				return io.NopCloser(bytes.NewReader(data)), nil
 			}
 			path = resolved.source.path
 		}
 		source, err := view.openSourceFile(path)
 		if err != nil {
-			return protocompile.SearchResult{}, fmt.Errorf("openSourceFile: %w", err)
+			return nil, fmt.Errorf("openSourceFile: %w", err)
 		}
-		return protocompile.SearchResult{Source: source}, nil
-	})
+		return source, nil
+	}
 }

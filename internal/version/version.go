@@ -12,17 +12,17 @@ import (
 )
 
 const (
-	develVersion           = "devel"
-	unknownVersion         = "unknown"
-	develMainVersion       = "(devel)"
-	protocompileModulePath = "github.com/bufbuild/protocompile"
-	revisionPrefix         = 7
+	develVersion       = "devel"
+	unknownVersion     = "unknown"
+	develMainVersion   = "(devel)"
+	compilerModulePath = "github.com/easyp-tech/easyp-test-compiler"
+	revisionPrefix     = 7
 )
 
 type buildMetadata struct {
-	easypVersion        string
-	protocompileVersion string
-	compilerVersion     *pluginpb.Version
+	easypVersion          string
+	nativeCompilerVersion string
+	compilerVersion       *pluginpb.Version
 }
 
 var (
@@ -62,16 +62,16 @@ func buildMetadataFromBuildInfo(bi *debug.BuildInfo, release string) buildMetada
 	if easypVersion == "" {
 		easypVersion = easypVersionFromBuildInfo(bi)
 	}
-	protocompileVersion := dependencyVersion(bi, protocompileModulePath)
+	nativeCompilerVersion := dependencyVersion(bi, compilerModulePath)
 
-	return buildMetadataFromVersions(easypVersion, protocompileVersion)
+	return buildMetadataFromVersions(easypVersion, nativeCompilerVersion)
 }
 
-func buildMetadataFromVersions(easypVersion, protocompileVersion string) buildMetadata {
+func buildMetadataFromVersions(easypVersion, nativeCompilerVersion string) buildMetadata {
 	return buildMetadata{
-		easypVersion:        easypVersion,
-		protocompileVersion: protocompileVersion,
-		compilerVersion:     compilerVersionFromVersions(protocompileVersion, easypVersion),
+		easypVersion:          easypVersion,
+		nativeCompilerVersion: nativeCompilerVersion,
+		compilerVersion:       compilerVersionFromVersions(nativeCompilerVersion, easypVersion),
 	}
 }
 
@@ -98,16 +98,16 @@ func cloneVersion(version *pluginpb.Version) *pluginpb.Version {
 	return clone
 }
 
-func compilerVersionFromVersions(protocompileVersion, easypVersion string) *pluginpb.Version {
-	major, minor, patch := semverMajorMinorPatch(protocompileVersion)
-	_, protocompileSuffix := splitVersionCoreAndSuffix(protocompileVersion)
+func compilerVersionFromVersions(nativeCompilerVersion, easypVersion string) *pluginpb.Version {
+	major, minor, patch := semverMajorMinorPatch(nativeCompilerVersion)
+	_, compilerSuffix := splitVersionCoreAndSuffix(nativeCompilerVersion)
 	easypCore, easypSuffix := splitVersionCoreAndSuffix(easypVersion)
 
 	return &pluginpb.Version{
 		Major:  proto.Int32(major),
 		Minor:  proto.Int32(minor),
 		Patch:  proto.Int32(patch),
-		Suffix: proto.String(buildCompilerSuffix(easypCore, protocompileSuffix, easypSuffix)),
+		Suffix: proto.String(buildCompilerSuffix(easypCore, compilerSuffix, easypSuffix)),
 	}
 }
 
@@ -144,12 +144,12 @@ func semverMajorMinorPatch(rawVersion string) (int32, int32, int32) {
 	return int32(major), int32(minor), int32(patch)
 }
 
-func buildCompilerSuffix(easypCore, protocompileSuffix, easypSuffix string) string {
+func buildCompilerSuffix(easypCore, compilerSuffix, easypSuffix string) string {
 	easypCore = sanitizeSuffixToken(easypCore)
 
-	parts := []string{easypCore, "bufbuild-protocompile"}
-	if protocompileSuffix = sanitizeOptionalToken(protocompileSuffix); protocompileSuffix != "" {
-		parts = append(parts, protocompileSuffix)
+	parts := []string{easypCore, "easyp-protoc"}
+	if compilerSuffix = sanitizeOptionalToken(compilerSuffix); compilerSuffix != "" {
+		parts = append(parts, compilerSuffix)
 	}
 
 	parts = append(parts, "easyp")

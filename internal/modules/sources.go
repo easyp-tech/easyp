@@ -75,8 +75,15 @@ func (root SourceRoot) walk(selected func(string) bool, namesOnly bool, targetAl
 	}
 	return sourceview.WalkLocal(context.Background(), boundary, relative, func(logical string, resolved sourceview.Resolution, walkErr error) error {
 		path := filepath.Join(boundary, filepath.FromSlash(logical))
+		physical := filepath.Join(physicalBoundary, filepath.FromSlash(resolved.Path))
 		if filepath.Ext(path) == ".proto" && root.fileAllowed != nil && !root.fileAllowed(path) {
 			return nil
+		}
+		if resolved.Info != nil && resolved.Info.IsDir() && root.directoryAllowed != nil && !root.directoryAllowed(physical) {
+			if walkErr != nil {
+				return nil
+			}
+			return fs.SkipDir
 		}
 		if errors.Is(walkErr, sourceview.ErrCycle) && resolved.Info != nil && resolved.Info.IsDir() {
 			if path_helpers.HiddenOrVendorSourcePath(root.Path, path) || (root.directoryAllowed != nil && !root.directoryAllowed(path)) {
@@ -105,7 +112,6 @@ func (root SourceRoot) walk(selected func(string) bool, namesOnly bool, targetAl
 			}
 			return walkErr
 		}
-		physical := filepath.Join(physicalBoundary, filepath.FromSlash(resolved.Path))
 		if !resolved.Info.IsDir() && root.fileAllowed != nil && !root.fileAllowed(physical) {
 			return nil
 		}

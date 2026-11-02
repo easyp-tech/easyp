@@ -56,7 +56,7 @@ func TestModTidyReportsOnlyCommittedImportMappings(t *testing.T) {
 			err = (Mod{}).Tidy(ctx)
 
 			if tt.wantErr {
-				require.ErrorContains(t, err, "unknown type")
+				require.ErrorContains(t, err, `"`+tt.typeName+`" is not defined.`)
 				assert.Empty(t, output.String())
 				return
 			}

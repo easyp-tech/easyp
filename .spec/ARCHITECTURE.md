@@ -101,6 +101,10 @@ Local replacements use an ephemeral main-module overlay graph and never alter th
 
 ## Generation
 
+All descriptor compilation uses the separate <code>github.com/easyp-tech/easyp-test-compiler/protoc</code> library through <code>internal/compiler</code>. The adapter requests complete imports, reconstructs checked reflection with interpreted custom options, and returns targets in caller order. Its resolver-only mode makes the caller's source view authoritative: denied, excluded, historical and proposed in-memory sources cannot be replaced by direct filesystem reads. Embedded standard sources are an explicit resolver fallback after not-found, never after integrity or authorization errors.
+
+The same adapter compiles current/baseline breaking graphs, proposed tidy import rewrites, and migration source-binding proofs. Migration keeps its namespace-provided standard sources and serial setting. The existing syntax parsers still own lint AST/comments and byte-preserving import edits; they do not provide a fallback compilation backend. Plugin compiler metadata identifies <code>easyp-protoc</code> and the pinned library version.
+
 ~~~text
 api.Generate.Action: flags + cwd + cache
   -> generation.Run(context, logger, cache, Request)
