@@ -17,10 +17,10 @@ Generate type-safe MCP tool bindings from annotated protobuf services for **Go, 
 
 ## Prerequisites
 
-Install [easyp](https://easyp.tech) **v1**, the recommended way to lint and generate. v1 is published as nightly tags (`v1.0.0-nightly.YYYYMMDD.N`); `brew` and `go install …@latest` still install v0.17.0:
+Install [easyp](https://easyp.tech) **v1**, the recommended way to lint and generate. `brew install easyp-tech/tap/easyp` installs it, or with Go:
 
 ```bash
-EASYP_VERSION=v1.0.0-nightly.20261008.1   # pick the newest from github.com/easyp-tech/easyp/releases
+EASYP_VERSION=v1.0.0   # or the newest from github.com/easyp-tech/easyp/releases
 go install "github.com/easyp-tech/easyp/cmd/easyp@$EASYP_VERSION"
 easyp --version
 ```

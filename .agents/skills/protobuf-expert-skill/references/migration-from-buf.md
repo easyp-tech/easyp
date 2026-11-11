@@ -108,7 +108,7 @@ plugins:                                       value: github.com/acme/gen/go
     opt: paths=source_relative             out: gen/go
   - remote: buf.build/grpc/go:v1.6.2       opts:
     out: gen/go                              paths: source_relative
-    opt:                                 - remote: plugins.beta.easyp.tech/grpc/go
+    opt:                                 - remote: plugins.easyp.tech/grpc/go
       - paths=source_relative              version: v1.6.2
       - require_unimplemented_servers=false out: gen/go
 inputs:                                    opts:

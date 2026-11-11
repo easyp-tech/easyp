@@ -2,7 +2,7 @@
 
 Principles for v1 pipelines:
 
-- **Pin the exact EasyP version.** v1 ships as `v1.0.0-nightly.YYYYMMDD.N`; `latest` tags and `@latest` still mean v0.17.0.
+- **Pin the exact EasyP version** (`v1.0.0`), not `latest` or `@latest`: a release must not change CI results by itself.
 - **Use `--frozen`.** It is never enabled automatically, not even when `CI=true`. With it, CI uses the committed `protobuf.mod` + `protobuf.lock` exactly and fails if they are stale, instead of re-resolving.
 - **Commit `protobuf.mod` and `protobuf.lock`.** A module without dependencies needs an empty lock (`modules: []`).
 - **Breaking needs history.** Use `fetch-depth: 0`.
@@ -37,7 +37,7 @@ permissions:
   contents: read
 
 env:
-  EASYP_VERSION: v1.0.0-nightly.20261008.1
+  EASYP_VERSION: v1.0.0
 
 jobs:
   lint:
@@ -70,7 +70,7 @@ name: proto
 on: [push, pull_request]
 
 env:
-  EASYP_VERSION: v1.0.0-nightly.20261008.1
+  EASYP_VERSION: v1.0.0
 
 jobs:
   proto:
@@ -106,7 +106,7 @@ Local plugins (`name: go`, `name: go-grpc`) must be on `PATH` in the job. Instal
 
 ```yaml
 variables:
-  EASYP_IMAGE: ghcr.io/easyp-tech/easyp:v1.0.0-nightly.20261008.1
+  EASYP_IMAGE: ghcr.io/easyp-tech/easyp:v1.0.0
   EASYPPATH: $CI_PROJECT_DIR/.easyp
 
 .easyp:
@@ -178,14 +178,14 @@ fi
 ```bash
 docker run --rm -v "$PWD:/workspace" -w /workspace \
   -e EASYPPATH=/workspace/.easyp \
-  ghcr.io/easyp-tech/easyp:v1.0.0-nightly.20261008.1 --frozen lint
+  ghcr.io/easyp-tech/easyp:v1.0.0 --frozen lint
 ```
 
 ## Migrating a v0 pipeline
 
 | v0 | v1 |
 |---|---|
-| `version: v0.x` / image `:v0.x` / `@latest` | the exact nightly tag |
+| `version: v0.x` / image `:v0.x` / `@latest` | the exact v1 tag (`v1.0.0`) |
 | `easyp mod download` | `easyp --frozen mod download` |
 | `easyp generate -p proto -r .` | `easyp --frozen generate` (`--project` / `--all`) |
 | cache path `~/.easyp`, key `easyp.lock` | path `~/.easyp/v1`, key `protobuf.lock` |
