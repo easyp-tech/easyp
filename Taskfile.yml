@@ -154,9 +154,9 @@ tasks:
       - sh scripts/check-dev-tools.sh
 
   goreleaser:check:
-    desc: Check GoReleaser configuration syntax
+    desc: Check GoReleaser configuration syntax (accepts only the brews deprecation)
     cmds:
-      - goreleaser check
+      - bash scripts/check-goreleaser.sh
 
   goreleaser:test:
     desc: Test GoReleaser build (snapshot, no publish)

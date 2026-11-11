@@ -28,6 +28,11 @@ type releaseConfig struct {
 	} `yaml:"dockers_v2"`
 	Brews []struct {
 		SkipUpload string `yaml:"skip_upload"`
+		Install    string `yaml:"install"`
+		Repository struct {
+			Owner string `yaml:"owner"`
+			Name  string `yaml:"name"`
+		} `yaml:"repository"`
 	} `yaml:"brews"`
 }
 
@@ -46,10 +51,17 @@ func TestReleaseChannels(t *testing.T) {
 	var config releaseConfig
 	err = yaml.Unmarshal(contents, &config)
 	require.NoError(t, err)
-	require.Equal(t, "true", config.Release.Prerelease)
+	require.Equal(t, "auto", config.Release.Prerelease)
 	require.Len(t, config.Builds, 2)
 	require.Len(t, config.Dockers, 1)
-	require.Empty(t, config.Brews)
+	require.Len(t, config.Brews, 1)
+	// auto: GoReleaser skips the formula for prereleases, so nightlies never
+	// reach brew users.
+	require.Equal(t, "auto", config.Brews[0].SkipUpload)
+	require.Equal(t, "easyp-tech", config.Brews[0].Repository.Owner)
+	require.Equal(t, "homebrew-tap", config.Brews[0].Repository.Name)
+	require.Contains(t, config.Brews[0].Install, `bin.install "easyp"`)
+	require.Contains(t, config.Brews[0].Install, `bin.install "easyp-mcp"`)
 
 	tests := []struct {
 		name       string
@@ -59,10 +71,10 @@ func TestReleaseChannels(t *testing.T) {
 		wantBuild  string
 	}{
 		{
-			name:       "accidental stable version cannot update release defaults",
+			name:       "stable release becomes latest everywhere",
 			data:       releaseTemplateData{Tag: "v1.0.0", Version: "1.0.0"},
-			wantLatest: "false",
-			wantTags:   []string{"v1.0.0"},
+			wantLatest: "true",
+			wantTags:   []string{"v1.0.0", "latest"},
 			wantBuild:  "v1.0.0",
 		},
 		{
@@ -81,9 +93,9 @@ func TestReleaseChannels(t *testing.T) {
 		},
 		{
 			name:       "snapshot keeps its build identity",
-			data:       releaseTemplateData{Tag: "v0.17.0", Version: "SNAPSHOT-1234567", IsSnapshot: true},
-			wantLatest: "false",
-			wantTags:   []string{"v0.17.0"},
+			data:       releaseTemplateData{Tag: "v1.0.0", Version: "SNAPSHOT-1234567", IsSnapshot: true},
+			wantLatest: "true",
+			wantTags:   []string{"v1.0.0", "latest"},
 			wantBuild:  "SNAPSHOT-1234567",
 		},
 	}
@@ -170,18 +182,34 @@ func TestReleaseTagValidation(t *testing.T) {
 		require.NoError(t, err, string(output))
 		return strings.TrimSpace(string(output))
 	}
+	commit := func(message string) {
+		t.Helper()
+		git("-c", "user.name=Release Test", "-c", "user.email=release@example.invalid", "commit", "--allow-empty", "-m", message)
+	}
 	git("init", "-b", "v1.0")
-	git("-c", "user.name=Release Test", "-c", "user.email=release@example.invalid", "commit", "--allow-empty", "-m", "v1 nightly source")
-	git("update-ref", "refs/remotes/origin/v1.0", "HEAD")
+	commit("v1 nightly source")
 	git("branch", "unrelated")
 	git("checkout", "-b", "main")
-	git("-c", "user.name=Release Test", "-c", "user.email=release@example.invalid", "commit", "--allow-empty", "-m", "v1 source on main")
+	commit("v1 source on main")
 	git("update-ref", "refs/remotes/origin/main", "HEAD")
 	git("tag", "v1.0.0-nightly.20261005.4")
+	git("tag", "v1.2.0")
 	git("checkout", "unrelated")
-	git("-c", "user.name=Release Test", "-c", "user.email=release@example.invalid", "commit", "--allow-empty", "-m", "outside v1.0")
+	commit("outside v1.0")
 	git("tag", "v1.0.0-nightly.20261005.2")
+	git("tag", "v1.0.1")
 	git("checkout", "v1.0")
+	// A v1.0 commit that never reached main: nightlies may come from here,
+	// stable releases may not.
+	commit("v1.0 only")
+	git("update-ref", "refs/remotes/origin/v1.0", "HEAD")
+	pretagged := map[string]bool{
+		"v1.0.0-nightly.20261005.2": true,
+		"v1.0.0-nightly.20261005.3": true,
+		"v1.0.0-nightly.20261005.4": true,
+		"v1.2.0":                    true,
+		"v1.0.1":                    true,
+	}
 
 	tests := []struct {
 		name   string
@@ -189,13 +217,17 @@ func TestReleaseTagValidation(t *testing.T) {
 		want   string
 		wantOK bool
 	}{
-		{name: "v1 stable cannot be published", tag: "v1.0.0", want: "Unsupported release tag"},
+		{name: "stable on main", tag: "v1.2.0", want: "stable\n", wantOK: true},
+		{name: "stable only on v1.0", tag: "v1.0.0", want: "Stable tag v1.0.0 is not in origin/main history"},
+		{name: "stable outside release branches", tag: "v1.0.1", want: "Stable tag v1.0.1 is not in origin/main history"},
 		{name: "v0 stable uses its original release pipeline", tag: "v0.17.1", want: "Unsupported release tag"},
+		{name: "v2 is not this module path", tag: "v2.0.0", want: "Unsupported release tag"},
 		{name: "nightly on v1.0", tag: "v1.0.0-nightly.20261005.1", want: "nightly\n", wantOK: true},
 		{name: "nightly on main after merge", tag: "v1.0.0-nightly.20261005.4", want: "nightly\n", wantOK: true},
 		{name: "nightly outside release branches", tag: "v1.0.0-nightly.20261005.2", want: "is not in origin/v1.0 or origin/main history"},
 		{name: "rc", tag: "v1.0.0-rc.1", want: "Unsupported release tag"},
-		{name: "other v1 nightly base", tag: "v1.1.0-nightly.20261005.1", want: "Unsupported release tag"},
+		{name: "nightly towards a later v1", tag: "v1.1.0-nightly.20261005.1", want: "nightly\n", wantOK: true},
+		{name: "nightly with leading zero minor", tag: "v1.01.0-nightly.20261005.1", want: "Unsupported release tag"},
 		{name: "date missing", tag: "v1.0.0-nightly", want: "Unsupported release tag"},
 		{name: "leading zero sequence", tag: "v1.0.0-nightly.20261005.01", want: "Unsupported release tag"},
 		{name: "zero sequence", tag: "v1.0.0-nightly.20261005.0", want: "Unsupported release tag"},
@@ -203,7 +235,7 @@ func TestReleaseTagValidation(t *testing.T) {
 		{name: "nonexistent tag", tag: "v1.0.0-nightly.20261005.3", want: "does not resolve to a commit"},
 	}
 	for _, tt := range tests {
-		if tt.tag != "v1.0.0-nightly.20261005.2" && tt.tag != "v1.0.0-nightly.20261005.3" && tt.tag != "v1.0.0-nightly.20261005.4" {
+		if !pretagged[tt.tag] {
 			git("tag", tt.tag)
 		}
 		t.Run(tt.name, func(t *testing.T) {
@@ -291,7 +323,7 @@ func TestReleaseWorkflow(t *testing.T) {
 	}
 	err = push.Decode(&trigger)
 	require.NoError(t, err)
-	require.Equal(t, []string{"v1.0.0-nightly.*"}, trigger.Tags)
+	require.Equal(t, []string{"v1.*.*"}, trigger.Tags)
 	job, ok := workflow.Jobs["release"]
 	require.True(t, ok)
 	guard := -1
