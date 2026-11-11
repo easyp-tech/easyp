@@ -61,7 +61,7 @@ legacy EasyP configuration detected; run easyp migrate --module <identity> to pr
    | `easyp.yaml` has `version: v1` / `linters:`; `easyp.gen.yaml` exists; `protobuf.mod` starts with `module` | **v1**, nothing to migrate |
    | `easyp.yaml` that is only an example or a template (docs, skill assets) | Rename it (`easyp-example.yaml`) or migrate it; do not leave a v0 file named `easyp.yaml` |
 
-3. **Check the binary:** `easyp --version`. v1 is distributed only as nightly tags (`v1.0.0-nightly.YYYYMMDD.N`). `brew` and `go install …@latest` still install v0.17.0. Install v1 side by side; see [installation.md](./installation.md). Keep v0 available for Step 2.
+3. **Check the binary:** `easyp --version`. `brew`, `go install …@latest` and Docker `latest` install v1. Keep v0 (`v0.17.0`, by exact version) available side by side for Step 2; see [installation.md](./installation.md).
 
 ## Step 2 — Baseline with v0
 
@@ -129,7 +129,7 @@ migrate refuses to convert what it cannot prove equivalent. The error is printed
 |---|---|---|
 | `PACKAGE_NO_IMPORT_CYCLE is not implemented` | The rule was removed in v1 | Delete it from `lint.use` / `lint.except`. Tell the user import-cycle checking is gone. |
 | `unsupported legacy breaking.use "WIRE_JSON"` (or `WIRE`, `PACKAGE`) | Only FILE converts automatically | Remove `breaking.use`, migrate, then set `breaking.categories: [WIRE_JSON]` in the new `easyp.yaml`. |
-| `generate.plugins[N].remote needs a pinned semantic version` | Remote plugin without `:vX.Y.Z`. migrate reports only the **first** one, so check every `remote:` entry. | Pin **all** of them in the v0 file (`remote: plugins.beta.easyp.tech/grpc/go:v1.6.2`), then rerun v0 `generate`. The pins are right when the Step 2 baseline is reproduced with no diff. See [choosing remote plugin pins](#choosing-remote-plugin-pins). |
+| `generate.plugins[N].remote needs a pinned semantic version` | Remote plugin without `:vX.Y.Z`. migrate reports only the **first** one, so check every `remote:` entry. | Pin **all** of them in the v0 file (`remote: plugins.easyp.tech/grpc/go:v1.6.2`), then rerun v0 `generate`. The pins are right when the Step 2 baseline is reproduced with no diff. See [choosing remote plugin pins](#choosing-remote-plugin-pins). |
 | `unsupported ref "<name>": use a semantic version or full Git commit` | `deps` entry pinned to a branch, short hash or non-semver tag (`@common-protos-1_3_1`) | Replace it with the full commit: `git ls-remote https://<repo> <name>` (for an annotated tag, use the `^{}` line). Or remove the pin and add it after migration with `easyp get repo@<name>`, which resolves named tags. |
 | `legacy easyp.lock is missing required dependency X; recover its historical pin` | `deps` lists X but `easyp.lock` has no entry for it | Restore the entry from git history (`git log -p -- easyp.lock`), or run v0 `easyp mod download` to record it. migrate never silently picks HEAD for a dependency it expected to be locked. |
 | `unsupported legacy config field "excludes"` (inside `buf.yaml`) | A dependency's `buf.yaml` uses a field the legacy-hash verifier does not read (seen with `bufbuild/protovalidate`) | Use the [re-resolution fallback](#fallback-re-resolve-dependencies) below. |
@@ -250,8 +250,8 @@ Agent instructions count too: `AGENTS.md`, `.github/agents`, `.github/instructio
 | `easyp mod download` in CI | `easyp --frozen mod download` |
 | `easyp mod update` | `easyp mod update` (rewrites `protobuf.mod` + `protobuf.lock`) |
 | cache key on `easyp.lock`, path `~/.easyp` | key on `protobuf.lock`, path `~/.easyp/v1` |
-| `go install …/cmd/easyp@latest`, `brew install` | pin a nightly tag explicitly (see [ci-cd-integration.md](./ci-cd-integration.md)) |
-| `easyp-tech/actions/*@v1` without `version` | pass `version: v1.0.0-nightly.YYYYMMDD.N` (the action runs the Docker image of that tag) |
+| `go install …/cmd/easyp@latest`, `brew install` | pin the exact v1 version in CI (see [ci-cd-integration.md](./ci-cd-integration.md)) |
+| `easyp-tech/actions/*@v1` without `version` | pass `version: v1.0.0` (the action runs the Docker image of that tag) |
 | `.gitignore` ignoring `easyp.lock` patterns | commit `protobuf.mod` and `protobuf.lock` |
 
 Cleanup, **only after the user confirms** the verification results: delete `easyp.lock` (or `easyp.lock.v0`), `*.v0.bak` and `*.v0.orig` (they stay in git history), and update README/docs that show v0 config or commands.
@@ -313,7 +313,7 @@ generate:
   inputs:
     - directory: {path: ., root: proto}
   plugins:
-    - remote: plugins.beta.easyp.tech/protocolbuffers/go:v1.36.11
+    - remote: plugins.easyp.tech/protocolbuffers/go:v1.36.11
       out: gen/go
       opts: {paths: source_relative}
 ```
@@ -342,7 +342,7 @@ breaking:
 # easyp.gen.yaml
 version: v1
 plugins:
-  - remote: plugins.beta.easyp.tech/protocolbuffers/go
+  - remote: plugins.easyp.tech/protocolbuffers/go
     version: v1.36.11
     out: gen/go
     opts:

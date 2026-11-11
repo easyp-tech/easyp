@@ -1,9 +1,10 @@
-# EasyP v1.0 — pre-release contract notes
+# EasyP v1.0 release notes
 
-EasyP v1.0 has no stable release. It is prepared for explicitly selected nightly
-versions; the default installation remains the stable v0.17.0 release. The
-implementation and the current `.spec` documents are the source of truth for
-the v1 contract.
+EasyP v1.0 is the current stable release. Homebrew, `go install ...@latest`,
+GitHub Latest and the Docker `latest` tag all select it. v0 remains available
+by its exact version (`v0.17.0`), and `easyp migrate` moves a v0 project to v1.
+The implementation and the current `.spec` documents are the source of truth
+for the v1 contract.
 
 ## Command-local configuration selection
 
@@ -30,7 +31,7 @@ another recognized kind; other names are read as the format the command expects.
 <code>validate-config</code> validates such named profiles, both when selected
 explicitly and when scanning a directory.
 
-## Nightly migration regression fixes
+## Migration fixes since the earlier nightlies
 
 Migration accepts Buf v2 <code>includes</code> and <code>excludes</code> metadata.
 Historical archive hashes are verified against the pinned Git revision, before
@@ -72,24 +73,20 @@ produce a partial generator candidate.
 
 ## Distribution and Go module compatibility
 
-After the v1 branch is merged into `main`, v1 is published only with
-`v1.0.0-nightly.YYYYMMDD.N` tags. The workflow marks releases as prereleases,
-keeps GitHub Latest unchanged, and publishes only the exact Docker tag. It does
-not publish a Homebrew formula. See [installation](README.md#v1-nightly-explicit-opt-in)
-and [release operations](.spec/DEPLOYMENT.md).
+v1 is published from `main` by `v1.X.Y` tags as the stable release: GitHub
+Latest, the Homebrew formula (now installing `easyp` and `easyp-mcp`), Go
+`@latest` and the Docker `latest` tag. Prereleases use exact
+`v1.X.Y-nightly.YYYYMMDD.N` tags and update none of those channels. See
+[installation](README.md#installation) and [release operations](.spec/DEPLOYMENT.md).
 
 The Go module path remains `github.com/easyp-tech/easyp`: v0 and v1 share a path,
-and `/vN` is required only for v2 and later. Pinned v0 requirements are unchanged
-by a branch merge. While v1 has only prerelease tags, `go install ...@latest` and
-`go get -u` for v0 consumers select the existing stable release. Explicit nightly
-requirements opt into the v1 API and configuration contract, which may break
-v0 callers. Do not create a stable `v1.0.0` Git tag during the nightly period:
-Go reads Git tags independently of GitHub Release flags, and that tag would
-become eligible for ordinary updates. See [Go's version rules](https://go.dev/doc/modules/version-numbers)
-and [version queries](https://go.dev/ref/mod#version-queries).
+and `/vN` is required only for v2 and later. Code that imports EasyP as a
+library therefore moves to v1 on `go get -u` or `@latest`, and the v1 API and
+configuration contract may break v0 callers. Pin `v0.17.0` until that code is
+ported.
 
-Go uses one version per module path in each build. A dependency that requires a
-higher v1 nightly can also raise the selected EasyP version through
+Go uses one version per module path in each build. A dependency that requires
+v1 also raises the selected EasyP version through
 [minimal version selection](https://go.dev/ref/mod#minimal-version-selection).
 The v0/v1 path therefore provides no API isolation between them.
 

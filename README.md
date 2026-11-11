@@ -16,13 +16,12 @@ The `easyp` CLI is a comprehensive tool for working with [Protocol Buffers](http
 
 ## Installation
 
-The latest stable release is **v0.17.0**. The source on this branch implements
-**v1.0**, which is distributed only through explicitly selected nightly versions.
-Merging v1 into `main` does not update the stable installation channels.
+The current release is **v1**. Projects still on v0 can preview and apply the
+move with `easyp migrate` (see [Quick Start](#quick-start)).
 
 ### Homebrew
 
-You can install `easyp` using [Homebrew](https://brew.sh) (macOS or Linux):
+You can install `easyp` and `easyp-mcp` using [Homebrew](https://brew.sh) (macOS or Linux):
 
 ```sh
 brew install easyp-tech/tap/easyp
@@ -30,59 +29,52 @@ brew install easyp-tech/tap/easyp
 
 ### Go Install
 
+Building v1 requires Go 1.26.6 or later.
+
 ```sh
 go install github.com/easyp-tech/easyp/cmd/easyp@latest
+go install github.com/easyp-tech/easyp/cmd/easyp-mcp@latest
+```
+
+### Docker
+
+```sh
+docker run --rm -v "$PWD:/workspace" -w /workspace ghcr.io/easyp-tech/easyp:latest --version
 ```
 
 ### Other methods
 
-For archives and Docker installation, see the [installation guide](https://easyp.tech/docs/introduction/install).
+Release archives contain both `easyp` and `easyp-mcp`, with a checksums file in
+the same [GitHub Release](https://github.com/easyp-tech/easyp/releases/latest).
+See the [installation guide](https://easyp.tech/docs/introduction/install).
 
-### v1 nightly (explicit opt-in)
+### Staying on v0
 
-Choose an existing `v1.0.0-nightly.YYYYMMDD.N` tag from
-[GitHub Releases](https://github.com/easyp-tech/easyp/releases). The tag below is a
-placeholder; replace it with a published nightly. Building v1 requires Go 1.26.6
-or later.
-
-```sh
-EASYP_NIGHTLY_VERSION=v1.0.0-nightly.YYYYMMDD.N
-EASYP_NIGHTLY_BIN="$HOME/.local/share/easyp-nightly/bin"
-mkdir -p "$EASYP_NIGHTLY_BIN"
-GOBIN="$EASYP_NIGHTLY_BIN" go install "github.com/easyp-tech/easyp/cmd/easyp@$EASYP_NIGHTLY_VERSION"
-GOBIN="$EASYP_NIGHTLY_BIN" go install "github.com/easyp-tech/easyp/cmd/easyp-mcp@$EASYP_NIGHTLY_VERSION"
-"$EASYP_NIGHTLY_BIN/easyp" --version
-```
-
-Nightly archives contain both `easyp` and `easyp-mcp`, with a checksums file in the
-same release. The CLI container uses the exact tag
-`ghcr.io/easyp-tech/easyp:<nightly-tag>`. Nightlies do not update Homebrew,
-GitHub Latest, or the Docker `latest` tag. `go install ...@latest` continues to
-select the stable v0 release while v1 has only prerelease tags.
+v0 remains available by its exact version, for example
+`go install github.com/easyp-tech/easyp/cmd/easyp@v0.17.0` or
+`ghcr.io/easyp-tech/easyp:v0.17.0`.
 
 Go modules use the same `github.com/easyp-tech/easyp` path for v0 and v1; there is
-no `/v1` suffix. The `/v2` suffix is required starting with v2. Existing pinned
-v0 dependencies keep their versions after the merge, but explicitly upgrading
-to v1 may require API and configuration changes. Creating a **stable Git tag**
-`v1.0.0` would make it eligible for `@latest`, even without a GitHub Release, so
-v1 stable tags must not be created during the nightly period. See
-[Go module version numbering](https://go.dev/doc/modules/version-numbers).
+no `/v1` suffix, and `/v2` is required starting with v2. Code that imports EasyP
+as a library and is not ready for the v1 API must pin v0: `go get -u` selects v1.
+Go also selects one version per module path for a build, so another dependency
+requiring v1 raises the selected version through
+[minimal version selection](https://go.dev/ref/mod#minimal-version-selection).
 
-Go selects one version per module path for a build. Another dependency requiring
-a v1 nightly can raise the selected version through
-[minimal version selection](https://go.dev/ref/mod#minimal-version-selection),
-so library consumers also need a dependency graph compatible with v0.
+### Prereleases
+
+Prerelease builds are published as `v1.X.Y-nightly.YYYYMMDD.N` tags on
+[GitHub Releases](https://github.com/easyp-tech/easyp/releases) and as
+`ghcr.io/easyp-tech/easyp:<nightly-tag>`. They are installed only by their exact
+tag and never update Homebrew, GitHub Latest, Go `@latest` or the Docker
+`latest` tag.
 
 ## Quick Start
 
-These commands describe the v1 nightly contract. Select the nightly binary
-above, or build this checkout, before using them. For an existing v0 project,
-run `easyp migrate` to preview its migration and `easyp migrate --write` to apply
-the plan.
+For an existing v0 project, run `easyp migrate` to preview its migration and
+`easyp migrate --write` to apply the plan.
 
 ```sh
-# Select the explicitly installed nightly for this terminal's v1 examples.
-export PATH="$HOME/.local/share/easyp-nightly/bin:$PATH"
 easyp --version
 
 # Initialize a new project

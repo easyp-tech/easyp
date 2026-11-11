@@ -20,7 +20,7 @@ EasyP v1 changed the file layout and refuses v0 configuration. Before giving any
 | `buf.yaml` / `buf.gen.yaml` | buf | [migration-from-buf.md](./references/migration-from-buf.md) |
 | Nothing | new project | `easyp init --module …` (v1) |
 
-Also check the binary: `easyp --version`. `brew` and `go install …@latest` still install **v0.17.0**; v1 ships as `v1.0.0-nightly.YYYYMMDD.N` tags ([installation.md](./references/installation.md)). The error `legacy EasyP configuration detected; run easyp migrate --module <identity>` means a v1 binary met v0 config.
+Also check the binary: `easyp --version`. `brew`, `go install …@latest` and Docker `latest` install **v1**; v0 is `v0.17.0` by exact version ([installation.md](./references/installation.md)). The error `legacy EasyP configuration detected; run easyp migrate --module <identity>` means a v1 binary met v0 config.
 
 ## The v1 model
 
@@ -170,10 +170,10 @@ See [protobuf-best-practices.md](./references/protobuf-best-practices.md).
 ### CI/CD
 
 Follow [ci-cd-integration.md](./references/ci-cd-integration.md):
-- Pin the exact nightly.
+- Pin the exact EasyP version.
 - Run `easyp --frozen mod download`, then `--frozen lint`, `--frozen breaking` (with `fetch-depth: 0`), and `--frozen generate && git diff --exit-code`.
 - Cache `~/.easyp/v1` keyed on `protobuf.lock`.
-- With `easyp-tech/actions`, always set `version`; the default image is v0.
+- With `easyp-tech/actions`, always set `version`; do not rely on its default image.
 
 ## Important constraints
 
