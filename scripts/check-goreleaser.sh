@@ -8,10 +8,12 @@
 set -uo pipefail
 
 goreleaser=${GORELEASER:-goreleaser}
-output=$("$goreleaser" check "$@" 2>&1)
+output=$(NO_COLOR=1 "$goreleaser" check "$@" 2>&1)
 status=$?
 printf '%s\n' "$output"
 [[ $status -eq 0 ]] && exit 0
+# CI forces colour regardless of NO_COLOR; match on the plain text.
+output=$(sed -E $'s/\x1b\\[[0-9;]*m//g' <<< "$output")
 
 deprecated=$(grep -oE 'DEPRECATED: +[a-z_.]+' <<< "$output" | awk '{print $2}' | sort -u)
 if [[ $deprecated == brews ]] &&
