@@ -3,7 +3,7 @@
 Start with:
 
 ```bash
-easyp --version                         # v1.0.0-nightly.… vs v0.x — most confusion starts here
+easyp --version                         # v1.x vs v0.x — most confusion starts here
 easyp validate-config --format text     # all four files, whole tree
 easyp --debug <command>                 # verbose logs on stderr
 ```
@@ -14,8 +14,8 @@ easyp --debug <command>                 # verbose logs on stderr
 |---|---|---|
 | `legacy EasyP configuration detected; run easyp migrate --module <identity> …` | v1 binary, v0 `easyp.yaml` (top-level `lint`/`deps`/`generate`) | Migrate: [migration-v0-to-v1.md](./migration-v0-to-v1.md). Or use a v0 binary for now. |
 | Same error for a file you did not expect (`examples/…/easyp.yaml`, `.agents/…/easyp.yaml`) | `validate-config` scans every directory; `lint` reads descendant policies | Migrate that nested project, or rename templates that are not real configs |
-| v0 binary: unknown field `linters` / `version: v1`, or it ignores `easyp.gen.yaml` | v0 binary, v1 config | Install a v1 nightly ([installation.md](./installation.md)); check that CI does not pin v0 |
-| `brew upgrade` / `go install …@latest` still gives v0.17.0 | v1 ships only as nightly tags | Pin `@v1.0.0-nightly.YYYYMMDD.N` explicitly |
+| v0 binary: unknown field `linters` / `version: v1`, or it ignores `easyp.gen.yaml` | v0 binary, v1 config | Install v1 ([installation.md](./installation.md)); check that CI does not pin v0 |
+| `brew upgrade` / `go install …@latest` still gives v0.17.0 | Stale tap or module cache | `brew update`, or pin `@v1.0.0` explicitly |
 
 ## Configuration errors
 

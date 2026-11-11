@@ -175,7 +175,7 @@ plugins:
     opts:
       paths: source_relative
       require_unimplemented_servers: false
-  - remote: plugins.beta.easyp.tech/grpc-ecosystem/gateway
+  - remote: plugins.easyp.tech/grpc-ecosystem/gateway
     version: v2.29.0             # required for remote, forbidden for name/path/command
     out: gen/go
     opts:
