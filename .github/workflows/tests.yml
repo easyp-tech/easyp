@@ -56,5 +56,5 @@ jobs:
           version: v2.18.2
           install-only: true
 
-      - name: Validate nightly release configuration
-        run: goreleaser check
+      - name: Validate release configuration
+        run: bash scripts/check-goreleaser.sh
