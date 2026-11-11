@@ -46,7 +46,7 @@ func TestDescribeRemoteExampleUsesCurrentRegistry(t *testing.T) {
 				continue
 			}
 			found = true
-			assert.Equal(t, "plugins.beta.easyp.tech/protocolbuffers/go", plugin.Remote)
+			assert.Equal(t, "plugins.easyp.tech/protocolbuffers/go", plugin.Remote)
 			assert.Equal(t, "v1.36.11", plugin.Version)
 		}
 	}
