@@ -1,1 +1,0 @@
-syntax = "proto3"; package feat06b.c03; message MinimalTokenMsg3 { int32 id = 1; }

@@ -1,1 +1,0 @@
-syntax = "proto2"; package feat02b.c04; message HexShort { optional string s = 1 [default = "\x1\x2A\x7f"]; }

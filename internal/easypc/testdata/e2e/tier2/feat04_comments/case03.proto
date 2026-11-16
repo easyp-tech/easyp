@@ -1,7 +1,0 @@
-syntax = "proto3"; package feat04b.c03;
-/* line 1
- * line 2
- * line 3
- * line 4
- */
-message MultiLineBlock { string s = 1; }

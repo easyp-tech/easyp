@@ -1,7 +1,0 @@
-syntax = "proto2";
-package tier3.combo26;
-
-message LegacyProto2Item {
-  required int32 legacy_id = 1;
-  optional string legacy_name = 2;
-}

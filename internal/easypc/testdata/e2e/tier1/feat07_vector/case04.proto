@@ -1,6 +1,0 @@
-syntax = "proto3";
-package feat07.case04;
-
-message DenseDelimiters {
-  message Inner1 { message Inner2 { message Inner3 { int32 val = 1; } } }
-}

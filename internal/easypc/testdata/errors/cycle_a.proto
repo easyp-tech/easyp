@@ -1,3 +1,0 @@
-syntax = "proto3";
-import "cycle_b.proto";
-message A {}

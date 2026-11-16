@@ -1,2 +1,0 @@
-testdata/errors/tag_large.proto:3:13: Field numbers cannot be greater than 536870911.
-testdata/errors/tag_large.proto:3:13: Suggested field numbers for Foo: 1

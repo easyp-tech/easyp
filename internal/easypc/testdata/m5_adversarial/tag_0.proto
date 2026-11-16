@@ -1,4 +1,0 @@
-syntax = "proto2";
-message Tag0 {
-  optional int32 f = 0;
-}

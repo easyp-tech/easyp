@@ -1,6 +1,0 @@
-syntax = "proto3"; package feat18b.c02;
-// Detached 1
-
-
-
-message C2 { int32 a = 1; }

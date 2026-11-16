@@ -1,1 +1,0 @@
-syntax = "proto3"; package feat27b.c01; message DetBound1 { int32 id = 1; string key = 2; }

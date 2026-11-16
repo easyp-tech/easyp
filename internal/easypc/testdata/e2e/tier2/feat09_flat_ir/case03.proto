@@ -1,9 +1,0 @@
-syntax = "proto3"; package feat09b.c03; message SevenOneofs {
-  oneof o_1 { int32 o_1_a = 1; string o_1_b = 2; }
-  oneof o_2 { int32 o_2_a = 3; string o_2_b = 4; }
-  oneof o_3 { int32 o_3_a = 5; string o_3_b = 6; }
-  oneof o_4 { int32 o_4_a = 7; string o_4_b = 8; }
-  oneof o_5 { int32 o_5_a = 9; string o_5_b = 10; }
-  oneof o_6 { int32 o_6_a = 11; string o_6_b = 12; }
-  oneof o_7 { int32 o_7_a = 13; string o_7_b = 14; }
-}

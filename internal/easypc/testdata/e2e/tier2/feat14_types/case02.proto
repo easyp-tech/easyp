@@ -1,1 +1,0 @@
-syntax = "proto3"; package feat14b.c02; message MutualA { MutualB b = 1; } message MutualB { MutualA a = 1; }

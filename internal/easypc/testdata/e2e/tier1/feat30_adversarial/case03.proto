@@ -1,7 +1,0 @@
-syntax = "proto3";
-package feat30.case03;
-
-message ReservedNames {
-  reserved "foo", "bar";
-  string valid_name = 1;
-}

@@ -1,7 +1,0 @@
-syntax = "proto3";
-package feat13.case01;
-import "dep01.proto";
-
-message MainMsg {
-  feat13.dep01.DepItem item = 1;
-}

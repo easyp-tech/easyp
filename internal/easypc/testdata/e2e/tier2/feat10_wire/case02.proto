@@ -1,1 +1,0 @@
-syntax = "proto3"; package feat10b.c02; message MaxTag { int32 val = 536870911; }

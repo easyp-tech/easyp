@@ -1,7 +1,0 @@
-syntax = "proto3";
-package feat24b.c02;
-
-message Proto3OptionalSyntheticOneof {
-  optional int32 opt_num = 1;
-  optional string opt_str = 2;
-}

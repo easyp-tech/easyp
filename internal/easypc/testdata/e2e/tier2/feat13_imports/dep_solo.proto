@@ -1,1 +1,0 @@
-syntax = "proto3"; package feat13b.solo; message SoloItem { int32 s = 1; }

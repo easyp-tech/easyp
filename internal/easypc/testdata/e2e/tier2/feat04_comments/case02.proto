@@ -1,5 +1,0 @@
-syntax = "proto3"; package feat04b.c02;
-//
-//
-//
-message MultipleEmptyComments { string s = 1; }

@@ -1,6 +1,0 @@
-syntax = "proto3";
-package feat22.case04;
-
-message OrderTest4 {
-  int32 ordinal = 1;
-}

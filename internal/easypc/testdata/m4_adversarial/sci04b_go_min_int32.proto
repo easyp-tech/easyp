@@ -1,6 +1,0 @@
-syntax = "proto2";
-package m4.adversarial.isolated;
-
-enum GoMinInt32Test {
-  MIN_INT32 = -2147483648;
-}

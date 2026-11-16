@@ -1,1 +1,0 @@
-syntax = "proto3"; package feat13.pub; import public "pub_inner.proto";

@@ -1,8 +1,0 @@
-syntax = "proto2";
-package feat03.case03;
-
-message Octals {
-  optional int32 oct_val1 = 1 [default = 077];
-  optional int32 oct_val2 = 2 [default = 0123];
-  optional int32 oct_zero = 3 [default = 00];
-}

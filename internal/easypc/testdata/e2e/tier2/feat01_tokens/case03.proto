@@ -1,1 +1,0 @@
-syntax = "proto3"; package feat01b.c03; message KeywordsAsFields { int32 message = 1; string syntax = 2; bool package = 3; }

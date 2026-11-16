@@ -1,2 +1,0 @@
-testdata/errors/tag_zero.proto:3:13: Field numbers must be positive integers.
-testdata/errors/tag_zero.proto:3:13: Suggested field numbers for Foo: 1

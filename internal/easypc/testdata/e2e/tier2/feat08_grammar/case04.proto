@@ -1,2 +1,0 @@
-syntax = "proto3"; package feat08b.c04; enum SingleValueEnum { ZERO = 0; }
-message UseSingle { SingleValueEnum e = 1; }

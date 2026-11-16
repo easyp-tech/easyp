@@ -1,5 +1,0 @@
-syntax = "proto3";
-package feat14.case01;
-
-message Entity { string id = 1; }
-message Container { Entity entity = 1; }

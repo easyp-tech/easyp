@@ -1,1 +1,0 @@
-syntax = "proto3"; package feat13b.chain; import "chain_c.proto"; message B { C c = 1; }

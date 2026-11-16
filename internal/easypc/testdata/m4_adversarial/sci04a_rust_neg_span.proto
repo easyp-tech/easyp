@@ -1,7 +1,0 @@
-syntax = "proto2";
-package m4.adversarial.isolated;
-
-enum RustNegSpanTest {
-  NEG_ONE = -1;
-  NEG_TWO = -2;
-}

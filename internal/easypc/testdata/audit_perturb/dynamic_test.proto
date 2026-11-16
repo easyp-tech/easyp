@@ -1,6 +1,0 @@
-syntax = "proto3";
-package audit.dynamic;
-
-message Probe {
-  string super_duper_renamed_field = 777;
-}

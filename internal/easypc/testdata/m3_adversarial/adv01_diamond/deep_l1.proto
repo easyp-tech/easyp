@@ -1,9 +1,0 @@
-syntax = "proto3";
-package adv01.deep.l1;
-
-import "deep_l2.proto";
-
-message Level1Msg {
-  adv01.deep.l2.Level2Msg inner = 1;
-  double score = 2;
-}

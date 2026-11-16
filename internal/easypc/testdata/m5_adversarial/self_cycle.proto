@@ -1,3 +1,0 @@
-syntax = "proto3";
-import "self_cycle.proto";
-message SelfCycleMsg {}

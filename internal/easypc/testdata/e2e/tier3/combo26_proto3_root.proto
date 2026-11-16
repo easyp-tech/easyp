@@ -1,8 +1,0 @@
-syntax = "proto3";
-package tier3.combo26;
-import "combo26_proto2_dep.proto";
-
-message ModernProto3Msg {
-  LegacyProto2Item legacy_item = 1;
-  string modern_tag = 2;
-}

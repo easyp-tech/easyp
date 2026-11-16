@@ -1,9 +1,0 @@
-syntax = "proto3";
-package adv01.deep.l4;
-
-import "deep_l5.proto";
-
-message Level4Msg {
-  adv01.deep.l5.Level5Msg inner = 1;
-  string l4_info = 2;
-}

@@ -1,3 +1,0 @@
-syntax = "proto3";
-package tier3.combo21;
-message PartB { int32 b = 1; }

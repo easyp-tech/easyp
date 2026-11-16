@@ -1,1 +1,0 @@
-syntax = "proto3"; package feat12b.c04; message RootScopeLookup { .feat12b.c04.RootScopeLookup self_ref = 1; }

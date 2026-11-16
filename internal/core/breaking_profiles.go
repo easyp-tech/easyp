@@ -14,7 +14,8 @@ import (
 	"google.golang.org/protobuf/reflect/protoreflect"
 	"google.golang.org/protobuf/types/descriptorpb"
 
-	"github.com/easyp-tech/easyp/internal/compilerbackend"
+	"github.com/easyp-tech/compiler-lab/easypc/compilerbackend"
+
 	"github.com/easyp-tech/easyp/internal/config"
 	"github.com/easyp-tech/easyp/internal/core/path_helpers"
 )

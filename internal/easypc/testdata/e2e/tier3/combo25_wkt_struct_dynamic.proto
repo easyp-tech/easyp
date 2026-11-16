@@ -1,9 +1,0 @@
-syntax = "proto3";
-package tier3.combo25;
-import "google/protobuf/struct.proto";
-
-message DynamicConfig {
-  google.protobuf.Struct config_map = 1;
-  google.protobuf.ListValue array_data = 2;
-  google.protobuf.Value generic_value = 3;
-}

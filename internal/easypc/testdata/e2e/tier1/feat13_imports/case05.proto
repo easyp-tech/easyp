@@ -1,9 +1,0 @@
-syntax = "proto3";
-package feat13.case05;
-import "diamond_b.proto";
-import "diamond_c.proto";
-
-message DiamondConsumer {
-  feat13.diamond.LeftWing left = 1;
-  feat13.diamond.RightWing right = 2;
-}

@@ -1,7 +1,0 @@
-syntax = "proto2";
-package feat02.case03;
-
-message OctalHexStrings {
-  optional string octal_str = 1 [default = "\101\102\103"];
-  optional string hex_str = 2 [default = "\x44\x45\x46"];
-}

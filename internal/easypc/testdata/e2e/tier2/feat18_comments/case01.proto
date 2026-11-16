@@ -1,3 +1,0 @@
-syntax = "proto3"; package feat18b.c01;
-//NoSpaceLeading
-message C1 { int32 a = 1; }

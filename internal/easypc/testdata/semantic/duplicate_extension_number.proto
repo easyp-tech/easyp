@@ -1,1 +1,0 @@
-syntax = "proto3"; package p; import "google/protobuf/descriptor.proto"; extend google.protobuf.MessageOptions { string x = 50000; string y = 50000; }

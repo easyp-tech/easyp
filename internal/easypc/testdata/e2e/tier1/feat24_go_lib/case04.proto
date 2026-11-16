@@ -1,9 +1,0 @@
-syntax = "proto3";
-package feat24.case04;
-
-message GoReflectTarget4 {
-  int32 id = 1;
-  string label = 2;
-  repeated bytes chunks = 3;
-  map<string, string> attributes = 4;
-}

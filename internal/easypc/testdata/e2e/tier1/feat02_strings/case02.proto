@@ -1,6 +1,0 @@
-syntax = "proto2";
-package feat02.case02;
-
-message EscapeSequences {
-  optional string escapes = 1 [default = "line1\nline2\ttab\rreturn\\slash\'quote\"double"];
-}

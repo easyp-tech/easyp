@@ -1,1 +1,0 @@
-syntax = "proto3"; package feat19b.c02; message J2 { string alreadyCamelCase = 1; }

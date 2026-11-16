@@ -1,1 +1,0 @@
-syntax = "proto3"; package p; option custom_opt = "x"; message M {}

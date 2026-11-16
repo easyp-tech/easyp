@@ -1,9 +1,0 @@
-syntax = "proto3";
-package adv02.c;
-
-import public "d.proto";
-
-message CMid {
-  adv02.d.DLeaf d_field = 1;
-  adv02.d.DEnum d_enum = 2;
-}

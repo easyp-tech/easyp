@@ -1,7 +1,0 @@
-syntax = "proto3";
-package feat16b.c03;
-import "google/protobuf/timestamp.proto";
-
-message TimestampInMap {
-  map<string, google.protobuf.Timestamp> events = 1;
-}

@@ -1,2 +1,0 @@
-syntax = "proto3"; package feat05b.c02; // Комментарий на русском: Проверка кодировки
-message CyrillicComment { string s = 1; }

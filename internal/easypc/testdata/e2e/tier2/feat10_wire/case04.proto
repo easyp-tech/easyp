@@ -1,1 +1,0 @@
-syntax = "proto3"; package feat10b.c04; message PostReservedTag { int32 val = 20000; }

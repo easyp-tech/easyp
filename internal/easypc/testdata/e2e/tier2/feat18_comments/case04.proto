@@ -1,1 +1,0 @@
-syntax = "proto3"; package feat18b.c04; message C4 { int32 /* inline block */ field = 1; }

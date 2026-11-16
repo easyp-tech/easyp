@@ -7,7 +7,9 @@ require (
 	github.com/a8m/envsubst v1.4.3
 	github.com/bufbuild/protocompile v0.14.1
 	github.com/charmbracelet/x/term v0.2.1
+	github.com/easyp-tech/compiler-lab/easypc v0.0.0
 	github.com/easyp-tech/service/api v1.0.0
+	github.com/go-git/go-billy/v5 v5.6.2
 	github.com/go-git/go-git/v5 v5.16.3
 	github.com/modelcontextprotocol/go-sdk v1.6.1
 	github.com/samber/lo v1.52.0
@@ -36,7 +38,6 @@ require (
 	github.com/easyp-tech/protoc-gen-mcp v0.5.0 // indirect
 	github.com/emirpasic/gods v1.18.1 // indirect
 	github.com/go-git/gcfg v1.5.1-0.20230307220236-3a3c6141e376 // indirect
-	github.com/go-git/go-billy/v5 v5.6.2 // indirect
 	github.com/golang/groupcache v0.0.0-20241129210726-2c02b8208cf8 // indirect
 	github.com/google/jsonschema-go v0.4.3 // indirect
 	github.com/jbenet/go-context v0.0.0-20150711004518-d14ea06fba99 // indirect
@@ -62,3 +63,5 @@ require (
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20260526163538-3dc84a4a5aaa // indirect
 	gopkg.in/warnings.v0 v0.1.2 // indirect
 )
+
+replace github.com/easyp-tech/compiler-lab/easypc => ../compiler-lab/easypc

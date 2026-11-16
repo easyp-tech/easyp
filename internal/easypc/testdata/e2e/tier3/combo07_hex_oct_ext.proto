@@ -1,9 +1,0 @@
-syntax = "proto2";
-package tier3.combo07;
-
-message HexOctMsg {
-  optional int32 hex_val = 1 [default = 0x1f];
-  optional int32 oct_val = 2 [default = 077];
-  repeated int32 packed_ints = 3 [packed = true];
-  extensions 0x100 to 0x200;
-}

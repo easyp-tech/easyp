@@ -1,1 +1,0 @@
-syntax = "proto3"; package feat30b.c01; message BoundMaxField { int32 x = 536870911; }

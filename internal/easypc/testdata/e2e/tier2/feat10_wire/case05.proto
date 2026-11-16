@@ -1,1 +1,0 @@
-syntax = "proto2"; package feat10b.c05; enum NegValues { NEG = -5; ZERO = 0; POS = 5; } message NegMsg { optional NegValues v = 1 [default = NEG]; }

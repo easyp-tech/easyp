@@ -1,7 +1,0 @@
-syntax = "proto3";
-package feat29.case01;
-
-message GoldenMsg1 {
-  int32 code = 1;
-  string message = 2;
-}

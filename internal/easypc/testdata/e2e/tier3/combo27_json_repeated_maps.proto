@@ -1,7 +1,0 @@
-syntax = "proto3";
-package tier3.combo27;
-
-message JsonRepeatedMapMsg {
-  repeated string tag_items = 1 [json_name = "tagList"];
-  map<string, int32> score_map = 2 [json_name = "scoresByName"];
-}

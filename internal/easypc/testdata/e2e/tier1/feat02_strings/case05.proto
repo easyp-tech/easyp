@@ -1,6 +1,0 @@
-syntax = "proto2";
-package feat02.case05;
-
-message ConcatStrings {
-  optional string multi_chunk = 1 [default = "part1 " "part2 " "part3"];
-}

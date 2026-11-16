@@ -1,4 +1,0 @@
-syntax = "proto3"; package feat18b.c03; enum EnumTrailing { VAL_A = 0; // trailing A
- VAL_B = 1; // trailing B
-}
-message C3 { EnumTrailing e = 1; }

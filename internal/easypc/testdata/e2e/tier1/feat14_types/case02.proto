@@ -1,5 +1,0 @@
-syntax = "proto3";
-package feat14.case02;
-
-enum State { S_OFF = 0; S_ON = 1; }
-message Device { State state = 1; }

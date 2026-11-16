@@ -1,1 +1,0 @@
-syntax = "proto2"; package feat03b.c02; message MaxOct { optional int32 o = 1 [default = 0777]; optional int32 o0 = 2 [default = 00]; }

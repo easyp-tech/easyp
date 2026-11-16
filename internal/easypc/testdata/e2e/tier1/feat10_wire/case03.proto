@@ -1,8 +1,0 @@
-syntax = "proto3";
-package feat10.case03;
-
-message PackedRepeated {
-  repeated int32 packed_ints = 1;
-  repeated double packed_doubles = 2;
-  repeated string unpacked_strings = 3;
-}

@@ -1,1 +1,0 @@
-syntax = "proto3"; package feat23b.helper2; message UnusedH2 { int32 a = 1; }

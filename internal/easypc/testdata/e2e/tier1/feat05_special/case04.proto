@@ -1,6 +1,0 @@
-syntax = "proto3";
-package feat05.case04;
-
-message AsciiPrintable {
-  string symbols = 1;
-}

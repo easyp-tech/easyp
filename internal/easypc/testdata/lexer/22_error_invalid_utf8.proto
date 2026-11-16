@@ -1,3 +1,0 @@
-// invalid utf8 in comment: ÿ
-"invalid utf8 in string: ÿ"
-ÿ

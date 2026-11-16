@@ -1,6 +1,0 @@
-syntax = "proto3";
-package feat07.case01;
-
-message LongIdentMsg {
-  string a_very_long_identifier_designed_to_cross_simd_vector_lanes_32_and_64_bytes_a_very_long_identifier_designed_to_cross_simd_vector_lanes_32_and_64_bytes_ = 1;
-}

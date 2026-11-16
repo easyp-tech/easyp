@@ -1,8 +1,0 @@
-syntax = "proto3";
-package feat12.case04;
-
-message Target { string desc = 1; }
-
-message Consumer {
-  .feat12.case04.Target fully_qualified = 1;
-}

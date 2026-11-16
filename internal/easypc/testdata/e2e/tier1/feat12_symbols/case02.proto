@@ -1,7 +1,0 @@
-syntax = "proto3";
-package feat12.case02;
-
-message Outer {
-  message Inner { string val = 1; }
-  Inner inner_field = 1;
-}

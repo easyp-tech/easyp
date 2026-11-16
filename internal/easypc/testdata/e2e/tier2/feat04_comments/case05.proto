@@ -1,1 +1,0 @@
-syntax = "proto3"; package feat04b.c05; message NoTrailingNewline { string s = 1; } // trailing comment
