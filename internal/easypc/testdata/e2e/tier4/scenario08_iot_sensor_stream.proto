@@ -1,0 +1,24 @@
+syntax = "proto3";
+package iot.fleet.v1;
+import "google/protobuf/timestamp.proto";
+
+message DeviceTelemetry {
+  string device_uuid = 1;
+  string firmware_version = 2;
+  google.protobuf.Timestamp recorded_at = 3;
+  double battery_percent = 4;
+  double temperature_celsius = 5;
+  double humidity_percent = 6;
+  int32 signal_strength_rssi = 7;
+}
+
+message DeviceCommand {
+  string command_id = 1;
+  string target_device_uuid = 2;
+  string action = 3;
+  map<string, string> parameters = 4;
+}
+
+service DeviceGateway {
+  rpc IngestTelemetry (stream DeviceTelemetry) returns (DeviceCommand);
+}

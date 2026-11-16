@@ -1,0 +1,11 @@
+syntax = "proto3";
+package adv02.a;
+
+import "b.proto";
+
+message RootA {
+  adv02.d.DLeaf direct_d = 1;
+  adv02.d.DEnum direct_d_enum = 2;
+  adv02.c.CMid direct_c = 3;
+  adv02.b.BGateway direct_b = 4;
+}

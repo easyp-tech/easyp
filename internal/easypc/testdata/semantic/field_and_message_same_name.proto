@@ -1,0 +1,1 @@
+syntax = "proto3"; package p; message M { message A {} string A = 1; }

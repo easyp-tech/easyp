@@ -1,0 +1,7 @@
+syntax = "proto3";
+package feat18.case02;
+
+message TrailCommentMsg {
+  string title = 1; // Trailing comment on title
+  int32 score = 2;  // Trailing comment on score
+}

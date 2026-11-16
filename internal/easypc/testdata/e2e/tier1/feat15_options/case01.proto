@@ -1,0 +1,11 @@
+syntax = "proto2";
+package feat15.case01;
+import "google/protobuf/descriptor.proto";
+
+extend google.protobuf.FileOptions {
+  optional string file_author = 50001;
+}
+
+option (file_author) = "EasyP Team";
+
+message Dummy { optional int32 id = 1; }

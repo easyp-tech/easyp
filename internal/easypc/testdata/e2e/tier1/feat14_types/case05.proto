@@ -1,0 +1,12 @@
+syntax = "proto3";
+package feat14.case05;
+
+message VariantA { int32 a = 1; }
+message VariantB { string b = 1; }
+
+message OneofHolder {
+  oneof choice {
+    VariantA v_a = 1;
+    VariantB v_b = 2;
+  }
+}

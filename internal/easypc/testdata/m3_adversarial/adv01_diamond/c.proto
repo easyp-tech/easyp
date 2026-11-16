@@ -1,0 +1,10 @@
+syntax = "proto3";
+package adv01.right;
+
+import "d.proto";
+
+message NodeC {
+  string c_name = 1;
+  adv01.base.NodeD payload = 2;
+  adv01.base.StatusD state = 3;
+}

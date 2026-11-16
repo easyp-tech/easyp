@@ -1,0 +1,18 @@
+syntax = "proto2";
+package tier3.combo01;
+import "google/protobuf/descriptor.proto";
+
+message OptInfo {
+  optional string author = 1;
+  optional int32 level = 2;
+}
+
+extend google.protobuf.MessageOptions {
+  optional OptInfo info = 50301;
+}
+
+message AnnotatedMsg {
+  option (info) = { author: "Agent", level: 5 };
+  optional int32 id = 1;
+  extensions 100 to 200;
+}

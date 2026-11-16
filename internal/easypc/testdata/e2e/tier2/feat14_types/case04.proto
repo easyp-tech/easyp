@@ -1,0 +1,1 @@
+syntax = "proto3"; package feat14b.c04; message SelfMap { map<string, SelfMap> tree = 1; }

@@ -1,0 +1,1 @@
+syntax = "proto3"; package feat17b.c01; message S1{int32 a=1;}

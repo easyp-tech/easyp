@@ -1,0 +1,44 @@
+syntax = "proto2";
+package adv06.bools;
+
+import "google/protobuf/descriptor.proto";
+
+// Explicit boolean options on FileOptions
+option java_multiple_files = false;
+option deprecated = false;
+
+extend google.protobuf.MessageOptions {
+  optional bool custom_flag = 61001;
+}
+
+extend google.protobuf.FieldOptions {
+  optional bool custom_field_flag = 61002;
+}
+
+message BoolTestMsg {
+  // Explicit boolean options on MessageOptions
+  option (custom_flag) = false;
+  option deprecated = false;
+  option message_set_wire_format = false;
+
+  // Explicit boolean options on FieldOptions
+  optional int32 val = 1 [
+    deprecated = false,
+    (custom_field_flag) = false
+  ];
+}
+
+enum BoolEnum {
+  option deprecated = false;
+  ZERO = 0 [deprecated = false];
+}
+
+message Req {}
+message Resp {}
+
+service BoolService {
+  option deprecated = false;
+  rpc Ping(Req) returns (Resp) {
+    option deprecated = false;
+  }
+}

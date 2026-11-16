@@ -1,0 +1,7 @@
+syntax = "proto2";
+package feat02.case04;
+
+message UnicodeStrings {
+  optional string unicode_short = 1 [default = "\u0041\u0042"];
+  optional string unicode_long = 2 [default = "\U00000043\U00000044"];
+}

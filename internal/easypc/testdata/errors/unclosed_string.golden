@@ -1,0 +1,2 @@
+testdata/errors/unclosed_string.proto:3:38: Multiline strings are not allowed. Did you miss a "?.
+testdata/errors/unclosed_string.proto:4:1: Expected "]".

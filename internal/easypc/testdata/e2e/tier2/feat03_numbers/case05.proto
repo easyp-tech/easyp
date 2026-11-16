@@ -1,0 +1,1 @@
+syntax = "proto3"; package feat03b.c05; message MaxUint32Tag { int32 max_tag = 536870911; }

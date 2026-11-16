@@ -1,0 +1,74 @@
+syntax = "proto2";
+package adv08.stress.scoping.main;
+
+import "iter3_scoping_base.proto";
+
+message ShadowItem {
+  optional string scope = 1 [default = "package_level"];
+}
+
+message OuterContainer {
+  message ShadowItem {
+    optional string scope = 1 [default = "outer_container_level"];
+  }
+
+  message InnerContainer {
+    message ShadowItem {
+      optional string scope = 1 [default = "inner_container_level"];
+    }
+
+    // Resolves to InnerContainer.ShadowItem (innermost)
+    optional ShadowItem local_shadow = 1;
+    // Resolves to OuterContainer.ShadowItem
+    optional OuterContainer.ShadowItem outer_shadow = 2;
+    // Resolves to package-level ShadowItem via relative package path
+    optional scoping.main.ShadowItem pkg_rel_shadow = 3;
+    // Resolves to package-level ShadowItem via full package path
+    optional adv08.stress.scoping.main.ShadowItem pkg_full_shadow = 4;
+  }
+
+  // Resolves to OuterContainer.ShadowItem
+  optional ShadowItem container_shadow = 1;
+  optional InnerContainer inner = 2;
+}
+
+message Tree {
+  message BranchA {
+    message Fruit {
+      optional int32 seeds = 1;
+    }
+    optional Fruit direct_fruit = 1;
+  }
+
+  message BranchB {
+    // Sibling lookup: BranchA is a sibling of BranchB inside Tree
+    optional BranchA.Fruit sibling_fruit = 1;
+
+    message SubBranchB {
+      // Cousin lookup: BranchA is found by looking outward to Tree, then into BranchA
+      optional BranchA.Fruit cousin_fruit = 1;
+    }
+    optional SubBranchB sub = 2;
+  }
+
+  optional BranchA a = 1;
+  optional BranchB b = 2;
+}
+
+message CrossPackageScopingConsumer {
+  // Sibling package lookup: adv08.stress.scoping.base shares prefix adv08.stress.scoping with main
+  optional base.RootType sibling_pkg_type = 1;
+  optional base.Parent.SiblingA.Leaf sibling_pkg_deep = 2;
+  
+  // Fully qualified
+  optional adv08.stress.scoping.base.ExtendableTarget target_full = 3;
+}
+
+// Relative extendee resolution in package scopes (stress-tests defect #4 from iter 2)
+extend base.ExtendableTarget {
+  optional int32 scoping_ext_relative = 101;
+}
+
+extend adv08.stress.scoping.base.ExtendableTarget {
+  optional string scoping_ext_full = 102;
+}

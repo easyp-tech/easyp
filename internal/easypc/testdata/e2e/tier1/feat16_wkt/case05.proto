@@ -1,0 +1,9 @@
+syntax = "proto3";
+package feat16.case05;
+import "google/protobuf/wrappers.proto";
+
+message WrappedValues {
+  google.protobuf.Int32Value boxed_int = 1;
+  google.protobuf.StringValue boxed_str = 2;
+  google.protobuf.BoolValue boxed_bool = 3;
+}

@@ -1,0 +1,26 @@
+syntax = "proto2";
+
+message DupFields {
+  optional int32 a = 1;
+  optional string a = 2;
+}
+
+message DupNums {
+  optional int32 a = 1;
+  optional string b = 1;
+}
+
+enum DupEnumValues {
+  FOO = 1;
+  FOO = 2;
+}
+
+enum DupEnumNumbers {
+  VAL1 = 1;
+  VAL2 = 1;
+}
+
+message OuterDup {
+  message Inner {}
+  message Inner {}
+}

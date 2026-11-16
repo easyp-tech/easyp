@@ -1,0 +1,1 @@
+syntax = "proto3"; package feat08b.c03; message OnlyReservedNames { reserved "foo", "bar"; }

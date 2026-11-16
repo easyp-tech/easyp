@@ -1,0 +1,3 @@
+syntax = "proto3";
+package tier3.combo14;
+message CoreEntity { string id = 1; }

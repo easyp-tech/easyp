@@ -1,0 +1,7 @@
+syntax = "proto3";
+package feat19.case02;
+
+message InferredJsonName {
+  string snake_case_identifier = 1;
+  int32 another_field_name = 2;
+}

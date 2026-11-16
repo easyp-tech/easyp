@@ -1,0 +1,8 @@
+syntax = "proto3";
+package audit.iter2.alpha;
+
+message AlphaRecord {
+    string beta_name = 50;
+    int64 alpha_id = 10;
+    bool delta_flag = 100;
+}

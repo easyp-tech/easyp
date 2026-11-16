@@ -1,0 +1,1 @@
+syntax = "proto2"; package feat02b.c03; message OctalNull { optional string s = 1 [default = "\000abc"]; }

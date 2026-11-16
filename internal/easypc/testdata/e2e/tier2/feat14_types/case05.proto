@@ -1,0 +1,1 @@
+syntax = "proto3"; package feat14b.c05; message OneofSelf { oneof item { OneofSelf child = 1; int32 leaf = 2; } }

@@ -1,0 +1,10 @@
+syntax = "proto2";
+package feat16b.c05;
+import "google/protobuf/descriptor.proto";
+
+extend google.protobuf.FileOptions {
+  optional string custom_wkt_ext = 50106;
+}
+
+option (custom_wkt_ext) = "extended";
+message WktExtendConsumer { optional int32 id = 1; }

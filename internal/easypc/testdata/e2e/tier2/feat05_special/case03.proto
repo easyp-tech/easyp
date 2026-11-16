@@ -1,0 +1,2 @@
+syntax = "proto3"; package feat05b.c03; // Emoji in comment: 🚀 🎉 ⚡
+message EmojiComment { string s = 1; }

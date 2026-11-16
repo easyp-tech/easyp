@@ -1,0 +1,7 @@
+syntax = "proto3";
+package feat19.case05;
+
+message AcronymFields {
+  string http_request_url = 1;
+  string xml_node_id = 2;
+}

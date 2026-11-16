@@ -1,0 +1,28 @@
+syntax = "proto3";
+package media.signalling.v1;
+
+message IceCandidate {
+  string candidate = 1;
+  string sdp_mid = 2;
+  int32 sdp_m_line_index = 3;
+}
+
+message SessionDescription {
+  string type = 1;
+  string sdp = 2;
+}
+
+message SignalMessage {
+  string session_id = 1;
+  string participant_id = 2;
+  oneof payload {
+    SessionDescription offer = 3;
+    SessionDescription answer = 4;
+    IceCandidate candidate = 5;
+    string bye = 6;
+  }
+}
+
+service SignallingChannel {
+  rpc SignalStream (stream SignalMessage) returns (stream SignalMessage);
+}

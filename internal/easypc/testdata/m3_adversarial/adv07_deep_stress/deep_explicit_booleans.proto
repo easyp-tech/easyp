@@ -1,0 +1,50 @@
+syntax = "proto2";
+package adv07.deep;
+import "deep_def.proto";
+
+option deprecated = false;
+option (custom_file_bool) = false;
+
+message BoolMatrixMsg {
+  option deprecated = false;
+  option message_set_wire_format = false;
+  option (custom_msg_bool) = false;
+
+  optional int32 f_opt = 1 [
+    deprecated = false,
+    (custom_field_bool) = false
+  ];
+
+  repeated int32 f_rep = 2 [
+    packed = false,
+    deprecated = false
+  ];
+
+  oneof bool_oneof {
+    option (custom_oneof_bool) = false;
+    int32 oo_field = 3 [deprecated = false];
+  }
+}
+
+enum BoolEnumTest {
+  option deprecated = false;
+  option (custom_enum_bool) = false;
+
+  VAL_ZERO = 0 [
+    deprecated = false,
+    (custom_enumval_bool) = false
+  ];
+}
+
+message ServiceReq {}
+message ServiceResp {}
+
+service BoolServiceTest {
+  option deprecated = false;
+  option (custom_service_bool) = false;
+
+  rpc DoPing(ServiceReq) returns (ServiceResp) {
+    option deprecated = false;
+    option (custom_method_bool) = false;
+  }
+}

@@ -1,0 +1,9 @@
+syntax = "proto3";
+package adv01.deep.l2;
+
+import "deep_l3.proto";
+
+message Level2Msg {
+  adv01.deep.l3.Level3Msg inner = 1;
+  bool is_active = 2;
+}

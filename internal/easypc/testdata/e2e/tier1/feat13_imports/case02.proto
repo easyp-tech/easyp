@@ -1,0 +1,9 @@
+syntax = "proto3";
+package feat13.case02;
+import "dep02a.proto";
+import "dep02b.proto";
+
+message MultiImport {
+  feat13.dep02a.ItemA a = 1;
+  feat13.dep02b.ItemB b = 2;
+}

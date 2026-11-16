@@ -1,0 +1,17 @@
+syntax = "proto2";
+package feat15b.c04;
+import "google/protobuf/descriptor.proto";
+
+message DeepOpt4 { optional string s = 1; }
+message DeepOpt3 { optional DeepOpt4 o4 = 1; }
+message DeepOpt2 { optional DeepOpt3 o3 = 1; }
+message DeepOpt1 { optional DeepOpt2 o2 = 1; }
+
+extend google.protobuf.MessageOptions {
+  optional DeepOpt1 deep_meta = 50104;
+}
+
+message DeepOptConsumer {
+  option (deep_meta) = { o2 { o3 { o4 { s: "deep_value" } } } };
+  optional int32 id = 1;
+}

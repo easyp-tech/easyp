@@ -1,0 +1,2 @@
+testdata/errors/tabstop8_col.proto:3:19: Field numbers must be positive integers.
+testdata/errors/tabstop8_col.proto:3:19: Suggested field numbers for Foo: 1

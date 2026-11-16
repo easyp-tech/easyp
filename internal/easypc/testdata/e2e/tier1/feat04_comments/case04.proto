@@ -1,0 +1,8 @@
+syntax = "proto3";
+package feat04.case04;
+
+// UTF-8 comments: Привет мир! 🚀 世界
+message Utf8Comments {
+  // Comment with symbols: © ® ™ §
+  string content = 1;
+}

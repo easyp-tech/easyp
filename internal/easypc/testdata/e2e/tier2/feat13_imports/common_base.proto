@@ -1,0 +1,1 @@
+syntax = "proto3"; package feat13b.common; message BaseCore { string id = 1; }

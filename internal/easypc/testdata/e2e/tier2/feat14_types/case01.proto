@@ -1,0 +1,1 @@
+syntax = "proto3"; package feat14b.c01; message RecursiveMsg { RecursiveMsg next = 1; int32 depth = 2; }

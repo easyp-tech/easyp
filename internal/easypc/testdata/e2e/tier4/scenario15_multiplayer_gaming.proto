@@ -1,0 +1,33 @@
+syntax = "proto3";
+package game.multiplayer.v1;
+
+message Vector3 {
+  float x = 1;
+  float y = 2;
+  float z = 3;
+}
+
+message PlayerInput {
+  uint32 input_sequence = 1;
+  Vector3 movement_input = 2;
+  Vector3 look_rotation = 3;
+  bool is_jumping = 4;
+  bool is_firing = 5;
+}
+
+message EntityState {
+  uint32 entity_id = 1;
+  Vector3 position = 2;
+  Vector3 velocity = 3;
+  Vector3 rotation = 4;
+  int32 health = 5;
+}
+
+message WorldSnapshot {
+  uint32 tick_number = 1;
+  repeated EntityState entities = 2;
+}
+
+service GameReplicationService {
+  rpc SyncGameSession (stream PlayerInput) returns (stream WorldSnapshot);
+}

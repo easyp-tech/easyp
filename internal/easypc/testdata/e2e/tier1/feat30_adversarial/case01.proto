@@ -1,0 +1,6 @@
+syntax = "proto3";
+package feat30.case01;
+
+message MaxTagMsg {
+  int32 max_tag_field = 536870911; // 2^29 - 1
+}

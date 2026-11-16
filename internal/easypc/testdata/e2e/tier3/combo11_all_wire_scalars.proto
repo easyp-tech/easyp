@@ -1,0 +1,20 @@
+syntax = "proto3";
+package tier3.combo11;
+
+message FullScalarWire {
+  int32 i32 = 1;
+  int64 i64 = 2;
+  uint32 u32 = 3;
+  uint64 u64 = 4;
+  sint32 s32 = 5;
+  sint64 s64 = 6;
+  fixed32 f32 = 7;
+  fixed64 f64 = 8;
+  sfixed32 sf32 = 9;
+  sfixed64 sf64 = 10;
+  bool b = 11;
+  float flt = 12;
+  double dbl = 13;
+  string str = 14;
+  bytes raw = 15;
+}

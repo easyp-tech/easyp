@@ -1,0 +1,10 @@
+syntax = "proto3";
+package feat04.case05;
+
+// Detached comment 1
+
+// Detached comment 2
+
+message DetachedCommentMsg {
+  string text = 1;
+}

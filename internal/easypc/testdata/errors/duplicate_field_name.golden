@@ -1,0 +1,1 @@
+testdata/errors/duplicate_field_name.proto:4:10: "bar" is already defined in "Foo".

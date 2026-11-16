@@ -1,0 +1,8 @@
+edition = "2023";
+package tier3.combo05;
+
+message EditionComboMsg {
+  int32 id = 1;
+  string title = 2;
+  repeated string tags = 3;
+}

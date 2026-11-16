@@ -1,0 +1,1 @@
+syntax = "proto3"; package feat04b.c04; message InlineBlock { int32 /* inline */ x = 1; }

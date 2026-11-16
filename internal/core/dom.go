@@ -11,6 +11,9 @@ import (
 	"github.com/yoheimuta/go-protoparser/v4/parser/meta"
 )
 
+// Position is a location in a proto file: 1-based line and column.
+type Position = meta.Position
+
 type (
 	// Rule is an interface for a rule checking.
 	Rule interface {

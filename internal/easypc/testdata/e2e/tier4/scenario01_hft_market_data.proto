@@ -1,0 +1,43 @@
+syntax = "proto3";
+package fin.marketdata.v1;
+
+enum OrderSide {
+  SIDE_UNSPECIFIED = 0;
+  SIDE_BUY = 1;
+  SIDE_SELL = 2;
+}
+
+enum OrderType {
+  TYPE_UNSPECIFIED = 0;
+  TYPE_LIMIT = 1;
+  TYPE_MARKET = 2;
+  TYPE_STOP_LIMIT = 3;
+}
+
+message PriceLevel {
+  int64 price_nano = 1;
+  int64 quantity = 2;
+  uint32 order_count = 3;
+}
+
+message MarketBookUpdate {
+  string symbol = 1;
+  uint64 sequence_number = 2;
+  int64 timestamp_micros = 3;
+  repeated PriceLevel bids = 4;
+  repeated PriceLevel asks = 5;
+}
+
+message TradeExecution {
+  string trade_id = 1;
+  string symbol = 2;
+  OrderSide side = 3;
+  int64 price_nano = 4;
+  int64 quantity = 5;
+  int64 match_time_micros = 6;
+}
+
+service MarketFeedService {
+  rpc StreamOrderBook (MarketBookUpdate) returns (stream MarketBookUpdate);
+  rpc StreamTrades (TradeExecution) returns (stream TradeExecution);
+}

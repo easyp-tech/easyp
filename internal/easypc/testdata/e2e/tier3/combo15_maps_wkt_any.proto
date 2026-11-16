@@ -1,0 +1,7 @@
+syntax = "proto3";
+package tier3.combo15;
+import "google/protobuf/any.proto";
+
+message AnyRegistry {
+  map<string, google.protobuf.Any> plugins = 1;
+}
