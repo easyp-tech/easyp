@@ -11,22 +11,22 @@ generate:
         value: github.com/acme/contracts/gen/go   # change to your module
 
 plugins:
-  - remote: plugins.beta.easyp.tech/protocolbuffers/go
+  - remote: plugins.easyp.tech/protocolbuffers/go
     version: v1.36.11
     out: gen/go
     opts:
       paths: source_relative
-  - remote: plugins.beta.easyp.tech/grpc/go
+  - remote: plugins.easyp.tech/grpc/go
     version: v1.6.2
     out: gen/go
     opts:
       paths: source_relative
       require_unimplemented_servers: false
-  - remote: plugins.beta.easyp.tech/grpc-ecosystem/gateway
+  - remote: plugins.easyp.tech/grpc-ecosystem/gateway
     version: v2.29.0
     out: gen/go
     opts:
       paths: source_relative
-  - remote: plugins.beta.easyp.tech/grpc-ecosystem/openapiv2
+  - remote: plugins.easyp.tech/grpc-ecosystem/openapiv2
     version: v2.29.0
     out: gen/openapi
