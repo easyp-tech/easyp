@@ -7,7 +7,7 @@ require (
 	github.com/a8m/envsubst v1.4.3
 	github.com/bufbuild/protocompile v0.14.1
 	github.com/charmbracelet/x/term v0.2.1
-	github.com/easyp-tech/compiler-lab/easypc v0.0.0
+	github.com/easyp-tech/easyprotoc v0.0.0-20261104120806-f378f3f3a05f
 	github.com/easyp-tech/service/api v1.0.0
 	github.com/go-git/go-billy/v5 v5.6.2
 	github.com/go-git/go-git/v5 v5.16.3
@@ -21,7 +21,7 @@ require (
 	golang.org/x/mod v0.38.0
 	golang.org/x/sys v0.47.0
 	google.golang.org/grpc v1.83.2
-	google.golang.org/protobuf v1.36.11
+	google.golang.org/protobuf v1.37.0-rc.1
 	gopkg.in/yaml.v3 v3.0.1
 )
 
@@ -63,5 +63,3 @@ require (
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20260526163538-3dc84a4a5aaa // indirect
 	gopkg.in/warnings.v0 v0.1.2 // indirect
 )
-
-replace github.com/easyp-tech/compiler-lab/easypc => ../compiler-lab/easypc
