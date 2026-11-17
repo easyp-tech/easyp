@@ -4,7 +4,7 @@ slug: "vendoring-kompilyatora-i-raschlenenie-modeli"
 # status lifecycle: draft (seeded by plan-phase) → validated (set by validate-phase §6)
 # audit-milestone §5.5 distinguishes NOT-VALIDATED (draft) from PARTIAL (validated + nyquist_compliant: false) (#2117)
 status: draft
-nyquist_compliant: false
+nyquist_compliant: true
 wave_0_complete: false
 created: "2026-11-17"
 ---
@@ -41,7 +41,15 @@ created: "2026-11-17"
 
 | Task ID | Plan | Wave | Requirement | Threat Ref | Secure Behavior | Test Type | Automated Command | File Exists | Status |
 |---------|------|------|-------------|------------|-----------------|-----------|-------------------|-------------|--------|
-| (filled by planner — one row per PLAN task) | | | | | | | | | |
+| 01-01-T1 (tracer: vendor drop) | 01-01 | 1 | LINT-VEND-01, LINT-VEND-02 | T-01-01, T-01-SC | pinned-SHA assert before copy; tidy zero-diff | build + unit + gate | `go build ./... && go test -count=1 ./internal/easypc/... ./internal/protoast/... && go mod tidy && git diff --exit-code go.mod go.sum` | ❌ until 01-01-T1 (trees are the deliverable) | ⬜ |
+| 01-01-T2 (hygiene + atomic commit) | 01-01 | 1 | LINT-VEND-01 | T-01-02, T-01-SC | seal + scoped lint exclusion | gate | `out=$(bin/golangci-lint run ./... 2>&1); echo "$out" \| grep -qE '\.go:[0-9]+:[0-9]+' && test "$(echo "$out" \| grep -E '\.go:[0-9]+:[0-9]+' \| grep -vc 'internal/protoast/build.go')" -eq 0` | ❌ until 01-01-T2 (VENDORED.md new) | ⬜ |
+| 01-02-T1 (RED: D-07 tests) | 01-02 | 2 | LINT-VEND-01 | T-01-03 | — | unit (failing-by-design) | `go test -count=1 ./internal/protoast/ -run 'TestPosition' …; a=$?; go test -count=1 ./internal/core/ -run 'TestProtoastPositions' …; b=$?; test $a -ne 0 && test $b -ne 0` (full command in PLAN) | ❌ Wave 2 — new position_test.go + position_parity_test.go + fixture | ⬜ |
+| 01-02-T2 (GREEN: rune columns) | 01-02 | 2 | LINT-VEND-01 | T-01-03 | contract enforced at the seam | unit | `go test -count=1 ./internal/protoast/... && go test -count=1 ./internal/core/ -run 'TestProtoastPositions'` | ✅ after 01-01 (vendored files edited) | ⬜ |
+| 01-02-T3 (gates + divergence record) | 01-02 | 2 | LINT-VEND-01, LINT-VEND-02 | T-01-SC | tidy zero-diff re-run | full suite + lint + gate | `go test -race -count=1 ./... && bin/golangci-lint run ./... && go mod tidy && git diff --exit-code go.mod go.sum` | ✅ existing suites | ⬜ |
+| 01-03-T1 (Position swap) | 01-03 | 2 | LINT-VEND-01 | T-01-04 | values-unchanged diff gate | regression | `go build ./... && go test -race -count=1 ./internal/core/... ./internal/rules/...` + diff-of-diffs values gate (in PLAN) | ✅ existing suites (42 test files edited) | ⬜ |
+| 01-03-T2 (read-model split) | 01-03 | 2 | LINT-VEND-01 | T-01-04, T-01-SC | tidy zero-diff re-run | regression + new twin test | `go build ./... && go test -race -count=1 ./... && bin/golangci-lint run ./... && go mod tidy && git diff --exit-code go.mod go.sum` | ✅ existing + ❌ twin test new in Wave 2 | ⬜ |
+| 01-04-T1 (casing verbatim) | 01-04 | 3 | LINT-VEND-01 | T-01-05 | pinned-SHA assert + byte-identical diff | unit + diff gate | `diff <clone>/easyp-cli/internal/rules/casing.go internal/rules/casing.go && diff <clone>/easyp-cli/internal/rules/casing_test.go internal/rules/casing_test.go && go test -count=1 ./internal/rules/` | ❌ until 01-04-T1 | ⬜ |
+| 01-04-T2 (lint_helpers adapted) | 01-04 | 3 | LINT-VEND-01 | T-01-05, T-01-SC | bounded delta + tidy zero-diff | build + unit + lint | `go build ./... && go test -race -count=1 ./internal/rules/... && bin/golangci-lint run ./... && go mod tidy && git diff --exit-code go.mod go.sum` | ❌ until 01-04-T2 | ⬜ |
 
 Placeholder rows the planner must cover (from RESEARCH.md):
 

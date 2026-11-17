@@ -34,6 +34,12 @@ Decimal phases appear between their surrounding integers in numeric order.
   4. Фиксатура с мультибайтовым UTF-8 содержимым доказывает, что позиции protoast воспроизводят контракт вывода main (1-based строка, 1-based колонка в рунах) — до начала любого переноса правил
 **Plans**: TBD
 **Design note** (решить в /gsd-discuss-phase): полнота вендоринга `lint_helpers.go`/`casing.go` — целиком или только используемое линтером подмножество (LINT-VEND-01)
+**Plans**: 4 plans
+Plans:
+- [ ] 01-01-PLAN.md — Vendor drop (tracer): easypc+protoast copy-in from compiler-lab main@08cef10, zero-diff deps, VENDORED.md + lint exclusion + AGENTS.md seal, one atomic commit
+- [ ] 01-02-PLAN.md — Position contract (TDD, D-07): rune columns in protoast build.go pos(), D-07(a) unit + D-07(b) golden parity tests on UTF-8+tab fixture, QF1002 fixed
+- [ ] 01-03-PLAN.md — Model split (D-06): Issue.Position → protoast.Position via single conversion boundary; lint-owned lintProtoInfoRead vs breaking-owned BreakingProtoInfo
+- [ ] 01-04-PLAN.md — Helper vendoring (D-01): casing.go/casing_test.go byte-verbatim, lint_helpers.go with 3 seam adaptations, D-02 fallback only on actual lint failure
 
 ### Phase 2: Линкер и маршрутизация ошибок
 **Goal**: Линковка корпусов через `easypc` с корректной трёхсторонней классификацией отказов: COMPILE-замечания, откат на пофайловый разбор при отсутствующем импорте, ошибки чтения/синтаксиса как в main
