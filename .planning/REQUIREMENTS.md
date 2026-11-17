@@ -98,28 +98,28 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| LINT-VEND-01 | — | Pending |
-| LINT-VEND-02 | — | Pending |
-| LINT-ENG-01 | — | Pending |
-| LINT-ENG-02 | — | Pending |
-| LINT-ENG-03 | — | Pending |
-| LINT-ENG-04 | — | Pending |
-| LINT-ENG-05 | — | Pending |
-| LINT-ENG-06 | — | Pending |
-| LINT-PARITY-01 | — | Pending |
-| LINT-PARITY-02 | — | Pending |
-| LINT-NEWRULES-01 | — | Pending |
-| LINT-NEWRULES-02 | — | Pending |
-| LINT-NEWRULES-03 | — | Pending |
-| LINT-NEWRULES-04 | — | Pending |
-| LINT-COMPAT-01 | — | Pending |
-| LINT-COMPAT-02 | — | Pending |
-| LINT-PERF-01 | — | Pending |
+| LINT-VEND-01 | Phase 1 | Pending |
+| LINT-VEND-02 | Phase 1 | Pending |
+| LINT-ENG-01 | Phase 3 | Pending |
+| LINT-ENG-02 | Phase 2 | Pending |
+| LINT-ENG-03 | Phase 2 | Pending |
+| LINT-ENG-04 | Phase 2 | Pending |
+| LINT-ENG-05 | Phase 3 | Pending |
+| LINT-ENG-06 | Phase 3 | Pending |
+| LINT-PARITY-01 | Phase 7 | Pending |
+| LINT-PARITY-02 | Phase 4 | Pending |
+| LINT-NEWRULES-01 | Phase 6 | Pending |
+| LINT-NEWRULES-02 | Phase 6 | Pending |
+| LINT-NEWRULES-03 | Phase 6 | Pending |
+| LINT-NEWRULES-04 | Phase 6 | Pending |
+| LINT-COMPAT-01 | Phase 5 | Pending |
+| LINT-COMPAT-02 | Phase 5 | Pending |
+| LINT-PERF-01 | Phase 7 | Pending |
 
 **Coverage:**
 - v1 requirements: 17 total
-- Mapped to phases: 0
-- Unmapped: 17 ⚠️ (заполнится при создании roadmap)
+- Mapped to phases: 17
+- Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-11-17*
