@@ -399,15 +399,21 @@ func TestProtoastPositionsMatchLegacyContract(t *testing.T) {
 | A4 | `linters.exclusions.paths` behavior verified only for the exact v2.14.0 pin used here | Pitfall 3 | Low — plan re-runs lint after the config edit anyway. |
 | A5 | golangci's `unused` may flag `lint_helpers.go`'s unexported helpers pre-Phase-4 (U1000 semantics cited from staticcheck docs; the helpers-in-main scenario not lint-run because helpers aren't in the throwaway copy) | Pitfall 2 | Low — D-02 pre-authorizes a minimal point exclusion; executor decides on actual failure. |
 
-## Open Questions
+## Open Questions (RESOLVED)
+
+All four questions are resolved — Q1/Q2 by explicit user confirmation (2026-11-17, recorded in `01-CONTEXT.md` § "Подтверждённые уточнения букв решений"), Q3/Q4 by the phase plans. Original wording kept below for traceability; each item carries its resolution.
 
 1. **D-01 mechanics for `lint_helpers.go`** — "как в лаборатории" is not compilable (Pitfall 2). Recommended: vendor with the 3 model-coupled signatures adapted, bodies verbatim, delta documented for the Phase-4 sync. Needs planner ruling (and it slightly reinterprets a locked decision's letter — worth one line in the plan's risks).
    - What we know: exact coupled declarations catalogued (Pitfall 2); casing.go/casing_test.go verbatim-safe.
    - What's unclear: whether the user prefers verbatim-but-uncompilable deferral (contradicts D-01's "in Phase 1") vs adapted-now (recommended).
    - Recommendation: adapt now; record delta in VENDORED.md-adjacent note or plan.
+   - **(RESOLVED)** User confirmed 2026-11-17 (CONTEXT.md "Подтверждённые уточнения букв решений", D-01 refinement): vendor now with the 3 adapted signatures, bodies verbatim, delta enumerated. Decided by plan 01-04 (Assumptions + Task 2).
 2. **Reference SHA confirmation** — D-08 says "ветка easyp-cli"; no such branch exists (Pitfall 4). Recommended pin: compiler-lab **main @ 08cef10909c0722f7042ba17b5c11951f9c6b6f6**, dir `easyp-cli/`. Confirm during plan review (it is the only zero-rewrite source, so risk is minimal).
+   - **(RESOLVED)** User confirmed 2026-11-17 (CONTEXT.md D-08 refinement): reference = main @ 08cef10909c0722f7042ba17b5c11951f9c6b6f6, dir `easyp-cli/`. Decided by plan 01-01 (Task 1 pin assertion + VENDORED.md, Assumptions block).
 3. **`task lint` gate vs Docker unavailability** — success criterion 3 requires `task lint` green; hadolint needs Docker which is down (Environment). Either provision Docker or scope the gate to `task lint:go` + explicit no-Dockerfile-changes note.
+   - **(RESOLVED)** Scoped to the Go half: plans gate on `bin/golangci-lint run ./...` with an explicit note that the hadolint half is vacuous this phase (no Dockerfile change; Docker daemon down per Environment). Decided by plan 01-01 (verification section).
 4. **`protoast_test.go` tab-expectation update ownership** — updating a vendored test's assertion is a protoast-tree edit (allowed; not easypc). Confirm the plan treats protoast as the adaptation seam (recommended) rather than sealed.
+   - **(RESOLVED)** protoast is the maintained adaptation seam: NOT excluded in `.golangci.yml`, tab expectations updated in-tree, divergence recorded for syncs. Decided by plan 01-02 (Task 2 + Task 3 VENDORED.md note; easypc stays sealed per D-04).
 
 ## Environment Availability
 
