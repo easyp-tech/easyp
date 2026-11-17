@@ -147,7 +147,7 @@ Phases with standard patterns (skip research-phase):
 ## Sources
 
 ### Primary (HIGH confidence)
-- Repo source at `5c9185f`/`5ebab04`: `internal/core/{lint,comment_suppressions,dom,proto_info_read,breaking_check,generate}.go`, `internal/rules/*`, `internal/config/v1/schema.go`, `internal/api/lint.go`, `internal/parallel/parallel.go`, `.spec/features/lint-easypc-infra/*`, `.spec/ERRORS.md`
+- Repo source at `5c9185f`/`5ebab04`: файлы lint / comment_suppressions / dom / proto_info_read / breaking_check / generate в `internal/core`, `internal/rules/*`, `internal/config/v1/schema.go`, `internal/api/lint.go`, `internal/parallel/parallel.go`, `.spec/features/lint-easypc-infra/*`, `.spec/ERRORS.md`
 - go-protoparser v4.14.2 module cache (`meta/position.go`, `parser/import.go`) — position contract
 - GitHub API: bufbuild/protocompile, yoheimuta/go-protoparser, jhump/protoreflect releases/metadata; buf CLI public go.mod
 - jhump/protoreflect v2 release notes (parser removed; Go 1.26 floor)
