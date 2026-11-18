@@ -12,7 +12,7 @@ Requirements for milestone «Миграция линтера на собстве
 ### Vendoring
 
 - [ ] **LINT-VEND-01** (REQ-1.1): WHEN исходники фичи собраны, the system SHALL содержать `easypc` (компилятор целиком, включая `cmd/` и `testdata/`) и `protoast`, вкопированные из `compiler-lab/easyp-cli` с импортами на `github.com/easyp-tech/easyp/internal/...`
-- [ ] **LINT-VEND-02** (REQ-1.2): WHEN выполнен `go mod tidy`, the system SHALL не содержать новых внешних зависимостей для компилятора (без внешнего модуля и без `replace`)
+- [x] **LINT-VEND-02** (REQ-1.2): WHEN выполнен `go mod tidy`, the system SHALL не содержать новых внешних зависимостей для компилятора (без внешнего модуля и без `replace`)
 
 ### Engine
 
@@ -99,7 +99,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | Requirement | Phase | Status |
 |-------------|-------|--------|
 | LINT-VEND-01 | Phase 1 | Pending |
-| LINT-VEND-02 | Phase 1 | Pending |
+| LINT-VEND-02 | Phase 1 | Complete |
 | LINT-ENG-01 | Phase 3 | Pending |
 | LINT-ENG-02 | Phase 2 | Pending |
 | LINT-ENG-03 | Phase 2 | Pending |
