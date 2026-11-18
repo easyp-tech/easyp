@@ -41,6 +41,21 @@ func (c *Core) protoInfoRead(ctx context.Context, fs FS, path string) (ProtoInfo
 	return protoInfo, nil
 }
 
+// BreakingProtoInfo is the breaking-owned read model for one proto file (D-06).
+type BreakingProtoInfo struct {
+	directiveComments    []directiveComment
+	Path                 string
+	ImportPath           string
+	Info                 *unordered.Proto
+	ProtoFilesFromImport map[ImportPath]*unordered.Proto
+}
+
+// breakingProtoInfoRead is the breaking-owned read-model constructor (D-06):
+// the breaking path's own twin of lintProtoInfoRead.
+func (c *Core) breakingProtoInfoRead(ctx context.Context, fs FS, path string) (BreakingProtoInfo, error) {
+	return BreakingProtoInfo{}, nil
+}
+
 func readProtoFile(f io.Reader) (*unordered.Proto, error) {
 	got, err := protoparser.Parse(f)
 	if err != nil {

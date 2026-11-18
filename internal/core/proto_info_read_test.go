@@ -142,6 +142,105 @@ func TestReadFileFromImportPreservesErrors(t *testing.T) {
 	}
 }
 
+func TestProtoInfoReadTwinsMirroring(t *testing.T) {
+	t.Parallel()
+
+	root := t.TempDir()
+	const name = "item.proto"
+	content := "syntax = \"proto3\";\n\npackage twins;\n\nmessage Item {}\n"
+	writeImportSource(t, root, name, content)
+	engine := &Core{logger: logger.NewNop(), importRoots: []string{root}}
+	walker := fs.NewFSWalker(root, ".")
+
+	lintInfo, err := engine.lintProtoInfoRead(t.Context(), walker, name)
+	require.NoError(t, err)
+	breakingInfo, err := engine.breakingProtoInfoRead(t.Context(), walker, name)
+	require.NoError(t, err)
+
+	// The twins are behaviorally identical in Phase 1; only their types differ.
+	assert.Equal(t, name, lintInfo.Path)
+	assert.Equal(t, name, breakingInfo.Path)
+	assert.Equal(t, lintInfo.ImportPath, breakingInfo.ImportPath)
+	assert.Equal(t, name, lintInfo.ImportPath)
+	require.NotNil(t, lintInfo.Info)
+	require.NotNil(t, breakingInfo.Info)
+	assert.Equal(t, lintInfo.Info, breakingInfo.Info)
+	assert.Equal(t, "twins", GetPackageName(lintInfo.Info))
+	assert.Equal(t, lintInfo.ProtoFilesFromImport, breakingInfo.ProtoFilesFromImport)
+}
+
+func TestLintProtoInfoReadErrorLabels(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name      string
+		content   string
+		wantLabel string
+	}{
+		{name: "open_failure", wantLabel: "Open:"},
+		{name: "parse_failure", content: "invalid proto", wantLabel: "readProtoFileWithDirectives:"},
+		{
+			name:      "import_failure",
+			content:   "syntax = \"proto3\";\n\nimport \"missing.proto\";\n\npackage twins;\n",
+			wantLabel: "readFilesFromImport:",
+		},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			root := t.TempDir()
+			if tt.content != "" {
+				writeImportSource(t, root, "item.proto", tt.content)
+			}
+			engine := &Core{logger: logger.NewNop(), importRoots: []string{root}}
+
+			_, err := engine.lintProtoInfoRead(t.Context(), fs.NewFSWalker(root, "."), "item.proto")
+
+			require.Error(t, err)
+			assert.ErrorContains(t, err, tt.wantLabel)
+		})
+	}
+}
+
+func TestBreakingProtoInfoReadErrorLabels(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name      string
+		content   string
+		wantLabel string
+	}{
+		{name: "open_failure", wantLabel: "Open:"},
+		{name: "parse_failure", content: "invalid proto", wantLabel: "readProtoFileWithDirectives:"},
+		{
+			name:      "import_failure",
+			content:   "syntax = \"proto3\";\n\nimport \"missing.proto\";\n\npackage twins;\n",
+			wantLabel: "readFilesFromImport:",
+		},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			root := t.TempDir()
+			if tt.content != "" {
+				writeImportSource(t, root, "item.proto", tt.content)
+			}
+			engine := &Core{logger: logger.NewNop(), importRoots: []string{root}}
+
+			_, err := engine.breakingProtoInfoRead(t.Context(), fs.NewFSWalker(root, "."), "item.proto")
+
+			require.Error(t, err)
+			assert.ErrorContains(t, err, tt.wantLabel)
+		})
+	}
+}
+
 func writeImportSource(t *testing.T, root, name, content string) string {
 	t.Helper()
 
