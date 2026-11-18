@@ -31,9 +31,9 @@ func (c *Core) Lint(ctx context.Context, fsWalker DirWalker) ([]IssueInfo, error
 			return nil
 		}
 
-		protoInfo, err := c.protoInfoRead(ctx, fsWalker, path)
+		protoInfo, err := c.lintProtoInfoRead(ctx, fsWalker, path)
 		if err != nil {
-			return fmt.Errorf("c.protoInfoRead: %w", err)
+			return fmt.Errorf("c.lintProtoInfoRead: %w", err)
 		}
 
 		suppressions, err := c.commentSuppressions(protoInfo)

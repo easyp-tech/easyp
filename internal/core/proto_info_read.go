@@ -14,31 +14,34 @@ import (
 	"github.com/easyp-tech/easyp/wellknownimports"
 )
 
-func (c *Core) protoInfoRead(ctx context.Context, fs FS, path string) (ProtoInfo, error) {
+// breakingProtoInfoRead is the breaking-owned read-model constructor (D-06):
+// the breaking path's own twin of lintProtoInfoRead. Behaviorally identical in
+// Phase 1; only the read-model type differs.
+func (c *Core) breakingProtoInfoRead(ctx context.Context, fs FS, path string) (BreakingProtoInfo, error) {
 	f, err := c.openDiskSource(fs, path)
 	if err != nil {
-		return ProtoInfo{}, fmt.Errorf("Open: %w", err)
+		return BreakingProtoInfo{}, fmt.Errorf("Open: %w", err)
 	}
 	defer c.close(ctx, f, path)
 
 	protoFile, comments, err := readProtoFileWithDirectives(f)
 	if err != nil {
-		return ProtoInfo{}, fmt.Errorf("readProtoFileWithDirectives: %w", err)
+		return BreakingProtoInfo{}, fmt.Errorf("readProtoFileWithDirectives: %w", err)
 	}
 
 	protoFilesFromImport, err := c.readFilesFromImport(ctx, fs, protoFile)
 	if err != nil {
-		return ProtoInfo{}, fmt.Errorf("readFilesFromImport: %w", err)
+		return BreakingProtoInfo{}, fmt.Errorf("readFilesFromImport: %w", err)
 	}
 
-	protoInfo := ProtoInfo{
+	breakingInfo := BreakingProtoInfo{
 		directiveComments:    comments,
 		Path:                 path,
 		Info:                 protoFile,
 		ProtoFilesFromImport: protoFilesFromImport,
 	}
-	protoInfo.ImportPath = c.sourceImportPath(fs, path)
-	return protoInfo, nil
+	breakingInfo.ImportPath = c.sourceImportPath(fs, path)
+	return breakingInfo, nil
 }
 
 // BreakingProtoInfo is the breaking-owned read model for one proto file (D-06).
@@ -48,12 +51,6 @@ type BreakingProtoInfo struct {
 	ImportPath           string
 	Info                 *unordered.Proto
 	ProtoFilesFromImport map[ImportPath]*unordered.Proto
-}
-
-// breakingProtoInfoRead is the breaking-owned read-model constructor (D-06):
-// the breaking path's own twin of lintProtoInfoRead.
-func (c *Core) breakingProtoInfoRead(ctx context.Context, fs FS, path string) (BreakingProtoInfo, error) {
-	return BreakingProtoInfo{}, nil
 }
 
 func readProtoFile(f io.Reader) (*unordered.Proto, error) {

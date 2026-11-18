@@ -165,7 +165,7 @@ func TestProtoInfoReadTwinsMirroring(t *testing.T) {
 	require.NotNil(t, lintInfo.Info)
 	require.NotNil(t, breakingInfo.Info)
 	assert.Equal(t, lintInfo.Info, breakingInfo.Info)
-	assert.Equal(t, "twins", GetPackageName(lintInfo.Info))
+	assert.Equal(t, PackageName("twins"), GetPackageName(lintInfo.Info))
 	assert.Equal(t, lintInfo.ProtoFilesFromImport, breakingInfo.ProtoFilesFromImport)
 }
 
