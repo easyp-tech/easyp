@@ -5,9 +5,9 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"github.com/yoheimuta/go-protoparser/v4/parser/meta"
 
 	"github.com/easyp-tech/easyp/internal/core"
+	"github.com/easyp-tech/easyp/internal/protoast"
 	"github.com/easyp-tech/easyp/internal/rules"
 )
 
@@ -39,7 +39,7 @@ func TestPackageSameGoPackage_Validate(t *testing.T) {
 		"invalid": {
 			fileNames: []string{validAuthProto, validAuthProto2},
 			wantIssues: &core.Issue{
-				Position: meta.Position{
+				Position: protoast.Position{
 					Filename: "",
 					Offset:   0,
 					Line:     0,

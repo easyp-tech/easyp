@@ -4,9 +4,9 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"github.com/yoheimuta/go-protoparser/v4/parser/meta"
 
 	"github.com/easyp-tech/easyp/internal/core"
+	"github.com/easyp-tech/easyp/internal/protoast"
 	"github.com/easyp-tech/easyp/internal/rules"
 )
 
@@ -35,7 +35,7 @@ func TestCommentField_Validate(t *testing.T) {
 		"invalid": {
 			fileName: invalidAuthProto,
 			wantIssues: &core.Issue{
-				Position: meta.Position{
+				Position: protoast.Position{
 					Filename: "",
 					Offset:   447,
 					Line:     18,

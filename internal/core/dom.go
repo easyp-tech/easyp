@@ -9,7 +9,15 @@ import (
 	"github.com/yoheimuta/go-protoparser/v4/interpret/unordered"
 	"github.com/yoheimuta/go-protoparser/v4/parser"
 	"github.com/yoheimuta/go-protoparser/v4/parser/meta"
+
+	"github.com/easyp-tech/easyp/internal/protoast"
 )
+
+// Position is a source position carried by issues. It is an alias of
+// protoast.Position so lint findings already speak the type the future engine
+// emits; go-protoparser values are converted at the AppendIssue boundary via
+// fromMetaPos.
+type Position = protoast.Position
 
 type (
 	// Rule is an interface for a rule checking.
@@ -33,7 +41,7 @@ type (
 
 	// Issue contains the information of an issue.
 	Issue struct {
-		Position   meta.Position
+		Position   Position
 		SourceName string
 		Message    string
 		RuleName   string
@@ -118,7 +126,7 @@ func GetPackageName(protoFile *unordered.Proto) PackageName {
 func AppendIssue(
 	issues []Issue, lintRule Rule, pos meta.Position, sourceName string, comments []*parser.Comment,
 ) []Issue {
-	return append(issues, buildError(lintRule, pos, sourceName))
+	return append(issues, buildError(lintRule, fromMetaPos(pos), sourceName))
 }
 
 // GetRuleName returns rule name
@@ -146,12 +154,24 @@ func toUpperSnakeCase(s string) string {
 }
 
 // buildError creates an Issue.
-func buildError(lintRule Rule, pos meta.Position, sourceName string) Issue {
+func buildError(lintRule Rule, pos Position, sourceName string) Issue {
 	return Issue{
 		Position:   pos,
 		SourceName: sourceName,
 		Message:    lintRule.Message(),
 		RuleName:   GetRuleName(lintRule),
+	}
+}
+
+// fromMetaPos converts a go-protoparser source position to the issue position
+// type. The field sets are identical in name, type, and order, so the
+// conversion copies every field and changes no value.
+func fromMetaPos(p meta.Position) Position {
+	return Position{
+		Filename: p.Filename,
+		Offset:   p.Offset,
+		Line:     p.Line,
+		Column:   p.Column,
 	}
 }
 

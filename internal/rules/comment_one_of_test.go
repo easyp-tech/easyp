@@ -4,11 +4,11 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"github.com/yoheimuta/go-protoparser/v4/parser/meta"
 
 	"github.com/easyp-tech/easyp/internal/rules"
 
 	"github.com/easyp-tech/easyp/internal/core"
+	"github.com/easyp-tech/easyp/internal/protoast"
 )
 
 func TestCommentOneof_Message(t *testing.T) {
@@ -35,7 +35,7 @@ func TestCommentOneOf_Validate(t *testing.T) {
 		"invalid": {
 			fileName: invalidAuthProto,
 			wantIssues: &core.Issue{
-				Position: meta.Position{
+				Position: protoast.Position{
 					Filename: "",
 					Offset:   748,
 					Line:     39,

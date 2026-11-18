@@ -4,9 +4,9 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"github.com/yoheimuta/go-protoparser/v4/parser/meta"
 
 	"github.com/easyp-tech/easyp/internal/core"
+	"github.com/easyp-tech/easyp/internal/protoast"
 	"github.com/easyp-tech/easyp/internal/rules"
 )
 
@@ -34,7 +34,7 @@ func TestEnumFirstValueZero_Validate(t *testing.T) {
 		"invalid": {
 			fileName: invalidAuthProto,
 			wantIssues: &core.Issue{
-				Position: meta.Position{
+				Position: protoast.Position{
 					Filename: "",
 					Offset:   917,
 					Line:     51,
@@ -49,7 +49,7 @@ func TestEnumFirstValueZero_Validate(t *testing.T) {
 		"invalid_nested": {
 			fileName: invalidAuthProto,
 			wantIssues: &core.Issue{
-				Position: meta.Position{
+				Position: protoast.Position{
 					Filename: "",
 					Offset:   667,
 					Line:     33,
