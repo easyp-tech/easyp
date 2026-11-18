@@ -1,0 +1,9 @@
+syntax = "proto2";
+package tier3.combo24;
+
+message GroupContainer {
+  repeated group ItemGroup = 1 {
+    required int32 item_id = 2;
+    optional string item_name = 3;
+  }
+}

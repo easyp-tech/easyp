@@ -1,0 +1,5 @@
+# 16_error_null_byte.proto
+ident 0 3
+error 4 1
+ident 6 3
+error 10 9

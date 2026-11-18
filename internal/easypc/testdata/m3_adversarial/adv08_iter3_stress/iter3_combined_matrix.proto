@@ -1,0 +1,105 @@
+syntax = "proto2";
+package adv08.stress.matrix;
+
+import "iter3_def.proto";
+import "iter3_scoping_base.proto";
+
+message ComplexMatrixTest {
+  // Option combining:
+  // 1. Bracketed extensions
+  // 2. Deep nested delimiters { < { < ... > } > }
+  // 3. Negative scalar extremes
+  // 4. Repeated field forms
+  option (opt_ext_msg) = {
+    name: "matrix_root"
+    code: -1
+    [adv08.stress.ext_sint32]: -2147483648
+    [adv08.stress.ext_sint64]: -9223372036854775808
+    [adv08.stress.ext_sfixed32]: -2147483648
+    [adv08.stress.ext_sfixed64]: -9223372036854775808
+
+    [adv08.stress.ext_child] <
+      name: "child_lvl_1"
+      code: 1
+      [adv08.stress.ext_status]: STATUS_NEG
+      [adv08.stress.ext_child]: {
+        name: "child_lvl_2"
+        code: 2
+        [adv08.stress.ext_child] <
+          name: "child_lvl_3"
+          code: 3
+          [adv08.stress.ext_sint32]: -2147483648
+        >
+      }
+    >
+
+    [adv08.stress.ext_rep_child]: [
+      < name: "rep_angle_1", code: -10 >,
+      { name: "rep_brace_2"; code: -20; },
+      < name: "rep_angle_3" code: -30 >
+    ]
+
+    [adv08.stress.ext_rep_child] { name: "occ_brace" }
+    [adv08.stress.ext_rep_child] < name: "occ_angle" >
+  };
+
+  // Field with deep delimiter options and negative scalar extremes
+  optional int32 field_with_nested_delimiters = 1 [
+    (opt_extreme_field) = {
+      sfix32_min: -2147483648
+      sfix64_min: -9223372036854775808
+      s32_min: -2147483648
+      s64_min: -9223372036854775808
+      f_neg_inf: -inf
+      d_neg_inf: -inf
+    },
+    (opt_deep_field) = {
+      n1: <
+        n2: {
+          n3: <
+            rep_leaf: [
+              < val: -2147483648, name: "leaf_min" >,
+              { val: 0, name: "leaf_zero" }
+            ]
+          >
+        }
+      >
+      leaves: [ <>, {} ]
+    }
+  ];
+
+  // Oneof with multiple options
+  oneof matrix_oneof {
+    option (opt_deep_oneof) = {
+      name: "oneof_brace"
+      n1: < name: "oneof_angle" >
+    };
+    option (opt_extreme_oneof) = {
+      s32_min: -2147483648
+      s64_min: -9223372036854775808
+    };
+
+    string choice_str = 2;
+    int32 choice_int = 3;
+    scoping.base.RootType choice_scoped = 4;
+  }
+}
+
+service MatrixService {
+  rpc MatrixCall (ComplexMatrixTest) returns (ComplexMatrixTest) {
+    option (opt_deep_method) = {
+      name: "method_deep"
+      n1: <
+        n2: {
+          n3: <
+            name: "method_n3"
+          >
+        }
+      >
+    };
+    option (opt_extreme_method) = {
+      sfix32_min: -2147483648
+      sfix64_min: -9223372036854775808
+    };
+  }
+}

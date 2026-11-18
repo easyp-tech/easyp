@@ -1,0 +1,3 @@
+﻿syntax = "proto3";
+package feat05.case01;
+message BomMsg { string val = 1; }

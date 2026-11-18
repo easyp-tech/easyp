@@ -1,0 +1,22 @@
+syntax = "proto3";
+
+package test.audit;
+
+import "probe2_imported.proto";
+
+message EnclosingScope {
+  message ShadowedType {
+    string inner_val = 1;
+  }
+
+  // Resolves to EnclosingScope.ShadowedType via lexical lookup
+  ShadowedType local_shadowed = 1;
+
+  // Resolves to test.audit.ShadowedType via fully qualified lookup
+  .test.audit.ShadowedType top_level_imported = 2;
+}
+
+message OuterScope {
+  // Resolves to test.audit.ShadowedType because no local ShadowedType exists in OuterScope
+  ShadowedType top_level_ref = 1;
+}

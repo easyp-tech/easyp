@@ -1,0 +1,10 @@
+syntax = "proto3";
+package corp.common;
+
+message Target {
+  string remote_id = 1;
+}
+
+message Another {
+  int32 remote_val = 1;
+}

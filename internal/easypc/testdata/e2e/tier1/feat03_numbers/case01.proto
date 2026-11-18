@@ -1,0 +1,8 @@
+syntax = "proto2";
+package feat03.case01;
+
+message Decimals {
+  optional int32 pos_dec = 1 [default = 12345];
+  optional int32 neg_dec = 2 [default = -67890];
+  optional uint64 large_dec = 3 [default = 999999999];
+}

@@ -1,0 +1,7 @@
+syntax = "proto3";
+package feat20.case02;
+
+message MetricsTarget2 {
+  int64 sequence = 1;
+  string payload = 2;
+}

@@ -1,0 +1,4 @@
+syntax = "proto2";
+message Tag19999 {
+  optional int32 f = 19999;
+}

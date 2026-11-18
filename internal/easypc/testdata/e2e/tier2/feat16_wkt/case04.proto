@@ -1,0 +1,7 @@
+syntax = "proto3";
+package feat16b.c04;
+import "google/protobuf/duration.proto";
+
+message RepeatedDuration {
+  repeated google.protobuf.Duration intervals = 1;
+}

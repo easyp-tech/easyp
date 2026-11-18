@@ -1,0 +1,1 @@
+syntax = "proto3"; package feat13.dep02a; message ItemA { string name = 1; }

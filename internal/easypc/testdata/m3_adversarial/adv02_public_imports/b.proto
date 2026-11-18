@@ -1,0 +1,8 @@
+syntax = "proto3";
+package adv02.b;
+
+import public "c.proto";
+
+message BGateway {
+  adv02.c.CMid c_field = 1;
+}

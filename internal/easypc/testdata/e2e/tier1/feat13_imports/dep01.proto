@@ -1,0 +1,1 @@
+syntax = "proto3"; package feat13.dep01; message DepItem { int32 id = 1; }

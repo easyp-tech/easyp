@@ -1,0 +1,8 @@
+syntax = "proto3";
+package tier3.combo29;
+
+message MaxTagReservedMsg {
+  reserved 100 to 500;
+  int32 normal_field = 1;
+  int32 extreme_field = 536870911;
+}

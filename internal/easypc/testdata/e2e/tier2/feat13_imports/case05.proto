@@ -1,0 +1,1 @@
+syntax = "proto3"; package feat13b.c05; import "dep_solo.proto"; message ConsumerSolo { feat13b.solo.SoloItem s = 1; }

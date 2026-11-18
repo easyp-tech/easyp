@@ -89,5 +89,6 @@ After behavior changes, run the relevant tests (at least the packages you touche
 - Hand-edit generated schema JSON: <code>schemas/easyp-v1.schema.json</code>, <code>schemas/easyp.schema.json</code>, <code>schemas/easyp.gen-v1.schema.json</code>, <code>schemas/easyp.gen.schema.json</code>, <code>schemas/protobuf.lock-v1.schema.json</code>, <code>schemas/protobuf.lock.schema.json</code>.
 - Commit or “fix” generated dependency/build noise, <code>coverage.out</code>, or the local <code>easyp</code> binary in the repo root. The documentation site lives in the separate docs repository.
 - Add parallel agent instruction files (<code>.cursor/rules/</code>, <code>CLAUDE.md</code>) unless explicitly requested; keep this file the source of truth.
+- Edit anything inside <code>internal/easypc</code> — it is a sealed vendor copy from compiler-lab. The sole exception (the one-time import-path rewrite at copy-in) was already exercised at vendoring time. Compiler fixes go upstream in compiler-lab and arrive by re-sync; see <code>internal/easypc/VENDORED.md</code> for provenance and the sync procedure.
 
 Shared producer policies use section-scoped <code>extends</code> from bounded local files or already declared/locked modules. See [.spec/config/policy-extends.md](.spec/config/policy-extends.md). No standalone policy versions or unpinned reference downloads are allowed.

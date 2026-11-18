@@ -1,0 +1,1 @@
+syntax = "proto2"; package feat02b.c01; message EmptyStr { optional string s = 1 [default = ""]; }

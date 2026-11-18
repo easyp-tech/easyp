@@ -1,0 +1,9 @@
+syntax = "proto2";
+package feat08.case01;
+
+message Proto2Grammar {
+  optional int32 opt = 1;
+  required string req = 2;
+  repeated bool rep = 3;
+  extensions 100 to 200;
+}

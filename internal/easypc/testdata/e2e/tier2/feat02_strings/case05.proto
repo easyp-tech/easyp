@@ -1,0 +1,1 @@
+syntax = "proto2"; package feat02b.c05; message ManyConcat { optional string s = 1 [default = "a" "b" "c" "d" "e"]; }

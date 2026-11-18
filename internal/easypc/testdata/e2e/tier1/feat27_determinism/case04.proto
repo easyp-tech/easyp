@@ -1,0 +1,8 @@
+syntax = "proto3";
+package feat27.case04;
+
+message DeterminismMsg4 {
+  uint32 uid = 1;
+  string hash_val = 2;
+  repeated int32 factors = 3;
+}

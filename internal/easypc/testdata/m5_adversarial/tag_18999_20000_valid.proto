@@ -1,0 +1,5 @@
+syntax = "proto2";
+message TagValidBoundaries {
+  optional int32 f1 = 18999;
+  optional int32 f2 = 20000;
+}

@@ -1,0 +1,1 @@
+syntax = "proto2"; package feat02b.c02; message AllEscapes { optional string s = 1 [default = "\a\b\f\n\r\t\v\\\'\""]; }

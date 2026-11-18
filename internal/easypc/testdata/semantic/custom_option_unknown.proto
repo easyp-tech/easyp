@@ -1,0 +1,1 @@
+syntax = "proto3"; package p; import "google/protobuf/descriptor.proto"; message M { string s = 1 [(nope) = "x"]; }

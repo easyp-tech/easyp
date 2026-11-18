@@ -1,0 +1,1 @@
+testdata/errors/null_byte.proto:2:1: Invalid control characters encountered in text.

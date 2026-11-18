@@ -1,0 +1,1 @@
+syntax = "proto3"; package feat17b.c05; message S5 { int32 x = 1; } // eof comment without nl

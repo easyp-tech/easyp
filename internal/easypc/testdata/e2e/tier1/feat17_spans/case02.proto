@@ -1,0 +1,8 @@
+syntax = "proto3";
+package feat17.case02;
+
+message SpansTest2 {
+  int32 id = 1;
+  string name = 2;
+  repeated string tags = 3;
+}

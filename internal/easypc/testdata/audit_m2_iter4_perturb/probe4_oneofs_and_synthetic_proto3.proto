@@ -1,0 +1,13 @@
+syntax = "proto3";
+package audit.iter4.probe4;
+
+message DispatchedCommand {
+    string command_id = 1;
+    oneof action {
+        string execute_script = 2;
+        int64 wait_delay_ms = 3;
+        bytes binary_payload = 4;
+    }
+    optional int32 retry_limit = 5;
+    optional string routing_key = 6;
+}

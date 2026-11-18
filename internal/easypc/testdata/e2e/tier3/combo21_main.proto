@@ -1,0 +1,9 @@
+syntax = "proto3";
+package tier3.combo21;
+import "combo21_a.proto";
+import "combo21_b.proto";
+
+message CompositePart {
+  PartA pa = 1;
+  PartB pb = 2;
+}

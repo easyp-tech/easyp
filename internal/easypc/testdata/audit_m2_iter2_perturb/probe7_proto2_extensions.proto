@@ -1,0 +1,11 @@
+syntax = "proto2";
+package audit.iter2.proto2;
+
+message BaseMessage {
+    optional int32 base_id = 1;
+    extensions 100 to 199;
+}
+
+extend BaseMessage {
+    optional string extra_note = 105;
+}

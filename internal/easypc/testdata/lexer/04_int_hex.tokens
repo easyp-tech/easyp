@@ -1,0 +1,9 @@
+# 04_int_hex.proto
+int 0 3
+int 4 3
+int 8 3
+int 12 4
+int 17 4
+int 22 10
+int 33 18
+int 52 8

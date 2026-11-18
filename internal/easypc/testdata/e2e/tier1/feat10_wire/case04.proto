@@ -1,0 +1,7 @@
+syntax = "proto3";
+package feat10.case04;
+
+message MapMessage {
+  map<string, int32> str_to_int = 1;
+  map<int64, string> int_to_str = 2;
+}

@@ -1,0 +1,11 @@
+syntax = "proto3";
+package tier3.combo10;
+
+message TreeNode {
+  string node_name = 1 [json_name = "nodeName"];
+  oneof branch {
+    TreeNode left_child = 2 [json_name = "leftChild"];
+    TreeNode right_child = 3 [json_name = "rightChild"];
+    int32 leaf_val = 4 [json_name = "leafVal"];
+  }
+}

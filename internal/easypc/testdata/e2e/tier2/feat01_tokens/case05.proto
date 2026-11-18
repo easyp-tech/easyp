@@ -1,0 +1,1 @@
+syntax="proto3";package feat01b.c05;message Compact{int32 x=1;string y=2;}

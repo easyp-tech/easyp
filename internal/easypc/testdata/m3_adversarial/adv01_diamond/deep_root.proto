@@ -1,0 +1,9 @@
+syntax = "proto3";
+package adv01.deep.root;
+
+import "deep_l1.proto";
+
+message DeepRootMsg {
+  adv01.deep.l1.Level1Msg chain_head = 1;
+  string summary = 2;
+}

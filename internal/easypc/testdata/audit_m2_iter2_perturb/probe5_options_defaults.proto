@@ -1,0 +1,8 @@
+syntax = "proto2";
+package audit.iter2.options;
+
+message OptRecord {
+    optional string label = 1 [default = "audit_probe_v2"];
+    optional int64 neg_value = 2 [default = -99999];
+    optional bool is_deprecated = 3 [deprecated = true];
+}

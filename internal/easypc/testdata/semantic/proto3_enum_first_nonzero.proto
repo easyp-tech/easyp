@@ -1,0 +1,1 @@
+syntax = "proto3"; package p; enum E { A = 1; }

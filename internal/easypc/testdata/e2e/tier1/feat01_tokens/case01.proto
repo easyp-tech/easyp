@@ -1,0 +1,9 @@
+syntax = "proto2";
+package feat01.case01;
+
+// Test basic proto2 keywords and punctuators
+message TokenTest {
+  optional int32 id = 1;
+  required string name = 2;
+  repeated bool flags = 3;
+}

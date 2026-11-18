@@ -1,0 +1,7 @@
+syntax = "proto3";
+package feat11.case04;
+
+message CliTest4 {
+  int32 id = 1;
+  string name = 2;
+}

@@ -1,0 +1,6 @@
+syntax = "proto3";
+package audit.iter2.alpha;
+
+message AlphaRecord {
+    uint32 alpha_metric = 42;
+}

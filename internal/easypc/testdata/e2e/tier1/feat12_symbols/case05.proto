@@ -1,0 +1,11 @@
+syntax = "proto3";
+package feat12.case05;
+
+message Enclosing {
+  enum Kind { UNKNOWN = 0; OK = 1; }
+  Kind kind = 1;
+}
+
+message Outside {
+  Enclosing.Kind ref_kind = 1;
+}

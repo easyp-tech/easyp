@@ -1,0 +1,37 @@
+syntax = "proto3";
+package healthcare.ehr.v1;
+import "google/protobuf/timestamp.proto";
+
+enum Gender {
+  GENDER_UNSPECIFIED = 0;
+  MALE = 1;
+  FEMALE = 2;
+  OTHER = 3;
+}
+
+message Patient {
+  string patient_id = 1;
+  string given_name = 2;
+  string family_name = 3;
+  Gender gender = 4;
+  string birth_date = 5;
+}
+
+message ClinicalObservation {
+  string observation_id = 1;
+  string patient_id = 2;
+  string code = 3;
+  string display_name = 4;
+  double value = 5;
+  string unit = 6;
+  google.protobuf.Timestamp effective_time = 7;
+}
+
+message MedicalRecord {
+  Patient patient = 1;
+  repeated ClinicalObservation observations = 2;
+}
+
+service HealthRecordService {
+  rpc GetRecord (Patient) returns (MedicalRecord);
+}

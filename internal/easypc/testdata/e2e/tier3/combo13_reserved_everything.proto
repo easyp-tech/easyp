@@ -1,0 +1,16 @@
+syntax = "proto3";
+package tier3.combo13;
+
+enum ReservedEnum {
+  reserved 2, 5, 8 to 10;
+  reserved "DEPRECATED_VAL";
+  RESERVED_ZERO = 0;
+  RESERVED_ACTIVE = 1;
+}
+
+message ReservedEverything {
+  reserved 4, 7, 10 to 20;
+  reserved "dummy", "legacy";
+  int32 id = 1;
+  ReservedEnum state = 2;
+}

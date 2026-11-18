@@ -1,0 +1,171 @@
+syntax = "proto2";
+package adv08.stress;
+
+import "google/protobuf/descriptor.proto";
+
+enum Status {
+  STATUS_UNKNOWN = 0;
+  STATUS_OK = 1;
+  STATUS_ERROR = 2;
+  STATUS_NEG = -1;
+}
+
+message Leaf {
+  optional int32 val = 1;
+  optional string name = 2;
+}
+
+message Node8 {
+  optional Leaf leaf = 1;
+  optional string name = 2;
+}
+
+message Node7 {
+  optional Node8 n8 = 1;
+  optional string name = 2;
+}
+
+message Node6 {
+  optional Node7 n7 = 1;
+  optional string name = 2;
+}
+
+message Node5 {
+  optional Node6 n6 = 1;
+  optional string name = 2;
+}
+
+message Node4 {
+  optional Node5 n5 = 1;
+  optional string name = 2;
+}
+
+message Node3 {
+  optional Node4 n4 = 1;
+  optional string name = 2;
+  repeated Leaf rep_leaf = 3;
+}
+
+message Node2 {
+  optional Node3 n3 = 1;
+  optional string name = 2;
+  repeated Node3 rep_n3 = 3;
+}
+
+message Node1 {
+  optional Node2 n2 = 1;
+  optional string name = 2;
+  repeated Node2 rep_n2 = 3;
+}
+
+message DeepRoot {
+  optional Node1 n1 = 1;
+  optional string name = 2;
+  repeated Leaf leaves = 3;
+  optional Leaf empty_leaf = 4;
+}
+
+message ExtremeScalars {
+  optional fixed32 u32_min = 1 [default = 0];
+  optional fixed32 u32_max = 2 [default = 4294967295];
+  optional sfixed32 sfix32_min = 3 [default = -2147483648];
+  optional sfixed32 sfix32_max = 4 [default = 2147483647];
+  optional sfixed32 sfix32_neg1 = 5 [default = -1];
+  optional sfixed32 sfix32_zero = 6 [default = 0];
+  
+  optional fixed64 u64_min = 7 [default = 0];
+  optional fixed64 u64_max = 8 [default = 18446744073709551615];
+  optional sfixed64 sfix64_min = 9 [default = -9223372036854775808];
+  optional sfixed64 sfix64_max = 10 [default = 9223372036854775807];
+  optional sfixed64 sfix64_neg1 = 11 [default = -1];
+  optional sfixed64 sfix64_zero = 12 [default = 0];
+
+  optional int32 i32_min = 13 [default = -2147483648];
+  optional int32 i32_max = 14 [default = 2147483647];
+  optional int64 i64_min = 15 [default = -9223372036854775808];
+  optional int64 i64_max = 16 [default = 9223372036854775807];
+
+  optional sint32 s32_min = 17 [default = -2147483648];
+  optional sint32 s32_max = 18 [default = 2147483647];
+  optional sint32 s32_neg1 = 19 [default = -1];
+  optional sint32 s32_zero = 20 [default = 0];
+
+  optional sint64 s64_min = 21 [default = -9223372036854775808];
+  optional sint64 s64_max = 22 [default = 9223372036854775807];
+  optional sint64 s64_neg1 = 23 [default = -1];
+  optional sint64 s64_zero = 24 [default = 0];
+
+  optional uint32 u32_max_varint = 25 [default = 4294967295];
+  optional uint64 u64_max_varint = 26 [default = 18446744073709551615];
+
+  optional float f_neg_zero = 27;
+  optional float f_neg_small = 28;
+  optional float f_pos_small = 29;
+  optional float f_inf = 30;
+  optional float f_neg_inf = 31;
+
+  optional double d_neg_zero = 32;
+  optional double d_neg_small = 33;
+  optional double d_inf = 34;
+  optional double d_neg_inf = 35;
+
+  optional Status status_neg = 36 [default = STATUS_NEG];
+}
+
+message ExtensibleContainer {
+  optional string name = 1;
+  optional int32 code = 2;
+  extensions 100 to max;
+}
+
+extend ExtensibleContainer {
+  optional int32 ext_int32 = 101;
+  optional sint32 ext_sint32 = 102;
+  optional sint64 ext_sint64 = 103;
+  optional sfixed32 ext_sfixed32 = 104;
+  optional sfixed64 ext_sfixed64 = 105;
+  optional string ext_str = 106;
+  optional Status ext_status = 107;
+  optional ExtensibleContainer ext_child = 108;
+  repeated ExtensibleContainer ext_rep_child = 109;
+}
+
+extend google.protobuf.FileOptions {
+  optional DeepRoot opt_deep_file = 70001;
+  optional ExtremeScalars opt_extreme_file = 70002;
+}
+
+extend google.protobuf.MessageOptions {
+  optional DeepRoot opt_deep_msg = 71001;
+  optional ExtremeScalars opt_extreme_msg = 71002;
+  optional ExtensibleContainer opt_ext_msg = 71003;
+}
+
+extend google.protobuf.FieldOptions {
+  optional DeepRoot opt_deep_field = 72001;
+  optional ExtremeScalars opt_extreme_field = 72002;
+  optional ExtensibleContainer opt_ext_field = 72003;
+}
+
+extend google.protobuf.EnumOptions {
+  optional DeepRoot opt_deep_enum = 73001;
+  optional ExtremeScalars opt_extreme_enum = 73002;
+}
+
+extend google.protobuf.EnumValueOptions {
+  optional ExtremeScalars opt_extreme_enumval = 74001;
+}
+
+extend google.protobuf.ServiceOptions {
+  optional DeepRoot opt_deep_service = 75001;
+}
+
+extend google.protobuf.MethodOptions {
+  optional DeepRoot opt_deep_method = 76001;
+  optional ExtremeScalars opt_extreme_method = 76002;
+}
+
+extend google.protobuf.OneofOptions {
+  optional DeepRoot opt_deep_oneof = 77001;
+  optional ExtremeScalars opt_extreme_oneof = 77002;
+}

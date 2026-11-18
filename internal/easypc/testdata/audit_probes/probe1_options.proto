@@ -1,0 +1,31 @@
+syntax = "proto3";
+
+package audit.probes.options;
+
+import "probe1_ext.proto";
+
+option (file_audit_marker) = "MUTATED_FORENSIC_SIG_77789";
+
+message ProbeMessage {
+  option (message_level) = LEVEL_LOW;
+  option (message_metadata) = {
+    auditor: "perturbed_auditor_xyz"
+    revision: 987654
+    tags: ["mutated", "probe", "dynamic_check"]
+  };
+
+  int32 sample_id = 1 [(field_score) = 777, (field_thresholds) = 100, (field_thresholds) = 200, (field_thresholds) = 300];
+  string payload = 2 [(field_score) = 888];
+}
+
+enum ProbeEnum {
+  option (enum_verified) = false;
+  PROBE_DEFAULT = 0;
+  PROBE_ACTIVE = 1;
+}
+
+service ProbeService {
+  rpc AuditRpc(ProbeMessage) returns (ProbeMessage) {
+    option (method_security) = "MUTATED_AUTH_SCHEME";
+  }
+}

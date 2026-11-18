@@ -1,0 +1,5 @@
+# 07_string_escapes.proto
+string 0 24
+string 25 16
+string 42 13
+string 56 40

@@ -1,0 +1,6 @@
+syntax = "proto3";
+package feat23.case05;
+
+message CleanMsg5 {
+  string title = 1;
+}

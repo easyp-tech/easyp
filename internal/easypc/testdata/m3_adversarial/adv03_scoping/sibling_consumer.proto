@@ -1,0 +1,11 @@
+syntax = "proto3";
+package corp.sub.consumer;
+
+import "sibling_helper.proto";
+
+message ConsumerMsg {
+  // Relative lookup finds corp.sub.helper.HelperMsg via common ancestor corp.sub
+  helper.HelperMsg direct_helper = 1;
+  helper.HelperEnum direct_status = 2;
+  corp.sub.helper.HelperMsg full_helper = 3;
+}

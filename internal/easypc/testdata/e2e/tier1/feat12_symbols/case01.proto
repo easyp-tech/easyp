@@ -1,0 +1,5 @@
+syntax = "proto3";
+package feat12.case01;
+
+message A { int32 id = 1; }
+message B { A a_ref = 1; }

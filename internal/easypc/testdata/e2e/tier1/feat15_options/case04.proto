@@ -1,0 +1,17 @@
+syntax = "proto2";
+package feat15.case04;
+import "google/protobuf/descriptor.proto";
+
+message ConfigMeta {
+  optional string label = 1;
+  optional int32 version = 2;
+}
+
+extend google.protobuf.MessageOptions {
+  optional ConfigMeta meta = 50004;
+}
+
+message ConfiguredMsg {
+  option (meta) = { label: "alpha", version: 1 };
+  optional int32 id = 1;
+}

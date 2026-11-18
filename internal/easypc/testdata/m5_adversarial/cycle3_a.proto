@@ -1,0 +1,3 @@
+syntax = "proto3";
+import "cycle3_b.proto";
+message MsgA {}

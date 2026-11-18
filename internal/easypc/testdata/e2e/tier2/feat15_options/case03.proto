@@ -1,0 +1,11 @@
+syntax = "proto2";
+package feat15b.c03;
+import "google/protobuf/descriptor.proto";
+
+extend google.protobuf.FieldOptions {
+  repeated string tag_list = 50103;
+}
+
+message RepOptMsg {
+  optional int32 val = 1 [(tag_list) = "tagA", (tag_list) = "tagB"];
+}

@@ -1,0 +1,23 @@
+syntax = "proto3";
+package audit.iter4.probe3;
+
+message OuterContainer {
+    enum Status {
+        UNKNOWN = 0;
+        ACTIVE = 1;
+        SUSPENDED = 2;
+    }
+
+    message InnerNode {
+        enum Priority {
+            P_DEFAULT = 0;
+            P_HIGH = 1;
+        }
+        string node_id = 1;
+        Priority priority = 2;
+    }
+
+    string container_name = 1;
+    Status status = 2;
+    repeated InnerNode nodes = 3;
+}

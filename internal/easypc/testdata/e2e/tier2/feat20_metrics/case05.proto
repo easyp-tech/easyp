@@ -1,0 +1,1 @@
+syntax = "proto3"; package feat20b.c05; message MetricsBound5 { int32 id = 1; }

@@ -1,0 +1,9 @@
+# 20_error_bad_string_escape.proto
+error 0 4
+error 5 4
+error 10 5
+error 16 4
+error 21 7
+error 29 8
+error 38 4
+error 43 11

@@ -1,0 +1,5 @@
+syntax = "proto3";
+package com.easyp.compiler.test.deep.pkg;
+
+message SiblingA { int32 id = 1; }
+message SiblingB { SiblingA ref_a = 1; }

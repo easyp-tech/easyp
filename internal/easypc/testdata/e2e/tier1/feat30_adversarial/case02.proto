@@ -1,0 +1,8 @@
+syntax = "proto3";
+package feat30.case02;
+
+message ReservedRanges {
+  reserved 2, 15, 9 to 11;
+  reserved 100 to 200;
+  int32 allowed = 1;
+}

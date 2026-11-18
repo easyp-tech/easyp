@@ -1,0 +1,1 @@
+syntax = "proto3"; package feat13b.c02; import "common_base.proto"; import "user_1.proto"; message Joint { feat13b.common.BaseCore base = 1; feat13b.common.User1 u1 = 2; }

@@ -1,0 +1,47 @@
+syntax = "proto3";
+package cloud.k8s.v1;
+import "google/protobuf/timestamp.proto";
+
+message ObjectMeta {
+  string name = 1;
+  string namespace = 2;
+  string uid = 3;
+  int64 generation = 4;
+  google.protobuf.Timestamp creation_timestamp = 5;
+  map<string, string> labels = 6;
+  map<string, string> annotations = 7;
+}
+
+message ContainerSpec {
+  string name = 1;
+  string image = 2;
+  repeated string command = 3;
+  repeated string args = 4;
+  map<string, string> env_vars = 5;
+}
+
+message PodSpec {
+  repeated ContainerSpec containers = 1;
+  string restart_policy = 2;
+  int64 termination_grace_period_seconds = 3;
+}
+
+message PodStatus {
+  string phase = 1;
+  string host_ip = 2;
+  string pod_ip = 3;
+  google.protobuf.Timestamp start_time = 4;
+}
+
+message Pod {
+  string api_version = 1;
+  string kind = 2;
+  ObjectMeta metadata = 3;
+  PodSpec spec = 4;
+  PodStatus status = 5;
+}
+
+service PodController {
+  rpc GetPod (ObjectMeta) returns (Pod);
+  rpc UpdatePodStatus (Pod) returns (Pod);
+}

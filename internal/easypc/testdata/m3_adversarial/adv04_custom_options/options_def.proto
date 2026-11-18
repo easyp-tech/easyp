@@ -1,0 +1,88 @@
+syntax = "proto2";
+package adv04.opt;
+
+import "google/protobuf/descriptor.proto";
+
+enum CustomEnum {
+  option allow_alias = true;
+  VAL_ZERO = 0;
+  VAL_ONE = 1;
+  VAL_NEG_TEN = -10;
+  VAL_ALIAS = 1;
+}
+
+message SubLeaf {
+  optional bool flag = 1;
+  optional double ratio = 2;
+  optional string note = 3;
+}
+
+message SubMsg {
+  optional string name = 1;
+  optional int32 code = 2;
+  repeated string tags = 3;
+  optional SubLeaf leaf = 4;
+}
+
+message AllScalarsMsg {
+  optional int32 f_int32 = 1;
+  optional int64 f_int64 = 2;
+  optional uint32 f_uint32 = 3;
+  optional uint64 f_uint64 = 4;
+  optional sint32 f_sint32 = 5;
+  optional sint64 f_sint64 = 6;
+  optional fixed32 f_fixed32 = 7;
+  optional fixed64 f_fixed64 = 8;
+  optional sfixed32 f_sfixed32 = 9;
+  optional sfixed64 f_sfixed64 = 10;
+  optional float f_float = 11;
+  optional double f_double = 12;
+  optional bool f_bool = 13;
+  optional string f_string = 14;
+  optional bytes f_bytes = 15;
+}
+
+extend google.protobuf.FileOptions {
+  optional string opt_file_str = 51001;
+  optional int32 opt_file_int = 51002;
+  repeated int32 opt_file_rep_int = 51003;
+  optional SubMsg opt_file_msg = 51004;
+}
+
+extend google.protobuf.MessageOptions {
+  optional AllScalarsMsg opt_msg_scalars = 52001;
+  repeated SubMsg opt_msg_rep_msg = 52002;
+  optional SubMsg opt_msg_angle = 52003;
+  optional CustomEnum opt_msg_enum = 52004;
+  optional int32 opt_high_tag = 99999;
+  optional int32 opt_low_tag = 10001;
+}
+
+extend google.protobuf.FieldOptions {
+  optional int32 opt_field_tag = 53001;
+  optional SubMsg opt_field_msg = 53002;
+}
+
+extend google.protobuf.OneofOptions {
+  optional string opt_oneof_tag = 54001;
+}
+
+extend google.protobuf.EnumOptions {
+  optional int32 opt_enum_code = 55001;
+}
+
+extend google.protobuf.EnumValueOptions {
+  optional string opt_enumval_code = 56001;
+}
+
+extend google.protobuf.ServiceOptions {
+  optional string opt_svc_auth = 57001;
+}
+
+extend google.protobuf.MethodOptions {
+  optional int32 opt_method_cost = 58001;
+}
+
+extend google.protobuf.ExtensionRangeOptions {
+  optional string opt_extrange_label = 59001;
+}

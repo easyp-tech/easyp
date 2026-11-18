@@ -1,0 +1,7 @@
+syntax = "proto3";
+
+package test.audit;
+
+message ShadowedType {
+  int32 top_level_val = 1;
+}

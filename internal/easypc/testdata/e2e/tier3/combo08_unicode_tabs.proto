@@ -1,0 +1,8 @@
+syntax = "proto3";
+package tier3.combo08;
+
+// Таблица пользователей с табуляцией:
+message TabUnicodeMsg {
+	int32	user_id	=	1;	// Идентификатор пользователя
+	string	user_name	=	2;	// Имя пользователя: 🚀
+}

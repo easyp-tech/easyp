@@ -1,0 +1,21 @@
+syntax = "proto3";
+package audit.forensics.m2.tags_modified;
+
+message BaseProbe {
+  int64 id = 9999;
+  bytes name = 42;
+  repeated string tags = 100000;
+  string payload = 888;
+  optional bool flag = 500;
+  map<string, int64> counts = 77;
+  oneof choice {
+    string choice_str = 1001;
+    int32 choice_num = 1002;
+  }
+}
+
+enum BaseStatus {
+  UNKNOWN = 0;
+  ACTIVE = 1;
+  SUSPENDED = 99;
+}

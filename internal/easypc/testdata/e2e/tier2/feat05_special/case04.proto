@@ -1,0 +1,6 @@
+syntax = "proto3";
+package feat05b.c04;
+message MixedLineEndings {
+  int32 a = 1;
+  int32 b = 2;
+}

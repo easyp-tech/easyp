@@ -1,0 +1,1 @@
+syntax = "proto3"; package feat07b.c05; message V5 { message M1 { message M2 { message M3 { message M4 { int32 z = 1; } } } } }

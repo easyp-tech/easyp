@@ -1,0 +1,115 @@
+syntax = "proto2";
+package adv08.stress;
+
+import "iter3_def.proto";
+
+message MixedDelimitersTest {
+  // Deep nested mixed delimiters with omitted colons
+  option (opt_deep_msg) = {
+    name: "root_mixed"
+    n1 <
+      name: "node1_angle"
+      n2: {
+        name: "node2_brace";
+        n3 <
+          name: "node3_angle",
+          n4: {
+            name: "node4_brace"
+            n5 <
+              name: "node5_angle"
+              n6: {
+                name: "node6_brace";
+                n7 <
+                  name: "node7_angle"
+                  n8: {
+                    name: "node8_brace"
+                    leaf <
+                      val: 9999
+                      name: "leaf_deep_nested"
+                    >
+                  }
+                >
+              }
+            >
+          }
+          rep_leaf: [
+            < val: 101, name: "rep_angle_1" >,
+            { val: 102; name: "rep_brace_2"; },
+            < val: 103 name: "rep_angle_3" >
+          ]
+        >
+        rep_n3: [
+          < name: "rep_n3_a" >,
+          { name: "rep_n3_b" }
+        ]
+      }
+    >
+    // Repeated field occurrences without array brackets mixing colon/no-colon and angle/brace
+    leaves: { val: 1 name: "l1" }
+    leaves < val: 2 name: "l2" >
+    leaves: < val: 3; name: "l3"; >
+    leaves { val: 4; name: "l4" }
+    
+    // Empty message forms
+    empty_leaf: <>
+  };
+
+  optional int32 field_brace_mix = 1 [
+    (opt_deep_field) = {
+      n1: <
+        n2: {
+          n3: <
+            n4: {
+              n5: <
+                n6: {
+                  n7: <
+                    n8: {
+                      leaf: < val: -123 >
+                    }
+                  >
+                }
+              >
+            }
+          >
+        }
+      >
+      leaves: [ <>, {} ]
+    }
+  ];
+
+  oneof test_oneof {
+    option (opt_deep_oneof) = {
+      name: "oneof_angle_root"
+      n1: <
+        name: "oneof_n1"
+        n2 < name: "oneof_n2" >
+      >
+    };
+    string choice_a = 2;
+    int32 choice_b = 3;
+  }
+}
+
+enum EnumDelimitersTest {
+  option (opt_deep_enum) = {
+    name: "enum_opt"
+    n1: < n2: { name: "enum_nested" } >
+  };
+
+  VAL_ZERO = 0;
+  VAL_ONE = 1;
+}
+
+service ServiceDelimitersTest {
+  option (opt_deep_service) = {
+    name: "service_angle"
+    n1: < name: "service_n1" >
+  };
+
+  rpc DoSomething (MixedDelimitersTest) returns (MixedDelimitersTest) {
+    option (opt_deep_method) = {
+      name: "method_brace"
+      n1: < name: "method_n1" >
+    };
+  }
+}
