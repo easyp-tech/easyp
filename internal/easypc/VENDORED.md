@@ -34,3 +34,25 @@ This tree is a verbatim copy-in of the `easypc` compiler from the private
    `go mod tidy && git diff --exit-code go.mod go.sum`,
    `bin/golangci-lint run ./...`.
 5. Update this file's SHA and vendored date.
+
+## protoast divergence (re-apply on every sync)
+
+`internal/protoast` was vendored from the same pinned SHA and directory
+(`easyp-cli/internal/protoast`). Unlike this tree, protoast is NOT sealed: it
+is the maintained adaptation seam where easyp's output contract meets the
+vendored compiler. It carries one deliberate divergence from upstream:
+
+- `build.go` `pos()` computes 1-based columns **counted in runes, tab = +1**
+  (the legacy go-protoparser output contract that every lint issue position
+  uses) instead of upstream protoc's 1-based byte columns with tab stops of 8.
+  Line numbering is untouched. Proven by `internal/protoast/position_test.go`
+  (D-07a) and `internal/core/position_parity_test.go` (D-07b).
+- `protoast_test.go` pins the tab-as-1 expectations (enum value column 2,
+  number column 13) with rune-convention wording instead of upstream's
+  tab-8 assertions.
+
+A future compiler-lab re-sync MUST re-apply this divergence after copying:
+after the copy step, re-apply the `pos()` rune-column computation in
+`build.go`, the position wording in `protoast.go`'s package doc, and the tab
+expectations in `protoast_test.go`, then re-run both D-07 tests. The easypc
+tree itself stays verbatim.
