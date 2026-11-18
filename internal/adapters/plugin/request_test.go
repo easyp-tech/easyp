@@ -7,8 +7,6 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"google.golang.org/protobuf/reflect/protodesc"
-	"google.golang.org/protobuf/types/descriptorpb"
 	"google.golang.org/protobuf/types/pluginpb"
 
 	"github.com/easyp-tech/easyp/internal/compiler"
@@ -40,13 +38,13 @@ message Item {
 		}
 		return io.NopCloser(strings.NewReader(source)), nil
 	}
-	files, err := compiler.Compile(t.Context(), []string{"api.proto"}, compiler.Options{
+	set, err := compiler.CompileDescriptorSet(t.Context(), []string{"api.proto"}, compiler.Options{
 		Resolve: compiler.StandardImports(resolve),
 	})
 	require.NoError(t, err)
 	request := &pluginpb.CodeGeneratorRequest{
 		FileToGenerate: []string{"api.proto"},
-		ProtoFile:      []*descriptorpb.FileDescriptorProto{protodesc.ToFileDescriptorProto(files[0])},
+		ProtoFile:      set.Files,
 	}
 
 	want, err := marshalRequest(request)

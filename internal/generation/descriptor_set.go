@@ -19,13 +19,14 @@ import (
 )
 
 type preparedDescriptorTarget struct {
-	target   generationTarget
-	selected v1GenerationModule
-	plan     *core.GenerationPlan
-	full     *descriptorpb.FileDescriptorSet
-	owners   map[string]string
-	versions map[string]string
-	label    string
+	target        generationTarget
+	selected      v1GenerationModule
+	plan          *core.GenerationPlan
+	full          *descriptorpb.FileDescriptorSet
+	fullValidated bool
+	owners        map[string]string
+	versions      map[string]string
+	label         string
 }
 
 // generateV1DescriptorSet validates every requested graph before executing any
@@ -113,12 +114,15 @@ func prepareDescriptorTargets(ctx context.Context, log logger.Logger, cache modu
 		if err != nil {
 			return nil, fmt.Errorf("PrepareGeneration for %s: %w", label, err)
 		}
-		full := plan.DescriptorSet(true)
-		if _, err := protodesc.NewFiles(full); err != nil {
-			return nil, fmt.Errorf("validate descriptor set for %s: %w", label, err)
+		item := preparedDescriptorTarget{target: target, selected: selected, plan: plan, label: label}
+		if request.DescriptorSetOut != "" || request.DescriptorSetOutDir != "" {
+			// Preparation validates the graph, including managed transformations.
+			item.full = plan.DescriptorSet(true)
+			item.fullValidated = true
+			item.owners = owners
+			item.versions = descriptorVersions(request, selected)
 		}
-		versions := descriptorVersions(request, selected)
-		prepared = append(prepared, preparedDescriptorTarget{target: target, selected: selected, plan: plan, full: full, owners: owners, versions: versions, label: label})
+		prepared = append(prepared, item)
 	}
 	for _, path := range slices.Sorted(maps.Keys(requested)) {
 		selectors := requested[path]
@@ -147,15 +151,22 @@ func unmatchedSourceSelectors(requested []string, matched map[string]bool) []str
 }
 
 func combineDescriptorTargets(targets []preparedDescriptorTarget, includeImports bool) (*descriptorpb.FileDescriptorSet, error) {
+	if len(targets) == 1 && targets[0].fullValidated {
+		target := targets[0]
+		if includeImports {
+			return target.full, nil
+		}
+		return descriptorSetForTargets(target.full, target.plan.Targets()), nil
+	}
 	combined := &descriptorpb.FileDescriptorSet{}
 	files := make(map[string]*descriptorpb.FileDescriptorProto)
 	origins := make(map[string]int)
-	selectedFiles := make(map[string]bool)
+	var selectedFiles []string
 	var labels []string
 	for index, target := range targets {
 		labels = append(labels, target.label)
-		for _, file := range target.plan.DescriptorSet(false).File {
-			selectedFiles[file.GetName()] = true
+		if !includeImports {
+			selectedFiles = append(selectedFiles, target.plan.Targets()...)
 		}
 		for _, file := range target.full.File {
 			name := file.GetName()
@@ -175,13 +186,23 @@ func combineDescriptorTargets(targets []preparedDescriptorTarget, includeImports
 	if includeImports {
 		return combined, nil
 	}
-	output := &descriptorpb.FileDescriptorSet{}
-	for _, file := range combined.File {
-		if selectedFiles[file.GetName()] {
-			output.File = append(output.File, file)
+	return descriptorSetForTargets(combined, selectedFiles), nil
+}
+
+// descriptorSetForTargets selects files from an immutable snapshot without
+// copying descriptor messages. Callers must keep the returned files immutable.
+func descriptorSetForTargets(full *descriptorpb.FileDescriptorSet, targets []string) *descriptorpb.FileDescriptorSet {
+	selected := make(map[string]bool, len(targets))
+	for _, name := range targets {
+		selected[name] = true
+	}
+	set := &descriptorpb.FileDescriptorSet{File: make([]*descriptorpb.FileDescriptorProto, 0, len(targets))}
+	for _, file := range full.File {
+		if selected[file.GetName()] {
+			set.File = append(set.File, file)
 		}
 	}
-	return output, nil
+	return set
 }
 
 func relativeDescriptorPath(root, path string) string {

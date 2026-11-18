@@ -15,7 +15,7 @@ const (
 	develVersion       = "devel"
 	unknownVersion     = "unknown"
 	develMainVersion   = "(devel)"
-	compilerModulePath = "github.com/easyp-tech/easyp-test-compiler"
+	compilerModulePath = "github.com/easyp-tech/easyprotoc"
 	revisionPrefix     = 7
 )
 

@@ -14,7 +14,7 @@ func TestBuildMetadataUsesNativeCompilerDependency(t *testing.T) {
 	info := &debug.BuildInfo{
 		Deps: []*debug.Module{
 			{Path: "github.com/bufbuild/protocompile", Version: "v0.14.1"},
-			{Path: "github.com/easyp-tech/easyp-test-compiler", Version: "v1.2.3-native"},
+			{Path: "github.com/easyp-tech/easyprotoc", Version: "v1.2.3-native"},
 		},
 	}
 

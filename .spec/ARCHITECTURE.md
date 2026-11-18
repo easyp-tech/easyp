@@ -101,9 +101,11 @@ Local replacements use an ephemeral main-module overlay graph and never alter th
 
 ## Generation
 
-All descriptor compilation uses the separate <code>github.com/easyp-tech/easyp-test-compiler/protoc</code> library through <code>internal/compiler</code>. The adapter requests complete imports, reconstructs checked reflection with interpreted custom options, and returns targets in caller order. Its resolver-only mode makes the caller's source view authoritative: denied, excluded, historical and proposed in-memory sources cannot be replaced by direct filesystem reads. Embedded standard sources are an explicit resolver fallback after not-found, never after integrity or authorization errors.
+Generation uses the <code>github.com/easyp-tech/easyprotoc/protoc</code> Go library through <code>internal/compiler</code>. The adapter requests the complete import closure, decodes the descriptor messages in parallel, validates the graph, and interprets custom options using its extension definitions. Resolver-only mode makes the caller's source view authoritative for exclusions, permissions and virtual sources. Embedded standard sources are resolved only after a not-found result.
 
-The same adapter compiles current/baseline breaking graphs, proposed tidy import rewrites, and migration source-binding proofs. Migration keeps its namespace-provided standard sources and serial setting. The existing syntax parsers still own lint AST/comments and byte-preserving import edits; they do not provide a fallback compilation backend. Plugin compiler metadata identifies <code>easyp-protoc</code> and the pinned library version.
+Breaking graphs, tidy import rewrites and migration source-binding proofs use <code>protocompile</code>. Lint uses <code>go-protoparser</code>. Plugin compiler metadata identifies <code>easyp-protoc</code> and the pinned library version.
+
+Generation uses <code>CompileDescriptorSet</code> to consume the decoded messages in target and import traversal order. It validates managed transformations when preparing the plan. <code>GenerationPlan.Targets</code> copies selected logical names, and <code>DescriptorSet</code> returns independent descriptor copies. Export reuses the validated snapshot for a single graph or directory output and validates each multi-graph union for conflicting descriptors and symbols.
 
 ~~~text
 api.Generate.Action: flags + cwd + cache

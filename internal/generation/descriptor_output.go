@@ -49,7 +49,11 @@ func planDescriptorOutputs(request Request, targets []preparedDescriptorTarget) 
 			return nil, fmt.Errorf("descriptor output collision at %q between %s and %s", outputPath, previous, target.label)
 		}
 		paths[key] = target.label
-		output, err := prepareDescriptorOutput(outputPath, target.plan.DescriptorSet(request.IncludeImports))
+		set := target.full
+		if !request.IncludeImports {
+			set = descriptorSetForTargets(target.full, target.plan.Targets())
+		}
+		output, err := prepareDescriptorOutput(outputPath, set)
 		if err != nil {
 			return nil, err
 		}

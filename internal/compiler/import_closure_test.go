@@ -51,7 +51,7 @@ func TestCompileOpensOnlyReachableDependencyFiles(t *testing.T) {
 			}
 			var mu sync.Mutex
 			opened := make(map[string]bool)
-			files, err := Compile(t.Context(), []string{"request.proto"}, Options{
+			set, err := CompileDescriptorSet(t.Context(), []string{"request.proto"}, Options{
 				Resolve: func(name string) (io.ReadCloser, error) {
 					mu.Lock()
 					opened[name] = true
@@ -66,11 +66,11 @@ func TestCompileOpensOnlyReachableDependencyFiles(t *testing.T) {
 			if tt.fails {
 				require.ErrorContains(t, err, `"Money" is already defined`)
 				assert.ErrorContains(t, err, "money.proto")
-				assert.Nil(t, files)
+				assert.Empty(t, set.Files)
 			} else {
 				require.NoError(t, err)
-				require.Len(t, files, 1)
-				assert.Equal(t, "request.proto", files[0].Path())
+				require.Len(t, set.Files, len(tt.opened))
+				assert.Equal(t, "request.proto", set.Files[len(set.Files)-1].GetName())
 			}
 			mu.Lock()
 			var names []string

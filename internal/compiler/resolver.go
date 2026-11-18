@@ -9,7 +9,7 @@ import (
 	"os"
 	"path/filepath"
 
-	native "github.com/easyp-tech/easyp-test-compiler/protoc"
+	"github.com/easyp-tech/easyprotoc/protoc"
 )
 
 // SourceResolver searches ordered roots through accessor. Only missing candidates
@@ -29,7 +29,7 @@ func SourceResolver(importPaths []string, accessor Resolver, standardImports boo
 		}
 		for _, root := range roots {
 			source, err := accessor(filepath.Join(root, filepath.FromSlash(name)))
-			if errors.Is(err, fs.ErrNotExist) || errors.Is(err, native.ErrFileNotFound) {
+			if errors.Is(err, fs.ErrNotExist) || errors.Is(err, protoc.ErrFileNotFound) {
 				continue
 			}
 			return source, err
@@ -47,10 +47,10 @@ func SourceResolver(importPaths []string, accessor Resolver, standardImports boo
 func StandardImports(resolve Resolver) Resolver {
 	return func(name string) (io.ReadCloser, error) {
 		source, err := resolve(name)
-		if !errors.Is(err, fs.ErrNotExist) && !errors.Is(err, native.ErrFileNotFound) {
+		if !errors.Is(err, fs.ErrNotExist) && !errors.Is(err, protoc.ErrFileNotFound) {
 			return source, err
 		}
-		data, builtinErr := (native.WKTResolver{}).FindFileByPath(context.Background(), name)
+		data, builtinErr := (protoc.WKTResolver{}).FindFileByPath(context.Background(), name)
 		if builtinErr != nil {
 			return nil, err
 		}
