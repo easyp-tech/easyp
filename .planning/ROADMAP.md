@@ -32,7 +32,7 @@ Decimal phases appear between their surrounding integers in numeric order.
   2. `go mod tidy` не изменяет `go.mod` и `go.sum` — ни одного нового внешнего модуля, ни `replace`
   3. `task test` и `task lint` зелёные после вендоринга и расчленения общей модели (`Issue.Position` на `protoast.Position`, `protoInfoRead` в собственности breaking) — поведение breaking/generate/`mod tidy`/`migrate` для пользователей не меняется
   4. Фиксатура с мультибайтовым UTF-8 содержимым доказывает, что позиции protoast воспроизводят контракт вывода main (1-based строка, 1-based колонка в рунах) — до начала любого переноса правил
-**Plans**: 3/4 plans executed
+**Plans**: 4/4 plans executed
 **Design note** (решить в /gsd-discuss-phase): полнота вендоринга `lint_helpers.go`/`casing.go` — целиком или только используемое линтером подмножество (LINT-VEND-01)
 **Plans**: 4 plans
 Plans:
@@ -44,7 +44,7 @@ Plans:
 - [x] 01-03-PLAN.md — Model split (D-06): Issue.Position → protoast.Position via single conversion boundary; lint-owned lintProtoInfoRead vs breaking-owned BreakingProtoInfo
 
 **Wave 3** *(blocked on Wave 2 completion)*
-- [ ] 01-04-PLAN.md — Helper vendoring (D-01): casing.go/casing_test.go byte-verbatim, lint_helpers.go with 3 seam adaptations, D-02 fallback only on actual lint failure
+- [x] 01-04-PLAN.md — Helper vendoring (D-01): casing.go/casing_test.go byte-verbatim, lint_helpers.go with 3 seam adaptations, D-02 fallback only on actual lint failure
 
 ### Phase 2: Линкер и маршрутизация ошибок
 **Goal**: Линковка корпусов через `easypc` с корректной трёхсторонней классификацией отказов: COMPILE-замечания, откат на пофайловый разбор при отсутствующем импорте, ошибки чтения/синтаксиса как в main
@@ -127,7 +127,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Вендоринг компилятора и расчленение модели | 3/4 | In Progress | - |
+| 1. Вендоринг компилятора и расчленение модели | 4/4 | In Progress | - |
 | 2. Линкер и маршрутизация ошибок | 0/TBD | Not started | - |
 | 3. Двухпроходный движок и подавления | 0/TBD | Not started | - |
 | 4. Перенос 43 правил с батч-паритетом | 0/TBD | Not started | - |

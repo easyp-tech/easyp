@@ -167,3 +167,7 @@ None - no external service configuration required.
 ---
 *Phase: 01-vendoring-kompilyatora-i-raschlenenie-modeli*
 *Completed: 2026-11-18*
+
+## Self-Check: PASSED
+
+All key artifacts verified present on disk (internal/rules/{casing.go, casing_test.go, lint_helpers.go}, .golangci.yml, this SUMMARY). Commits 725ae48, 1069426, ab2c1fd confirmed ancestors of HEAD; ledger-measured commit count 2 production commits (nonzero, matching code changes); no file deletions in any plan commit. Byte-identity re-verified post-commit (both casing diffs empty); lint 0 issues; tidy zero-diff.
