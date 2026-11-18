@@ -3,16 +3,16 @@ gsd_state_version: "1.0"
 current_phase: 01
 current_phase_name: Вендоринг компилятора и расчленение модели
 status: executing
-stopped_at: Phase 1 context gathered
-last_updated: "2026-11-17T20:13:34.635Z"
-last_activity: 2026-11-17
-last_activity_desc: Roadmap created (7 phases, 17/17 requirements mapped)
-state_head: 1e9a5965517058787411a0d5b77dbbeb7d556f44
+stopped_at: Completed 01-03-PLAN.md
+last_updated: "2026-11-18T21:29:43.461Z"
+last_activity: 2026-11-18
+last_activity_desc: Phase 01 execution started
+state_head: 0d7d8cb69a89ec52d4a6e5ce269addcfe200838a
 progress:
   total_phases: 7
   completed_phases: 0
   total_plans: 4
-  completed_plans: 0
+  completed_plans: 3
   percent: 0
 ---
 
@@ -36,14 +36,14 @@ progress:[░░░░░░░░░░] 0%
 See: .planning/PROJECT.md (updated 2026-11-17)
 
 **Core value:** EasyP остаётся drop-in buf-совместимым инструментом: формат вывода, коды выхода и конфигурация не ломаются между версиями — миграции внутренностей незаметны пользователю.
-**Current focus:** Phase 1 — Вендоринг компилятора и расчленение модели (milestone lint-easypc-infra)
+**Current focus:** Phase 01 — Вендоринг компилятора и расчленение модели
 
 ## Current Position
 
-Phase: 01 (Вендоринг компилятора и расчленение модели) — READY TO EXECUTE
-Plan: 0 of TBD in current phase
+Phase: 01 (Вендоринг компилятора и расчленение модели) — EXECUTING
+Plan: 4 of 4
 Status: Ready to execute
-Last activity: 2026-11-17 — Roadmap created (7 phases, 17/17 requirements mapped)
+Last activity: 2026-11-18 — Phase 01 execution started
 
 Progress: [░░░░░░░░░░] 0%
 
@@ -65,6 +65,11 @@ Progress: [░░░░░░░░░░] 0%
 - Trend: —
 
 *Updated after each plan completion*
+**Per-Plan Metrics:**
+
+| Plan | Duration | Tasks | Files |
+|------|----------|-------|-------|
+| Phase 01 P03 | 30 min | 2 tasks | 51 files |
 
 ## Accumulated Context
 
@@ -75,6 +80,8 @@ Recent decisions affecting current work:
 
 - Roadmap: порядок фаз следует build order из research (vendor → linker → engine → rules → flip → new rules → acceptance); COMPAT-ворота стоят на переключении lint-пути (Phase 5), полный корпусный паритет и PERF — на приёмке (Phase 7)
 - Roadmap: 43 правила переносятся в одной фазе (Phase 4) с батч-уровневой верификацией паритета как инвариантом; батчи — планы внутри фазы, не отдельные фазы
+- [Phase 01]: Issue.Position is protoast.Position behind one fromMetaPos boundary; lint/breaking read models split (D-06) into lintProtoInfoRead/ProtoInfo and breakingProtoInfoRead/BreakingProtoInfo with twin-mirror parity tests; behavior diff empty
+- [Phase 01]: 56 test position literals swapped by one scripted grep|sed sweep with values provably unchanged (diff-of-diffs empty); TDD GREEN uses feat prefix per canonical tdd.md contract
 
 ### Pending Todos
 
@@ -95,6 +102,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-11-17T19:23:23.527Z
-Stopped at: Phase 1 context gathered
-Resume file: .planning/phases/01-vendoring-kompilyatora-i-raschlenenie-modeli/01-CONTEXT.md
+Last session: 2026-11-18T21:29:43.384Z
+Stopped at: Completed 01-03-PLAN.md
+Resume file: None

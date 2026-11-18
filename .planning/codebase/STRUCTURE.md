@@ -56,7 +56,7 @@ easyp/
 - Key files: `generate.go`, `config.go` (v1→engine translation), `discovery.go`, `inherit.go`, `selection.go`, `module.go`, `descriptor_set.go`, `descriptor_output.go`, `frozen.go`, `workspace_index.go`
 
 **`internal/core`:**
-- Key files: `core.go`, `dom.go`, `lint.go`, `generate.go`, `generate_bucket.go`, `generate_plugins.go`, `generate_inputs.go`, `managed_mode.go`, `breaking_checker.go`, `breaking_check.go`, `breaking_profiles.go`, `comment_suppressions.go`
+- Key files: `core.go`, `dom.go`, `lint.go`, `lint_proto_info.go`, `generate.go`, `generate_bucket.go`, `generate_plugins.go`, `generate_inputs.go`, `managed_mode.go`, `breaking_checker.go`, `breaking_check.go`, `breaking_profiles.go`, `proto_info_read.go`, `comment_suppressions.go`
 
 **`internal/rules`:**
 - Purpose: 88 files; lint rules named after the buf-compatible rule (snake_case)

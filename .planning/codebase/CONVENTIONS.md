@@ -60,7 +60,7 @@ Groups separated by blank lines. Run `gofmt`.
 ## Error Handling
 
 **Patterns (strictly enforced):**
-- Wrap every propagated failure as `fmt.Errorf("<called_function>: %w", err)` — callee function/method name ONLY, no package or receiver prefix (`"Open: %w"`, `"Fetch: %w"`, `"protoInfoRead: %w"`)
+- Wrap every propagated failure as `fmt.Errorf("<called_function>: %w", err)` — callee function/method name ONLY, no package or receiver prefix (`"Open: %w"`, `"Fetch: %w"`, `"lintProtoInfoRead: %w"`)
 - Use `errors.Is` for sentinels, `errors.As` for typed errors; preserve `%w` chains
 - Reuse existing errors in their owning packages — do not invent duplicate sentinels:
   - `internal/core/core.go`: `ErrInvalidRule`, `ErrRepositoryDoesNotExist`, `ErrEmptyInputFiles`
