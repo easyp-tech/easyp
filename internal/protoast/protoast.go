@@ -3,9 +3,11 @@
 // so a file lints even when its imports cannot be resolved.
 //
 // Text fields hold the source as written with whitespace and comments removed
-// (types keep a leading dot, numbers keep their sign). Positions follow protoc:
-// 1-based lines, 1-based columns counted in bytes with tabs advancing to the
-// next multiple of 8, and 0-based byte offsets.
+// (types keep a leading dot, numbers keep their sign). Positions follow the
+// easyp output contract: 1-based lines, 1-based columns counted in runes with
+// a tab advancing the column by exactly one, and 0-based byte offsets. This
+// diverges from upstream protoc's byte columns with tab stops of 8; see
+// builder.pos in build.go and internal/easypc/VENDORED.md for the sync note.
 package protoast
 
 import (

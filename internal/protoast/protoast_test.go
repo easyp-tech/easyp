@@ -90,9 +90,9 @@ func TestParse(t *testing.T) {
 	values := f.Enums[0].Values
 	require.Len(t, values, 2)
 	assert.Equal(t, "-1", values[1].Number)
-	assert.Equal(t, 9, values[1].Pos.Column, "a tab advances to the next multiple of 8, as in protoc")
+	assert.Equal(t, 2, values[1].Pos.Column, "a tab advances the column by exactly one")
 	assert.Equal(t, values[1].Pos, values[1].NamePos)
-	assert.Equal(t, 20, values[1].NumberPos.Column)
+	assert.Equal(t, 13, values[1].NumberPos.Column)
 	assert.Equal(t, 9, outer.NamePos.Column)
 	assert.Equal(t, 34, f.Services[0].RPCs[0].Response.Pos.Column)
 	assert.Equal(t, 18, f.Services[0].RPCs[0].Request.Pos.Column, "after the stream keyword")

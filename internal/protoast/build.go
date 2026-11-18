@@ -5,6 +5,7 @@ import (
 	"io"
 	"sort"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/easyp-tech/easyp/internal/easypc/pkg/parser"
 	"github.com/easyp-tech/easyp/internal/easypc/protoc/syntax"
@@ -239,8 +240,8 @@ func (b *builder) field(n *parser.FieldNode) *Field {
 		Options: b.optionList(n.Options, n.CustomJSONNameOpt, n.DefaultOpt),
 	}
 	fld.NamePos = b.namePos(n.Name)
-	switch {
-	case n.TypeKind == parser.TypeGroup:
+	switch n.TypeKind {
+	case parser.TypeGroup:
 		fld.Type = b.tokens(n.TypeName)
 		fld.Name = b.syn.Text(n.Name)
 		fld.Group = true
@@ -444,12 +445,24 @@ func (l *literal) String() string {
 	return sb.String()
 }
 
-// pos converts a byte offset into a Position.
+// pos converts a byte offset into a Position. It implements easyp's output
+// contract: 1-based lines, 1-based columns counted in runes, and a tab
+// advancing the column by exactly one. This deliberately diverges from
+// upstream protoc's byte columns with tab stops of 8; re-apply the divergence
+// on every compiler-lab re-sync (see internal/easypc/VENDORED.md).
 func (b *builder) pos(off uint32) Position {
 	if off > b.ast.SrcLen {
 		off = b.ast.SrcLen
 	}
-	line, column := b.syn.LineCol(off)
+	// Line numbering is identical in both conventions because line starts are
+	// byte offsets, so the line still comes from the vendored LineCol; only
+	// the column is recomputed as a rune count.
+	line, _ := b.syn.LineCol(off)
+	lineStart := off
+	for lineStart > 0 && b.ast.Src[lineStart-1] != '\n' {
+		lineStart--
+	}
+	column := utf8.RuneCount(b.ast.Src[lineStart:off]) + 1
 	return Position{Offset: int(off), Line: line, Column: column}
 }
 
