@@ -7,6 +7,11 @@ linters:
     # in compiler-lab and arrive by re-sync. See internal/easypc/VENDORED.md.
     paths:
       - internal/easypc
+      # D-02 fallback (plan 01-04, applied on actual lint failure): the lint
+      # helpers are vendored per D-01 but deliberately unwired until Phase 4,
+      # so the unused check reports them dead in the meantime. Scoped to this
+      # one file; the casing files are NOT excluded.
+      - internal/rules/lint_helpers.go
     rules:
       # Exported callee labels are required by .spec/agent-rules.md.
       # Keep ST1005 for capitalized sentences; only identifier-style wrappers
@@ -14,3 +19,11 @@ linters:
       - linters: [staticcheck]
         text: '^ST1005:'
         source: 'fmt\.Errorf\("[A-Z][A-Za-z0-9_]*: '
+      # Vendored byte-verbatim code (D-01): casing.go must stay identical to
+      # compiler-lab main@08cef10, so its single upstream QF1001 (De Morgan
+      # quickfix suggestion inside toSnakeCase) is silenced, not applied.
+      # The fix goes upstream and arrives by re-sync. Only this finding code
+      # is exempt for this file; every other linter stays active on it.
+      - linters: [staticcheck]
+        text: '^QF1001:'
+        paths: internal/rules/casing\.go
