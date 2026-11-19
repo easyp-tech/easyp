@@ -78,10 +78,10 @@ Plans:
   2. Подавления идентичны текущему main: `ignore`/`ignore_only` и `allowCommentIgnores` со всеми диалектами комментариев (`easyp:disable`/`nolint`/`buf:lint:ignore`) — перенесённый набор suppression-фиксатур проходит целиком
   3. Неизвестное имя правила или группы в `lint.use` возвращает ту же ошибку валидации конфигурации, что и текущий main
   4. Кросс-файловые правила через `ModuleRule` (Collect/Finish) корректно завершаются в параллельном движке; приёмники правил не пишут в свои поля между прогонами (аудит statelessness в составе race-теста движка)
-**Plans**: 4 plans
+**Plans**: 1/4 plans executed
 Plans:
 **Wave 1**
-- [ ] 03-01-PLAN.md — Two-pass linked-file engine tracer: etalon port with renamed identifiers (no bridge), model from Linked.Syntax, windows of 256, central suppressions, ModuleRule Collect/Finish, D-01 total sort, fallback read path + main-wins wrapper (LINT-ENG-01; D-01/D-02/D-03/D-05/D-07)
+- [x] 03-01-PLAN.md — Two-pass linked-file engine tracer: etalon port with renamed identifiers (no bridge), model from Linked.Syntax, windows of 256, central suppressions, ModuleRule Collect/Finish, D-01 total sort, fallback read path + main-wins wrapper (LINT-ENG-01; D-01/D-02/D-03/D-05/D-07)
 
 **Wave 2** *(blocked on Wave 1 completion)*
 - [ ] 03-02-PLAN.md — Suppression parity table: main's fixture matrix (EOF, policy, dialects) re-driven through the new engine, config ignore/ignore_only, tab position pin (LINT-ENG-05; D-04/D-05)
@@ -147,7 +147,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 |-------|----------------|--------|-----------|
 | 1. Вендоринг компилятора и расчленение модели | 4/4 | Complete    | 2026-11-19 |
 | 2. Линкер и маршрутизация ошибок | 4/4 | Complete    | 2026-11-19 |
-| 3. Двухпроходный движок и подавления | 0/4 | Not started | - |
+| 3. Двухпроходный движок и подавления | 1/4 | In Progress | - |
 | 4. Перенос 43 правил с батч-паритетом | 0/TBD | Not started | - |
 | 5. Переключение lint-пути и ворота совместимости | 0/TBD | Not started | - |
 | 6. Новые правила и регенерация схем/MCP | 0/TBD | Not started | - |

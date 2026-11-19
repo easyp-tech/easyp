@@ -3,16 +3,16 @@ gsd_state_version: "1.0"
 current_phase: 03
 current_phase_name: Двухпроходный движок и подавления
 status: executing
-stopped_at: Phase 3 context gathered
-last_updated: "2026-11-19T13:21:53.268Z"
+stopped_at: Completed 03-01-PLAN.md
+last_updated: "2026-11-19T13:46:18.077Z"
 last_activity: 2026-11-19
-last_activity_desc: Phase 02 complete, transitioned to Phase 3
-state_head: 6b29efe892f0ef6e1d1de3c80f8cb3698bd486ad
+last_activity_desc: Phase 03 execution started
+state_head: c5f7f4b9629166fb6869b7542865257ed883f4e5
 progress:
   total_phases: 7
   completed_phases: 2
   total_plans: 12
-  completed_plans: 8
+  completed_plans: 9
   percent: 29
 ---
 
@@ -36,14 +36,14 @@ progress:[███░░░░░░░] 29%
 See: .planning/PROJECT.md (updated 2026-11-19)
 
 **Core value:** EasyP остаётся drop-in buf-совместимым инструментом: формат вывода, коды выхода и конфигурация не ломаются между версиями — миграции внутренностей незаметны пользователю.
-**Current focus:** Phase 3 — Двухпроходный движок и подавления
+**Current focus:** Phase 03 — Двухпроходный движок и подавления
 
 ## Current Position
 
-Phase: 03 (Двухпроходный движок и подавления) — READY TO EXECUTE
-Plan: Not started
+Phase: 03 (Двухпроходный движок и подавления) — EXECUTING
+Plan: 2 of 4
 Status: Ready to execute
-Last activity: 2026-11-19 — Phase 02 complete, transitioned to Phase 3
+Last activity: 2026-11-19 — Phase 03 execution started
 
 Progress: [███░░░░░░░] 29%
 
@@ -76,6 +76,7 @@ Progress: [███░░░░░░░] 29%
 | Phase 02 P02 | 15 min | 3 tasks | 5 files |
 | Phase 02 P03 | 25 min | 3 tasks | 1 files |
 | Phase 02 P04 | 5 min | 2 tasks | 2 files |
+| Phase 03 P01 | 20 min | 2 tasks | 8 files |
 
 ## Accumulated Context
 
@@ -101,6 +102,9 @@ Recent decisions affecting current work:
 - [Phase 02]: Seam shape: behavior-preserving extraction of the inline WithErrorHandler closure into unexported diagCollector — linkSources registers the identical function value, so the synthetic-warn test drives the real production handler
 - [Phase 02]: Extraction is required because no natural warn fixture exists in the vendored tree and producing one would need sealed internal/easypc edits (D-04); synthetic diagnostics carry neutral messages, never text matching (D-01)
 - [Phase 02]: handler_race_mixed asserts exact counts and per-Line identity tallies (never range bounds); order deliberately unasserted — interleaving is legal (Pitfall 7 mutex pin)
+- [Phase 03]: New linked engine reads Core.linkedRules (additive Options.LinkedRules); old engine keeps c.rules — dual contract never crosses (research A1) — New linked engine reads Core.linkedRules (additive Options.LinkedRules); old engine keeps c.rules — dual contract never crosses (research A1)
+- [Phase 03]: Parameter type pins the old shouldIgnore to the old contract, so lint_linked.go mirrors it as shouldIgnoreLinked with byte-for-byte main semantics — Parameter type pins the old shouldIgnore to the old contract, so lint_linked.go mirrors it as shouldIgnoreLinked with byte-for-byte main semantics
+- [Phase 03]: Main-wins wrapper pinned now: drain wraps per-file model errors with the exact literal fs.WalkDir: c.lintProtoInfoRead: (parity pin, not the callee), proven by exact-string cells — Main-wins wrapper pinned now: drain wraps per-file model errors with the exact literal fs.WalkDir: c.lintProtoInfoRead: (parity pin, not the callee), proven by exact-string cells
 
 ### Pending Todos
 
@@ -124,6 +128,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-11-19T11:50:58.538Z
-Stopped at: Phase 3 context gathered
-Resume file: .planning/phases/03-dvuhprohodnyy-dvizhok-i-podavleniya/03-CONTEXT.md
+Last session: 2026-11-19T13:46:06.217Z
+Stopped at: Completed 03-01-PLAN.md
+Resume file: None
