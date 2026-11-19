@@ -444,20 +444,25 @@ out, code := runBuiltEasyp(t, "lint", "--path", fixtureDir) // code == 2 / 1 / 0
 | A6 | Контракт «ErrorHandler зовётся последовательно» у драйвера сохраняется до синков; защитный mutex в коллекторе — достаточная страховка | Pitfall 7 | Синк compiler-lab изменит контракт → гонка; mutex снимает риск без правок easypc |
 | A7 | `task` CLI отсутствует на PATH в текущем окружении (task: MISSING, gotestsum: MISSING, bin/ содержит только golangci-lint); верификация — прямые go-команды из AGENTS.md | Environment Availability | `task test` недоступен как есть; эквиваленты документированы, `task init` требует установки task |
 
-## Open Questions
+## Open Questions (RESOLVED)
+
+> Resolution status: Q2 and Q3 are resolved and substantively adopted in plan 02-02 content (annotations below). Q1 is deliberately NOT auto-resolved — it is **surfaced-for-ratification**: its adopted route (A1 two-level verification) is implemented as plan 02-03's flagged assumption pending user ratification at phase verification.
 
 1. **Механика D-05 для класса 1 до врезки (A1).**
    - What we know: классы 2/3 проверяемы через реальный Action-путь сейчас; класс 1 не достигает Action без изменения `Lint()`.
    - What's unclear: устраивает ли пользователя верификация класса 1 на уровне классификатора + printIssues до врезки, с полным Action-прогоном в Phase 5.
    - Recommendation: да (двухуровневая матрица); зафиксировать в плане как интерпретацию D-05.
+   - **Resolution (surfaced-for-ratification, not silently resolved):** adopted route = A1 two-level verification — класс 1 проверяется на уровне классификатора (plans 02-01/02-02) + printIssues golden (plan 02-03), полный Action-прогон матрицы повторяется в Phase 5. Implemented as plan 02-03's flagged assumption bullet «LINT-ENG-02 — unresolved»; user ratification happens at phase verification.
 2. **Классификация нелокального импорта (`"../x.proto"`) — COMPILE (эталон) или откат (дух «как в main»)?**
    - What we know: exit 1 в обоих случаях; отличается презентация (COMPILE-замечания vs error-строка).
    - What's unclear: какое поведение считается целевым для Phase 5-паритета.
    - Recommendation: следовать эталону (COMPILE) — буква REQ-2.2 («ошибки компиляции, не связанные с отсутствующим импортом»); ячейку матрицы включить обязательно.
+   - **Resolution (adopted):** эталон — COMPILE. Implemented verbatim as plan 02-02's `non_local_import_compile` cell (Task 2 behavior + must_haves truth «non-local import paths classify COMPILE — etalon behavior per research A4 / Open Question 2» + threat T-02-03 mitigation).
 3. **Носитель типизированной ошибки missing (буква D-01).**
    - What we know: `OpenImportFileError{FileName}` уже несёт путь и маршрутизируется в exit 2; эталон пробрасывает его как есть, добавляя только missing-флаг резолвера.
    - What's unclear: требуется ли D-01 буквальный НОВЫЙ тип «типизированной ошибки линкера» или проброс/обёртка `OpenImportFileError` удовлетворяют.
    - Recommendation: минимальная обёртка/проброс существующего типа; новый тип вводить только если Phase 3/5 потребуется различать «missing при линковке» от «missing при пофайловом чтении».
+   - **Resolution (adopted):** проброс существующего `*OpenImportFileError`, новый тип не вводится. Implemented as plan 02-02's acceptance criterion «no new error type is declared in internal/core/link.go (missing-import typing reuses *OpenImportFileError)» and its must_haves truth carrying the exit-2 carrier (D-01/D-02).
 
 ## Environment Availability
 
