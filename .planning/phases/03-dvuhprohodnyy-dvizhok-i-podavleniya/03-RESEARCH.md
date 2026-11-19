@@ -508,22 +508,25 @@ func ValidateNames(names []string) error {
 | A5 | `parallel.Run`'s "small corpus, no goroutines" property referenced by D-02 maps to `workers := min(count, limit)` semantics (count ≤ NumCPU workers; `count<=0` → no-op) — no separate threshold branch exists in either copy | Pattern 1 | Cosmetic; no behavioral impact |
 | A6 | COMPILE issues intentionally bypass suppression filtering (etalon behavior), and Phase 2's IN-02 question (should COMPILE respect shouldIgnore) stays deferred to Phase 5 | Pattern 1 | If the project wants COMPILE suppressible, add a decision to the Phase 5 flip plan, not here |
 
-## Open Questions
+## Open Questions (RESOLVED in planning — see 03-01-PLAN.md)
 
 1. **New model/rule-interface naming (ties to A1)**
    - What we know: `ProtoInfo`, `Rule`, `Lint`, `commentSuppressions`, `readFilesFromImport`, `directiveComment`, `parsedDirective` collide; old names stay live until Phase 5.
    - What's unclear: preferred new names (e.g., `LinkedFileInfo`/`LintRule`/`LintLinked`…) and whether Phase 5 will rename back to etalon names or keep the new ones.
    - Recommendation: planner picks names in the plan (CONTEXT grants discretion); keep a rename map comment in the new files for Phase 5 consolidation.
+   - **RESOLVED (plan 03-01):** planner picked the names at engine-port time per CONTEXT discretion — `LintLinked` (method), `LinkedFileInfo` (struct), `LintRule`/`ModuleRule` (interfaces), `LinkedRuleName` (helper), plus renamed suppression/read identifiers (`linkedCommentSuppressions`, `linkedDirectiveComment`, `linkedParsedDirective`, `linkedFilesFromImport`, `linkedFileFromImport`). The full etalon->new rename map is a binding header comment at the top of `internal/core/lint_model.go`, kept for Phase 5 consolidation (which also owns the keep-vs-rename-back call).
 
 2. **Scope of "representative rules" for engine parity (ties to A2)**
    - What we know: ROADMAP criterion 1 requires the windowed engine to produce the same remarks as the sequential main-model pass "для репрезентативных правил"; D-03 says real rules arrive in Phase 4.
    - What's unclear: test doubles only, or a minimal real-rule mini-port as engine fixtures.
    - Recommendation: test doubles (old-model rule + new-model rule asserting equal (rule, file, line, col) sets) — keeps Phase 4 scope intact; a real ModuleRule collect/finish lifecycle is still exercised via a double implementing Collect/Finish.
+   - **RESOLVED (plan 03-01, A2 accepted):** test doubles only — plan 03-01 Task 1 drives the engine with stateless `LintRule` doubles and a `ModuleRule` double exercising the Collect/Finish lifecycle; no real rule is pre-ported and Phase 4 scope stays intact. Real-rule parity lands as Phase 4's batch gates and Phase 7's corpus gates.
 
 3. **Per-file error wrapper text (Pitfall 6)**
    - What we know: the two engines wrap the same failure with different callee names; text is user-visible at Phase 5.
    - What's unclear: whether to match main's `c.lintProtoInfoRead` chain now or note divergence for Phase 5.
    - Recommendation: match main's observable text now (cheap, REQ-2.4 "как до изменения"), pin with exact-string tests.
+   - **RESOLVED (plan 03-01):** main's observable text is matched now (cheap, REQ-2.4) — the new engine wraps per-file model errors with the exact `fs.WalkDir: c.lintProtoInfoRead: %w` chain (literal documented as a deliberate parity pin, not the actual callee name), pinned by exact-string test cells (`fallback_missing_import_command_error`, `fallback_syntax_error_wrapper`, `fallback_read_error`) in plan 03-01 Task 2.
 
 ## Environment Availability
 
