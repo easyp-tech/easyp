@@ -12,6 +12,7 @@
   "jina": false,
   "git": {
     "branching_strategy": "none",
+    "allow_default_branch_commits": true,
     "create_tag": true,
     "repo_tagging": "single",
     "phase_branch_template": "gsd/phase-{phase}-{slug}",
@@ -50,7 +51,8 @@
     "security_asvs_level": 1,
     "security_block_on": "high",
     "tdd_mode": true,
-    "ui_review": true
+    "ui_review": true,
+    "_auto_chain_active": true
   },
   "ship": {
     "pr_body_sections": [
