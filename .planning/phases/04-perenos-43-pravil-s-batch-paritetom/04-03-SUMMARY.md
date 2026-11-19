@@ -20,7 +20,7 @@ affects: [04-04..04-06 batches (harness + registry reuse), 04-07 (exact-set guar
 actuals:
   tokens: 10671    # 42684 diff chars over internal/rules/ at chars/4 (estimate was 78000; uniform ports on a proven harness, one shape x10)
   tasks: 3
-  commits: 3       # MEASURED: git rev-list --count 7fc5aae..HEAD
+  commits: 4       # MEASURED: git rev-list --count 7fc5aae..HEAD minus the metadata docs commit — 3 task commits (RED + 2 GREEN) + 1 fixture-fix commit (5ef30ab)
 
 # Tech tracking
 tech-stack:
@@ -143,9 +143,9 @@ duration: 18 min
 started: 2026-11-19T19:21:45Z
 completed: 2026-11-19T19:39:50Z
 status: complete
-commits: 3
+commits: 4
 plan_head_before: 7fc5aae57d53c76402ca8a49d83aa475fce5814a
-plan_head_after: 3065a7a5ad11b709ce5e89768cb14176d0e3cb75
+plan_head_after: 5ef30ab14e2bf1c50d2e1cae67297d3bb6ca1cc5
 ---
 
 # Phase 04 Plan 03: Batch 2 — BASIC Casing Summary
@@ -176,14 +176,15 @@ Each task was committed atomically:
 1. **Task 1 (RED): BASIC-casing parity suite fails on the unported-rule guard** - `1def52e` (test)
 2. **Task 2 (GREEN part 1): port the ten casing rules — main regexps + keyword positions + shallow walks** - `cd7f5aa` (feat)
 3. **Task 3 (GREEN part 2 + batch gate): carried main tests + cumulative gate** - `3065a7a` (feat)
+4. **Fixture fix: keyword_positions literals corrected against the old-engine oracle** - `5ef30ab` (fix)
 
-**Plan metadata:** docs commit (this SUMMARY + state/roadmap/validation updates).
+**Plan metadata:** docs commits (this SUMMARY + state/roadmap/validation updates; `0f7dda8` + the SUMMARY-correction commit).
 
 ## TDD Gate Compliance
 
 - RED `1def52e` (test(04-03)) precedes GREEN `cd7f5aa`/`3065a7a` (feat(04-03)) in ancestry — gate sequence RED -> GREEN satisfied; no REFACTOR needed (the GREEN commits are the minimal implementations; no cleanup beyond the plan shape was warranted).
 - RED evidence machine-validated (`gsd_run check tdd-red-evidence` -> `RED_EVIDENCE_OK`, reason `target_test_failed`): TestLinkedParityBasicCasing executed and failed on its own requirePorted assertion naming all ten unported rules while the package compiled; the semantic assessment is recorded in the evidence file.
-- Task 1's RED commit touches only the `*_test.go` pathspec plus the evidence JSON planning artifact; Tasks 2-3 carry `tdd="true"`-cycle GREEN implementations with their behavior proof (parity suite + carried tests) run before each commit.
+- Task 1's RED commit touches only the `*_test.go` pathspec plus the evidence JSON planning artifact; Tasks 2-3 carry `tdd="true"`-cycle GREEN implementations with their behavior proof (parity suite + carried tests) run before each commit. The `5ef30ab` fix commit is a test-fixture correction that lands after GREEN — the RED -> GREEN order is unaffected (RED `1def52e` is an ancestor of both GREEN commits; 04-02's trailing fix-commit precedent).
 
 ## Files Created/Modified
 
@@ -215,8 +216,8 @@ Each task was committed atomically:
 - **Issue:** the fixture's raw string began with a newline (every expected line number off by one) and the enum value `BAD_V` actually matches main's UPPER_SNAKE regexp (only 5 old-side findings instead of 6) — the hand-derived literals did not match the old engine's real output
 - **Fix:** renamed the value to `bad_value` (fails the regexp) and recomputed all six literals from the old engine's actual findings (6:1, 7:3, 13:1, 14:3, 17:1, 18:3) — the old engine is the oracle, so the test was fixed, not the code
 - **Files modified:** internal/rules/parity_basic_casing_test.go
-- **Verification:** keyword_positions cell green; all six old-side literals asserted and reproduced by the new engine
-- **Committed in:** cd7f5aa
+- **Verification:** keyword_positions cell green; all six old-side literals asserted and reproduced by the new engine; cumulative parity suite re-run green on the committed state
+- **Committed in:** 5ef30ab
 
 ---
 
@@ -250,7 +251,7 @@ None - no external service configuration required. The etalon checkout precondit
 - `git diff --exit-code` over the ten old rule files + builder.go + lint.go + lint_linked.go + lint_model.go + casing.go + lint_helpers.go → empty (dormancy)
 - Carried tests: `go test -race -count=1 ./internal/rules/ -run 'TestEnumPascalCase|...|TestServicePascalCase'` → ok (all ten suites, -v per-suite verified)
 - Batch gate (Task 3): quick suite `-race` ok (core, core/path_helpers, rules); `TestLinkedParity -v` → 13 green sub-cells (3 Wave-0 + 5 MINIMAL + 5 BASIC casing); `go build ./...` ok; `go mod tidy && git diff --exit-code go.mod go.sum` → TIDY_CLEAN; `go run ./cmd/easyp schema-gen && git diff --exit-code schemas/` → SCHEMA_CLEAN; `bin/golangci-lint run ./internal/rules/... ./internal/core/...` → 0 issues; `TestModuleRuleSet` → ok
-- Commits measured: `git rev-list --count 7fc5aae..HEAD` = 3
+- Commits measured: `git rev-list --count 7fc5aae..HEAD` = 5 (3 task commits + 1 fixture fix + 1 metadata docs commit); task-commits frontmatter count 4 excludes the docs commit per 04-02 precedent
 
 ## Next Phase Readiness
 
@@ -261,8 +262,8 @@ None - no external service configuration required. The etalon checkout precondit
 ## Self-Check: PASSED
 
 - All 22 task files exist on disk (11 created + 11 modified verified via git log --name-status)
-- All 3 commits are ancestors of HEAD: 1def52e (RED test), cd7f5aa (GREEN feat), 3065a7a (GREEN feat + gate)
-- Commits measured from the persisted ledger: `git rev-list --count 7fc5aae..HEAD` = 3
+- All 4 code commits are ancestors of HEAD: 1def52e (RED test), cd7f5aa (GREEN feat), 3065a7a (GREEN feat + gate), 5ef30ab (fixture fix)
+- Commits measured from the persisted ledger: `git rev-list --count 7fc5aae..HEAD` = 5 incl. docs; 4 excluding the metadata docs commit
 - RED evidence record exists and validates RED_EVIDENCE_OK
 - STATE.md at Plan 4 of 7, stopped_at "Completed 04-03-PLAN.md"; ROADMAP.md phase row updated (3/7 summaries, In Progress)
 - LINT-PARITY-02 correctly NOT marked complete (shared-ID gate: sibling plans 04-04..04-07 declare it without SUMMARYs)
