@@ -3,16 +3,16 @@ gsd_state_version: "1.0"
 current_phase: 04
 current_phase_name: Перенос 43 правил с батч-паритетом
 status: executing
-stopped_at: Completed 04-03-PLAN.md
-last_updated: "2026-11-19T19:42:02.089Z"
+stopped_at: Completed 04-04-PLAN.md
+last_updated: "2026-11-19T20:26:10.597Z"
 last_activity: 2026-11-19
 last_activity_desc: Phase 04 execution started
-state_head: 3065a7a5ad11b709ce5e89768cb14176d0e3cb75
+state_head: 34d4f318fb2c0550c1cbc886dd9df01ac627e05f
 progress:
   total_phases: 7
   completed_phases: 3
   total_plans: 19
-  completed_plans: 15
+  completed_plans: 16
   percent: 43
 ---
 
@@ -41,7 +41,7 @@ See: .planning/PROJECT.md (updated 2026-11-19)
 ## Current Position
 
 Phase: 04 (Перенос 43 правил с батч-паритетом) — EXECUTING
-Plan: 4 of 7
+Plan: 5 of 7
 Status: Ready to execute
 Last activity: 2026-11-19 — Phase 04 execution started
 
@@ -84,6 +84,7 @@ Progress: [███░░░░░░░] 29%
 | Phase 04 P01 | 13 min | 3 tasks | 10 files |
 | Phase 04 P02 | 10 min | 3 tasks | 11 files |
 | Phase 04 P03 | 22 min | 3 tasks | 22 files |
+| Phase 04 P04 | 34 min | 3 tasks | 23 files |
 
 ## Accumulated Context
 
@@ -133,6 +134,11 @@ Recent decisions affecting current work:
 - [Phase 04]: Digit-led rpc names are rejected by BOTH parsers at the rpc-name token — the plan's rpc 2Fast divergence edge is unreachable in compiling corpora — Parity fixtures must compile (research precondition); the RPC regexp semantics ride the shared get_thing finding plus carried tests; documented for the Phase-7 corpus gate
 - [Phase 04]: Parity cells run cfg.Use = ten batch names + four MINIMAL names so every cell re-verifies the whole ported registry cumulatively (14 rules) — The plan's cumulative re-verification requirement read into every cell, not one dedicated cell; old-side counts 9/6/0/2/2 asserted before each multiset compare
 - [Phase 04]: keyword_positions pins exact old-side (rule,line,col) literals via a local oldFindings helper — harness file untouched per the plan's file list — Position literals asserted on the live old engine (the oracle) before the both-engines compare; a name-token port would shift columns and fail the fingerprint
+- [Phase 04]: [Phase 04]: swift_prefix bug pinned bug-for-bug: PackageSameSwiftPrefixLinked compares the literal ruby_package option (main's copy-paste bug), both-side regression pins (differing ruby_package issues, differing swift_prefix clean); the corrected behavior is a deferred post-parity decision (T-04-09)
+- [Phase 04]: [Phase 04]: ImportUsed ports main's syntax walk unconditionally and statelessly (importUsage + InstructionParser reuse); LinkedFileInfo.Resolved never read (grep-clean); the walk is main's actual walk — file-level extends only (unordered keeps message-level extends in MessageBody; main's checkInExtends sees ProtoBody only), maps/groups/message options outside (T-04-08)
+- [Phase 04]: [Phase 04]: The real testdata/import_used corpus does not link (undefined extend target, duplicate TestService) — engine-level IMPORT_USED parity cells use compiling same-package variants; the real fixtures stay in the carried test over parseLinkedFile infos (all 11 imports marked used, clean)
+- [Phase 04]: [Phase 04]: EnumFirstValueZero keeps the lab's empty-enum guard as the single documented crash-fix deviation (research A7, unit-pinned; protoc rejects empty enums so the engine path never sees one) while main's string compare (Number != "0") stays — "00"/"0x0" issue where the lab's numeric compare passes (T-04-10)
+- [Phase 04]: [Phase 04]: Option-comparison ports compare RAW written constants (fileOption + opt.Value + firstExemptMismatches; skip-optionless, packageless early return) — optionString/mismatches unreachable and grep-enforced; every parity cell runs the cumulative 24-name config so cells double as full-registry regressions (T-04-11)
 
 ### Pending Todos
 
@@ -158,6 +164,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-11-19T19:41:38.520Z
-Stopped at: Completed 04-03-PLAN.md
+Last session: 2026-11-19T20:26:09.962Z
+Stopped at: Completed 04-04-PLAN.md
 Resume file: None
