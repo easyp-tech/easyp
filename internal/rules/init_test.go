@@ -162,12 +162,3 @@ func validate(rule core.LintRule, infos ...core.LinkedFileInfo) ([]core.Issue, e
 	}
 	return issues, nil
 }
-
-// parseProtoLinked builds a LinkedFileInfo from source text for small, focused
-// cases.
-func parseProtoLinked(t testing.TB, path, src string) core.LinkedFileInfo {
-	t.Helper()
-	file, err := protoast.Parse(path, []byte(src))
-	require.NoError(t, err)
-	return core.LinkedFileInfo{Path: path, File: file}
-}
