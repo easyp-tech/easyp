@@ -14,6 +14,7 @@ import (
 	"sync/atomic"
 
 	"github.com/easyp-tech/easyp/internal/easypc/protoc"
+	"github.com/easyp-tech/easyp/internal/protoast"
 )
 
 // CompileRuleName reports compiler errors found while linking linted files.
@@ -56,6 +57,14 @@ func (c *Core) linkSources(ctx context.Context, disk FS, paths []string, sources
 		return nil, nil
 	}
 
+	// A syntax error in any corpus file beats COMPILE: the corpus falls back
+	// to the per-file path, where that file's syntax error becomes a command
+	// error exactly as before the linker existed.
+	if hasPerFileSyntaxError(paths, sources) {
+		c.logger.Debug(ctx, "link failed, lint rules use the syntax only", slog.String("error", err.Error()))
+		return nil, nil
+	}
+
 	// Deterministic issue order: by path, then line, then column.
 	slices.SortStableFunc(diags, func(a, b protoc.Diagnostic) int {
 		return cmp.Or(
@@ -77,6 +86,19 @@ func (c *Core) linkSources(ctx context.Context, disk FS, paths []string, sources
 		})
 	}
 	return nil, issues
+}
+
+// hasPerFileSyntaxError reports whether any corpus file fails its individual
+// parse. protoc.Diagnostic does not distinguish syntax from semantic failures,
+// so the distinction is behavioral: after a failed Link each file is parsed on
+// its own, and any syntax error outranks the COMPILE class.
+func hasPerFileSyntaxError(paths []string, sources [][]byte) bool {
+	for i, path := range paths {
+		if _, err := protoast.Parse(path, sources[i]); err != nil {
+			return true
+		}
+	}
+	return false
 }
 
 // lintResolver serves corpus files from memory and resolves imports through
