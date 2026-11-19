@@ -9,6 +9,7 @@ package rules_test
 
 import (
 	"cmp"
+	"fmt"
 	"os"
 	"path/filepath"
 	"slices"
@@ -25,17 +26,21 @@ import (
 )
 
 // requirePorted is every batch's RED guard: a batch's parity test fails HERE,
-// on its own assertion, listing the unported name, while the package still
+// on its own assertion, listing the unported names, while the package still
 // compiles (a Go build-failure RED is invalid — never reference
-// not-yet-existing types in RED tests).
+// not-yet-existing types in RED tests). Every given name is probed so one
+// failure reports the batch's full unported list.
 func requirePorted(t *testing.T, names ...string) {
 	t.Helper()
 
+	var unported []string
 	for _, name := range names {
-		_, _, err := rules.NewLinked(config.LintConfig{Use: []string{name}})
-		if err != nil {
-			t.Fatalf("rule not ported to the linked registry yet: %s: %v", name, err)
+		if _, _, err := rules.NewLinked(config.LintConfig{Use: []string{name}}); err != nil {
+			unported = append(unported, fmt.Sprintf("%s (%v)", name, err))
 		}
+	}
+	if len(unported) > 0 {
+		t.Fatalf("rules not ported to the linked registry yet: %s", strings.Join(unported, "; "))
 	}
 }
 

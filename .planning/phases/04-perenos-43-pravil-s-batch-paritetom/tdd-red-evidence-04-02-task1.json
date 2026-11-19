@@ -1,0 +1,10 @@
+{
+  "command": "go test -race -count=1 ./internal/rules/ -run TestLinkedParityMinimal",
+  "exitCode": 1,
+  "output": "--- FAIL: TestLinkedParityMinimal (0.00s)\n    parity_minimal_test.go:22: rules not ported to the linked registry yet: DIRECTORY_SAME_PACKAGE (invalid rule: DIRECTORY_SAME_PACKAGE); PACKAGE_DEFINED (invalid rule: PACKAGE_DEFINED); PACKAGE_SAME_DIRECTORY (invalid rule: PACKAGE_SAME_DIRECTORY)\nFAIL\nFAIL\tgithub.com/easyp-tech/easyp/internal/rules\t0.028s\nFAIL\n",
+  "targetTest": "TestLinkedParityMinimal",
+  "targetFile": "internal/rules/parity_minimal_test.go",
+  "expected": "RED: the batch parity suite fails on its own requirePorted guard, naming the unported rules DIRECTORY_SAME_PACKAGE, PACKAGE_DEFINED and PACKAGE_SAME_DIRECTORY while the package still compiles",
+  "actual": "--- FAIL: TestLinkedParityMinimal at parity_minimal_test.go:22 with message \"rules not ported to the linked registry yet: DIRECTORY_SAME_PACKAGE (invalid rule: DIRECTORY_SAME_PACKAGE); PACKAGE_DEFINED (invalid rule: PACKAGE_DEFINED); PACKAGE_SAME_DIRECTORY (invalid rule: PACKAGE_SAME_DIRECTORY)\"; exit code 1",
+  "semanticAssessment": "The target test executed and failed on the planned assertion (the requirePorted registry probe), not on a build/setup/fixture fault: the package compiled, the test ran, and the failure message lists exactly the three batch rules still absent from rules.NewLinked. No unrelated assertion failed and no test passed unexpectedly."
+}
