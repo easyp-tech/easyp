@@ -99,8 +99,28 @@ Plans:
   1. Все 43 правила дают на общих фиксатурах идентичные старой реализации замечания (правило, файл, строка, колонка); перенос выполняется батчами, и каждый батч верифицирован по паритету до начала следующего — корпусный lint-diff на финише остаётся воротами, а не сессией отладки
   2. Правила, чьё поведение изменилось в main после снятия лабораторной копии (например, подавления через комментарии), следуют семантике текущего main, а не лаборатории; colocated-тесты переносятся из main
   3. У каждого перенесённого правила есть colocated `<rule>_test.go`; `task test` и `task lint` зелёные на всех промежуточных состояниях фазы
-**Plans**: TBD (ожидаемо по плану на батч правил)
-**Design notes** (решить в /gsd-discuss-phase): батчи и порядок переноса 43 правил (естественные кандидаты — группы конфига MINIMAL → BASIC → DEFAULT → COMMENTS → UNARY_RPC); механизм батч-верификации — per-batch паритетные тесты против старой реализации или корпусный lint-diff
+**Plans**: 7 plans
+Plans:
+**Wave 1** (Batch 0 — infra + pilot)
+- [ ] 04-01-PLAN.md — Wave-0 infrastructure (tracer): linked issue constructor + LintRuleName override, NewLinked registry, parity harness (old-vs-new sorted multiset), Decl.Pos position probe, TestModuleRuleSet guard, readSource-once disk-instrumentation cell; pilot port PackageDirectoryMatch with carried main tests
+
+**Wave 2** *(blocked on Wave 1)*
+- [ ] 04-02-PLAN.md — Batch 1 MINIMAL (4 rules): DirectorySamePackage/PackageSameDirectory as first-exempt ModuleRules, PackageDefined 0:0 zero position; firstExemptMismatches helper; pilot re-verified cumulatively
+
+**Wave 3** *(blocked on Wave 2)*
+- [ ] 04-03-PLAN.md — Batch 2 BASIC casing (10 rules): main regexps + keyword positions + shallow walk shapes (nested-decl cells); ImportNoPublic/ImportNoWeak verbatim
+
+**Wave 4** *(blocked on Wave 3)*
+- [ ] 04-04-PLAN.md — Batch 3 BASIC semantic (10 rules): EnumFirstValueZero string compare + empty-enum guard, EnumNoAllowAlias any-value, ImportUsed stateless syntax walk (Resolved unused), 7 option ModuleRules (first-exempt, skip-optionless, written constants, swift_prefix ruby_package bug pin)
+
+**Wave 5** *(blocked on Wave 4)*
+- [ ] 04-05-PLAN.md — Batch 4 DEFAULT (8 rules): EnumValuePrefix pascalToUpperSnake carried, EnumZeroValueSuffix first-value exact + ENV tag, FileLowerSnakeCase full-filename 0:0, RPCRequestResponseUnique per-file ModuleRule, standard-name written compares, version-suffix regexp, ServiceSuffix
+
+**Wave 6** *(blocked on Wave 5)*
+- [ ] 04-06-PLAN.md — Batch 5 COMMENTS (7 rules): uniform presence predicate (HasCommentAbove; directive-only and detached comments document), shallow shapes, proto2 group pin
+
+**Wave 7** *(blocked on Wave 6)*
+- [ ] 04-07-PLAN.md — Batch 6 UNARY_RPC (2) + finish: streaming rules verbatim; registry complete (41), registry-parity + exact ModuleRule-set guards, lint_helpers re-alignment, lint-exclusion comment resolution, phase closure gates
 
 ### Phase 5: Переключение lint-пути и ворота совместимости
 **Goal**: `easyp lint` работает на компиляторе; старый lint-контур удалён; формат вывода, пути, коды выхода и все остальные подсистемы не изменились — единственная точка пользовательски видимого изменения, откат = revert
@@ -148,7 +168,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 | 1. Вендоринг компилятора и расчленение модели | 4/4 | Complete    | 2026-11-19 |
 | 2. Линкер и маршрутизация ошибок | 4/4 | Complete    | 2026-11-19 |
 | 3. Двухпроходный движок и подавления | 4/4 | Complete    | 2026-11-19 |
-| 4. Перенос 43 правил с батч-паритетом | 0/TBD | Not started | - |
+| 4. Перенос 43 правил с батч-паритетом | 0/7 | Not started | - |
 | 5. Переключение lint-пути и ворота совместимости | 0/TBD | Not started | - |
 | 6. Новые правила и регенерация схем/MCP | 0/TBD | Not started | - |
 | 7. Приёмка — паритет корпусов и производительность | 0/TBD | Not started | - |
