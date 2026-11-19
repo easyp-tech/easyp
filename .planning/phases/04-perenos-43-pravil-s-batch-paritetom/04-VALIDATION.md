@@ -40,9 +40,11 @@ created: "2026-11-19"
 
 | Task ID | Plan | Wave | Requirement | Threat Ref | Secure Behavior | Test Type | Automated Command | File Exists | Status |
 |---------|------|------|-------------|------------|-----------------|-----------|-------------------|-------------|--------|
-| (заполняется планами; каждая batch-ячейка — parity-тест против live-старого движка) | 0X | X | LINT-PARITY-02 | T-04-* | Идентичные замечания старое-vs-новое (rule, path, line, col) на общих фиксатурах | parity/table | `go test -race -count=1 ./internal/rules/ -run 'TestLinkedParity'` | ❌ W0 | ⬜ pending |
-| (Wave 0: disk-instrumentation cell) | 04-01 | 0 | LINT-PARITY-02 | T-04-* | readSource ровно один раз на файл корпуса | unit | `go test -race -count=1 ./internal/core/ -run 'TestReadSourceOnce'` | ❌ W0 | ⬜ pending |
-| (Wave 0: position probe) | 04-01 | 0 | LINT-PARITY-02 | T-04-* | Decl.Pos таблица по 6 kinds закреплена | unit/probe | `go test -race -count=1 ./internal/core/ -run 'TestDeclPositionProbe'` | ❌ W0 | ⬜ pending |
+| (заполняется планами; каждая batch-ячейка — parity-тест против live-старого движка) | 0X | X | LINT-PARITY-02 | T-04-* | Идентичные замечания старое-vs-новое (rule, path, line, col) на общих фиксатурах | parity/table | `go test -race -count=1 ./internal/rules/ -run 'TestLinkedParity'` | ✅ W0 (04-01: harness + pilot cells) | ✅ green (04-01) |
+| (Wave 0: pilot rule carried tests) | 04-01 | 0 | LINT-PARITY-02 | T-04-01 | Main's carried expectations byte-verbatim on PackageDirectoryMatchLinked (offset 20, line 3, col 1, SourceName, message; module-qualified prefix cells) | unit | `go test -race -count=1 ./internal/rules/ -run 'TestPackageDirectoryMatch'` | ✅ W0 | ✅ green (04-01) |
+| (Wave 0: disk-instrumentation cell) | 04-01 | 0 | LINT-PARITY-02 | T-04-* | readSource ровно один раз на файл корпуса (компилируемый корпус из 2 файлов с внутрипакетным импортом; total opens == 2) | unit | `go test -race -count=1 ./internal/core/ -run 'TestReadSourceOnce'` | ✅ W0 | ✅ green (04-01) |
+| (Wave 0: position probe) | 04-01 | 0 | LINT-PARITY-02 | T-04-* | Decl.Pos == Meta.Pos по Offset/Line/Column закреплена для 10 kinds (11 якорей: package, import, file-level option, message, plain field, oneof, oneof member field, enum, enum value, service, rpc) | unit/probe | `go test -race -count=1 ./internal/core/ -run 'TestDeclPositionProbe'` | ✅ W0 | ✅ green (04-01) |
+| (Wave 0: ModuleRule-set membership guard) | 04-01 | 0 | LINT-PARITY-02 | T-04-* | Каждый портированный ModuleRule сообщает имя из D-03 набора (04-07 усилит до exact-set) | guard | `go test -race -count=1 ./internal/rules/ -run 'TestModuleRuleSet'` | ✅ W0 | ✅ green (04-01) |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
 
@@ -50,11 +52,11 @@ created: "2026-11-19"
 
 ## Wave 0 Requirements
 
-- [ ] Parity harness (live old engine + dormant new engine in-process, sorted multiset compare) — Wave 0 план
-- [ ] Позиционный probe (Decl.Pos таблица для Import/Field/Message/Package/RPC/Option) — Wave 0 план
-- [ ] Disk-instrumentation cell (standing constraint 999.1) — Wave 0 план
-- [ ] Пилотное правило (PackageDirectoryMatch) как smoke батча — Wave 0 план
-- [ ] `Existing infrastructure covers test framework — go test готов`
+- [x] Parity harness (live old engine + dormant new engine in-process, sorted multiset compare) — 04-01 (`parity_harness_test.go` + `parity_wave0_test.go`, все ячейки green -race)
+- [x] Позиционный probe (Decl.Pos таблица; расширен с 6 до 10 kinds / 11 якорей — все green) — 04-01
+- [x] Disk-instrumentation cell (standing constraint 999.1) — 04-01 (`TestReadSourceOnce`)
+- [x] Пилотное правило (PackageDirectoryMatch) как smoke батча — 04-01 (перенесено, carried-тесты green)
+- [x] `Existing infrastructure covers test framework — go test готов`
 
 ---
 
