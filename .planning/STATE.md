@@ -3,16 +3,16 @@ gsd_state_version: "1.0"
 current_phase: 02
 current_phase_name: Линкер и маршрутизация ошибок
 status: executing
-stopped_at: Completed 02-01-PLAN.md
-last_updated: "2026-11-19T04:06:46.070Z"
+stopped_at: Completed 02-02-PLAN.md
+last_updated: "2026-11-19T04:35:15.364Z"
 last_activity: 2026-11-19
 last_activity_desc: Phase 02 execution started
-state_head: 8b9e412f5f006e5ba391a777d242638fe4ea2411
+state_head: c0994dc4d41cf83cf51ff8ba4d9f57d7c2961dff
 progress:
   total_phases: 7
   completed_phases: 1
   total_plans: 7
-  completed_plans: 5
+  completed_plans: 6
   percent: 14
 ---
 
@@ -41,7 +41,7 @@ See: .planning/PROJECT.md (updated 2026-11-19)
 ## Current Position
 
 Phase: 02 (Линкер и маршрутизация ошибок) — EXECUTING
-Plan: 2 of 3
+Plan: 3 of 3
 Status: Ready to execute
 Last activity: 2026-11-19 — Phase 02 execution started
 
@@ -72,6 +72,7 @@ Progress: [█░░░░░░░░░] 14%
 | Phase 01 P03 | 30 min | 2 tasks | 51 files |
 | Phase 01 P04 | 18 min | 2 tasks | 4 files |
 | Phase 02 P01 | 11 min | 2 tasks | 2 files |
+| Phase 02 P02 | 15 min | 3 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -88,6 +89,9 @@ Recent decisions affecting current work:
 - [Phase 01]: D-02 fallback fired on actual lint failure (12 U1000): one paths exclusion scoped to internal/rules/lint_helpers.go; upstream QF1001 in byte-verbatim casing.go silenced by finding-scoped rule (Rule 3, flagged for verifier ratification)
 - [Phase 02]: linkSources three-outcome contract (linked trees / COMPILE issues / (nil,nil) fallback) via typed lintResolver seam on openImportFile; missing-import detection is atomic-flag-based, diagnostic text never parsed
 - [Phase 02]: git.allow_default_branch_commits:true set in config.json (documented #3819 override) so branching_strategy:none commits on the current branch as in Phase 1
+- [Phase 02]: [Phase 02]: syntax-over-COMPILE precedence via behavioral per-file protoast.Parse (hasPerFileSyntaxError on the failed-Link path); !ErrCompilationFailed fallback branch kept etalon-verbatim (not unit-triggerable with a complete linted map)
+- [Phase 02]: [Phase 02]: missing-import matrix proves inherited openImportFile semantics — transitive depth-2 and blocked imports fall back with *OpenImportFileError as the exit-2 carrier (asserted via the direct importer; readFilesFromImport is one-level per D-06); non-local imports classify COMPILE per etalon A4
+- [Phase 02]: [Phase 02]: COMPILE positions follow the compiler LineCol convention (tab stop 8, byte columns) pinned by a tab/UTF-8 fixture diverging from the D-07 rune contract (col 37 vs 19); cycle diagnostics pinned at the driver's hard-coded 2:1
 
 ### Pending Todos
 
@@ -109,6 +113,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-11-19T04:06:45.931Z
-Stopped at: Completed 02-01-PLAN.md
+Last session: 2026-11-19T04:35:15.199Z
+Stopped at: Completed 02-02-PLAN.md
 Resume file: None
