@@ -247,3 +247,12 @@ None - no external service configuration required.
 ---
 *Phase: 03-dvuhprohodnyy-dvizhok-i-podavleniya*
 *Completed: 2026-11-19*
+
+## Self-Check: PASSED
+
+- All 5 created engine/test files plus the RED evidence record and this SUMMARY exist on disk
+- Commits 0353377 (RED), 3ac8abf (GREEN), c5f7f4b (Task 2), ebfce28 (docs) are ancestors of HEAD
+- `gsd_run check evaluation-scope --plan 03-01 --commits-only` resolved (plan-subject commits on this branch)
+- All task acceptance criteria re-run after all tasks: green (see Verification Log)
+- Plan-level <verification> suite re-run: all green; LINT-ENG-01 marking deferred by the #2388 shared-ID gate until sibling plans 03-02..03-04 produce their summaries
+
