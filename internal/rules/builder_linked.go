@@ -38,13 +38,13 @@ import (
 //	MessagePascalCase            -> MessagePascalCaseLinked            (batch 2)
 //	OneofLowerSnakeCase          -> OneofLowerSnakeCaseLinked          (batch 2)
 //	PackageLowerSnakeCase        -> PackageLowerSnakeCaseLinked        (batch 2)
-//	PackageSameCsharpNamespace   -> (placeholder, batch 3)
-//	PackageSameGoPackage         -> (placeholder, batch 3)
-//	PackageSameJavaMultipleFiles -> (placeholder, batch 3)
-//	PackageSameJavaPackage       -> (placeholder, batch 3)
-//	PackageSamePHPNamespace      -> (placeholder, batch 3)
-//	PackageSameRubyPackage       -> (placeholder, batch 3)
-//	PackageSameSwiftPrefix       -> (placeholder, batch 3)
+//	PackageSameCsharpNamespace   -> PackageSameCsharpNamespaceLinked   (batch 3)
+//	PackageSameGoPackage         -> PackageSameGoPackageLinked         (batch 3)
+//	PackageSameJavaMultipleFiles -> PackageSameJavaMultipleFilesLinked (batch 3)
+//	PackageSameJavaPackage       -> PackageSameJavaPackageLinked       (batch 3)
+//	PackageSamePHPNamespace      -> PackageSamePHPNamespaceLinked      (batch 3)
+//	PackageSameRubyPackage       -> PackageSameRubyPackageLinked       (batch 3)
+//	PackageSameSwiftPrefix       -> PackageSameSwiftPrefixLinked       (batch 3; bug pin — compares ruby_package)
 //	RPCPascalCase                -> RPCPascalCaseLinked                (batch 2)
 //	ServicePascalCase            -> ServicePascalCaseLinked            (batch 2)
 //	EnumValuePrefix              -> (placeholder, batch 4)
@@ -90,13 +90,13 @@ func NewLinked(cfg config.LintConfig) ([]core.LintRule, map[string][]string, err
 		&MessagePascalCaseLinked{},
 		&OneofLowerSnakeCaseLinked{},
 		&PackageLowerSnakeCaseLinked{},
-		// &PackageSameCsharpNamespaceLinked{},
-		// &PackageSameGoPackageLinked{},
-		// &PackageSameJavaMultipleFilesLinked{},
-		// &PackageSameJavaPackageLinked{},
-		// &PackageSamePHPNamespaceLinked{},
-		// &PackageSameRubyPackageLinked{},
-		// &PackageSameSwiftPrefixLinked{},
+		&PackageSameCsharpNamespaceLinked{},
+		&PackageSameGoPackageLinked{},
+		&PackageSameJavaMultipleFilesLinked{},
+		&PackageSameJavaPackageLinked{},
+		&PackageSamePHPNamespaceLinked{},
+		&PackageSameRubyPackageLinked{},
+		&PackageSameSwiftPrefixLinked{},
 		&RPCPascalCaseLinked{},
 		&ServicePascalCaseLinked{},
 		//	defaultGroup — batch 4
