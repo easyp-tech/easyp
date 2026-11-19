@@ -155,3 +155,21 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 
 ---
 *Roadmap created: 2026-11-17 (milestone lint-easypc-infra, 17/17 requirements mapped)*
+
+## Backlog
+
+### Phase 999.1: Follow-up — Phase 03 deferred UAT follow-up: Test 1 (BACKLOG)
+
+**Goal:** Resolve the UAT checkpoint deferred during Phase 03 verification
+**Source phase:** 03
+**Deferred at:** 2026-11-19 during /gsd-verify-work 03 session completion
+**Follow-ups:**
+- [ ] Test 1: Add a disk-instrumentation cell in Phase 4 asserting readSource is invoked exactly once per corpus file on a compiling corpus (behavioral proof for the no-disk-reread guarantee, currently structural) (deferred 2026-11-19)
+
+### Phase 999.2: Follow-up — Phase 03 deferred UAT follow-up: Test 2 (BACKLOG)
+
+**Goal:** Resolve the UAT checkpoint deferred during Phase 03 verification
+**Source phase:** 03
+**Deferred at:** 2026-11-19 during /gsd-verify-work 03 session completion
+**Follow-ups:**
+- [ ] Test 2: Standing constraint for Phase 4: at each rule-port batch confirm ported rules never consult comment directives or ignoreOnly themselves; keep central-filter cells (comment_suppression_central, finish_comment_refilter, compile_bypasses_suppression) green (deferred 2026-11-19)
