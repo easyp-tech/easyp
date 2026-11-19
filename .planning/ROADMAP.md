@@ -56,8 +56,10 @@ Plans:
   2. Корпус с отсутствующим импортом откатывается на разбор каждого файла по отдельности и репортит ошибки чтения/синтаксиса как до изменения, без `COMPILE`-замечаний; типизированная ошибка отсутствующего импорта (`OpenImportFileError`) доходит до существующего пути exit-кода 2
   3. Файл с ошибкой чтения или синтаксиса возвращает ошибку выполнения команды для этого файла в точности как до изменения
   4. Фиксатурная матрица всех трёх классов ошибок (компиляция / отсутствующий импорт / чтение-синтаксис) проходит с кодами выхода CLI, проверенными через путь Action — до врезки движка в `easyp lint`
-**Plans**: 3/3 plans executed
+**Plans**: 4/4 plans executed
 Plans:
+- [x] 02-04-PLAN.md
+
 **Wave 1**
 - [x] 02-01-PLAN.md — Corpus linker tracer: typed resolver seam (D-01) + three-outcome classification (linked / COMPILE issues / fallback) in internal/core/link.go, COMPILE shape pinned at etalon numbers (LINT-ENG-02/03)
 
@@ -135,7 +137,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Вендоринг компилятора и расчленение модели | 4/4 | Complete    | 2026-11-19 |
-| 2. Линкер и маршрутизация ошибок | 3/3 | In Progress | - |
+| 2. Линкер и маршрутизация ошибок | 4/4 | In Progress | - |
 | 3. Двухпроходный движок и подавления | 0/TBD | Not started | - |
 | 4. Перенос 43 правил с батч-паритетом | 0/TBD | Not started | - |
 | 5. Переключение lint-пути и ворота совместимости | 0/TBD | Not started | - |

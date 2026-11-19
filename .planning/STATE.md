@@ -3,16 +3,16 @@ gsd_state_version: "1.0"
 current_phase: 02
 current_phase_name: Линкер и маршрутизация ошибок
 status: verifying
-stopped_at: Completed 02-03-PLAN.md
-last_updated: "2026-11-19T05:08:22.513Z"
+stopped_at: Completed 02-04-PLAN.md
+last_updated: "2026-11-19T11:19:11.534Z"
 last_activity: 2026-11-19
 last_activity_desc: Phase 02 execution started
-state_head: 35fc26b0eb1a3ec0ecd4383dfdf610a7b0cd6d3b
+state_head: dc49ec17c6b2ff71b2fcc44733bcaf4ab3c6f408
 progress:
   total_phases: 7
   completed_phases: 1
-  total_plans: 7
-  completed_plans: 7
+  total_plans: 8
+  completed_plans: 8
   percent: 14
 ---
 
@@ -74,6 +74,7 @@ Progress: [█░░░░░░░░░] 14%
 | Phase 02 P01 | 11 min | 2 tasks | 2 files |
 | Phase 02 P02 | 15 min | 3 tasks | 5 files |
 | Phase 02 P03 | 25 min | 3 tasks | 1 files |
+| Phase 02 P04 | 5 min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -96,6 +97,9 @@ Recent decisions affecting current work:
 - [Phase 02]: D-05 matrix proven through the real routing surface: in-process actionV1 error-type cells (OpenImportFileError/plain/ErrHasLintIssue/nil) plus subprocess numeric exit codes 2/1/0 over a sync.OnceValues-built binary — with lint.go/lint_v1.go/core lint.go byte-unchanged
 - [Phase 02]: COMPILE output pinned pre-flip: printIssues text line 'path:4:3: message (COMPILE)' (empty-SourceName artifact) byte-exact, JSON zero Position.Filename/Offset, D-03 order preserved; class-1 through-Action run stays deferred to Phase 5 (flagged assumption A1, ratification at phase verification)
 - [Phase 02]: Plan 02-03 fixtures use the v1 linters selection (MINIMAL + FILE_LOWER_SNAKE_CASE enable) because the plan's literal legacy lint: shape is rejected by v1.ParsePolicy KnownFields strict decode (Rule 3 deviation, test-scope only)
+- [Phase 02]: Seam shape: behavior-preserving extraction of the inline WithErrorHandler closure into unexported diagCollector — linkSources registers the identical function value, so the synthetic-warn test drives the real production handler
+- [Phase 02]: Extraction is required because no natural warn fixture exists in the vendored tree and producing one would need sealed internal/easypc edits (D-04); synthetic diagnostics carry neutral messages, never text matching (D-01)
+- [Phase 02]: handler_race_mixed asserts exact counts and per-Line identity tallies (never range bounds); order deliberately unasserted — interleaving is legal (Pitfall 7 mutex pin)
 
 ### Pending Todos
 
@@ -117,6 +121,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-11-19T05:08:22.349Z
-Stopped at: Completed 02-03-PLAN.md
+Last session: 2026-11-19T11:18:58.136Z
+Stopped at: Completed 02-04-PLAN.md
 Resume file: None
