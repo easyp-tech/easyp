@@ -182,3 +182,12 @@ None - no external service configuration required.
 ---
 *Phase: 03-dvuhprohodnyy-dvizhok-i-podavleniya*
 *Completed: 2026-11-19*
+
+## Self-Check: PASSED
+
+- internal/core/lint_linked_matrix_test.go and this SUMMARY exist on disk
+- Commits fdfff03 (Task 1), 8647bf1 (Task 2), df42a7c (docs) are ancestors of HEAD
+- `gsd_run check evaluation-scope --plan 03-03 --commits-only` resolved with 3 plan-subject commits on this branch
+- All task acceptance criteria re-run after all tasks: green (see Verification Log)
+- Plan-level <verification> suite re-run: all green; LINT-ENG-01 marked complete (no sibling plan shares the ID — 03-04 declares only LINT-ENG-06)
+

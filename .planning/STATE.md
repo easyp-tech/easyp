@@ -3,16 +3,16 @@ gsd_state_version: "1.0"
 current_phase: 03
 current_phase_name: Двухпроходный движок и подавления
 status: executing
-stopped_at: Completed 03-02-PLAN.md
-last_updated: "2026-11-19T14:11:53.864Z"
+stopped_at: Completed 03-03-PLAN.md
+last_updated: "2026-11-19T14:28:56.127Z"
 last_activity: 2026-11-19
 last_activity_desc: Phase 03 execution started
-state_head: 2f197d3ed4801670262cbf358e103da5d28fccb0
+state_head: df42a7cd2cef485494f8c4abf9125ec61aa5125c
 progress:
   total_phases: 7
   completed_phases: 2
   total_plans: 12
-  completed_plans: 10
+  completed_plans: 11
   percent: 29
 ---
 
@@ -41,7 +41,7 @@ See: .planning/PROJECT.md (updated 2026-11-19)
 ## Current Position
 
 Phase: 03 (Двухпроходный движок и подавления) — EXECUTING
-Plan: 3 of 4
+Plan: 4 of 4
 Status: Ready to execute
 Last activity: 2026-11-19 — Phase 03 execution started
 
@@ -78,6 +78,7 @@ Progress: [███░░░░░░░] 29%
 | Phase 02 P04 | 5 min | 2 tasks | 2 files |
 | Phase 03 P01 | 20 min | 2 tasks | 8 files |
 | Phase 03 P02 | 19 min | 2 tasks | 2 files |
+| Phase 03 P03 | 10 min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -109,6 +110,9 @@ Recent decisions affecting current work:
 - [Phase 03]: Parity double mirrors the oracle rule exactly (rules.MessagePascalCase regexp + top-level walk) so old-path expectations carry over verbatim — A generic double mis-reports well-named messages the oracle rule never reports; parity requires matching finding sets
 - [Phase 03]: Tab directive pin asserts a hand-computed rune-column literal with the A4 byte-vs-rune divergence documented as a Phase 5 observable — Expectations are never derived from the engine under test; column divergence is pinned, not silently accepted
 - [Phase 03]: No engine divergence found across all 21 suppression fixtures: lint_suppressions.go and lint_linked.go stayed untouched — The protoast owner walk is proven equivalent to main's reflection walk on the whole EOF matrix; 03-03 inherits no engine fix mandate
+- [Phase 03]: No engine fix needed: all 9 matrix cells passed against the 03-01 engine on the first -race run — determinism, serial Collect, walk-order precedence hold as designed; fix(03-03) unused — Matrix cells assert exact counts and byte-identity against the proven engine; passing table IS the determinism proof per plan RED design
+- [Phase 03]: Race detector as the serialization proof: serialCollectModuleRule records Collect paths into an unsynchronized slice — concurrent Collect would trip -race on that exact slice — doubleModuleRule stays mutex-protected; the matrix double makes the detector itself the proof of drain-loop placement
+- [Phase 03]: compile_bypasses_suppression pins A6/IN-02 in-code with every suppression channel armed: Phase 5 flip inherits the COMPILE-suppressibility decision consciously — Whether COMPILE should be suppressible is deferred to Phase 5 IN-02; the pin makes current routing explicit
 
 ### Pending Todos
 
@@ -132,6 +136,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-11-19T14:11:53.701Z
-Stopped at: Completed 03-02-PLAN.md
+Last session: 2026-11-19T14:28:43.131Z
+Stopped at: Completed 03-03-PLAN.md
 Resume file: None
