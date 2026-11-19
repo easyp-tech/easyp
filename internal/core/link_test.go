@@ -109,6 +109,44 @@ func TestLinkSources(t *testing.T) {
 				assert.Equal(t, CompileRuleName, issues[0].RuleName)
 			},
 		},
+		{
+			name:  "syntax_error_falls_back",
+			paths: []string{"clean.proto", "truncated.proto"},
+			sources: [][]byte{
+				[]byte("syntax = \"proto3\";\n\npackage fine;\n\nmessage Fine {\n  string name = 1;\n}\n"),
+				[]byte("syntax = \"proto3\";\n\npackage broken;\n\nmessage Truncated {\n  string name = 1;\n"),
+			},
+			assert: func(t *testing.T, linked *protoc.Linked, issues []IssueInfo) {
+				require.Nil(t, linked)
+				require.Nil(t, issues)
+			},
+		},
+		{
+			name:  "syntax_beats_compile",
+			paths: []string{"a.proto", "b.proto"},
+			sources: [][]byte{
+				[]byte("syntax = \"proto3\";\n\npackage broken;\n\nmessage Truncated {\n  string name = 1;\n"),
+				[]byte("syntax = \"proto3\";\n\npackage dep;\n\nmessage B {\n  Ghost field = 1;\n}\n"),
+			},
+			assert: func(t *testing.T, linked *protoc.Linked, issues []IssueInfo) {
+				require.Nil(t, linked)
+				require.Nil(t, issues)
+			},
+		},
+		{
+			name:  "semantic_only_emits_compile",
+			paths: []string{"b.proto"},
+			sources: [][]byte{
+				[]byte("syntax = \"proto3\";\n\npackage dep;\n\nmessage B {\n  Ghost field = 1;\n}\n"),
+			},
+			assert: func(t *testing.T, linked *protoc.Linked, issues []IssueInfo) {
+				require.Nil(t, linked)
+				require.NotEmpty(t, issues)
+				for _, issue := range issues {
+					assert.Equal(t, CompileRuleName, issue.RuleName)
+				}
+			},
+		},
 	}
 
 	for _, tt := range tests {
