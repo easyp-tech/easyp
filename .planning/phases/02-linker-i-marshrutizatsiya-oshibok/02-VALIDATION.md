@@ -42,9 +42,9 @@ created: "2026-11-19"
 
 | Task ID | Plan | Wave | Requirement | Threat Ref | Secure Behavior | Test Type | Automated Command | File Exists | Status |
 |---------|------|------|-------------|------------|-----------------|-----------|-------------------|-------------|--------|
-| (заполняется планами) | 0X | X | LINT-ENG-02 | T-02-* | COMPILE-issues только при провале линковки с compile-ошибками | unit/golden | `go test -count=1 ./internal/core/ -run TestLink` | ❌ W0 | ⬜ pending |
-| (заполняется планами) | 0X | X | LINT-ENG-03 | T-02-* | Откат пофайлового разбора без COMPILE | unit | `go test -count=1 ./internal/core/ -run TestMissingImport` | ❌ W0 | ⬜ pending |
-| (заполняется планами) | 0X | X | LINT-ENG-04 | T-02-* | Ошибка чтения/синтаксиса как в main | unit/action | `go test -count=1 ./internal/api/...` | ❌ W0 | ⬜ pending |
+| (заполняется планами) | 0X | X | LINT-ENG-02 | T-02-02, T-02-03, T-02-05, T-02-06 | COMPILE-issues только при провале линковки с compile-ошибками | unit/golden | `go test -count=1 ./internal/core/ -run TestLink` | ❌ W0 | ⬜ pending |
+| (заполняется планами) | 0X | X | LINT-ENG-03 | T-02-01, T-02-04, T-02-07 | Откат пофайлового разбора без COMPILE | unit | `go test -count=1 ./internal/core/ -run TestMissingImport` | ❌ W0 | ⬜ pending |
+| (заполняется планами) | 0X | X | LINT-ENG-04 | T-02-05, T-02-08 | Ошибка чтения/синтаксиса как в main | unit/action | `go test -count=1 ./internal/api/...` | ❌ W0 | ⬜ pending |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
 
