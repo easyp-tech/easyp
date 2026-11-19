@@ -3,16 +3,16 @@ gsd_state_version: "1.0"
 current_phase: 04
 current_phase_name: Перенос 43 правил с батч-паритетом
 status: executing
-stopped_at: Completed 04-05-PLAN.md
-last_updated: "2026-11-19T20:53:08.538Z"
+stopped_at: Completed 04-06-PLAN.md
+last_updated: "2026-11-19T21:08:02.135Z"
 last_activity: 2026-11-19
 last_activity_desc: Phase 04 execution started
-state_head: b76d0a6af16dbf4d535ac41e5f3d91161e08e1f9
+state_head: 75e8320d00867b3ba9c1b98d07d75445bd45aaef
 progress:
   total_phases: 7
   completed_phases: 3
   total_plans: 19
-  completed_plans: 17
+  completed_plans: 18
   percent: 43
 ---
 
@@ -41,7 +41,7 @@ See: .planning/PROJECT.md (updated 2026-11-19)
 ## Current Position
 
 Phase: 04 (Перенос 43 правил с батч-паритетом) — EXECUTING
-Plan: 6 of 7
+Plan: 7 of 7
 Status: Ready to execute
 Last activity: 2026-11-19 — Phase 04 execution started
 
@@ -86,6 +86,7 @@ Progress: [███░░░░░░░] 29%
 | Phase 04 P03 | 22 min | 3 tasks | 22 files |
 | Phase 04 P04 | 34 min | 3 tasks | 23 files |
 | Phase 04 P05 | 13 min | 3 tasks | 19 files |
+| Phase 04 P06 | 9 min | 3 tasks | 16 files |
 
 ## Accumulated Context
 
@@ -143,6 +144,8 @@ Recent decisions affecting current work:
 - [Phase 04]: pascalToUpperSnake carried byte-verbatim as pascalToUpperSnakeLinked (single declaration in the ported file; frozen old file owns the original name — rename-mapped for Phase 5); lab acronym helpers grep-clean (T-04-12)
 - [Phase 04]: RPCRequestResponseUniqueLinked is per-file first-exempt uniqueness on written type strings via a ModuleRule Finish (path-grouped occurrences, seen-set per file); Resolved/RPCTypes never read — grep-clean (T-04-13); standard-name rules compare written strings exactly, qualified types fail (T-04-14)
 - [Phase 04]: v1alpha.proto parity-cell verdict follows the live old-engine oracle (issues at 0:0 — digit after the leading lowercase run fails the full-filename regexp), not the plan's "clean" annotation; probes before RED enforced the compiling precondition (distinct enum names per same-package file, ru2.v1 -> rw.v1) and confirmed old-side counts 7/2/3/10/2/3/1/0
+- [Phase 04]: COMMENTS presence predicate is main's len(Comments)==0 mapped to !HasCommentAbove() (Leading+Detached), grounded at source in go-protoparser v4.14.2 ParseComments (all preceding comments attach incl. across blank lines; same-line trailing in the separate InlineComment field) — directive-only and detached comments document; the lab's directive-filtering helper is grep-unreachable from the seven ports (T-04-16)
+- [Phase 04]: Proto2 group fields need no CommentField guard: groups are listed separately from plain fields in BOTH models (go-protoparser MessageBody.Groups, protoast Message.Groups — verified at source), pinned by the proto2_group_field cell (research A4 resolved at source); the directive_only_documents cell makes the batch suite mechanize standing constraint (b)'s interplay (0 suppressed-and-documented vs 2 undirected findings)
 
 ### Pending Todos
 
@@ -168,6 +171,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-11-19T20:52:57.133Z
-Stopped at: Completed 04-05-PLAN.md
+Last session: 2026-11-19T21:07:53.673Z
+Stopped at: Completed 04-06-PLAN.md
 Resume file: None
