@@ -6,9 +6,11 @@ import (
 	"regexp"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/easyp-tech/easyp/internal/fs/fs"
+	"github.com/easyp-tech/easyp/internal/logger"
 )
 
 // messagePascalCaseName is rules.MessagePascalCase's name predicate; the
@@ -37,6 +39,33 @@ func (m *messagePascalCase) Validate(info LinkedFileInfo) ([]Issue, error) {
 		}
 	}
 	return res, nil
+}
+
+// finishIssueModuleRule reports preset Finish findings: the vehicle for the
+// Finish-side re-filter cells (ignore_only and comment suppression on Finish
+// output). Collect is a no-op; Validate is never called by the engine.
+type finishIssueModuleRule struct {
+	issues []IssueInfo
+}
+
+var _ ModuleRule = (*finishIssueModuleRule)(nil)
+
+func (m *finishIssueModuleRule) Message() string { return "module finish finding" }
+
+func (m *finishIssueModuleRule) Validate(LinkedFileInfo) ([]Issue, error) { return nil, nil }
+
+func (m *finishIssueModuleRule) Collect(LinkedFileInfo) error { return nil }
+
+func (m *finishIssueModuleRule) Finish() []IssueInfo { return m.issues }
+
+// writeCorpusInto writes the corpus into an existing root; the nested-file
+// cells need the subdirectory created before the files are written.
+func writeCorpusInto(t *testing.T, root string, files map[string]string) {
+	t.Helper()
+
+	for name, src := range files {
+		require.NoError(t, os.WriteFile(filepath.Join(root, name), []byte(src), 0o644))
+	}
 }
 
 // TestLintLinkedSuppressionParity re-drives main's suppression fixture matrix
@@ -106,4 +135,154 @@ func TestLintLinkedSuppressionParity(t *testing.T) {
 			}
 		})
 	}
+
+	// Config-side suppression parity (D-05): ignore and ignore_only skip
+	// findings per rule per path exactly like main, on the walk, the per-file
+	// check, and the Finish re-filter.
+
+	t.Run("config_ignore_walk_filter", func(t *testing.T) {
+		t.Parallel()
+
+		root := t.TempDir()
+		require.NoError(t, os.MkdirAll(filepath.Join(root, "sub"), 0o755))
+		writeCorpusInto(t, root, map[string]string{
+			"sub/a.proto": "syntax = \"proto3\";\npackage alpha;\nmessage HiddenOne {}\n",
+			"b.proto":     "syntax = \"proto3\";\npackage beta;\nmessage VisibleOne {}\n",
+		})
+		recording := &recordingRule{}
+		app := New(Options{
+			Logger:              logger.NewNop(),
+			LinkedRules:         []LintRule{recording, &doubleRuleAlpha{}},
+			Ignore:              []string{"sub"},
+			AllowCommentIgnores: false,
+			KnownLintRules:      []string{"DOUBLE_RULE_ALPHA"},
+		})
+		got, err := app.LintLinked(t.Context(), fs.NewFSWalker(root, "."))
+		require.NoError(t, err)
+
+		// The walk filter drops sub/ before any rule runs: the recording rule
+		// never saw sub/a.proto, and only b.proto's finding is reported.
+		assert.Equal(t, []string{"b.proto"}, recording.observed())
+		require.Len(t, got, 1)
+		assert.Equal(t, "b.proto", got[0].Path)
+		assert.Equal(t, "DOUBLE_RULE_ALPHA", got[0].RuleName)
+	})
+
+	t.Run("ignore_only_dir_prefix", func(t *testing.T) {
+		t.Parallel()
+
+		root := t.TempDir()
+		require.NoError(t, os.MkdirAll(filepath.Join(root, "sub"), 0o755))
+		writeCorpusInto(t, root, map[string]string{
+			"sub/a.proto": "syntax = \"proto3\";\npackage alpha;\nmessage HiddenOne {}\n",
+			"b.proto":     "syntax = \"proto3\";\npackage beta;\nmessage VisibleOne {}\n",
+		})
+		app := New(Options{
+			Logger:              logger.NewNop(),
+			LinkedRules:         []LintRule{&doubleRuleAlpha{}},
+			IgnoreOnly:          map[string][]string{"DOUBLE_RULE_ALPHA": {"sub"}},
+			AllowCommentIgnores: false,
+			KnownLintRules:      []string{"DOUBLE_RULE_ALPHA"},
+		})
+		got, err := app.LintLinked(t.Context(), fs.NewFSWalker(root, "."))
+		require.NoError(t, err)
+
+		// Prefix semantics, not exact match: the "sub" entry suppresses
+		// "sub/a.proto" while the finding outside the prefix survives.
+		require.Len(t, got, 1)
+		assert.Equal(t, "b.proto", got[0].Path)
+		assert.Equal(t, "DOUBLE_RULE_ALPHA", got[0].RuleName)
+	})
+
+	t.Run("ignore_only_finish_refilter", func(t *testing.T) {
+		t.Parallel()
+
+		root := t.TempDir()
+		require.NoError(t, os.MkdirAll(filepath.Join(root, "sub"), 0o755))
+		writeCorpusInto(t, root, map[string]string{
+			"sub/a.proto": "syntax = \"proto3\";\npackage alpha;\nmessage HiddenOne {}\n",
+			"b.proto":     "syntax = \"proto3\";\npackage beta;\nmessage VisibleOne {}\n",
+		})
+		module := &finishIssueModuleRule{issues: []IssueInfo{
+			{Path: "sub/a.proto", Issue: Issue{Position: Position{Line: 1, Column: 1}, Message: "module finish finding", RuleName: "FINISH_ISSUE_MODULE_RULE"}},
+			{Path: "b.proto", Issue: Issue{Position: Position{Line: 1, Column: 1}, Message: "module finish finding", RuleName: "FINISH_ISSUE_MODULE_RULE"}},
+		}}
+		app := newLinkedEngine(nil, false, map[string][]string{"FINISH_ISSUE_MODULE_RULE": {"sub"}}, module)
+		got, err := app.LintLinked(t.Context(), fs.NewFSWalker(root, "."))
+		require.NoError(t, err)
+
+		// shouldIgnoreLinked applies to Finish output (D-05): the ignoreOnly
+		// path's Finish finding is dropped, the one outside survives. The
+		// ignoreOnly key is the rule's registry name, as in main.
+		require.Len(t, got, 1)
+		assert.Equal(t, "b.proto", got[0].Path)
+		assert.Equal(t, "FINISH_ISSUE_MODULE_RULE", got[0].RuleName)
+	})
+
+	t.Run("finish_comment_refilter", func(t *testing.T) {
+		t.Parallel()
+
+		// single.proto: the disable sits on line 5 above SuppressedOne on
+		// line 6, so the suppression range covers exactly line 6.
+		single := "syntax = \"proto3\";\n\npackage alpha;\n\n// easyp:disable DOUBLE_RULE_ALPHA\nmessage SuppressedOne {}\n"
+		for _, tc := range []struct {
+			name  string
+			allow bool
+			want  int
+		}{
+			{name: "allow_drops_finish_finding", allow: true, want: 0},
+			{name: "disallow_keeps_finish_finding", allow: false, want: 1},
+		} {
+			t.Run(tc.name, func(t *testing.T) {
+				t.Parallel()
+
+				root := writeCorpus(t, map[string]string{"single.proto": single})
+				module := &finishIssueModuleRule{issues: []IssueInfo{{
+					Path:  "single.proto",
+					Issue: Issue{Position: Position{Line: 6, Column: 1}, Message: "module finish finding", RuleName: "DOUBLE_RULE_ALPHA"},
+				}}}
+				app := newLinkedEngine([]string{"DOUBLE_RULE_ALPHA"}, tc.allow, nil, module)
+				got, err := app.LintLinked(t.Context(), fs.NewFSWalker(root, "."))
+				require.NoError(t, err)
+
+				// The Finish-side half of the central filter: the Finish
+				// finding on the suppressed line is dropped under
+				// AllowCommentIgnores and kept without it.
+				require.Len(t, got, tc.want)
+				if tc.want == 1 {
+					assert.Equal(t, "single.proto", got[0].Path)
+					assert.Equal(t, "DOUBLE_RULE_ALPHA", got[0].RuleName)
+				}
+			})
+		}
+	})
+
+	t.Run("tab_directive_position_pin", func(t *testing.T) {
+		t.Parallel()
+
+		// Suppression matches by LINE: a tab before the comment marker does
+		// not affect which lines the directive covers (the matching key never
+		// diverges between the engines).
+		root := writeCorpus(t, map[string]string{
+			"tabbed.proto": prefix + "\t// easyp:disable DOUBLE_RULE_ALPHA\nmessage tabbed_bad {}\n",
+		})
+		app := newLinkedEngine([]string{"DOUBLE_RULE_ALPHA"}, true, nil, &doubleRuleAlpha{})
+		got, err := app.LintLinked(t.Context(), fs.NewFSWalker(root, "."))
+		require.NoError(t, err)
+		require.Empty(t, got)
+
+		// Directive validation errors embed the comment position in protoast's
+		// rune-based convention: the tab advances the column by exactly one,
+		// so the marker sits at column 2 (asserted as a hand-computed literal,
+		// not derived from the engine). The old path's go-protoparser metadata
+		// is byte-oriented and protoc's COMPILE positions use tab stops of 8,
+		// so column-level divergence on tabbed or multi-byte lines is a
+		// Phase 5 observable (research A4, pinned here, not silently accepted).
+		root = writeCorpus(t, map[string]string{
+			"taberr.proto": prefix + "message keep_me {}\n\n\t// nolint:UNKNOWN_DOUBLE\n",
+		})
+		app = newLinkedEngine([]string{"DOUBLE_RULE_ALPHA"}, true, nil, &doubleRuleAlpha{})
+		_, err = app.LintLinked(t.Context(), fs.NewFSWalker(root, "."))
+		require.ErrorContains(t, err, `taberr.proto:4:2: unknown or unsupported lint rule "UNKNOWN_DOUBLE" in comment directive`)
+	})
 }
