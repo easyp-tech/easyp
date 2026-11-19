@@ -17,7 +17,7 @@ func TestEnumFirstValueZero_Message(t *testing.T) {
 
 	const expMessage = "enum first value must be zero"
 
-	rule := rules.EnumFirstValueZero{}
+	rule := rules.EnumFirstValueZeroLinked{}
 	message := rule.Message()
 
 	assert.Equal(expMessage, message)
@@ -72,17 +72,42 @@ func TestEnumFirstValueZero_Validate(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			r, protos := start(t)
+			rule := rules.EnumFirstValueZeroLinked{}
 
-			rule := rules.EnumFirstValueZero{}
-			issues, err := rule.Validate(protos[tc.fileName])
-			r.ErrorIs(err, tc.wantErr)
+			issues, err := rule.Validate(parseLinkedFile(t, tc.fileName))
+			require.ErrorIs(t, err, tc.wantErr)
 			switch {
 			case tc.wantIssues != nil:
-				r.Contains(issues, *tc.wantIssues)
+				require.Contains(t, issues, *tc.wantIssues)
 			case len(issues) > 0:
-				r.Empty(issues)
+				require.Empty(t, issues)
 			}
 		})
 	}
+}
+
+func TestEnumFirstValueZero_EmptyEnumGuard(t *testing.T) {
+	t.Parallel()
+
+	// Unit pin for the one documented deviation (research A7, threat T-04-10):
+	// main indexes the first value unguarded and panics on an empty enum; the
+	// port keeps the guard so Validate stays total. protoc rejects empty enums,
+	// so the engine path never sees one — the fixture is parsed directly here,
+	// bypassing the compile gate.
+	const src = `syntax = "proto3";
+
+package guard;
+
+enum Empty {
+}
+`
+
+	file, err := protoast.Parse("empty.proto", []byte(src))
+	require.NoError(t, err)
+
+	rule := rules.EnumFirstValueZeroLinked{}
+
+	issues, err := rule.Validate(core.LinkedFileInfo{Path: "empty.proto", File: file})
+	require.NoError(t, err)
+	require.Empty(t, issues)
 }

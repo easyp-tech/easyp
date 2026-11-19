@@ -27,14 +27,14 @@ import (
 //	DirectorySamePackage         -> DirectorySamePackageLinked         (batch 1)
 //	PackageDefined               -> PackageDefinedLinked               (batch 1)
 //	PackageSameDirectory         -> PackageSameDirectoryLinked         (batch 1)
-//	EnumFirstValueZero           -> (placeholder, batch 3)
-//	EnumNoAllowAlias             -> (placeholder, batch 3)
+//	EnumFirstValueZero           -> EnumFirstValueZeroLinked           (batch 3)
+//	EnumNoAllowAlias             -> EnumNoAllowAliasLinked             (batch 3)
 //	EnumPascalCase               -> EnumPascalCaseLinked               (batch 2)
 //	EnumValueUpperSnakeCase      -> EnumValueUpperSnakeCaseLinked      (batch 2)
 //	FieldLowerSnakeCase          -> FieldLowerSnakeCaseLinked          (batch 2)
 //	ImportNoPublic               -> ImportNoPublicLinked               (batch 2)
 //	ImportNoWeak                 -> ImportNoWeakLinked                 (batch 2)
-//	ImportUsed                   -> (placeholder, batch 3)
+//	ImportUsed                   -> ImportUsedLinked                   (batch 3)
 //	MessagePascalCase            -> MessagePascalCaseLinked            (batch 2)
 //	OneofLowerSnakeCase          -> OneofLowerSnakeCaseLinked          (batch 2)
 //	PackageLowerSnakeCase        -> PackageLowerSnakeCaseLinked        (batch 2)
@@ -79,14 +79,14 @@ func NewLinked(cfg config.LintConfig) ([]core.LintRule, map[string][]string, err
 		&PackageSameDirectoryLinked{},
 
 		//	basicGroup — batch 2 (casing) and batch 3 (semantic)
-		// &EnumFirstValueZeroLinked{},
-		// &EnumNoAllowAliasLinked{},
+		&EnumFirstValueZeroLinked{},
+		&EnumNoAllowAliasLinked{},
 		&EnumPascalCaseLinked{},
 		&EnumValueUpperSnakeCaseLinked{},
 		&FieldLowerSnakeCaseLinked{},
 		&ImportNoPublicLinked{},
 		&ImportNoWeakLinked{},
-		// &ImportUsedLinked{},
+		&ImportUsedLinked{},
 		&MessagePascalCaseLinked{},
 		&OneofLowerSnakeCaseLinked{},
 		&PackageLowerSnakeCaseLinked{},
