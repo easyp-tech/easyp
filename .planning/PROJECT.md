@@ -31,12 +31,12 @@ EasyP остаётся drop-in buf-совместимым инструменто
 - ✓ Git-центричные зависимости: `protobuf.mod` / `protobuf.lock`, verified checkouts, vendoring — existing
 - ✓ v1-конфигурация: `easyp.yaml`, `easyp.gen.yaml`, JSON-схемы (`task schema:generate`), MCP-сервер конфигурации — existing
 - ✓ Миграция legacy → v1 (`easyp migrate`, интерактивный мастер) — existing
+- ✓ Вендоринг компилятора `easypc` и модели `protoast` из compiler-lab — Phase 1 (байт-verbatim, ноль новых зависимостей, пустой дифф поведения)
 
 ### Active
 
 Milestone «Миграция линтера на собственный компилятор» — полный список в REQUIREMENTS.md (LINT-*):
 
-- [ ] Вендоринг компилятора `easypc` и модели `protoast` из compiler-lab (без внешних зависимостей)
 - [ ] Новый lint-движок на слинкованных деревьях `easypc` с сохранением подавлений/`ignore`/валидации конфига
 - [ ] Паритет всех 43 текущих правил на корпусах `api-common` и `googleapis-nocompute`
 - [ ] Новые правила `PACKAGE_NO_IMPORT_CYCLE`, `SYNTAX_SPECIFIED`, `FIELD_NOT_REQUIRED` + обновление схем и MCP-описаний
@@ -72,9 +72,10 @@ Milestone «Миграция линтера на собственный комп
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
 | Эталон — compiler-lab, а не написание с нуля | Реализация уже проверена: паритет замечаний и 0.08 с на `compute.proto` в лаборатории | — Pending |
-| Компилятор вендорится как `internal/easypc`, без внешнего модуля | Нет новых внешних зависимостей и `replace` (REQ-1.2) | — Pending |
+| Компилятор вендорится как `internal/easypc`, без внешнего модуля | Нет новых внешних зависимостей и `replace` (REQ-1.2) | ✓ Phase 1 — ноль новых require/replace, go.sum нетронут |
 | Требования перенесены из `.spec/features/lint-easypc-infra/requirements.md` без переосмысления | Документ прошёл interview и In Review | — Pending |
 | Остальные подсистемы остаются на go-protoparser | Минимизация риска milestone; перевод — будущие фичи | — Pending |
+| Точечные lint-исключения для дословно вендоренного кода (QF1001/casing.go, U1000/lint_helpers.go) вместо правки апстрима | D-01 байт-идентичность + зелёный lint-гейт несовместимы иначе; исправления уходят апстримом и приходят re-sync | ✓ Phase 1 — ратифицировано на UAT (2026-11-19) |
 
 ## Evolution
 
@@ -94,4 +95,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-11-17 after initialization*
+*Last updated: 2026-11-19 after Phase 1*

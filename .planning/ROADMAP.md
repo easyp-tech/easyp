@@ -12,7 +12,7 @@ Milestone «Миграция линтера на собственный комп
 
 Decimal phases appear between their surrounding integers in numeric order.
 
-- [ ] **Phase 1: Вендоринг компилятора и расчленение модели** - easypc + protoast вкопированы без новых зависимостей; lint-путь отделён от модели breaking
+- [x] **Phase 1: Вендоринг компилятора и расчленение модели** - easypc + protoast вкопированы без новых зависимостей; lint-путь отделён от модели breaking (completed 2026-11-19)
 - [ ] **Phase 2: Линкер и маршрутизация ошибок** - линковка корпусов с трёхсторонней классификацией: COMPILE / откат при отсутствующем импорте / ошибки чтения-синтаксиса
 - [ ] **Phase 3: Двухпроходный движок и подавления** - параллельные окна, ModuleRule, детерминированный порядок, паритет ignore/комментариев/валидации конфига
 - [ ] **Phase 4: Перенос 43 правил с батч-паритетом** - все правила на protoast, семантика main побеждает лабораторию, паритет верифицируется на уровне батча
@@ -32,7 +32,7 @@ Decimal phases appear between their surrounding integers in numeric order.
   2. `go mod tidy` не изменяет `go.mod` и `go.sum` — ни одного нового внешнего модуля, ни `replace`
   3. `task test` и `task lint` зелёные после вендоринга и расчленения общей модели (`Issue.Position` на `protoast.Position`, `protoInfoRead` в собственности breaking) — поведение breaking/generate/`mod tidy`/`migrate` для пользователей не меняется
   4. Фиксатура с мультибайтовым UTF-8 содержимым доказывает, что позиции protoast воспроизводят контракт вывода main (1-based строка, 1-based колонка в рунах) — до начала любого переноса правил
-**Plans**: 4/4 plans executed
+**Plans**: 4/4 plans complete
 **Design note** (решить в /gsd-discuss-phase): полнота вендоринга `lint_helpers.go`/`casing.go` — целиком или только используемое линтером подмножество (LINT-VEND-01)
 **Plans**: 4 plans
 Plans:
@@ -127,7 +127,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Вендоринг компилятора и расчленение модели | 4/4 | In Progress | - |
+| 1. Вендоринг компилятора и расчленение модели | 4/4 | Complete    | 2026-11-19 |
 | 2. Линкер и маршрутизация ошибок | 0/TBD | Not started | - |
 | 3. Двухпроходный движок и подавления | 0/TBD | Not started | - |
 | 4. Перенос 43 правил с батч-паритетом | 0/TBD | Not started | - |
