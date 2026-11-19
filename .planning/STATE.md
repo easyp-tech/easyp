@@ -3,16 +3,16 @@ gsd_state_version: "1.0"
 current_phase: 04
 current_phase_name: Перенос 43 правил с батч-паритетом
 status: executing
-stopped_at: Phase 03 complete, ready to plan Phase 4
-last_updated: "2026-11-19T18:46:17.370Z"
+stopped_at: Completed 04-01-PLAN.md
+last_updated: "2026-11-19T19:02:36.882Z"
 last_activity: 2026-11-19
-last_activity_desc: Phase 03 complete, transitioned to Phase 4
-state_head: 34346a0900af6f0d98e3612aa47d75d7619f77d4
+last_activity_desc: Phase 04 execution started
+state_head: 0672a93529a12496f6ddcf10fa4a1bcef232c88a
 progress:
   total_phases: 7
   completed_phases: 3
   total_plans: 19
-  completed_plans: 12
+  completed_plans: 13
   percent: 43
 ---
 
@@ -36,14 +36,14 @@ progress:[████░░░░░░] 43%
 See: .planning/PROJECT.md (updated 2026-11-19)
 
 **Core value:** EasyP остаётся drop-in buf-совместимым инструментом: формат вывода, коды выхода и конфигурация не ломаются между версиями — миграции внутренностей незаметны пользователю.
-**Current focus:** Phase 03 — Двухпроходный движок и подавления
+**Current focus:** Phase 04 — Перенос 43 правил с батч-паритетом
 
 ## Current Position
 
-Phase: 04 (Перенос 43 правил с батч-паритетом) — READY TO EXECUTE
-Plan: Not started
+Phase: 04 (Перенос 43 правил с батч-паритетом) — EXECUTING
+Plan: 2 of 7
 Status: Ready to execute
-Last activity: 2026-11-19 — Phase 03 complete, transitioned to Phase 4
+Last activity: 2026-11-19 — Phase 04 execution started
 
 Progress: [███░░░░░░░] 29%
 
@@ -81,6 +81,7 @@ Progress: [███░░░░░░░] 29%
 | Phase 03 P02 | 19 min | 2 tasks | 2 files |
 | Phase 03 P03 | 10 min | 2 tasks | 2 files |
 | Phase 03 P04 | 12 min | 2 tasks | 2 files |
+| Phase 04 P01 | 13 min | 3 tasks | 10 files |
 
 ## Accumulated Context
 
@@ -118,6 +119,10 @@ Recent decisions affecting current work:
 - [Phase 03]: Validation parity = keep-untouched + prove: rules.New remains THE validator; guard asserts ErrInvalidRule identity + exact wrapped texts per selection — Any second engine-side name validation would create two error surfaces that drift; pinned behaviorally via valid_config cell (core.New has no error surface)
 - [Phase 03]: PACKAGE_NO_IMPORT_CYCLE special case pinned by parity guard until Phase 6 flip removes it — Main's deliberate exception stays byte-stable; removal is a Phase 6 decision, never silent
 - [Phase 03]: Phase closure gates green: dormancy/tidy/schema/lint clean; full -race suite green except pre-existing wazero race in internal/adapters/plugin (Phase-1 deferred item, out of scope) — Out-of-scope failure recorded with deferred-items reference per plan carve-out; fix owned before Phase 7 gate
+- [Phase 04]: assertBatchParity carries wantOldCount: expected old-side finding count asserted BEFORE the sorted-multiset compare in one engine run (T-04-02 anti-vacuity) — Makes each parity cell's old-side expectation a first-class assertion; a vacuous both-empty run can no longer pass silently
+- [Phase 04]: TestModuleRuleSet probes each registry name individually and skips not-yet-ported names; the plan's literal Use: rules.AllRuleNames() cannot be green while the linked registry holds only the pilot — Preserves the guard's stated purpose (catch accidental ModuleRule implementations on landing) while staying green; 04-07 strengthens to exact-set equality
+- [Phase 04]: Core-package tests use literal KnownLintRules lists instead of rules.AllRuleNames() — package core cannot import internal/rules (import cycle; 03-01 precedent) — The plan snippet was unimplementable as written; the literal list keeps the cell behavior-equivalent
+- [Phase 04]: Wave-0 keeps buildCore/Options.LinkedRules production wiring deferred to Phase 5 — LinkedRules is populated only from tests (dormancy trivially provable, easyp lint byte-identical) — Restates the 04-RESEARCH Open Question 3 resolution as the executed decision; recorded for the Phase-5 flip plan
 
 ### Pending Todos
 
@@ -143,6 +148,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-11-19T14:45:42.399Z
-Stopped at: Phase 03 complete, ready to plan Phase 4
+Last session: 2026-11-19T19:02:20.488Z
+Stopped at: Completed 04-01-PLAN.md
 Resume file: None

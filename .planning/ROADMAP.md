@@ -99,10 +99,10 @@ Plans:
   1. Все 43 правила дают на общих фиксатурах идентичные старой реализации замечания (правило, файл, строка, колонка); перенос выполняется батчами, и каждый батч верифицирован по паритету до начала следующего — корпусный lint-diff на финише остаётся воротами, а не сессией отладки
   2. Правила, чьё поведение изменилось в main после снятия лабораторной копии (например, подавления через комментарии), следуют семантике текущего main, а не лаборатории; colocated-тесты переносятся из main
   3. У каждого перенесённого правила есть colocated `<rule>_test.go`; `task test` и `task lint` зелёные на всех промежуточных состояниях фазы
-**Plans**: 7 plans
+**Plans**: 1/7 plans executed
 Plans:
 **Wave 1** (Batch 0 — infra + pilot)
-- [ ] 04-01-PLAN.md — Wave-0 infrastructure (tracer): linked issue constructor + LintRuleName override, NewLinked registry, parity harness (old-vs-new sorted multiset), Decl.Pos position probe, TestModuleRuleSet guard, readSource-once disk-instrumentation cell; pilot port PackageDirectoryMatch with carried main tests
+- [x] 04-01-PLAN.md — Wave-0 infrastructure (tracer): linked issue constructor + LintRuleName override, NewLinked registry, parity harness (old-vs-new sorted multiset), Decl.Pos position probe, TestModuleRuleSet guard, readSource-once disk-instrumentation cell; pilot port PackageDirectoryMatch with carried main tests
 
 **Wave 2** *(blocked on Wave 1)*
 - [ ] 04-02-PLAN.md — Batch 1 MINIMAL (4 rules): DirectorySamePackage/PackageSameDirectory as first-exempt ModuleRules, PackageDefined 0:0 zero position; firstExemptMismatches helper; pilot re-verified cumulatively
@@ -168,7 +168,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 | 1. Вендоринг компилятора и расчленение модели | 4/4 | Complete    | 2026-11-19 |
 | 2. Линкер и маршрутизация ошибок | 4/4 | Complete    | 2026-11-19 |
 | 3. Двухпроходный движок и подавления | 4/4 | Complete    | 2026-11-19 |
-| 4. Перенос 43 правил с батч-паритетом | 0/7 | Not started | - |
+| 4. Перенос 43 правил с батч-паритетом | 1/7 | In Progress | - |
 | 5. Переключение lint-пути и ворота совместимости | 0/TBD | Not started | - |
 | 6. Новые правила и регенерация схем/MCP | 0/TBD | Not started | - |
 | 7. Приёмка — паритет корпусов и производительность | 0/TBD | Not started | - |
