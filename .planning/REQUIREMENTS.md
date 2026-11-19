@@ -20,7 +20,7 @@ Requirements for milestone «Миграция линтера на собстве
 - [x] **LINT-ENG-02** (REQ-2.2): WHEN хотя бы один файл корпуса не проходит линковку (ошибки компиляции, не связанные с отсутствующим импортом), the system SHALL выдать для этих файлов замечания с именем правила `COMPILE` (позиция и сообщение компилятора) и не запускать правила на корпусе
 - [x] **LINT-ENG-03** (REQ-2.3): WHEN линковка невозможна из-за отсутствующего импорта, the system SHALL вернуться к разбору каждого файла по отдельности и репортить ошибку чтения/синтаксиса как до этого изменения (без COMPILE issues)
 - [x] **LINT-ENG-04** (REQ-2.4): WHEN файл содержит ошибки чтения или синтаксиса, the system SHALL вернуть ошибку выполнения команды для этого файла как до изменения
-- [ ] **LINT-ENG-05** (REQ-2.5): WHEN правило включено и файл попадает под `ignore`/`ignore_only` или подавление комментариями (`allowCommentIgnores`), the system SHALL применять те же правила подавления, что и текущий main
+- [x] **LINT-ENG-05** (REQ-2.5): WHEN правило включено и файл попадает под `ignore`/`ignore_only` или подавление комментариями (`allowCommentIgnores`), the system SHALL применять те же правила подавления, что и текущий main
 - [ ] **LINT-ENG-06** (REQ-2.6): WHEN конфигурация lint содержит неизвестное имя правила или группы в `lint.use`, the system SHALL вернуть ошибку валидации как до изменения
 
 ### Parity
@@ -104,7 +104,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | LINT-ENG-02 | Phase 2 | Complete |
 | LINT-ENG-03 | Phase 2 | Complete |
 | LINT-ENG-04 | Phase 2 | Complete |
-| LINT-ENG-05 | Phase 3 | Pending |
+| LINT-ENG-05 | Phase 3 | Complete |
 | LINT-ENG-06 | Phase 3 | Pending |
 | LINT-PARITY-01 | Phase 7 | Pending |
 | LINT-PARITY-02 | Phase 4 | Pending |

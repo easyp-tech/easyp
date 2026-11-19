@@ -3,16 +3,16 @@ gsd_state_version: "1.0"
 current_phase: 03
 current_phase_name: Двухпроходный движок и подавления
 status: executing
-stopped_at: Completed 03-01-PLAN.md
-last_updated: "2026-11-19T13:46:18.077Z"
+stopped_at: Completed 03-02-PLAN.md
+last_updated: "2026-11-19T14:11:53.864Z"
 last_activity: 2026-11-19
 last_activity_desc: Phase 03 execution started
-state_head: c5f7f4b9629166fb6869b7542865257ed883f4e5
+state_head: 2f197d3ed4801670262cbf358e103da5d28fccb0
 progress:
   total_phases: 7
   completed_phases: 2
   total_plans: 12
-  completed_plans: 9
+  completed_plans: 10
   percent: 29
 ---
 
@@ -41,7 +41,7 @@ See: .planning/PROJECT.md (updated 2026-11-19)
 ## Current Position
 
 Phase: 03 (Двухпроходный движок и подавления) — EXECUTING
-Plan: 2 of 4
+Plan: 3 of 4
 Status: Ready to execute
 Last activity: 2026-11-19 — Phase 03 execution started
 
@@ -77,6 +77,7 @@ Progress: [███░░░░░░░] 29%
 | Phase 02 P03 | 25 min | 3 tasks | 1 files |
 | Phase 02 P04 | 5 min | 2 tasks | 2 files |
 | Phase 03 P01 | 20 min | 2 tasks | 8 files |
+| Phase 03 P02 | 19 min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -105,6 +106,9 @@ Recent decisions affecting current work:
 - [Phase 03]: New linked engine reads Core.linkedRules (additive Options.LinkedRules); old engine keeps c.rules — dual contract never crosses (research A1) — New linked engine reads Core.linkedRules (additive Options.LinkedRules); old engine keeps c.rules — dual contract never crosses (research A1)
 - [Phase 03]: Parameter type pins the old shouldIgnore to the old contract, so lint_linked.go mirrors it as shouldIgnoreLinked with byte-for-byte main semantics — Parameter type pins the old shouldIgnore to the old contract, so lint_linked.go mirrors it as shouldIgnoreLinked with byte-for-byte main semantics
 - [Phase 03]: Main-wins wrapper pinned now: drain wraps per-file model errors with the exact literal fs.WalkDir: c.lintProtoInfoRead: (parity pin, not the callee), proven by exact-string cells — Main-wins wrapper pinned now: drain wraps per-file model errors with the exact literal fs.WalkDir: c.lintProtoInfoRead: (parity pin, not the callee), proven by exact-string cells
+- [Phase 03]: Parity double mirrors the oracle rule exactly (rules.MessagePascalCase regexp + top-level walk) so old-path expectations carry over verbatim — A generic double mis-reports well-named messages the oracle rule never reports; parity requires matching finding sets
+- [Phase 03]: Tab directive pin asserts a hand-computed rune-column literal with the A4 byte-vs-rune divergence documented as a Phase 5 observable — Expectations are never derived from the engine under test; column divergence is pinned, not silently accepted
+- [Phase 03]: No engine divergence found across all 21 suppression fixtures: lint_suppressions.go and lint_linked.go stayed untouched — The protoast owner walk is proven equivalent to main's reflection walk on the whole EOF matrix; 03-03 inherits no engine fix mandate
 
 ### Pending Todos
 
@@ -128,6 +132,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-11-19T13:46:06.217Z
-Stopped at: Completed 03-01-PLAN.md
+Last session: 2026-11-19T14:11:53.701Z
+Stopped at: Completed 03-02-PLAN.md
 Resume file: None

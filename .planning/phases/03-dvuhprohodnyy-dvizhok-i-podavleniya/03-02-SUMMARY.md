@@ -180,3 +180,11 @@ None - no external service configuration required.
 ---
 *Phase: 03-dvuhprohodnyy-dvizhok-i-podavleniya*
 *Completed: 2026-11-19*
+
+## Self-Check: PASSED
+
+- internal/core/lint_suppressions_parity_test.go exists on disk
+- Commits 3b62bef, 4f0f12a, 2016db0 (tasks) and 2f197d3 (docs) are ancestors of HEAD
+- `gsd_run check evaluation-scope --plan 03-02 --commits-only` resolved with 4 plan-subject commits
+- All task acceptance criteria re-run after all tasks: green (see Verification Log)
+- Plan-level <verification> suite re-run: all green; LINT-ENG-05 marking deferred by the #2388 shared-ID gate pending sibling summaries (03-03/03-04)
