@@ -136,7 +136,7 @@ func TestLintLinked(t *testing.T) {
 		root := writeCorpus(t, map[string]string{
 			"a.proto": "syntax = \"proto3\";\n\npackage alpha;\n\nmessage AlphaOne {\n  string name = 1;\n}\n\nmessage AlphaTwo {\n  string id = 1;\n}\n",
 			"b.proto": "syntax = \"proto3\";\n\npackage beta;\n\nmessage BetaOne {\n  string name = 1;\n}\n",
-			"c.proto": "syntax = \"proto3\";\n\npackage gamma;\n\nimport \"b.proto\";\n\nmessage GammaOne {\n  b.BetaOne ref = 1;\n}\n",
+			"c.proto": "syntax = \"proto3\";\n\npackage gamma;\n\nimport \"b.proto\";\n\nmessage GammaOne {\n  beta.BetaOne ref = 1;\n}\n",
 		})
 		alpha := &doubleRuleAlpha{}
 		beta := &doubleRuleBeta{}
@@ -310,7 +310,9 @@ func TestLintLinked(t *testing.T) {
 			"f0.proto": "syntax = \"proto3\";\n\npackage racepkg;\n\nmessage SharedBase {\n  string id = 1;\n}\n\nmessage Second {\n  string name = 1;\n}\n",
 		}
 		for i := 1; i < 8; i++ {
-			files[fmt.Sprintf("f%d.proto", i)] = "syntax = \"proto3\";\n\npackage racepkg;\n\nimport \"f0.proto\";\n\nmessage FiOne {\n  SharedBase base = 1;\n}\n\nmessage FiTwo {\n  string x = 1;\n}\n"
+			// Message names stay unique across the shared package: proto files
+			// of one package share one namespace.
+			files[fmt.Sprintf("f%d.proto", i)] = fmt.Sprintf("syntax = \"proto3\";\n\npackage racepkg;\n\nimport \"f0.proto\";\n\nmessage F%dOne {\n  SharedBase base = 1;\n}\n\nmessage F%dTwo {\n  string x = 1;\n}\n", i, i)
 		}
 		root := writeCorpus(t, files)
 		// Shared instances across the whole corpus: every worker checks files

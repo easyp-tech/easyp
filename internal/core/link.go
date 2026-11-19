@@ -143,3 +143,78 @@ func (r *lintResolver) FindFileByPath(ctx context.Context, path string) ([]byte,
 	}
 	return src, nil
 }
+
+// resolution derives the per-file facts rules need from the linked set.
+func resolution(linked *protoc.Linked, path string) *Resolution {
+	file, ok := linked.File(path)
+	if !ok {
+		return nil
+	}
+	res := &Resolution{
+		UsedImports: make(map[ImportPath]bool, len(file.Imports)),
+		RPCTypes:    make(map[int][2]string, len(file.Methods)),
+	}
+	for _, imp := range file.Imports {
+		res.UsedImports[ImportPath(imp.Path)] = usesThrough(linked, file, imp.Path)
+	}
+	for _, m := range file.Methods {
+		res.RPCTypes[int(m.Offset)] = [2]string{m.Input, m.Output}
+	}
+	return res
+}
+
+// usesThrough reports whether file uses a name from imported or from a file
+// that imported re-exports through public imports.
+func usesThrough(linked *protoc.Linked, file *protoc.LinkedFile, imported string) bool {
+	seen := map[string]bool{}
+	queue := []string{imported}
+	for len(queue) > 0 {
+		path := queue[0]
+		queue = queue[1:]
+		if seen[path] {
+			continue
+		}
+		seen[path] = true
+		if file.Uses[path] {
+			return true
+		}
+		if dep, ok := linked.File(path); ok {
+			for _, imp := range dep.Imports {
+				if imp.Public {
+					queue = append(queue, imp.Path)
+				}
+			}
+		}
+	}
+	return false
+}
+
+// linkedFiles serves lint models and import outlines from one Link result. It
+// wraps the raw *protoc.Linked the linkSources classifier returns.
+type linkedFiles struct {
+	linked   *protoc.Linked
+	mu       sync.Mutex
+	outlines map[string]*linkedOutline
+}
+
+type linkedOutline struct {
+	once sync.Once
+	file *protoast.File
+}
+
+// outline returns the outline of a linked file, computed once from its tree.
+func (l *linkedFiles) outline(path string) (*protoast.File, bool) {
+	file, ok := l.linked.File(path)
+	if !ok {
+		return nil, false
+	}
+	l.mu.Lock()
+	entry, ok := l.outlines[path]
+	if !ok {
+		entry = &linkedOutline{}
+		l.outlines[path] = entry
+	}
+	l.mu.Unlock()
+	entry.once.Do(func() { entry.file = protoast.OutlineOf(file.Syntax) })
+	return entry.file, true
+}
