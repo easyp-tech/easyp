@@ -56,14 +56,14 @@ Plans:
   2. Корпус с отсутствующим импортом откатывается на разбор каждого файла по отдельности и репортит ошибки чтения/синтаксиса как до изменения, без `COMPILE`-замечаний; типизированная ошибка отсутствующего импорта (`OpenImportFileError`) доходит до существующего пути exit-кода 2
   3. Файл с ошибкой чтения или синтаксиса возвращает ошибку выполнения команды для этого файла в точности как до изменения
   4. Фиксатурная матрица всех трёх классов ошибок (компиляция / отсутствующий импорт / чтение-синтаксис) проходит с кодами выхода CLI, проверенными через путь Action — до врезки движка в `easyp lint`
-**Plans**: 2/3 plans executed
+**Plans**: 3/3 plans executed
 Plans:
 **Wave 1**
 - [x] 02-01-PLAN.md — Corpus linker tracer: typed resolver seam (D-01) + three-outcome classification (linked / COMPILE issues / fallback) in internal/core/link.go, COMPILE shape pinned at etalon numbers (LINT-ENG-02/03)
 
 **Wave 2** *(blocked on Wave 1 completion)*
 - [x] 02-02-PLAN.md — Classification matrix completion: syntax-over-COMPILE precedence (LINT-ENG-04), missing-import variants (transitive/blocked/WKT/non-local), tab-UTF-8 LineCol pinning, testdata tree
-- [ ] 02-03-PLAN.md — Action-path matrix (D-05): in-process actionV1 error classes, subprocess exit codes 0/1/2, COMPILE printIssues golden; lint.go/api untouched (dormancy)
+- [x] 02-03-PLAN.md — Action-path matrix (D-05): in-process actionV1 error classes, subprocess exit codes 0/1/2, COMPILE printIssues golden; lint.go/api untouched (dormancy)
 **Research flag**: классификация ошибок линковки — поверхность высочайшего риска (semantic cliff); резолвер идёт через `importRoots` + `importFileAllowed` + `wellknownimports`, без обхода
 
 ### Phase 3: Двухпроходный движок и подавления
@@ -135,7 +135,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Вендоринг компилятора и расчленение модели | 4/4 | Complete    | 2026-11-19 |
-| 2. Линкер и маршрутизация ошибок | 2/3 | In Progress | - |
+| 2. Линкер и маршрутизация ошибок | 3/3 | In Progress | - |
 | 3. Двухпроходный движок и подавления | 0/TBD | Not started | - |
 | 4. Перенос 43 правил с батч-паритетом | 0/TBD | Not started | - |
 | 5. Переключение lint-пути и ворота совместимости | 0/TBD | Not started | - |
