@@ -129,7 +129,9 @@ None yet.
 - [Roadmap] Открытые design-вопросы из REQUIREMENTS.md маршрутизированы по фазам (Design note в ROADMAP.md), решаются в /gsd-discuss-phase, не в roadmap
 - Phase 1 complete (4/4). Phase-4 note: remove the lint_helpers.go paths exclusion when helpers gain callers; re-check QF1001 casing rule at next compiler-lab re-sync
 - Phase 2 complete (4/4). Phase-5 notes (deferred from code review, 02-REVIEW-DISPOSITION.md): WR-01 (import open/read failures misclassify as COMPILE — filepath.IsLocal pre-check + broken atomic), WR-02 (lintResolver bypasses importFileAllowed/sourceFileOpen for corpus files), IN-01 (FindFileByPath ctx guard), IN-02 (COMPILE diagnostics vs shouldIgnore) — fold into the Phase 5 flip plan. Natural-warn fixture re-pin (A3) and full class-1 matrix through Action — Phase 5 re-runs
-- Pre-existing wazero data race (internal/adapters/plugin, -race) — dedicated subsystem fix needed before the Phase 7 full-suite gate (deferred-items.md, Phase 1 acknowledged)
+- Pre-existing wazero data race (internal/adapters/plugin, -race) — dedicated subsystem fix needed before the Phase 7 full-suite gate (deferred-items.md, Phase 1 acknowledged). VERIFIER CORRECTION (Phase 3): poisons TWO packages — internal/adapters/plugin AND internal/generation (race stack through BuiltinPluginExecutor.Execute()); same root cause
+- Phase 3 complete (4/4). Phase-4 standing constraints (UAT-ratified 2026-11-19, ROADMAP backlog 999.1/999.2): disk-instrumentation cell (readSource once per corpus file) + suppression-centrality at every rule-port batch (central-filter cells stay green); rules never self-suppress
+- Phase 3: engine reads rules from new additive Core.linkedRules []LintRule / Options.LinkedRules (old engine keeps c.rules — dormancy provable); rename map in lint_model.go header — consolidate at Phase 5
 
 ## Deferred Items
 

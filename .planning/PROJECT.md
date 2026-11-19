@@ -77,6 +77,8 @@ Milestone «Миграция линтера на собственный комп
 | Остальные подсистемы остаются на go-protoparser | Минимизация риска milestone; перевод — будущие фичи | — Pending |
 | Точечные lint-исключения для дословно вендоренного кода (QF1001/casing.go, U1000/lint_helpers.go) вместо правки апстрима | D-01 байт-идентичность + зелёный lint-гейт несовместимы иначе; исправления уходят апстримом и приходят re-sync | ✓ Phase 1 — ратифицировано на UAT (2026-11-19) |
 | Классификация отказов линковки — типизированный шов резолвера (не парсинг текста диагностик) + корпусный откат при отсутствующем импорте | `protoc.ErrFileNotFound`/`OpenImportFileError` — типизированный канал надёжнее строкового матчинга; откат соответствует букве REQ-2.3 | ✓ Phase 2 — dormant-классификатор, exit-коды 0/1/2 доказаны через Action-путь |
+| Новые идентификаторы вместо моста: LintLinked/LinkedFileInfo/LintRule/linkedCommentSuppressions в новых файлах core | 10 коллизий имён со старым контрактом в пакете core; bridge — антипаттерн (research); консолидация имён — Phase 5 | ✓ Phase 3 — dormant-движок, 49+15 ячеек под -race |
+| Детерминизм вывода — усиление, не паритет: тотальная сортировка (path, rule, line, col) на выходе движка | Порядок main не контракт (map iteration); паритет порядка ломает детерминизм без пользы | ✓ Phase 3 — repeated_runs_byte_identical (5 прогонов) |
 
 ## Evolution
 
@@ -96,4 +98,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-11-19 after Phase 2*
+*Last updated: 2026-11-19 after Phase 3*
