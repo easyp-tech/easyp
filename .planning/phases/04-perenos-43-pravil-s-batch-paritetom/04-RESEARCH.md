@@ -413,12 +413,12 @@ func validate(rule core.LintRule, infos ...core.LinkedFileInfo) ([]core.Issue, e
 | A6 | `NewLinked` returning `(rules, ignoreOnly-map, error)` mirroring `New` is the right shape for `Options.LinkedRules` wiring | Coexistence | Cosmetic; planner may reshape |
 | A7 | Keeping `EnumFirstValueZero`'s empty-enum guard (lab) while keeping main's string-compare is acceptable as the one deliberate deviation | #5 | If strict bug-for-bug is demanded, the port re-introduces a panic on a reachable-in-fallback input — recommend keeping the guard |
 
-## Open Questions
+## Open Questions (RESOLVED 2026-11-19 — dispositions recorded during plan revision; each implemented in the phase plans as cited)
 
-1. **swift_prefix bug-for-bug vs fix** (#22) — recommend pin + deferred decision; needs user ratification at discuss.
-2. **Deferred lab improvements** (cross-file RPCRequestResponseUnique, resolution-based ImportUsed, NamePos positions, helper casing) — park in a backlog note (ROADMAP 999.x style) so Phase 7 doesn't inherit silent expectations.
-3. **buildCore wiring timing** — populate `Options.LinkedRules` in Phase 4 (dormant) or Phase 5; planner discretion, no behavior impact.
-4. **Position mapping probe results** (A1) — Wave 0 confirms the per-kind table before batch 1.
+1. **swift_prefix bug-for-bug vs fix** (#22) — RESOLVED: bug-for-bug pin ratified; 04-04 Task 3 ports `PackageSameSwiftPrefixLinked` comparing the literal `ruby_package` option with documented pin comment, regression cells in the batch parity suite (`swift_prefix_bug_pin`) and carried test, threat T-04-09 mitigates a silent "fix"; the corrected behavior is a deferred post-parity decision (ledgered in the 04-07 SUMMARY).
+2. **Deferred lab improvements** (cross-file RPCRequestResponseUnique, resolution-based ImportUsed, NamePos positions, helper casing) — RESOLVED: parked as explicit deferred-decision items, never adopted silently — 04-04 Task 2 (ImportUsed syntax-walk unconditionally, prohibition + grep), 04-05 Tasks 2-3 (main algorithms byte-verbatim, per-file uniqueness), and the phase-close deferred-decisions ledger in 04-07 Task 3 item 7, so Phase 7 inherits no silent expectations.
+3. **buildCore wiring timing** — RESOLVED (planner discretion): deferred to Phase 5; `Options.LinkedRules` is populated only from tests during Phase 4 (dormancy invariant stated in every batch plan's standing constraints; 04-01 records it as the planner decision), keeping `easyp lint` byte-identical until the flip.
+4. **Position mapping probe results** (A1) — RESOLVED: closed by the Wave-0 probe `TestDeclPositionProbe` (04-01 Task 3) which pins `Decl.Pos == Meta.Pos` for all ten declaration kinds and records the mapping table in a comment before batch 1 starts; carried main test literals remain the per-batch oracle.
 
 ## Environment Availability
 
