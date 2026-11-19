@@ -47,14 +47,14 @@ import (
 //	PackageSameSwiftPrefix       -> PackageSameSwiftPrefixLinked       (batch 3; bug pin — compares ruby_package)
 //	RPCPascalCase                -> RPCPascalCaseLinked                (batch 2)
 //	ServicePascalCase            -> ServicePascalCaseLinked            (batch 2)
-//	EnumValuePrefix              -> (placeholder, batch 4)
-//	EnumZeroValueSuffix          -> (placeholder, batch 4)
-//	FileLowerSnakeCase           -> (placeholder, batch 4)
-//	RPCRequestResponseUnique     -> (placeholder, batch 4)
-//	RPCRequestStandardName       -> (placeholder, batch 4)
-//	RPCResponseStandardName      -> (placeholder, batch 4)
-//	PackageVersionSuffix         -> (placeholder, batch 4)
-//	ServiceSuffix                -> (placeholder, batch 4)
+//	EnumValuePrefix              -> EnumValuePrefixLinked              (batch 4)
+//	EnumZeroValueSuffix          -> EnumZeroValueSuffixLinked          (batch 4)
+//	FileLowerSnakeCase           -> FileLowerSnakeCaseLinked           (batch 4)
+//	RPCRequestResponseUnique     -> RPCRequestResponseUniqueLinked     (batch 4)
+//	RPCRequestStandardName       -> RPCRequestStandardNameLinked       (batch 4)
+//	RPCResponseStandardName      -> RPCResponseStandardNameLinked      (batch 4)
+//	PackageVersionSuffix         -> PackageVersionSuffixLinked         (batch 4)
+//	ServiceSuffix                -> ServiceSuffixLinked                (batch 4)
 //	CommentEnum                  -> (placeholder, batch 5)
 //	CommentEnumValue             -> (placeholder, batch 5)
 //	CommentField                 -> (placeholder, batch 5)
@@ -100,18 +100,18 @@ func NewLinked(cfg config.LintConfig) ([]core.LintRule, map[string][]string, err
 		&RPCPascalCaseLinked{},
 		&ServicePascalCaseLinked{},
 		//	defaultGroup — batch 4
-		// &EnumValuePrefixLinked{},
-		// &EnumZeroValueSuffixLinked{
-		// 	Suffix: defaultIfEmpty(cfg.EnumZeroValueSuffix, "UNSPECIFIED"),
-		// },
-		// &FileLowerSnakeCaseLinked{},
-		// &RPCRequestResponseUniqueLinked{},
-		// &RPCRequestStandardNameLinked{},
-		// &RPCResponseStandardNameLinked{},
-		// &PackageVersionSuffixLinked{},
-		// &ServiceSuffixLinked{
-		// 	Suffix: defaultIfEmpty(cfg.ServiceSuffix, "Service"),
-		// },
+		&EnumValuePrefixLinked{},
+		&EnumZeroValueSuffixLinked{
+			Suffix: defaultIfEmpty(cfg.EnumZeroValueSuffix, "UNSPECIFIED"),
+		},
+		&FileLowerSnakeCaseLinked{},
+		&RPCRequestResponseUniqueLinked{},
+		&RPCRequestStandardNameLinked{},
+		&RPCResponseStandardNameLinked{},
+		&PackageVersionSuffixLinked{},
+		&ServiceSuffixLinked{
+			Suffix: defaultIfEmpty(cfg.ServiceSuffix, "Service"),
+		},
 		//	commentsGroup — batch 5
 		// &CommentEnumLinked{},
 		// &CommentEnumValueLinked{},
