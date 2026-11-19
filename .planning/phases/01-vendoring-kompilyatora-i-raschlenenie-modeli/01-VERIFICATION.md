@@ -1,7 +1,7 @@
 ---
 phase: 01-vendoring-kompilyatora-i-raschlenenie-modeli
 verified: 2026-11-18T22:28:47Z
-status: human_needed
+status: passed
 score: 23/23 must-haves verified
 behavior_unverified: 0
 overrides_applied: 0
@@ -927,3 +927,9 @@ Awaiting human decision; no code changes are required by this verification.
 
 _Verified: 2026-11-18T22:28:47Z_
 _Verifier: Claude (gsd-verifier)_
+
+## Acknowledged Gaps
+
+Acknowledged during /gsd-verify-work 1 artifact scan (2026-11-19), user confirmed proceed:
+
+- deferred-items.md — "Pre-existing wazero data race fails `internal/adapters/plugin` under `-race` on this machine (go1.27.3)" — open; out of phase scope (reproduced on pristine HEAD before the vendor drop, upstream third-party code), dispositioned as FUTURE.
