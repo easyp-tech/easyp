@@ -29,15 +29,15 @@ import (
 //	PackageSameDirectory         -> PackageSameDirectoryLinked         (batch 1)
 //	EnumFirstValueZero           -> (placeholder, batch 3)
 //	EnumNoAllowAlias             -> (placeholder, batch 3)
-//	EnumPascalCase               -> (placeholder, batch 2)
-//	EnumValueUpperSnakeCase      -> (placeholder, batch 2)
-//	FieldLowerSnakeCase          -> (placeholder, batch 2)
-//	ImportNoPublic               -> (placeholder, batch 2)
-//	ImportNoWeak                 -> (placeholder, batch 2)
+//	EnumPascalCase               -> EnumPascalCaseLinked               (batch 2)
+//	EnumValueUpperSnakeCase      -> EnumValueUpperSnakeCaseLinked      (batch 2)
+//	FieldLowerSnakeCase          -> FieldLowerSnakeCaseLinked          (batch 2)
+//	ImportNoPublic               -> ImportNoPublicLinked               (batch 2)
+//	ImportNoWeak                 -> ImportNoWeakLinked                 (batch 2)
 //	ImportUsed                   -> (placeholder, batch 3)
-//	MessagePascalCase            -> (placeholder, batch 2)
-//	OneofLowerSnakeCase          -> (placeholder, batch 2)
-//	PackageLowerSnakeCase        -> (placeholder, batch 2)
+//	MessagePascalCase            -> MessagePascalCaseLinked            (batch 2)
+//	OneofLowerSnakeCase          -> OneofLowerSnakeCaseLinked          (batch 2)
+//	PackageLowerSnakeCase        -> PackageLowerSnakeCaseLinked        (batch 2)
 //	PackageSameCsharpNamespace   -> (placeholder, batch 3)
 //	PackageSameGoPackage         -> (placeholder, batch 3)
 //	PackageSameJavaMultipleFiles -> (placeholder, batch 3)
@@ -45,8 +45,8 @@ import (
 //	PackageSamePHPNamespace      -> (placeholder, batch 3)
 //	PackageSameRubyPackage       -> (placeholder, batch 3)
 //	PackageSameSwiftPrefix       -> (placeholder, batch 3)
-//	RPCPascalCase                -> (placeholder, batch 2)
-//	ServicePascalCase            -> (placeholder, batch 2)
+//	RPCPascalCase                -> RPCPascalCaseLinked                (batch 2)
+//	ServicePascalCase            -> ServicePascalCaseLinked            (batch 2)
 //	EnumValuePrefix              -> (placeholder, batch 4)
 //	EnumZeroValueSuffix          -> (placeholder, batch 4)
 //	FileLowerSnakeCase           -> (placeholder, batch 4)
@@ -81,15 +81,15 @@ func NewLinked(cfg config.LintConfig) ([]core.LintRule, map[string][]string, err
 		//	basicGroup — batch 2 (casing) and batch 3 (semantic)
 		// &EnumFirstValueZeroLinked{},
 		// &EnumNoAllowAliasLinked{},
-		// &EnumPascalCaseLinked{},
-		// &EnumValueUpperSnakeCaseLinked{},
-		// &FieldLowerSnakeCaseLinked{},
-		// &ImportNoPublicLinked{},
-		// &ImportNoWeakLinked{},
+		&EnumPascalCaseLinked{},
+		&EnumValueUpperSnakeCaseLinked{},
+		&FieldLowerSnakeCaseLinked{},
+		&ImportNoPublicLinked{},
+		&ImportNoWeakLinked{},
 		// &ImportUsedLinked{},
-		// &MessagePascalCaseLinked{},
-		// &OneofLowerSnakeCaseLinked{},
-		// &PackageLowerSnakeCaseLinked{},
+		&MessagePascalCaseLinked{},
+		&OneofLowerSnakeCaseLinked{},
+		&PackageLowerSnakeCaseLinked{},
 		// &PackageSameCsharpNamespaceLinked{},
 		// &PackageSameGoPackageLinked{},
 		// &PackageSameJavaMultipleFilesLinked{},
@@ -97,8 +97,8 @@ func NewLinked(cfg config.LintConfig) ([]core.LintRule, map[string][]string, err
 		// &PackageSamePHPNamespaceLinked{},
 		// &PackageSameRubyPackageLinked{},
 		// &PackageSameSwiftPrefixLinked{},
-		// &RPCPascalCaseLinked{},
-		// &ServicePascalCaseLinked{},
+		&RPCPascalCaseLinked{},
+		&ServicePascalCaseLinked{},
 		//	defaultGroup — batch 4
 		// &EnumValuePrefixLinked{},
 		// &EnumZeroValueSuffixLinked{
