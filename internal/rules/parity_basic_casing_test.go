@@ -235,7 +235,7 @@ syntax = "proto3";
 package pos;
 
 enum bad_top_enum {
-  BAD_V = 0;
+  bad_value = 0;
 }
 
 message Req {}
@@ -253,12 +253,12 @@ service bad_service {
 		old := oldFindings(t, cfg, files)
 		require.Len(t, old, 6, "old-side finding count before the multiset compare")
 		for _, want := range []posKey{
-			{"ENUM_PASCAL_CASE", 5, 1},
-			{"ENUM_VALUE_UPPER_SNAKE_CASE", 6, 3},
-			{"MESSAGE_PASCAL_CASE", 12, 1},
-			{"FIELD_LOWER_SNAKE_CASE", 13, 3},
-			{"SERVICE_PASCAL_CASE", 16, 1},
-			{"RPC_PASCAL_CASE", 17, 3},
+			{"ENUM_PASCAL_CASE", 6, 1},
+			{"ENUM_VALUE_UPPER_SNAKE_CASE", 7, 3},
+			{"MESSAGE_PASCAL_CASE", 13, 1},
+			{"FIELD_LOWER_SNAKE_CASE", 14, 3},
+			{"SERVICE_PASCAL_CASE", 17, 1},
+			{"RPC_PASCAL_CASE", 18, 3},
 		} {
 			require.Contains(t, keys(old), want, "old-side keyword-position literal %v must reach the fingerprint", want)
 		}
