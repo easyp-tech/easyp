@@ -1,9 +1,14 @@
 package api
 
 import (
+	"bytes"
 	"flag"
+	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"runtime"
+	"sync"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -123,6 +128,109 @@ func TestLintLinkMatrix(t *testing.T) {
 
 			err := runLinkMatrixAction(t, writeLinkMatrixFixture(t, tt.files))
 			tt.check(t, err)
+		})
+	}
+}
+
+// buildEasypBinary compiles ./cmd/easyp once per test run into a temp dir and
+// returns the binary path. The binary lives outside the repository and is never
+// committed; the temp dir is left for the OS tmp reaper because the guard must
+// stay shared across the three cells.
+var buildEasypBinary = sync.OnceValues(func() (string, error) {
+	_, thisFile, _, ok := runtime.Caller(0)
+	if !ok {
+		return "", os.ErrNotExist
+	}
+	repoRoot := filepath.Dir(filepath.Dir(filepath.Dir(thisFile)))
+	binDir, err := os.MkdirTemp("", "easyp-link-matrix-build")
+	if err != nil {
+		return "", err
+	}
+	binPath := filepath.Join(binDir, "easyp")
+	build := exec.Command("go", "build", "-o", binPath, "./cmd/easyp")
+	build.Dir = repoRoot
+	if out, buildErr := build.CombinedOutput(); buildErr != nil {
+		return "", fmt.Errorf("go build: %w: %s", buildErr, out)
+	}
+	return binPath, nil
+})
+
+// runEasypLint runs the built binary's lint command inside dir and returns
+// stdout, stderr and the concrete process exit code. The child gets its own
+// Dir and an inherited Env; the parent process state is never mutated, so the
+// actual exit codes (0/1/2) are observable only here, never in process.
+func runEasypLint(t *testing.T, binPath, dir string) (string, string, int) {
+	t.Helper()
+
+	var stdout, stderr bytes.Buffer
+	cmd := exec.Command(binPath, "lint", "--path", ".")
+	cmd.Dir = dir
+	cmd.Env = os.Environ()
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+	err := cmd.Run()
+	code := 0
+	if err != nil {
+		var exitErr *exec.ExitError
+		require.ErrorAs(t, err, &exitErr)
+		code = exitErr.ExitCode()
+	}
+	return stdout.String(), stderr.String(), code
+}
+
+// TestLintLinkMatrixExitCodes proves the actual CLI exit codes through the
+// built binary. Process state is asserted in child processes only, so the test
+// and its cells stay sequential (the go-testing process-state exception).
+func TestLintLinkMatrixExitCodes(t *testing.T) {
+	binPath, err := buildEasypBinary()
+	require.NoError(t, err)
+
+	tests := []struct {
+		name  string
+		files map[string]string
+		check func(t *testing.T, stdout, stderr string, code int)
+	}{
+		{
+			// Missing import: errExit logs "Cannot import file" with the file
+			// name attribute and exits the process with code 2.
+			name: "missing_import_code_2",
+			files: map[string]string{
+				"root.proto": "syntax = \"proto3\";\n\npackage example_pkg;\n\nimport \"missing.proto\";\n",
+			},
+			check: func(t *testing.T, stdout, stderr string, code int) {
+				require.Equal(t, 2, code)
+				require.Contains(t, stderr, "Cannot import file")
+				require.Contains(t, stderr, "missing.proto")
+			},
+		},
+		{
+			// Syntax error: the default Action branch returns the error, main
+			// reaches log.Fatal and exits 1.
+			name: "syntax_error_code_1",
+			files: map[string]string{
+				"broken.proto": "syntax = \"proto3\";\n\npackage example_pkg;\n\nmessage Broken {\n",
+			},
+			check: func(t *testing.T, stdout, stderr string, code int) {
+				require.Equal(t, 1, code)
+			},
+		},
+		{
+			// Clean corpus: no findings, no error — exit 0 with no issue lines.
+			name: "compiling_clean_code_0",
+			files: map[string]string{
+				"example_pkg/clean_file.proto": "syntax = \"proto3\";\n\npackage example_pkg;\n\nmessage CleanFile {\n  string name = 1;\n}\n",
+			},
+			check: func(t *testing.T, stdout, stderr string, code int) {
+				require.Equal(t, 0, code)
+				require.Empty(t, stdout)
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			stdout, stderr, code := runEasypLint(t, binPath, writeLinkMatrixFixture(t, tt.files))
+			tt.check(t, stdout, stderr, code)
 		})
 	}
 }
