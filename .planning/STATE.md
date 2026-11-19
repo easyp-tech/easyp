@@ -3,16 +3,16 @@ gsd_state_version: "1.0"
 current_phase: 04
 current_phase_name: Перенос 43 правил с батч-паритетом
 status: executing
-stopped_at: Completed 04-01-PLAN.md
-last_updated: "2026-11-19T19:02:36.882Z"
+stopped_at: Completed 04-02-PLAN.md
+last_updated: "2026-11-19T19:16:54.088Z"
 last_activity: 2026-11-19
 last_activity_desc: Phase 04 execution started
-state_head: 0672a93529a12496f6ddcf10fa4a1bcef232c88a
+state_head: 9b1c123f9833678ae1f90ea063781c46a56dbed9
 progress:
   total_phases: 7
   completed_phases: 3
   total_plans: 19
-  completed_plans: 13
+  completed_plans: 14
   percent: 43
 ---
 
@@ -41,7 +41,7 @@ See: .planning/PROJECT.md (updated 2026-11-19)
 ## Current Position
 
 Phase: 04 (Перенос 43 правил с батч-паритетом) — EXECUTING
-Plan: 2 of 7
+Plan: 3 of 7
 Status: Ready to execute
 Last activity: 2026-11-19 — Phase 04 execution started
 
@@ -82,6 +82,7 @@ Progress: [███░░░░░░░] 29%
 | Phase 03 P03 | 10 min | 2 tasks | 2 files |
 | Phase 03 P04 | 12 min | 2 tasks | 2 files |
 | Phase 04 P01 | 13 min | 3 tasks | 10 files |
+| Phase 04 P02 | 10 min | 3 tasks | 11 files |
 
 ## Accumulated Context
 
@@ -123,6 +124,10 @@ Recent decisions affecting current work:
 - [Phase 04]: TestModuleRuleSet probes each registry name individually and skips not-yet-ported names; the plan's literal Use: rules.AllRuleNames() cannot be green while the linked registry holds only the pilot — Preserves the guard's stated purpose (catch accidental ModuleRule implementations on landing) while staying green; 04-07 strengthens to exact-set equality
 - [Phase 04]: Core-package tests use literal KnownLintRules lists instead of rules.AllRuleNames() — package core cannot import internal/rules (import cycle; 03-01 precedent) — The plan snippet was unimplementable as written; the literal list keeps the cell behavior-equivalent
 - [Phase 04]: Wave-0 keeps buildCore/Options.LinkedRules production wiring deferred to Phase 5 — LinkedRules is populated only from tests (dormancy trivially provable, easyp lint byte-identical) — Restates the 04-RESEARCH Open Question 3 resolution as the executed decision; recorded for the Phase-5 flip plan
+- [Phase 04]: requirePorted probes every given name and reports the FULL unported list in one RED assertion — the plan requires the RED failure to name all three unported rules, which the Wave-0 fail-fast guard could not — Batch RED evidence must name the full unported list per 04-02 acceptance criteria; single-name fail-fast hid the rest. Single-name Wave-0 usage unchanged.
+- [Phase 04]: MINIMAL group rules reach only groupedValues.firstExemptMismatches; the lab report-everyone mismatches stays byte-untouched and unreachable from ports — Main wins (LINT-PARITY-02): the lab changed observable grouping behavior; T-04-03 mitigation is grep-verified (no .mismatches( in *_linked.go).
+- [Phase 04]: PackageDefinedLinked emits main zero Position literal (Filename, 0:0); protoast.FilePosition 1:1 excluded — Main pins 0:0 (carried test + parity fingerprint); T-04-04 mitigation.
+- [Phase 04]: Unused parseProtoLinked helper removed instead of adding a lint exclusion; PackageSameDirectory carried test asserts the real engine literal (main carried field was never asserted) — Batch lint gate is a 04-02 acceptance criterion; no later plan names the helper — re-add with callers. The dead carried literal could not be asserted verbatim without failing main behavior.
 
 ### Pending Todos
 
@@ -148,6 +153,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-11-19T19:02:20.488Z
-Stopped at: Completed 04-01-PLAN.md
+Last session: 2026-11-19T19:16:42.291Z
+Stopped at: Completed 04-02-PLAN.md
 Resume file: None
