@@ -298,6 +298,14 @@ None - no external service configuration required. The etalon checkout precondit
 - The deferred-decisions list above carries this batch's parked items into the 04-07 consolidation ledger (cross-file uniqueness, standard-name normalization, acronym helpers, helper-name consolidation)
 - No harness changes were needed; no blockers; standing constraints (a) and (b) remain mechanized green cells (TestReadSourceOnce + the core Suppression cells + the new central_filter_suppressible cell)
 
+## Self-Check: PASSED
+
+- All 11 task-created/modified files exist on disk (9 created + 9 modified per git log --name-status of the three task commits, 18 source/test files total; verified with `[ -f ]` above)
+- All 4 commits are ancestors of HEAD: 16f46c2 (RED test), 7ab23e0 (GREEN part 1), 6789cfb (GREEN part 2 + gate), b509c29 (SUMMARY + VALIDATION)
+- Commits measured from the persisted ledger: `git rev-list --count 33284989..HEAD` = 3 (code commits; plan_head_before 33284989a9f2bc7e63724c1ea7909bf53605f42a, plan_head_after 6789cfb4f5effb2936c129658d83be608c02d9f4)
+- RED evidence record exists and validates RED_EVIDENCE_OK
+- Broken-windows ledger: the two documented deviations (helper rename, oracle verdict) appended to .planning/WINDOWS.md as open entries 3/4; no stubs, no skipped tests, no unrun verifies
+
 ---
 *Phase: 04-perenos-43-pravil-s-batch-paritetom*
 *Completed: 2026-11-19*
