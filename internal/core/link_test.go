@@ -1,6 +1,8 @@
 package core
 
 import (
+	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -18,13 +20,15 @@ func TestLinkSources(t *testing.T) {
 		name    string
 		paths   []string
 		sources [][]byte
-		assert  func(t *testing.T, linked *protoc.Linked, issues []IssueInfo)
+		setup   func(t *testing.T, root string)
+		newCore func(t *testing.T, root string) *Core
+		assert  func(t *testing.T, engine *Core, walker *fs.FSWalker, linked *protoc.Linked, issues []IssueInfo)
 	}{
 		{
 			name:    "compile_error",
 			paths:   []string{"test.proto"},
 			sources: [][]byte{[]byte("syntax = \"proto3\";\npackage example;\nmessage bad_name {\n  required string s = 1;\n}\n")},
-			assert: func(t *testing.T, linked *protoc.Linked, issues []IssueInfo) {
+			assert: func(t *testing.T, engine *Core, walker *fs.FSWalker, linked *protoc.Linked, issues []IssueInfo) {
 				require.Nil(t, linked)
 				require.Len(t, issues, 1)
 				assert.Equal(t, CompileRuleName, issues[0].RuleName)
@@ -41,7 +45,7 @@ func TestLinkSources(t *testing.T) {
 			name:  "compiling_with_wkt",
 			paths: []string{"event.proto"},
 			sources: [][]byte{[]byte("syntax = \"proto3\";\n\npackage example;\n\nimport \"google/protobuf/timestamp.proto\";\n\nmessage Event {\n  google.protobuf.Timestamp at = 1;\n}\n")},
-			assert: func(t *testing.T, linked *protoc.Linked, issues []IssueInfo) {
+			assert: func(t *testing.T, engine *Core, walker *fs.FSWalker, linked *protoc.Linked, issues []IssueInfo) {
 				require.NotNil(t, linked)
 				assert.Empty(t, issues)
 			},
@@ -50,7 +54,7 @@ func TestLinkSources(t *testing.T) {
 			name:  "missing_import",
 			paths: []string{"orphan.proto"},
 			sources: [][]byte{[]byte("syntax = \"proto3\";\n\npackage example;\n\nimport \"missing.proto\";\n")},
-			assert: func(t *testing.T, linked *protoc.Linked, issues []IssueInfo) {
+			assert: func(t *testing.T, engine *Core, walker *fs.FSWalker, linked *protoc.Linked, issues []IssueInfo) {
 				require.Nil(t, linked)
 				require.Nil(t, issues)
 			},
@@ -62,7 +66,7 @@ func TestLinkSources(t *testing.T) {
 				[]byte("syntax = \"proto3\";\n\npackage example;\n\nimport \"b.proto\";\n\nmessage A {\n  dep.B ok = 1;\n}\n"),
 				[]byte("syntax = \"proto3\";\n\npackage dep;\n\nmessage B {\n  Ghost field = 1;\n}\n"),
 			},
-			assert: func(t *testing.T, linked *protoc.Linked, issues []IssueInfo) {
+			assert: func(t *testing.T, engine *Core, walker *fs.FSWalker, linked *protoc.Linked, issues []IssueInfo) {
 				require.Nil(t, linked)
 				require.Len(t, issues, 1)
 				assert.Contains(t, issues[0].Message, "Ghost")
@@ -77,15 +81,12 @@ func TestLinkSources(t *testing.T) {
 				[]byte("syntax = \"proto3\";\npackage zexample;\nmessage bad_name_z {\n  required string s = 1;\n}\n"),
 				[]byte("syntax = \"proto3\";\npackage aexample;\nmessage bad_name_a {\n  required string s = 1;\n}\n"),
 			},
-			assert: func(t *testing.T, linked *protoc.Linked, issues []IssueInfo) {
+			assert: func(t *testing.T, engine *Core, walker *fs.FSWalker, linked *protoc.Linked, issues []IssueInfo) {
 				require.Nil(t, linked)
 				require.Len(t, issues, 2)
 				assert.Equal(t, "a.proto", issues[0].Path)
 				assert.Equal(t, "z.proto", issues[1].Path)
 
-				root := t.TempDir()
-				engine := &Core{logger: logger.NewNop(), importRoots: []string{root}}
-				walker := fs.NewFSWalker(root, ".")
 				linkedAgain, issuesAgain := engine.linkSources(t.Context(), walker, []string{"z.proto", "a.proto"},
 					[][]byte{
 						[]byte("syntax = \"proto3\";\npackage zexample;\nmessage bad_name_z {\n  required string s = 1;\n}\n"),
@@ -102,7 +103,7 @@ func TestLinkSources(t *testing.T) {
 				[]byte("syntax = \"proto3\";\n\npackage fine;\n\nmessage Fine {\n  string name = 1;\n}\n"),
 				[]byte("syntax = \"proto3\";\npackage broken;\nmessage bad_name {\n  required string s = 1;\n}\n"),
 			},
-			assert: func(t *testing.T, linked *protoc.Linked, issues []IssueInfo) {
+			assert: func(t *testing.T, engine *Core, walker *fs.FSWalker, linked *protoc.Linked, issues []IssueInfo) {
 				require.Nil(t, linked)
 				require.Len(t, issues, 1)
 				assert.Equal(t, "broken.proto", issues[0].Path)
@@ -116,7 +117,7 @@ func TestLinkSources(t *testing.T) {
 				[]byte("syntax = \"proto3\";\n\npackage fine;\n\nmessage Fine {\n  string name = 1;\n}\n"),
 				[]byte("syntax = \"proto3\";\n\npackage broken;\n\nmessage Truncated {\n  string name = 1;\n"),
 			},
-			assert: func(t *testing.T, linked *protoc.Linked, issues []IssueInfo) {
+			assert: func(t *testing.T, engine *Core, walker *fs.FSWalker, linked *protoc.Linked, issues []IssueInfo) {
 				require.Nil(t, linked)
 				require.Nil(t, issues)
 			},
@@ -128,7 +129,7 @@ func TestLinkSources(t *testing.T) {
 				[]byte("syntax = \"proto3\";\n\npackage broken;\n\nmessage Truncated {\n  string name = 1;\n"),
 				[]byte("syntax = \"proto3\";\n\npackage dep;\n\nmessage B {\n  Ghost field = 1;\n}\n"),
 			},
-			assert: func(t *testing.T, linked *protoc.Linked, issues []IssueInfo) {
+			assert: func(t *testing.T, engine *Core, walker *fs.FSWalker, linked *protoc.Linked, issues []IssueInfo) {
 				require.Nil(t, linked)
 				require.Nil(t, issues)
 			},
@@ -139,12 +140,106 @@ func TestLinkSources(t *testing.T) {
 			sources: [][]byte{
 				[]byte("syntax = \"proto3\";\n\npackage dep;\n\nmessage B {\n  Ghost field = 1;\n}\n"),
 			},
-			assert: func(t *testing.T, linked *protoc.Linked, issues []IssueInfo) {
+			assert: func(t *testing.T, engine *Core, walker *fs.FSWalker, linked *protoc.Linked, issues []IssueInfo) {
 				require.Nil(t, linked)
 				require.NotEmpty(t, issues)
 				for _, issue := range issues {
 					assert.Equal(t, CompileRuleName, issue.RuleName)
 				}
+			},
+		},
+		{
+			name:  "transitive_missing_depth2",
+			paths: []string{"a.proto", "b.proto"},
+			sources: [][]byte{
+				[]byte("syntax = \"proto3\";\n\npackage example;\n\nimport \"b.proto\";\n\nmessage A {\n  dep.B ok = 1;\n}\n"),
+				[]byte("syntax = \"proto3\";\n\npackage dep;\n\nimport \"missing.proto\";\n\nmessage B {\n  string name = 1;\n}\n"),
+			},
+			setup: func(t *testing.T, root string) {
+				writeImportSource(t, root, "a.proto", "syntax = \"proto3\";\n\npackage example;\n\nimport \"b.proto\";\n\nmessage A {\n  dep.B ok = 1;\n}\n")
+				writeImportSource(t, root, "b.proto", "syntax = \"proto3\";\n\npackage dep;\n\nimport \"missing.proto\";\n\nmessage B {\n  string name = 1;\n}\n")
+			},
+			assert: func(t *testing.T, engine *Core, walker *fs.FSWalker, linked *protoc.Linked, issues []IssueInfo) {
+				require.Nil(t, linked)
+				require.Nil(t, issues)
+
+				// The corpus fell back because the per-file path it lands on
+				// carries the typed missing-import error to the exit-2 route.
+				// The direct importer is b.proto: readFilesFromImport reads one
+				// level, so processing b.proto is where missing.proto surfaces.
+				_, err := engine.lintProtoInfoRead(t.Context(), walker, "b.proto")
+				require.Error(t, err)
+				var notFound *OpenImportFileError
+				require.ErrorAs(t, err, &notFound)
+				assert.Equal(t, "missing.proto", notFound.FileName)
+			},
+		},
+		{
+			name:  "blocked_import",
+			paths: []string{"a.proto"},
+			sources: [][]byte{
+				[]byte("syntax = \"proto3\";\n\npackage example;\n\nimport \"b.proto\";\n\nmessage A {\n  dep.B ok = 1;\n}\n"),
+			},
+			setup: func(t *testing.T, root string) {
+				writeImportSource(t, root, "a.proto", "syntax = \"proto3\";\n\npackage example;\n\nimport \"b.proto\";\n\nmessage A {\n  dep.B ok = 1;\n}\n")
+				writeImportSource(t, root, "b.proto", "syntax = \"proto3\";\n\npackage dep;\n\nmessage B {\n  string name = 1;\n}\n")
+			},
+			newCore: func(t *testing.T, root string) *Core {
+				// The importRoots loop (proto_info_read.go:127-137) resolves
+				// imports without consulting importFileAllowed, so this cell's
+				// Core carries empty importRoots: the denial is the only thing
+				// standing between b.proto and the os.ErrNotExist fall-through.
+				return &Core{
+					logger: logger.NewNop(),
+					importFileAllowed: func(path string) bool {
+						return path != filepath.Join(root, "b.proto")
+					},
+				}
+			},
+			assert: func(t *testing.T, engine *Core, walker *fs.FSWalker, linked *protoc.Linked, issues []IssueInfo) {
+				require.Nil(t, linked)
+				require.Nil(t, issues)
+
+				// Blocked imports fall back exactly like missing ones, and the
+				// per-file path errors with the exit-2 carrier naming the dep.
+				_, err := engine.lintProtoInfoRead(t.Context(), walker, "a.proto")
+				require.Error(t, err)
+				var notFound *OpenImportFileError
+				require.ErrorAs(t, err, &notFound)
+				assert.Equal(t, "b.proto", notFound.FileName)
+			},
+		},
+		{
+			name:  "wkt_resolves",
+			paths: []string{"event.proto"},
+			sources: [][]byte{
+				[]byte("syntax = \"proto3\";\n\npackage example;\n\nimport \"google/protobuf/timestamp.proto\";\n\nmessage Event {\n  google.protobuf.Timestamp at = 1;\n}\n"),
+			},
+			assert: func(t *testing.T, engine *Core, walker *fs.FSWalker, linked *protoc.Linked, issues []IssueInfo) {
+				require.NotNil(t, linked)
+				assert.Empty(t, issues)
+			},
+		},
+		{
+			name:  "non_local_import_compile",
+			paths: []string{"outside_user.proto"},
+			sources: [][]byte{
+				[]byte("syntax = \"proto3\";\n\npackage example;\n\nimport \"../outside.proto\";\n\nmessage A {\n  string name = 1;\n}\n"),
+			},
+			assert: func(t *testing.T, engine *Core, walker *fs.FSWalker, linked *protoc.Linked, issues []IssueInfo) {
+				require.Nil(t, linked)
+				require.NotEmpty(t, issues)
+
+				// A non-local import path fails with a plain error, not
+				// os.ErrNotExist, so the missing flag stays false and the
+				// etalon classifies the corpus as COMPILE (research A4).
+				found := false
+				for _, issue := range issues {
+					if issue.RuleName == CompileRuleName && strings.Contains(issue.Message, "../outside.proto") {
+						found = true
+					}
+				}
+				assert.True(t, found, "expected a COMPILE issue referencing the non-local import path, got: %+v", issues)
 			},
 		},
 	}
@@ -155,12 +250,18 @@ func TestLinkSources(t *testing.T) {
 			t.Parallel()
 
 			root := t.TempDir()
+			if tt.setup != nil {
+				tt.setup(t, root)
+			}
 			engine := &Core{logger: logger.NewNop(), importRoots: []string{root}}
+			if tt.newCore != nil {
+				engine = tt.newCore(t, root)
+			}
 			walker := fs.NewFSWalker(root, ".")
 
 			linked, issues := engine.linkSources(t.Context(), walker, tt.paths, tt.sources)
 
-			tt.assert(t, linked, issues)
+			tt.assert(t, engine, walker, linked, issues)
 		})
 	}
 }
