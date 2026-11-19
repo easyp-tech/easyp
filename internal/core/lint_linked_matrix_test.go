@@ -160,10 +160,7 @@ func TestLintLinkedMatrix(t *testing.T) {
 
 		// Walk order of the corpus: the walker lists the .proto files
 		// lexically, and the engine passes them to Collect in that order.
-		wantOrder := make([]string, 0, len(files))
-		for _, name := range slices.Sorted(maps.Keys(files)) {
-			wantOrder = append(wantOrder, name)
-		}
+		wantOrder := slices.Sorted(maps.Keys(files))
 
 		for run := range 2 {
 			module := &serialCollectModuleRule{}
@@ -217,5 +214,127 @@ func TestLintLinkedMatrix(t *testing.T) {
 		require.ErrorContains(t, err, "fs.WalkDir: c.lintProtoInfoRead:")
 		assert.Contains(t, err.Error(), "a_bad.proto")
 		assert.NotContains(t, err.Error(), "z_bad.proto")
+	})
+
+	t.Run("mixed_corpus_compile_isolation", func(t *testing.T) {
+		t.Parallel()
+
+		root := writeCorpus(t, map[string]string{
+			"broken.proto":  "syntax = \"proto3\";\npackage broken;\nmessage bad_name {\n  required string s = 1;\n}\n",
+			"clean_a.proto": "syntax = \"proto3\";\n\npackage fine;\n\nmessage FineOne {\n  string name = 1;\n}\n\nmessage FineTwo {\n  string id = 1;\n}\n",
+			"clean_b.proto": "syntax = \"proto3\";\n\npackage other;\n\nmessage FineThree {\n  string id = 1;\n}\n",
+		})
+		// Doubles eligible for every clean declaration: if rules ran anywhere
+		// on this corpus they would report these messages.
+		app := newLinkedEngine(nil, false, nil, &doubleRuleAlpha{}, &doubleRuleBeta{}, &doubleModuleRule{})
+		got, err := app.LintLinked(t.Context(), fs.NewFSWalker(root, "."))
+		require.NoError(t, err)
+
+		// COMPILE issues isolate to the erroneous file (exact count, exact
+		// path, etalon shape), and rules are skipped corpus-wide: zero double
+		// findings anywhere, like buf (Phase 2 multi_file_corpus pin, one
+		// level up through the engine).
+		require.Len(t, got, 1)
+		assert.Equal(t, CompileRuleName, got[0].RuleName)
+		assert.Equal(t, "broken.proto", got[0].Path)
+		assert.Equal(t, "Required fields are not allowed in proto3.", got[0].Message)
+		assert.Equal(t, 4, got[0].Position.Line)
+		assert.Equal(t, 3, got[0].Position.Column)
+		assert.Empty(t, got[0].Position.Filename)
+		assert.Zero(t, got[0].Position.Offset)
+		assert.Empty(t, got[0].SourceName)
+	})
+
+	t.Run("dep_file_diagnostic_through_engine", func(t *testing.T) {
+		t.Parallel()
+
+		root := writeCorpus(t, map[string]string{
+			"a.proto": "syntax = \"proto3\";\n\npackage example;\n\nimport \"b.proto\";\n\nmessage A {\n  dep.B ok = 1;\n}\n",
+			"b.proto": "syntax = \"proto3\";\n\npackage dep;\n\nmessage B {\n  Ghost field = 1;\n}\n",
+		})
+		app := newLinkedEngine(nil, false, nil, &doubleRuleAlpha{}, &doubleRuleBeta{})
+		got, err := app.LintLinked(t.Context(), fs.NewFSWalker(root, "."))
+		require.NoError(t, err)
+
+		// The dep file's semantic error surfaces as a COMPILE issue carried
+		// on the dep's own import path, with the verbatim compiler message
+		// naming the undefined type (Phase 2 dep_file_semantic_error pin,
+		// mirrored one level up through the engine).
+		require.Len(t, got, 1)
+		assert.Equal(t, CompileRuleName, got[0].RuleName)
+		assert.Equal(t, "b.proto", got[0].Path)
+		assert.Contains(t, got[0].Message, "Ghost")
+	})
+
+	t.Run("compile_bypasses_suppression", func(t *testing.T) {
+		t.Parallel()
+
+		// A6/IN-02 behavior pin: COMPILE issues return before any suppression
+		// machinery runs — no shouldIgnore, no ignoreOnly, no comment
+		// suppression range filters them. Whether COMPILE remarks SHOULD be
+		// suppressible is the Phase 5 IN-02 decision (deferred to the flip
+		// plan); this cell makes the current routing explicit so the flip
+		// plan inherits the decision consciously, not accidentally.
+		root := writeCorpus(t, map[string]string{
+			"broken.proto": "syntax = \"proto3\";\npackage broken;\n\n// easyp:disable DOUBLE_RULE_ALPHA\nmessage bad_name {\n  required string s = 1;\n}\n",
+			"clean.proto":  "syntax = \"proto3\";\n\npackage fine;\n\nmessage Fine {\n  string name = 1;\n}\n",
+		})
+		// Every suppression channel armed: comment ignores allowed, the
+		// directive annotates the offending declaration, ignoreOnly names the
+		// erroneous path, and the double would report the clean file if rules
+		// ran at all.
+		app := newLinkedEngine(
+			[]string{"DOUBLE_RULE_ALPHA"},
+			true,
+			map[string][]string{"DOUBLE_RULE_ALPHA": {"broken.proto"}},
+			&doubleRuleAlpha{},
+		)
+		got, err := app.LintLinked(t.Context(), fs.NewFSWalker(root, "."))
+		require.NoError(t, err)
+
+		// The COMPILE issue returns unchanged through every armed channel.
+		require.Len(t, got, 1)
+		assert.Equal(t, CompileRuleName, got[0].RuleName)
+		assert.Equal(t, "broken.proto", got[0].Path)
+		assert.Equal(t, "Required fields are not allowed in proto3.", got[0].Message)
+	})
+
+	t.Run("compile_deterministic_twice", func(t *testing.T) {
+		t.Parallel()
+
+		// Two erroneous files, the first carrying two diagnostics: three
+		// COMPILE issues total, ordered by the Phase 2 D-03 sort (path, line,
+		// col) composed with the engine's D-01 sort at exit.
+		root := writeCorpus(t, map[string]string{
+			"a.proto": "syntax = \"proto3\";\npackage alpha;\nmessage bad_name {\n  required string s = 1;\n  required string t = 2;\n}\n",
+			"z.proto": "syntax = \"proto3\";\npackage zeta;\nmessage also_bad {\n  required string s = 1;\n}\n",
+		})
+		app := newLinkedEngine(nil, false, nil, &doubleRuleAlpha{})
+		walker := fs.NewFSWalker(root, ".")
+
+		first, err := app.LintLinked(t.Context(), walker)
+		require.NoError(t, err)
+		second, err := app.LintLinked(t.Context(), walker)
+		require.NoError(t, err)
+
+		// Byte-identical across runs, with the sort stability holding through
+		// both layers: a.proto's two diagnostics stay in line order ahead of
+		// z.proto's.
+		require.Equal(t, first, second)
+		require.Len(t, first, 3)
+		wantOrder := []struct {
+			path string
+			line int
+		}{
+			{path: "a.proto", line: 4},
+			{path: "a.proto", line: 5},
+			{path: "z.proto", line: 4},
+		}
+		for i, w := range wantOrder {
+			assert.Equal(t, w.path, first[i].Path, "finding %d", i)
+			assert.Equal(t, CompileRuleName, first[i].RuleName, "finding %d", i)
+			assert.Equal(t, w.line, first[i].Position.Line, "finding %d", i)
+			assert.Equal(t, 3, first[i].Position.Column, "finding %d", i)
+		}
 	})
 }
