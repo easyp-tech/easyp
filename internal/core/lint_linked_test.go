@@ -466,10 +466,12 @@ func TestLintLinked(t *testing.T) {
 		// The missing import forced the (nil, nil) fallback, and the fallback
 		// still ran the rules on every parseable file (LINT-ENG-03: fallback
 		// is not the rules-skipping COMPILE route). z_missing.proto aborts the
-		// drain in walk order with the exit-2 carrier, so its findings never
+		// drain in walk order (exit-2 semantics), so its findings never
 		// existed and the parseable files' findings are observable through the
-		// recorded rule invocations.
-		assert.Equal(t, []string{"a.proto", "b.proto"}, recording.observed())
+		// recorded rule invocations. Validate runs inside the parallel window,
+		// so the observations are compared as a set; walk order is pinned by
+		// the module Collect assertion below.
+		assert.ElementsMatch(t, []string{"a.proto", "b.proto"}, recording.observed())
 		module.mu.Lock()
 		collected := append([]string(nil), module.collected...)
 		module.mu.Unlock()
