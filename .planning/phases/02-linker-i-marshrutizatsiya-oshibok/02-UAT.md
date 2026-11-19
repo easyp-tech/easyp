@@ -56,10 +56,12 @@ blocked: 0
 
 - gap_id: G-02-3
   truth: "The IsWarn drop branch (internal/core/link.go:45-47) is exercised by a test with a warn diagnostic"
-  status: failed
+  status: resolved
   reason: "User reported: Add a synthetic warn fixture now — the user chose a synthetic warn diagnostic test over the Phase 5 deferral"
   severity: minor
   test: 3
+  resolved_by: "02-04-PLAN.md"
+  resolved_at: "2026-11-19"
   root_cause: "No warn-producing proto fixture exists in this phase; the compiler driver rarely emits warn diagnostics, so the errorHandler closure's IsWarn drop never fires in any of the 16 natural cells"
   artifacts:
     - path: "internal/core/link.go"
