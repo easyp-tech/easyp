@@ -62,8 +62,12 @@ import (
 //	CommentOneof                 -> CommentOneofLinked                 (batch 5)
 //	CommentRPC                   -> CommentRPCLinked                   (batch 5)
 //	CommentService               -> CommentServiceLinked               (batch 5)
-//	RPCNoClientStreaming         -> (placeholder, batch 6)
-//	RPCNoServerStreaming         -> (placeholder, batch 6)
+//	RPCNoClientStreaming         -> RPCNoClientStreamingLinked         (batch 6)
+//	RPCNoServerStreaming         -> RPCNoServerStreamingLinked         (batch 6)
+//
+// The placeholder list is now empty: all 41 registry rules are ported (the
+// finishing batch 04-07; registry parity is proven by the registry-parity
+// guard against New).
 func NewLinked(cfg config.LintConfig) ([]core.LintRule, map[string][]string, error) {
 	if err := validateConfigRuleNames(cfg); err != nil {
 		return nil, nil, fmt.Errorf("validateConfigRuleNames: %w", err)
@@ -112,17 +116,17 @@ func NewLinked(cfg config.LintConfig) ([]core.LintRule, map[string][]string, err
 		&ServiceSuffixLinked{
 			Suffix: defaultIfEmpty(cfg.ServiceSuffix, "Service"),
 		},
-	//	commentsGroup — batch 5
-	&CommentEnumLinked{},
-	&CommentEnumValueLinked{},
-	&CommentFieldLinked{},
-	&CommentMessageLinked{},
-	&CommentOneofLinked{},
-	&CommentRPCLinked{},
-	&CommentServiceLinked{},
+		//	commentsGroup — batch 5
+		&CommentEnumLinked{},
+		&CommentEnumValueLinked{},
+		&CommentFieldLinked{},
+		&CommentMessageLinked{},
+		&CommentOneofLinked{},
+		&CommentRPCLinked{},
+		&CommentServiceLinked{},
 		//	unaryRPCGroup — batch 6
-		// &RPCNoClientStreamingLinked{},
-		// &RPCNoServerStreamingLinked{},
+		&RPCNoClientStreamingLinked{},
+		&RPCNoServerStreamingLinked{},
 	}
 
 	rules := make(map[string]core.LintRule)
