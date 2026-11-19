@@ -2,6 +2,7 @@ package api
 
 import (
 	"bytes"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"os"
@@ -231,6 +232,98 @@ func TestLintLinkMatrixExitCodes(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			stdout, stderr, code := runEasypLint(t, binPath, writeLinkMatrixFixture(t, tt.files))
 			tt.check(t, stdout, stderr, code)
+		})
+	}
+}
+
+// compileIssue is the D-03 COMPILE issue shape: rule COMPILE, compiler LineCol
+// position, message without prefixes, and zero SourceName/Filename/Offset. The
+// literals mirror the etalon expectation pinned by internal/core/link_test.go
+// (test.proto 4:3 "Required fields are not allowed in proto3.").
+func compileIssue(path string, line, column int, message string) core.IssueInfo {
+	return core.IssueInfo{
+		Path: path,
+		Issue: core.Issue{
+			Position: core.Position{Line: line, Column: column},
+			Message:  message,
+			RuleName: core.CompileRuleName,
+		},
+	}
+}
+
+// TestPrintIssuesCompileGolden pins COMPILE remarks in the existing printIssues
+// output format before the Phase 5 flip. Calling core's unexported linkSources
+// from package api is impossible (unexported Core fields), so the composition
+// seam proven here is the shared shape contract; the real
+// classifier-output-through-printIssues run is part of the Phase 5 matrix re-run.
+func TestPrintIssuesCompileGolden(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name   string
+		format string
+		issues []core.IssueInfo
+		check  func(t *testing.T, output string)
+	}{
+		{
+			// The empty SourceName collapses to nothing between the colons and
+			// the message: the whole rendered line is pinned byte-for-byte.
+			name:   "text_golden",
+			format: flags.TextFormat,
+			issues: []core.IssueInfo{
+				compileIssue("test.proto", 4, 3, "Required fields are not allowed in proto3."),
+			},
+			check: func(t *testing.T, output string) {
+				require.Equal(t, "test.proto:4:3: Required fields are not allowed in proto3. (COMPILE)\n", output)
+			},
+		},
+		{
+			// The JSON printer serializes Position whole, so the zero
+			// Filename/Offset fields are visible — pinned, not discovered in
+			// Phase 5.
+			name:   "json_golden",
+			format: flags.JSONFormat,
+			issues: []core.IssueInfo{
+				compileIssue("test.proto", 4, 3, "Required fields are not allowed in proto3."),
+			},
+			check: func(t *testing.T, output string) {
+				var got core.IssueInfo
+				require.NoError(t, json.Unmarshal([]byte(output), &got))
+				require.Equal(t, "", got.Position.Filename)
+				require.Equal(t, 0, got.Position.Offset)
+				require.Equal(t, 4, got.Position.Line)
+				require.Equal(t, 3, got.Position.Column)
+				require.Equal(t, "COMPILE", got.RuleName)
+				require.Equal(t, "test.proto", got.Path)
+				require.Equal(t, "Required fields are not allowed in proto3.", got.Message)
+			},
+		},
+		{
+			// Issues handed over in the classifier's D-03 order (path, then
+			// line, then column) render in exactly that order; the api-side
+			// Path sort in lint_v1.go preserves it.
+			name:   "multi_issue_order",
+			format: flags.TextFormat,
+			issues: []core.IssueInfo{
+				compileIssue("a.proto", 2, 1, "first compile issue"),
+				compileIssue("a.proto", 5, 3, "second compile issue"),
+				compileIssue("b.proto", 4, 3, "Required fields are not allowed in proto3."),
+			},
+			check: func(t *testing.T, output string) {
+				require.Equal(t, "a.proto:2:1: first compile issue (COMPILE)\n"+
+					"a.proto:5:3: second compile issue (COMPILE)\n"+
+					"b.proto:4:3: Required fields are not allowed in proto3. (COMPILE)\n", output)
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			var buf bytes.Buffer
+			require.NoError(t, printIssues(tt.format, &buf, tt.issues))
+			tt.check(t, buf.String())
 		})
 	}
 }
