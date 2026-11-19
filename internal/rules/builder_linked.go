@@ -55,13 +55,13 @@ import (
 //	RPCResponseStandardName      -> RPCResponseStandardNameLinked      (batch 4)
 //	PackageVersionSuffix         -> PackageVersionSuffixLinked         (batch 4)
 //	ServiceSuffix                -> ServiceSuffixLinked                (batch 4)
-//	CommentEnum                  -> (placeholder, batch 5)
-//	CommentEnumValue             -> (placeholder, batch 5)
-//	CommentField                 -> (placeholder, batch 5)
-//	CommentMessage               -> (placeholder, batch 5)
-//	CommentOneof                 -> (placeholder, batch 5)
-//	CommentRPC                   -> (placeholder, batch 5)
-//	CommentService               -> (placeholder, batch 5)
+//	CommentEnum                  -> CommentEnumLinked                  (batch 5)
+//	CommentEnumValue             -> CommentEnumValueLinked             (batch 5)
+//	CommentField                 -> CommentFieldLinked                 (batch 5)
+//	CommentMessage               -> CommentMessageLinked               (batch 5)
+//	CommentOneof                 -> CommentOneofLinked                 (batch 5)
+//	CommentRPC                   -> CommentRPCLinked                   (batch 5)
+//	CommentService               -> CommentServiceLinked               (batch 5)
 //	RPCNoClientStreaming         -> (placeholder, batch 6)
 //	RPCNoServerStreaming         -> (placeholder, batch 6)
 func NewLinked(cfg config.LintConfig) ([]core.LintRule, map[string][]string, error) {
@@ -112,14 +112,14 @@ func NewLinked(cfg config.LintConfig) ([]core.LintRule, map[string][]string, err
 		&ServiceSuffixLinked{
 			Suffix: defaultIfEmpty(cfg.ServiceSuffix, "Service"),
 		},
-		//	commentsGroup — batch 5
-		// &CommentEnumLinked{},
-		// &CommentEnumValueLinked{},
-		// &CommentFieldLinked{},
-		// &CommentMessageLinked{},
-		// &CommentOneofLinked{},
-		// &CommentRPCLinked{},
-		// &CommentServiceLinked{},
+	//	commentsGroup — batch 5
+	&CommentEnumLinked{},
+	&CommentEnumValueLinked{},
+	&CommentFieldLinked{},
+	&CommentMessageLinked{},
+	&CommentOneofLinked{},
+	&CommentRPCLinked{},
+	&CommentServiceLinked{},
 		//	unaryRPCGroup — batch 6
 		// &RPCNoClientStreamingLinked{},
 		// &RPCNoServerStreamingLinked{},
