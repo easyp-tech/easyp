@@ -10,7 +10,10 @@
 // Delta from upstream (D-01 refinement, user-confirmed 2026-11-17): exactly
 // the model-coupled declarations below are minimally adapted so the file
 // compiles against main's core API; every other body is verbatim. Phase 4
-// re-aligns the helpers with the ported rules.
+// re-aligns the helpers with the ported rules. The Phase-4 re-alignment
+// (04-02) adds firstExemptMismatches below — the ported group rules' Finish
+// with main's first-exempt semantics; mismatches stays the lab-faithful
+// report-everyone shape and is not reached by the ports.
 //
 //  1. packagePosition — the lab signature consumed the lab's protoast-based
 //     core.ProtoInfo.File; it now takes the protoast file directly
@@ -143,6 +146,29 @@ func (g *groupedValues) mismatches(rule core.Rule) []core.IssueInfo {
 				Line:     v.pos.Line,
 				Column:   v.pos.Column,
 			}, v.source, nil) {
+				res = append(res, core.IssueInfo{Issue: issue, Path: v.path})
+			}
+		}
+	}
+	*g = groupedValues{}
+	return res
+}
+
+// firstExemptMismatches is the ported group rules' Finish with main's
+// first-exempt semantics: the first value of a group (walk order; add
+// preserves insertion order) is exempt, and only later files whose value
+// differs from it issue, each at its own position. The lab's mismatches above
+// stays the lab-faithful report-everyone shape and is not reached by the
+// ported rules.
+func (g *groupedValues) firstExemptMismatches(rule core.LintRule) []core.IssueInfo {
+	var res []core.IssueInfo
+	for _, group := range g.order {
+		first := g.groups[group][0]
+		for _, v := range g.groups[group][1:] {
+			if v.value == first.value {
+				continue
+			}
+			for _, issue := range core.AppendLinkedIssue(nil, rule, v.pos, v.source) {
 				res = append(res, core.IssueInfo{Issue: issue, Path: v.path})
 			}
 		}

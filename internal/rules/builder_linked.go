@@ -24,9 +24,9 @@ import (
 // batch asserts the list is complete:
 //
 //	PackageDirectoryMatch        -> PackageDirectoryMatchLinked        (Wave 0, this file batch)
-//	DirectorySamePackage         -> (placeholder, batch 1)
-//	PackageDefined               -> (placeholder, batch 1)
-//	PackageSameDirectory         -> (placeholder, batch 1)
+//	DirectorySamePackage         -> DirectorySamePackageLinked         (batch 1)
+//	PackageDefined               -> PackageDefinedLinked               (batch 1)
+//	PackageSameDirectory         -> PackageSameDirectoryLinked         (batch 1)
 //	EnumFirstValueZero           -> (placeholder, batch 3)
 //	EnumNoAllowAlias             -> (placeholder, batch 3)
 //	EnumPascalCase               -> (placeholder, batch 2)
@@ -70,13 +70,13 @@ func NewLinked(cfg config.LintConfig) ([]core.LintRule, map[string][]string, err
 	}
 	allRules := []core.LintRule{
 		//	minGroup
-		// &DirectorySamePackageLinked{}, // batch 1
-		// &PackageDefinedLinked{},       // batch 1
+		&DirectorySamePackageLinked{},
+		&PackageDefinedLinked{},
 		&PackageDirectoryMatchLinked{
 			Root:   ".",
 			Prefix: cfg.PackageDirectoryPrefix,
 		},
-		// &PackageSameDirectoryLinked{}, // batch 1
+		&PackageSameDirectoryLinked{},
 
 		//	basicGroup — batch 2 (casing) and batch 3 (semantic)
 		// &EnumFirstValueZeroLinked{},
