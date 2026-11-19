@@ -3,16 +3,16 @@ gsd_state_version: "1.0"
 current_phase: 04
 current_phase_name: Перенос 43 правил с батч-паритетом
 status: executing
-stopped_at: Completed 04-02-PLAN.md
-last_updated: "2026-11-19T19:16:54.088Z"
+stopped_at: Completed 04-03-PLAN.md
+last_updated: "2026-11-19T19:42:02.089Z"
 last_activity: 2026-11-19
 last_activity_desc: Phase 04 execution started
-state_head: 9b1c123f9833678ae1f90ea063781c46a56dbed9
+state_head: 3065a7a5ad11b709ce5e89768cb14176d0e3cb75
 progress:
   total_phases: 7
   completed_phases: 3
   total_plans: 19
-  completed_plans: 14
+  completed_plans: 15
   percent: 43
 ---
 
@@ -41,7 +41,7 @@ See: .planning/PROJECT.md (updated 2026-11-19)
 ## Current Position
 
 Phase: 04 (Перенос 43 правил с батч-паритетом) — EXECUTING
-Plan: 3 of 7
+Plan: 4 of 7
 Status: Ready to execute
 Last activity: 2026-11-19 — Phase 04 execution started
 
@@ -83,6 +83,7 @@ Progress: [███░░░░░░░] 29%
 | Phase 03 P04 | 12 min | 2 tasks | 2 files |
 | Phase 04 P01 | 13 min | 3 tasks | 10 files |
 | Phase 04 P02 | 10 min | 3 tasks | 11 files |
+| Phase 04 P03 | 18 min | 3 tasks | 22 files |
 
 ## Accumulated Context
 
@@ -128,6 +129,10 @@ Recent decisions affecting current work:
 - [Phase 04]: MINIMAL group rules reach only groupedValues.firstExemptMismatches; the lab report-everyone mismatches stays byte-untouched and unreachable from ports — Main wins (LINT-PARITY-02): the lab changed observable grouping behavior; T-04-03 mitigation is grep-verified (no .mismatches( in *_linked.go).
 - [Phase 04]: PackageDefinedLinked emits main zero Position literal (Filename, 0:0); protoast.FilePosition 1:1 excluded — Main pins 0:0 (carried test + parity fingerprint); T-04-04 mitigation.
 - [Phase 04]: Unused parseProtoLinked helper removed instead of adding a lint exclusion; PackageSameDirectory carried test asserts the real engine literal (main carried field was never asserted) — Batch lint gate is a 04-02 acceptance criterion; no later plan names the helper — re-add with callers. The dead carried literal could not be asserted verbatim without failing main behavior.
+- [Phase 04]: Batch-2 casing ports keep main's regexps as predicates (casing.go helper equality excluded and grep-enforced) with Decl.Pos keyword positions and shallow main walk shapes via direct field iteration — Main wins (LINT-PARITY-02): helper substitution or NamePos positions would silently change findings; the ten carried main literals (536/26/1 style) are the per-rule oracle and survive byte-verbatim
+- [Phase 04]: Digit-led rpc names are rejected by BOTH parsers at the rpc-name token — the plan's rpc 2Fast divergence edge is unreachable in compiling corpora — Parity fixtures must compile (research precondition); the RPC regexp semantics ride the shared get_thing finding plus carried tests; documented for the Phase-7 corpus gate
+- [Phase 04]: Parity cells run cfg.Use = ten batch names + four MINIMAL names so every cell re-verifies the whole ported registry cumulatively (14 rules) — The plan's cumulative re-verification requirement read into every cell, not one dedicated cell; old-side counts 9/6/0/2/2 asserted before each multiset compare
+- [Phase 04]: keyword_positions pins exact old-side (rule,line,col) literals via a local oldFindings helper — harness file untouched per the plan's file list — Position literals asserted on the live old engine (the oracle) before the both-engines compare; a name-token port would shift columns and fail the fingerprint
 
 ### Pending Todos
 
@@ -153,6 +158,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-11-19T19:16:42.291Z
-Stopped at: Completed 04-02-PLAN.md
+Last session: 2026-11-19T19:41:38.520Z
+Stopped at: Completed 04-03-PLAN.md
 Resume file: None
