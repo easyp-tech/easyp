@@ -6,7 +6,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/easyp-tech/easyp/internal/core"
-	"github.com/easyp-tech/easyp/internal/protoast"
 	"github.com/easyp-tech/easyp/internal/rules"
 )
 
@@ -17,7 +16,7 @@ func TestPackageDirectoryMatch_Message(t *testing.T) {
 
 	const expMessage = "package does not match directory path"
 
-	rule := rules.PackageDirectoryMatch{}
+	rule := rules.PackageDirectoryMatchLinked{}
 	message := rule.Message()
 
 	assert.Equal(expMessage, message)
@@ -34,7 +33,7 @@ func TestPackageDirectoryMatch_Validate(t *testing.T) {
 		"invalid": {
 			fileName: invalidAuthProto,
 			wantIssues: &core.Issue{
-				Position: protoast.Position{
+				Position: core.Position{
 					Filename: "",
 					Offset:   20,
 					Line:     3,
@@ -57,12 +56,12 @@ func TestPackageDirectoryMatch_Validate(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			r, protos := start(t)
+			r := require.New(t)
 
-			rule := rules.PackageDirectoryMatch{
+			rule := rules.PackageDirectoryMatchLinked{
 				Root: "./../../testdata/",
 			}
-			issues, err := rule.Validate(protos[tc.fileName])
+			issues, err := rule.Validate(parseLinkedFile(t, tc.fileName))
 			r.ErrorIs(err, tc.wantErr)
 			switch {
 			case tc.wantIssues != nil:
@@ -77,22 +76,22 @@ func TestPackageDirectoryMatch_Validate(t *testing.T) {
 func TestPackageDirectoryMatch_ModuleQualifiedPackage(t *testing.T) {
 	t.Parallel()
 
-	r, protos := start(t)
-	info := protos[validAuthProto]
+	r := require.New(t)
+	info := parseLinkedFile(t, validAuthProto)
 	info.ImportPath = "v1/service.proto"
-	rule := rules.PackageDirectoryMatch{Root: ".", Prefix: "user"}
+	rule := rules.PackageDirectoryMatchLinked{Root: ".", Prefix: "user"}
 
-	info.Info.ProtoBody.Packages[0].Name = "user.v1"
+	info.File.Packages[0].Name = "user.v1"
 	issues, err := rule.Validate(info)
 	r.NoError(err)
 	r.Empty(issues)
 
-	info.Info.ProtoBody.Packages[0].Name = "v1"
+	info.File.Packages[0].Name = "v1"
 	issues, err = rule.Validate(info)
 	r.NoError(err)
 	r.Empty(issues)
 
-	info.Info.ProtoBody.Packages[0].Name = "other.v1"
+	info.File.Packages[0].Name = "other.v1"
 	issues, err = rule.Validate(info)
 	r.NoError(err)
 	r.Len(issues, 1)

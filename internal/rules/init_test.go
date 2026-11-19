@@ -10,6 +10,7 @@ import (
 	"github.com/yoheimuta/go-protoparser/v4/interpret/unordered"
 
 	"github.com/easyp-tech/easyp/internal/core"
+	"github.com/easyp-tech/easyp/internal/protoast"
 )
 
 const (
@@ -95,4 +96,78 @@ func parseFile(t testing.TB, assert *require.Assertions, path string) core.Proto
 		Info:                 res,
 		ProtoFilesFromImport: protoFilesFromImport,
 	}
+}
+
+// parseLinkedFile builds a LinkedFileInfo for a testdata file (the linked
+// contract's helper, mirroring the etalon's protoast-era parseFile): the file
+// itself is parsed with protoast.Parse and its direct imports are parsed from
+// ./../../testdata, skipping the ones that are not stored there.
+func parseLinkedFile(t testing.TB, path string) core.LinkedFileInfo {
+	t.Helper()
+
+	src, err := os.ReadFile(path)
+	require.NoError(t, err)
+
+	file, err := protoast.Parse(path, src)
+	require.NoError(t, err)
+
+	imported := make(map[core.ImportPath]*protoast.File)
+
+	// read imports files
+	for _, imp := range file.Imports {
+		importPath := core.ConvertImportPath(imp.Location)
+		fullPath := filepath.Join("./../../testdata", string(importPath))
+
+		src, err := os.ReadFile(fullPath)
+		if err != nil {
+			continue
+		}
+
+		parsed, err := protoast.Parse(string(importPath), src)
+		require.NoError(t, err)
+
+		imported[importPath] = parsed
+	}
+
+	return core.LinkedFileInfo{
+		Path:          path,
+		File:          file,
+		ImportedFiles: imported,
+	}
+}
+
+// validate runs a linked-contract rule over infos the way lint does: module
+// rules collect every file and report once, other rules report per file.
+func validate(rule core.LintRule, infos ...core.LinkedFileInfo) ([]core.Issue, error) {
+	moduleRule, ok := rule.(core.ModuleRule)
+	if !ok {
+		var issues []core.Issue
+		for _, info := range infos {
+			found, err := rule.Validate(info)
+			if err != nil {
+				return nil, err
+			}
+			issues = append(issues, found...)
+		}
+		return issues, nil
+	}
+	for _, info := range infos {
+		if err := moduleRule.Collect(info); err != nil {
+			return nil, err
+		}
+	}
+	var issues []core.Issue
+	for _, found := range moduleRule.Finish() {
+		issues = append(issues, found.Issue)
+	}
+	return issues, nil
+}
+
+// parseProtoLinked builds a LinkedFileInfo from source text for small, focused
+// cases.
+func parseProtoLinked(t testing.TB, path, src string) core.LinkedFileInfo {
+	t.Helper()
+	file, err := protoast.Parse(path, []byte(src))
+	require.NoError(t, err)
+	return core.LinkedFileInfo{Path: path, File: file}
 }

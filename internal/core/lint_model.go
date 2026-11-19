@@ -18,6 +18,12 @@ package core
 //	(method) readFileFromImport  -> linkedFileFromImport
 //	(method) shouldIgnore        -> shouldIgnoreLinked (a mirror, not shared:
 //	   the original's parameter type pins it to the old rule contract)
+//	(func) AppendIssue (5-arg)   -> AppendLinkedIssue (below; the etalon's
+//	   4-arg shape: the linked contract carries no comments parameter)
+//	(func) GetRuleName           -> LinkedRuleName (below), plus the additive
+//	   optional-method preference: a rule implementing LintRuleName() string
+//	   reports that name before the reflection fallback — suffixed port types
+//	   (<Name>Linked, Phase 4) return their canonical registry name through it
 //
 // Shared-by-value symbols are reused in place from the old files and never
 // redeclared: Position, Issue, IssueInfo, ImportPath, PackageName,
@@ -90,8 +96,26 @@ type (
 	}
 )
 
+// AppendLinkedIssue records a linked-engine rule finding (rename map: the
+// etalon's 4-arg AppendIssue). It is the single issue-construction point for
+// the ported rules; the lint engine applies per-file suppressions.
+func AppendLinkedIssue(issues []Issue, rule LintRule, pos Position, sourceName string) []Issue {
+	return append(issues, Issue{
+		Position:   pos,
+		SourceName: sourceName,
+		Message:    rule.Message(),
+		RuleName:   LinkedRuleName(rule),
+	})
+}
+
 // LinkedRuleName returns the registry name of a linked-engine rule: the same
-// UPPER_SNAKE spelling the old engine derives with GetRuleName.
+// UPPER_SNAKE spelling the old engine derives with GetRuleName. A rule may
+// override the reflection-derived name with an optional LintRuleName method —
+// suffixed port types (<Name>Linked) report their canonical registry name
+// through it, so no _LINKED suffix leaks into findings, config, or schemas.
 func LinkedRuleName(rule LintRule) string {
+	if named, ok := rule.(interface{ LintRuleName() string }); ok {
+		return named.LintRuleName()
+	}
 	return toUpperSnakeCase(reflect.TypeOf(rule).Elem().Name())
 }
