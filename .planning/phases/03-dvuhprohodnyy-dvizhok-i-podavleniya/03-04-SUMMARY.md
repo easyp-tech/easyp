@@ -215,3 +215,12 @@ None - no external service configuration required.
 ---
 *Phase: 03-dvuhprohodnyy-dvizhok-i-podavleniya*
 *Completed: 2026-11-19*
+
+## Self-Check: PASSED
+
+- internal/rules/validation_parity_test.go and this SUMMARY exist on disk
+- Commits 0718751 (Task 1) and 94fbf70 (docs: SUMMARY + STATE/ROADMAP/REQUIREMENTS + VALIDATION row) are ancestors of HEAD
+- `gsd_run check evaluation-scope --plan 03-04 --commits-only` resolved (plan-subject commits on this branch)
+- All task acceptance criteria re-run after all tasks: green — parity 7/7 cells under -race, main validation test green untouched, internal/rules production-clean, schema drift-free, dormancy/easypc/tidy clean, golangci-lint 0 issues (full-suite gate: all packages ok except the documented pre-existing wazero race in internal/adapters/plugin, see Issues Encountered)
+- Plan-level `<verification>` suite re-run: all green
+
