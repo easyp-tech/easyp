@@ -404,4 +404,46 @@ func TestLinkSourcesWarnDrop(t *testing.T) {
 			{Path: "test.proto", Line: 12, Col: 1, Message: "synthetic error at line 12"},
 		}, diags)
 	})
+
+	t.Run("handler_race_mixed", func(t *testing.T) {
+		t.Parallel()
+
+		// Contention pin on the extracted seam (research Pitfall 7): the
+		// mutex discipline must hold under concurrent mixed warn/error posts
+		// — no lost updates, no warn leakage.
+		const goroutines = 4
+		const pairsPerGoroutine = 25
+
+		var mu sync.Mutex
+		var diags []protoc.Diagnostic
+		handler := diagCollector(&mu, &diags)
+
+		var wg sync.WaitGroup
+		for g := 0; g < goroutines; g++ {
+			wg.Add(1)
+			go func(g int) {
+				defer wg.Done()
+				for i := 0; i < pairsPerGoroutine; i++ {
+					handler(protoc.Diagnostic{Path: "race.proto", Line: g + 1, Col: 1, Message: "synthetic warning", IsWarn: true})
+					handler(protoc.Diagnostic{Path: "race.proto", Line: g + 1, Col: 1, Message: "synthetic error"})
+				}
+			}(g)
+		}
+		wg.Wait()
+
+		// Exactly the posted error count arrives: goroutines*pairsPerGoroutine
+		// error posts, interleaving legal but none lost.
+		require.Len(t, diags, goroutines*pairsPerGoroutine)
+
+		// The Line value identifies the posting goroutine, so per-identity
+		// counts must be exact — order is not asserted (interleaving is legal).
+		counts := make(map[int]int, goroutines)
+		for _, d := range diags {
+			require.False(t, d.IsWarn)
+			counts[d.Line]++
+		}
+		for g := 1; g <= goroutines; g++ {
+			assert.Equal(t, pairsPerGoroutine, counts[g], "goroutine identity %d", g)
+		}
+	})
 }
