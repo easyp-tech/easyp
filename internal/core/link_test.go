@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -344,4 +345,63 @@ func mustReadFixture(t *testing.T, rel string) []byte {
 	src, err := os.ReadFile(rel)
 	require.NoError(t, err)
 	return src
+}
+
+// TestLinkSourcesWarnDrop drives synthetic protoc.Diagnostic values through
+// diagCollector — the exact handler linkSources registers with
+// protoc.WithErrorHandler, the same function value protoc.Link invokes at
+// runtime. The collector slice is diagnostics' only channel into the D-03
+// sort and COMPILE issue construction, so a warn dropped at this handler
+// structurally can never surface as a COMPILE issue (gap G-02-3, research
+// A3). The test constructs diagnostic values; it never parses or matches
+// diagnostic text (D-01).
+func TestLinkSourcesWarnDrop(t *testing.T) {
+	t.Parallel()
+
+	t.Run("warn_dropped", func(t *testing.T) {
+		t.Parallel()
+
+		var mu sync.Mutex
+		var diags []protoc.Diagnostic
+		handler := diagCollector(&mu, &diags)
+
+		handler(protoc.Diagnostic{Path: "test.proto", Line: 4, Col: 3, Message: "synthetic warning", IsWarn: true})
+
+		require.Empty(t, diags)
+	})
+
+	t.Run("non_warn_collected", func(t *testing.T) {
+		t.Parallel()
+
+		var mu sync.Mutex
+		var diags []protoc.Diagnostic
+		handler := diagCollector(&mu, &diags)
+
+		// The drop is IsWarn-selective, not a swallow-all: the same handler
+		// construction collects a non-warn diagnostic.
+		handler(protoc.Diagnostic{Path: "test.proto", Line: 4, Col: 3, Message: "synthetic error"})
+
+		require.Equal(t, []protoc.Diagnostic{{Path: "test.proto", Line: 4, Col: 3, Message: "synthetic error"}}, diags)
+	})
+
+	t.Run("warn_mix_order", func(t *testing.T) {
+		t.Parallel()
+
+		var mu sync.Mutex
+		var diags []protoc.Diagnostic
+		handler := diagCollector(&mu, &diags)
+
+		// A warn/error mix keeps exactly the error diagnostics, in arrival
+		// order: the COMPILE input stream is neither shrunk nor corrupted.
+		handler(protoc.Diagnostic{Path: "test.proto", Line: 1, Col: 1, Message: "synthetic warning first", IsWarn: true})
+		handler(protoc.Diagnostic{Path: "test.proto", Line: 9, Col: 1, Message: "synthetic error at line 9"})
+		handler(protoc.Diagnostic{Path: "test.proto", Line: 2, Col: 1, Message: "synthetic warning second", IsWarn: true})
+		handler(protoc.Diagnostic{Path: "test.proto", Line: 12, Col: 1, Message: "synthetic error at line 12"})
+
+		require.Len(t, diags, 2)
+		require.Equal(t, []protoc.Diagnostic{
+			{Path: "test.proto", Line: 9, Col: 1, Message: "synthetic error at line 9"},
+			{Path: "test.proto", Line: 12, Col: 1, Message: "synthetic error at line 12"},
+		}, diags)
+	})
 }

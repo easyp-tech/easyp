@@ -101,6 +101,12 @@ func hasPerFileSyntaxError(paths []string, sources [][]byte) bool {
 	return false
 }
 
+// diagCollector returns the diagnostic handler registered with protoc.Link
+// through protoc.WithErrorHandler.
+func diagCollector(mu *sync.Mutex, diags *[]protoc.Diagnostic) func(protoc.Diagnostic) {
+	return func(protoc.Diagnostic) {}
+}
+
 // lintResolver serves corpus files from memory and resolves imports through
 // the existing openImportFile boundary, adding no filesystem access of its
 // own. A missing import sets missing so the classifier can fall back to the
