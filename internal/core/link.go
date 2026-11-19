@@ -41,14 +41,7 @@ func (c *Core) linkSources(ctx context.Context, disk FS, paths []string, sources
 	linked, err := protoc.Link(ctx, paths,
 		protoc.WithResolver(resolver),
 		protoc.WithSyntaxTrees(true),
-		protoc.WithErrorHandler(func(d protoc.Diagnostic) {
-			if d.IsWarn {
-				return
-			}
-			diagsMu.Lock()
-			defer diagsMu.Unlock()
-			diags = append(diags, d)
-		}))
+		protoc.WithErrorHandler(diagCollector(&diagsMu, &diags)))
 	if err == nil {
 		return linked, nil
 	}
@@ -102,9 +95,20 @@ func hasPerFileSyntaxError(paths []string, sources [][]byte) bool {
 }
 
 // diagCollector returns the diagnostic handler registered with protoc.Link
-// through protoc.WithErrorHandler.
+// through protoc.WithErrorHandler. Compiler warnings are dropped (research
+// A3 — the etalon warn-drop policy: warnings never surface as COMPILE
+// remarks), errors are collected under mu in arrival order. The collected
+// slice is diagnostics' only channel into the D-03 sort and COMPILE issue
+// construction.
 func diagCollector(mu *sync.Mutex, diags *[]protoc.Diagnostic) func(protoc.Diagnostic) {
-	return func(protoc.Diagnostic) {}
+	return func(d protoc.Diagnostic) {
+		if d.IsWarn {
+			return
+		}
+		mu.Lock()
+		defer mu.Unlock()
+		*diags = append(*diags, d)
+	}
 }
 
 // lintResolver serves corpus files from memory and resolves imports through
