@@ -36,16 +36,16 @@ progress:[███░░░░░░░] 29%
 See: .planning/PROJECT.md (updated 2026-11-19)
 
 **Core value:** EasyP остаётся drop-in buf-совместимым инструментом: формат вывода, коды выхода и конфигурация не ломаются между версиями — миграции внутренностей незаметны пользователю.
-**Current focus:** Phase 02 — Линкер и маршрутизация ошибок
+**Current focus:** Phase 3 — Двухпроходный движок и подавления
 
 ## Current Position
 
 Phase: 3 — Двухпроходный движок и подавления
 Plan: Not started
-Status: Phase complete — ready for verification
+Status: Ready to plan
 Last activity: 2026-11-19 — Phase 02 complete, transitioned to Phase 3
 
-Progress: [█░░░░░░░░░] 14%
+Progress: [███░░░░░░░] 29%
 
 ## Performance Metrics
 
@@ -111,6 +111,8 @@ None yet.
 - [Roadmap] Стенд `lab.py` (паритет корпусов, Phase 7) требует доступа к приватному compiler-lab и пересборки корпусов — валидировать спайком до фазы приёмки
 - [Roadmap] Открытые design-вопросы из REQUIREMENTS.md маршрутизированы по фазам (Design note в ROADMAP.md), решаются в /gsd-discuss-phase, не в roadmap
 - Phase 1 complete (4/4). Phase-4 note: remove the lint_helpers.go paths exclusion when helpers gain callers; re-check QF1001 casing rule at next compiler-lab re-sync
+- Phase 2 complete (4/4). Phase-5 notes (deferred from code review, 02-REVIEW-DISPOSITION.md): WR-01 (import open/read failures misclassify as COMPILE — filepath.IsLocal pre-check + broken atomic), WR-02 (lintResolver bypasses importFileAllowed/sourceFileOpen for corpus files), IN-01 (FindFileByPath ctx guard), IN-02 (COMPILE diagnostics vs shouldIgnore) — fold into the Phase 5 flip plan. Natural-warn fixture re-pin (A3) and full class-1 matrix through Action — Phase 5 re-runs
+- Pre-existing wazero data race (internal/adapters/plugin, -race) — dedicated subsystem fix needed before the Phase 7 full-suite gate (deferred-items.md, Phase 1 acknowledged)
 
 ## Deferred Items
 
@@ -122,6 +124,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-11-19T11:18:58.136Z
+Last session: 2026-11-19T11:45:00Z
 Stopped at: Phase 02 complete, ready to plan Phase 3
 Resume file: None

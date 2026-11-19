@@ -76,6 +76,7 @@ Milestone «Миграция линтера на собственный комп
 | Требования перенесены из `.spec/features/lint-easypc-infra/requirements.md` без переосмысления | Документ прошёл interview и In Review | — Pending |
 | Остальные подсистемы остаются на go-protoparser | Минимизация риска milestone; перевод — будущие фичи | — Pending |
 | Точечные lint-исключения для дословно вендоренного кода (QF1001/casing.go, U1000/lint_helpers.go) вместо правки апстрима | D-01 байт-идентичность + зелёный lint-гейт несовместимы иначе; исправления уходят апстримом и приходят re-sync | ✓ Phase 1 — ратифицировано на UAT (2026-11-19) |
+| Классификация отказов линковки — типизированный шов резолвера (не парсинг текста диагностик) + корпусный откат при отсутствующем импорте | `protoc.ErrFileNotFound`/`OpenImportFileError` — типизированный канал надёжнее строкового матчинга; откат соответствует букве REQ-2.3 | ✓ Phase 2 — dormant-классификатор, exit-коды 0/1/2 доказаны через Action-путь |
 
 ## Evolution
 
@@ -95,4 +96,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-11-19 after Phase 1*
+*Last updated: 2026-11-19 after Phase 2*
