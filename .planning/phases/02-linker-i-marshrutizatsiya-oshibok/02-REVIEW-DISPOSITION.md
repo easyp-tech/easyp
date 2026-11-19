@@ -11,4 +11,4 @@
 | IN-01 | info | lintResolver.FindFileByPath ignores ctx, unlike every sibling resolver | deferred → Phase 5 | Re-routed 2026-11-19 (checker feedback, gap-plan 02-04 review): plan 02-04 IS the first link.go code touch but is a behavior-preserving extraction whose byte-identity is pinned by the 16 existing cells — folding a resolver ctx change there would break the extraction's regression proof. ctx alignment lands with the Phase 5 wiring plan where the resolver joins the live lint path |
 | IN-02 | info | COMPILE diagnostics can target files outside the linted corpus and bypass the ignore mechanism | open | Phase 5 decision to record and pin, per review |
 
-**Summary:** 4 open / 0 deferred / 0 fixed / 0 rejected. No critical findings — advisory, non-blocking.
+**Summary:** 3 open / 1 deferred / 0 fixed / 0 rejected. No critical findings — advisory, non-blocking.
