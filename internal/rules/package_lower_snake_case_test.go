@@ -17,7 +17,7 @@ func TestPackageLowerSnakeCase_Message(t *testing.T) {
 
 	const expMessage = "package name should be lower_snake_case"
 
-	rule := rules.PackageLowerSnakeCase{}
+	rule := rules.PackageLowerSnakeCaseLinked{}
 	message := rule.Message()
 
 	assert.Equal(expMessage, message)
@@ -57,16 +57,15 @@ func TestPackageLowerSnakeCase_Validate(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			r, protos := start(t)
+			rule := rules.PackageLowerSnakeCaseLinked{}
 
-			rule := rules.PackageLowerSnakeCase{}
-			issues, err := rule.Validate(protos[tc.fileName])
-			r.ErrorIs(err, tc.wantErr)
+			issues, err := rule.Validate(parseLinkedFile(t, tc.fileName))
+			require.ErrorIs(t, err, tc.wantErr)
 			switch {
 			case tc.wantIssues != nil:
-				r.Contains(issues, *tc.wantIssues)
+				require.Contains(t, issues, *tc.wantIssues)
 			case len(issues) > 0:
-				r.Empty(issues)
+				require.Empty(t, issues)
 			}
 		})
 	}

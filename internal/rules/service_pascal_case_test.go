@@ -17,7 +17,7 @@ func TestServicePascalCase_Message(t *testing.T) {
 
 	const expMessage = "service names must be PascalCase"
 
-	rule := rules.ServicePascalCase{}
+	rule := rules.ServicePascalCaseLinked{}
 	message := rule.Message()
 
 	assert.Equal(expMessage, message)
@@ -56,16 +56,15 @@ func TestServicePascalCase_Validate(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			r, protos := start(t)
+			rule := rules.ServicePascalCaseLinked{}
 
-			rule := rules.ServicePascalCase{}
-			issues, err := rule.Validate(protos[tc.fileName])
-			r.ErrorIs(err, tc.wantErr)
+			issues, err := rule.Validate(parseLinkedFile(t, tc.fileName))
+			require.ErrorIs(t, err, tc.wantErr)
 			switch {
 			case tc.wantIssues != nil:
-				r.Contains(issues, *tc.wantIssues)
+				require.Contains(t, issues, *tc.wantIssues)
 			case len(issues) > 0:
-				r.Empty(issues)
+				require.Empty(t, issues)
 			}
 		})
 	}
