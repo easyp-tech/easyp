@@ -6,15 +6,21 @@ import (
 	"io"
 	"maps"
 	"slices"
+	"sync"
 
 	"github.com/easyp-tech/easyp/internal/adapters/console"
 	"github.com/easyp-tech/easyp/internal/adapters/plugin"
 	"github.com/easyp-tech/easyp/internal/logger"
+	"github.com/easyp-tech/easyp/internal/protoast"
 )
 
 // Core provide to business logic of EasyP.
 type Core struct {
-	rules                 []Rule
+	rules []Rule
+	// linkedRules are the rules of the linked lint engine (lint_model.go).
+	// D-04 dormancy: the old engine keeps reading rules; nothing populates
+	// linkedRules until a phase flips the CLI onto the linked path.
+	linkedRules           []LintRule
 	ignore                []string
 	ignoreOnly            map[string][]string
 	allowCommentIgnores   bool
@@ -39,6 +45,17 @@ type Core struct {
 	remoteExecutor  plugin.Executor
 	builtinExecutor plugin.Executor
 	commandExecutor plugin.Executor
+
+	// importCache holds parsed import outlines for lint; files are parsed in
+	// parallel, so it is shared and locked.
+	importCache *parsedImports
+}
+
+// parsedImports holds parsed import outlines for lint; files are parsed in
+// parallel, so it is shared and locked.
+type parsedImports struct {
+	mu    sync.Mutex
+	files map[string]*protoast.File
 }
 
 var (
@@ -49,7 +66,10 @@ var (
 
 // Options configures the lint, breaking, and generation engines.
 type Options struct {
-	Rules               []Rule
+	Rules []Rule
+	// LinkedRules are the rules of the linked lint engine (lint_model.go);
+	// the old engine ignores them (D-04 dormancy).
+	LinkedRules         []LintRule
 	Ignore              []string
 	IgnoreOnly          map[string][]string
 	AllowCommentIgnores bool
@@ -82,6 +102,7 @@ func New(options Options) *Core {
 	terminal := console.New()
 	return &Core{
 		rules:                   options.Rules,
+		linkedRules:             options.LinkedRules,
 		ignore:                  options.Ignore,
 		ignoreOnly:              options.IgnoreOnly,
 		allowCommentIgnores:     options.AllowCommentIgnores,
