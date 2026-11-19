@@ -1,10 +1,10 @@
 ---
 schema_version: 1
-open_count: 2
+open_count: 4
 waived_count: 0
 fixed_count: 0
-total_count: 2
-last_updated: 2026-11-18T21:54:53.254Z
+total_count: 4
+last_updated: 2026-11-19T20:52:24.164Z
 ---
 
 # Broken Windows Ledger
@@ -17,6 +17,8 @@ last_updated: 2026-11-18T21:54:53.254Z
 |----|-------|------|------|------|-------------|--------|--------|-------------|-------------|
 | 1 | 01 | deviation | internal/adapters/plugin/builtin_run_test.go |  | Pre-existing wazero v1.9.0 data race (GetWazeroVersion) fails internal/adapters/plugin under -race; reproduced on pristine HEAD, unrelated to 01-01 vendor drop; full-suite race leg red on this machine | open |  | 2026-11-18T10:33:54.860Z |  |
 | 2 | 01 | deviation | .golangci.yml | 20 | Upstream QF1001 in byte-verbatim casing.go silenced by finding-scoped exclusion rule (plan 01-04 Rule 3; prohibition letter vs gate-green conflict) - ratify interpretation, re-evaluate at next re-sync | open |  | 2026-11-18T21:54:53.254Z |  |
+| 3 | 04 | deviation | internal/rules/enum_value_prefix_linked.go | 38 | pascalToUpperSnake carried byte-verbatim under rename-mapped name pascalToUpperSnakeLinked (frozen old file owns the original name); Phase 5 drops the suffix | open |  | 2026-11-19T20:52:18.040Z |  |
+| 4 | 04 | deviation | internal/rules/parity_default_test.go | 139 | v1alpha.proto cell verdict follows the live old-engine oracle (issues at 0:0), not the plan's 'clean' annotation - the main-vs-lab tooth (lab strips the extension) | open |  | 2026-11-19T20:52:24.164Z |  |
 
 ````json
 [
@@ -43,6 +45,32 @@ last_updated: 2026-11-18T21:54:53.254Z
     "status": "open",
     "reason": "",
     "recorded_at": "2026-11-18T21:54:53.254Z",
+    "resolved_at": null,
+    "milestone": null
+  },
+  {
+    "id": 3,
+    "kind": "deviation",
+    "phase": "04",
+    "file": "internal/rules/enum_value_prefix_linked.go",
+    "line": 38,
+    "description": "pascalToUpperSnake carried byte-verbatim under rename-mapped name pascalToUpperSnakeLinked (frozen old file owns the original name); Phase 5 drops the suffix",
+    "status": "open",
+    "reason": "",
+    "recorded_at": "2026-11-19T20:52:18.040Z",
+    "resolved_at": null,
+    "milestone": null
+  },
+  {
+    "id": 4,
+    "kind": "deviation",
+    "phase": "04",
+    "file": "internal/rules/parity_default_test.go",
+    "line": 139,
+    "description": "v1alpha.proto cell verdict follows the live old-engine oracle (issues at 0:0), not the plan's 'clean' annotation - the main-vs-lab tooth (lab strips the extension)",
+    "status": "open",
+    "reason": "",
+    "recorded_at": "2026-11-19T20:52:24.164Z",
     "resolved_at": null,
     "milestone": null
   }

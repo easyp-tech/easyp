@@ -3,16 +3,16 @@ gsd_state_version: "1.0"
 current_phase: 04
 current_phase_name: Перенос 43 правил с батч-паритетом
 status: executing
-stopped_at: Completed 04-04-PLAN.md
-last_updated: "2026-11-19T20:26:10.597Z"
+stopped_at: Completed 04-05-PLAN.md
+last_updated: "2026-11-19T20:53:08.538Z"
 last_activity: 2026-11-19
 last_activity_desc: Phase 04 execution started
-state_head: 34d4f318fb2c0550c1cbc886dd9df01ac627e05f
+state_head: b76d0a6af16dbf4d535ac41e5f3d91161e08e1f9
 progress:
   total_phases: 7
   completed_phases: 3
   total_plans: 19
-  completed_plans: 16
+  completed_plans: 17
   percent: 43
 ---
 
@@ -41,7 +41,7 @@ See: .planning/PROJECT.md (updated 2026-11-19)
 ## Current Position
 
 Phase: 04 (Перенос 43 правил с батч-паритетом) — EXECUTING
-Plan: 5 of 7
+Plan: 6 of 7
 Status: Ready to execute
 Last activity: 2026-11-19 — Phase 04 execution started
 
@@ -85,6 +85,7 @@ Progress: [███░░░░░░░] 29%
 | Phase 04 P02 | 10 min | 3 tasks | 11 files |
 | Phase 04 P03 | 22 min | 3 tasks | 22 files |
 | Phase 04 P04 | 34 min | 3 tasks | 23 files |
+| Phase 04 P05 | 13 min | 3 tasks | 19 files |
 
 ## Accumulated Context
 
@@ -139,6 +140,9 @@ Recent decisions affecting current work:
 - [Phase 04]: [Phase 04]: The real testdata/import_used corpus does not link (undefined extend target, duplicate TestService) — engine-level IMPORT_USED parity cells use compiling same-package variants; the real fixtures stay in the carried test over parseLinkedFile infos (all 11 imports marked used, clean)
 - [Phase 04]: [Phase 04]: EnumFirstValueZero keeps the lab's empty-enum guard as the single documented crash-fix deviation (research A7, unit-pinned; protoc rejects empty enums so the engine path never sees one) while main's string compare (Number != "0") stays — "00"/"0x0" issue where the lab's numeric compare passes (T-04-10)
 - [Phase 04]: [Phase 04]: Option-comparison ports compare RAW written constants (fileOption + opt.Value + firstExemptMismatches; skip-optionless, packageless early return) — optionString/mismatches unreachable and grep-enforced; every parity cell runs the cumulative 24-name config so cells double as full-registry regressions (T-04-11)
+- [Phase 04]: pascalToUpperSnake carried byte-verbatim as pascalToUpperSnakeLinked (single declaration in the ported file; frozen old file owns the original name — rename-mapped for Phase 5); lab acronym helpers grep-clean (T-04-12)
+- [Phase 04]: RPCRequestResponseUniqueLinked is per-file first-exempt uniqueness on written type strings via a ModuleRule Finish (path-grouped occurrences, seen-set per file); Resolved/RPCTypes never read — grep-clean (T-04-13); standard-name rules compare written strings exactly, qualified types fail (T-04-14)
+- [Phase 04]: v1alpha.proto parity-cell verdict follows the live old-engine oracle (issues at 0:0 — digit after the leading lowercase run fails the full-filename regexp), not the plan's "clean" annotation; probes before RED enforced the compiling precondition (distinct enum names per same-package file, ru2.v1 -> rw.v1) and confirmed old-side counts 7/2/3/10/2/3/1/0
 
 ### Pending Todos
 
@@ -164,6 +168,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-11-19T20:26:09.962Z
-Stopped at: Completed 04-04-PLAN.md
+Last session: 2026-11-19T20:52:57.133Z
+Stopped at: Completed 04-05-PLAN.md
 Resume file: None
