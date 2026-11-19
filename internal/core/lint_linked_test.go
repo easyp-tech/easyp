@@ -13,6 +13,7 @@ import (
 
 	"github.com/easyp-tech/easyp/internal/fs/fs"
 	"github.com/easyp-tech/easyp/internal/logger"
+	"github.com/easyp-tech/easyp/internal/protoast"
 )
 
 // Engine test doubles for the linked lint engine: the per-file rules are
@@ -24,8 +25,47 @@ import (
 var (
 	_ LintRule   = (*doubleRuleAlpha)(nil)
 	_ LintRule   = (*doubleRuleBeta)(nil)
+	_ LintRule   = (*recordingRule)(nil)
 	_ ModuleRule = (*doubleModuleRule)(nil)
 )
+
+// recordingRule records what Validate saw per run: the linted paths and the
+// imported-file outlines. Fallback-matrix cells assert on its recordings to
+// observe which files the rules processed.
+type recordingRule struct {
+	mu       sync.Mutex
+	paths    []string
+	imported map[string]*protoast.File
+}
+
+func (r *recordingRule) Message() string { return "recording finding" }
+
+func (r *recordingRule) Validate(info LinkedFileInfo) ([]Issue, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.paths = append(r.paths, info.Path)
+	for importPath, file := range info.ImportedFiles {
+		if r.imported == nil {
+			r.imported = make(map[string]*protoast.File)
+		}
+		r.imported[string(importPath)] = file
+	}
+	return nil, nil
+}
+
+// observed returns the paths Validate saw, in processing order.
+func (r *recordingRule) observed() []string {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	return append([]string(nil), r.paths...)
+}
+
+// outlineOf returns the recorded outline of one import path.
+func (r *recordingRule) outlineOf(importPath string) *protoast.File {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	return r.imported[importPath]
+}
 
 // doubleRuleAlpha reports one finding per message declaration.
 type doubleRuleAlpha struct{}
@@ -348,5 +388,119 @@ func TestLintLinked(t *testing.T) {
 		for name := range files {
 			assert.Equal(t, map[string]int{"DOUBLE_RULE_ALPHA": 2, "DOUBLE_RULE_BETA": 2}, perFile[name], "file %s", name)
 		}
+	})
+
+	t.Run("fallback_missing_import_command_error", func(t *testing.T) {
+		t.Parallel()
+
+		root := writeCorpus(t, map[string]string{
+			"orphan.proto": "syntax = \"proto3\";\n\npackage example;\n\nimport \"missing.proto\";\n",
+		})
+		app := newLinkedEngine(nil, false, nil, &doubleRuleAlpha{})
+		got, err := app.LintLinked(t.Context(), fs.NewFSWalker(root, "."))
+		require.Error(t, err)
+		require.Nil(t, got)
+
+		// The missing import surfaces as the exit-2 carrier inherited from
+		// openImportFile, wrapped in main's user-visible chain (main-wins
+		// parity pin: the wrapper literal is deliberate, not the callee).
+		var notFound *OpenImportFileError
+		require.ErrorAs(t, err, &notFound)
+		assert.Equal(t, "missing.proto", notFound.FileName)
+		require.ErrorContains(t, err, "fs.WalkDir: c.lintProtoInfoRead:")
+	})
+
+	t.Run("fallback_syntax_error_wrapper", func(t *testing.T) {
+		t.Parallel()
+
+		root := writeCorpus(t, map[string]string{
+			"truncated.proto": "syntax = \"proto3\";\n\npackage broken;\n\nmessage Truncated {\n  string name = 1;\n",
+		})
+		app := newLinkedEngine(nil, false, nil, &doubleRuleAlpha{})
+		got, err := app.LintLinked(t.Context(), fs.NewFSWalker(root, "."))
+		require.Error(t, err)
+		require.Nil(t, got)
+
+		// A syntax error is a command error on the fallback path, never a
+		// COMPILE issue, under the same main-wins wrapper prefix (Pitfall 6
+		// resolution).
+		require.ErrorContains(t, err, "fs.WalkDir: c.lintProtoInfoRead:")
+	})
+
+	t.Run("fallback_read_error", func(t *testing.T) {
+		t.Parallel()
+
+		root := writeCorpus(t, map[string]string{
+			"unreadable.proto": "syntax = \"proto3\";\npackage example;\nmessage Unreadable {}\n",
+		})
+		require.NoError(t, os.Chmod(filepath.Join(root, "unreadable.proto"), 0o000))
+		t.Cleanup(func() {
+			require.NoError(t, os.Chmod(filepath.Join(root, "unreadable.proto"), 0o644))
+		})
+
+		app := newLinkedEngine(nil, false, nil, &doubleRuleAlpha{})
+		got, err := app.LintLinked(t.Context(), fs.NewFSWalker(root, "."))
+		require.Error(t, err)
+		require.Nil(t, got)
+
+		// The read error rides pass 1's indexed readErrs into the same drain
+		// wrap as every other per-file model error.
+		require.ErrorContains(t, err, "fs.WalkDir: c.lintProtoInfoRead:")
+	})
+
+	t.Run("fallback_rules_still_run", func(t *testing.T) {
+		t.Parallel()
+
+		root := writeCorpus(t, map[string]string{
+			"a.proto":         "syntax = \"proto3\";\npackage alpha;\nmessage A {}\n",
+			"b.proto":         "syntax = \"proto3\";\npackage beta;\nmessage B {}\n",
+			"z_missing.proto": "syntax = \"proto3\";\n\npackage zeta;\n\nimport \"missing.proto\";\n\nmessage Zed {}\n",
+		})
+		recording := &recordingRule{}
+		module := &doubleModuleRule{}
+		app := newLinkedEngine(nil, false, nil, recording, &doubleRuleAlpha{}, module)
+		got, err := app.LintLinked(t.Context(), fs.NewFSWalker(root, "."))
+		require.Error(t, err)
+		require.Nil(t, got)
+
+		// The missing import forced the (nil, nil) fallback, and the fallback
+		// still ran the rules on every parseable file (LINT-ENG-03: fallback
+		// is not the rules-skipping COMPILE route). z_missing.proto aborts the
+		// drain in walk order with the exit-2 carrier, so its findings never
+		// existed and the parseable files' findings are observable through the
+		// recorded rule invocations.
+		assert.Equal(t, []string{"a.proto", "b.proto"}, recording.observed())
+		module.mu.Lock()
+		collected := append([]string(nil), module.collected...)
+		module.mu.Unlock()
+		assert.Equal(t, []string{"a.proto", "b.proto"}, collected)
+
+		var notFound *OpenImportFileError
+		require.ErrorAs(t, err, &notFound)
+		require.ErrorContains(t, err, "fs.WalkDir: c.lintProtoInfoRead:")
+	})
+
+	t.Run("fallback_outline_cache", func(t *testing.T) {
+		t.Parallel()
+
+		root := writeCorpus(t, map[string]string{
+			"base.proto":      "syntax = \"proto3\";\n\npackage base;\n\nmessage Base {\n  string id = 1;\n}\n",
+			"user.proto":      "syntax = \"proto3\";\n\npackage user;\n\nimport \"base.proto\";\n\nmessage User {\n  base.Base b = 1;\n}\n",
+			"z_missing.proto": "syntax = \"proto3\";\n\npackage zeta;\n\nimport \"missing.proto\";\n\nmessage Zed {}\n",
+		})
+		recording := &recordingRule{}
+		app := newLinkedEngine(nil, false, nil, recording)
+		_, err := app.LintLinked(t.Context(), fs.NewFSWalker(root, "."))
+		require.Error(t, err)
+
+		// Within the fell-back corpus, user.proto's import of its sibling
+		// base.proto resolves to a non-nil outline through the
+		// linkedFileFromImport/cacheLintedOutline path (parseOnTheirOwn cached
+		// the linted base.proto outline under the import name's key).
+		require.Contains(t, recording.observed(), "user.proto")
+		outline := recording.outlineOf("base.proto")
+		require.NotNil(t, outline)
+		require.Len(t, outline.Messages, 1)
+		assert.Equal(t, "Base", outline.Messages[0].Name)
 	})
 }
