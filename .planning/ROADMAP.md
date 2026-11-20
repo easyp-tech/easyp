@@ -134,7 +134,7 @@ Plans:
   1. `easyp lint` выдаёт замечания в неизменном формате: пути, формат issues и коды выхода CLI совпадают с main до переключения на фиксатурном корпусе, включая новые `COMPILE`-замечания в существующем формате
   2. Старый lint-контур и старые реализации правил удалены из кодовой базы; `easyp lint` обслуживается только движком на компиляторе (врезка — одно изменение в шве `buildCore`)
   3. breaking, generate, `mod tidy` и `migrate` проходят свои тестовые наборы в том же прогоне CI — поведение как до изменения; `go-protoparser` и `protocompile` остаются в `go.mod`
-**Plans**: 4/4 plans executed
+**Plans**: 5 plans — 4/4 executed + 05-05 gap closure (05-REVIEW WR-01/IN-01/IN-02)
 Plans:
 **Wave 1**
 - [x] 05-01-PLAN.md — Golden capture (tracer): full-registry 73-finding golden incl. Message + D-01 order from the frozen old engine, linked-drive message-parity proof, CLI stdout/exit-code golden (LINT-COMPAT-01)
@@ -147,6 +147,9 @@ Plans:
 
 **Wave 3** *(blocked on Wave 2)*
 - [x] 05-04-PLAN.md — Consolidation commit: 41 port-type renames, override drops, name-function collapse, rename-map header deletion; final phase battery (LINT-COMPAT-01/02)
+
+**Wave 5** *(gap closure — from 05-REVIEW.md findings; blocked on Wave 3)*
+- [ ] 05-05-PLAN.md — Micro gap closure (TDD): WR-01 sentinel-typed broken-import discrimination + probe cell, IN-01 dead readErrs re-check removal, IN-02 stale comment refresh; goldens byte-identical, breaking files byte-frozen (LINT-COMPAT-01)
 
 **Design note**: решение «мост vs одно переключение» зафиксировано планированием Phase 5 — переключение одно, через консолидацию rename-map (identity flip): buildCore и lint_v1.go текстуально не меняются, биндинги меняют идентичность в одном атомарном коммите; откат = revert (LINT-ENG-01, LINT-PARITY-01)
 
