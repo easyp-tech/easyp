@@ -15,7 +15,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 1: Вендоринг компилятора и расчленение модели** - easypc + protoast вкопированы без новых зависимостей; lint-путь отделён от модели breaking (completed 2026-11-19)
 - [x] **Phase 2: Линкер и маршрутизация ошибок** - линковка корпусов с трёхсторонней классификацией: COMPILE / откат при отсутствующем импорте / ошибки чтения-синтаксиса (completed 2026-11-19)
 - [x] **Phase 3: Двухпроходный движок и подавления** - параллельные окна, ModuleRule, детерминированный порядок, паритет ignore/комментариев/валидации конфига (completed 2026-11-19)
-- [ ] **Phase 4: Перенос 43 правил с батч-паритетом** - все правила на protoast, семантика main побеждает лабораторию, паритет верифицируется на уровне батча
+- [x] **Phase 4: Перенос 43 правил с батч-паритетом** - все правила на protoast, семантика main побеждает лабораторию, паритет верифицируется на уровне батча (completed 2026-11-20)
 - [ ] **Phase 5: Переключение lint-пути и ворота совместимости** - easyp lint на компиляторе, старый контур удалён, формат/коды выхода и остальные подсистемы неизменны
 - [ ] **Phase 6: Новые правила и регенерация схем/MCP** - PACKAGE_NO_IMPORT_CYCLE, SYNTAX_SPECIFIED, FIELD_NOT_REQUIRED + атомарное обновление схем и MCP-описаний
 - [ ] **Phase 7: Приёмка — паритет корпусов и производительность** - идентичный main вывод на api-common и googleapis-nocompute, не медленнее main
@@ -99,7 +99,7 @@ Plans:
   1. Все 43 правила дают на общих фиксатурах идентичные старой реализации замечания (правило, файл, строка, колонка); перенос выполняется батчами, и каждый батч верифицирован по паритету до начала следующего — корпусный lint-diff на финише остаётся воротами, а не сессией отладки
   2. Правила, чьё поведение изменилось в main после снятия лабораторной копии (например, подавления через комментарии), следуют семантике текущего main, а не лаборатории; colocated-тесты переносятся из main
   3. У каждого перенесённого правила есть colocated `<rule>_test.go`; `task test` и `task lint` зелёные на всех промежуточных состояниях фазы
-**Plans**: 8/8 plans executed
+**Plans**: 8/8 plans complete
 Plans:
 **Wave 1** (Batch 0 — infra + pilot)
 - [x] 04-01-PLAN.md — Wave-0 infrastructure (tracer): linked issue constructor + LintRuleName override, NewLinked registry, parity harness (old-vs-new sorted multiset), Decl.Pos position probe, TestModuleRuleSet guard, readSource-once disk-instrumentation cell; pilot port PackageDirectoryMatch with carried main tests
@@ -171,7 +171,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 | 1. Вендоринг компилятора и расчленение модели | 4/4 | Complete    | 2026-11-19 |
 | 2. Линкер и маршрутизация ошибок | 4/4 | Complete    | 2026-11-19 |
 | 3. Двухпроходный движок и подавления | 4/4 | Complete    | 2026-11-19 |
-| 4. Перенос 43 правил с батч-паритетом | 8/8 | In Progress | - |
+| 4. Перенос 43 правил с батч-паритетом | 8/8 | Complete    | 2026-11-20 |
 | 5. Переключение lint-пути и ворота совместимости | 0/TBD | Not started | - |
 | 6. Новые правила и регенерация схем/MCP | 0/TBD | Not started | - |
 | 7. Приёмка — паритет корпусов и производительность | 0/TBD | Not started | - |
