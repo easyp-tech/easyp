@@ -87,10 +87,10 @@ func TestRegistryParity(t *testing.T) {
 
 	// ...then with user-configured values plumbed through both constructors.
 	requireConfigParity(t, config.LintConfig{
-		Use:                     allNames,
-		PackageDirectoryPrefix:  "internal/",
-		EnumZeroValueSuffix:     "NONE",
-		ServiceSuffix:           "API",
+		Use:                    allNames,
+		PackageDirectoryPrefix: "internal/",
+		EnumZeroValueSuffix:    "NONE",
+		ServiceSuffix:          "API",
 	})
 
 	// (d) ignoreOnly unwrapping: identical maps from both constructors for a
