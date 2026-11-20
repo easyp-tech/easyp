@@ -1,10 +1,10 @@
 ---
 schema_version: 1
-open_count: 15
+open_count: 16
 waived_count: 0
 fixed_count: 0
-total_count: 15
-last_updated: 2026-11-20T20:29:32.513Z
+total_count: 16
+last_updated: 2026-11-20T20:59:41.829Z
 ---
 
 # Broken Windows Ledger
@@ -30,6 +30,7 @@ last_updated: 2026-11-20T20:29:32.513Z
 | 13 | 05 | deviation | internal/api/lint_stdout_golden_test.go |  | 05-03: Gate-3 twin fixture corrected (Rule 3): the 05-01 corpus declared the same message (CleanFile) in two same-package files — legal for the old per-file engine but a redeclaration under the linked engine's full corpus linking, routing the whole run to COMPILE and vacating the rule-finding golden (research Pitfall 7 applied to Gate 3); Excluded_File.proto's message renamed to ExcludedMsg so the corpus compiles; the pinned stdout literals were re-captured from the byte-frozen pre-flip binary (built from flip-HEAD via git archive) over the corrected fixture and are byte-identical to the 05-01 literals, md5-stable across 3 runs; TestLintStdoutGolden green post-flip | open |  | 2026-11-20T20:29:31.645Z |  |
 | 14 | 05 | deviation | internal/core/proto_info_read_test.go |  | 05-03: plan surface addition (Rule 3, blocking compile): internal/core/proto_info_read_test.go and link_test.go call the deleted lintProtoInfoRead directly but are absent from the plan's files_modified list; TestProtoInfoReadTwinsMirroring + TestLintProtoInfoReadErrorLabels died with their oracle, the two link_test.go fallback cells re-pointed to protoInfoFromSource (same openImportFile funnel, same typed OpenImportFileError carrier) — assertions preserved verbatim in intent | open |  | 2026-11-20T20:29:31.985Z |  |
 | 15 | 05 | deviation | internal/core/lint_linked.go |  | 05-03: acceptance-criterion baselines reconciled against the plan's own prohibitions (Rule 3): (a) grep lintProtoInfoRead lands at 8 lines, not the criterion's EXPECT==1 — the byte-identical parity-pin comment+literal (2), the frozen proto_info_read.go comment 'twin of lintProtoInfoRead' (1), and the five exact-string proof cells asserting the pin text (5) are all mandated by the plan's canonical-six C1 prohibition and Phase-3 main-wins proof; the achieved invariant is zero LIVE references (callable call sites) to the deleted function; (b) the api runtime.go removed-lines gate's raw grep -c '^- ' counts the diff header, so the corrected plumbing is grep -c '^-[^-]' = 0 (comment-only addition preserved); (c) the zero-ref grep HEAD baseline was 399 at execution time vs the plan's recorded 384 (05-02's cells postdate the plan); EXPECT==0 achieved | open |  | 2026-11-20T20:29:32.513Z |  |
+| 16 | 05 | deviation | internal/core/lint_linked_read.go | 139 | 05-04 Rule 3: protoInfoFromLinked renamed to protoInfoFromLink (plan action listed only the 41 port types; the zero-reference criterion 'LintRuleName or word-Linked' == 0 forced the rename, 4 occurrences: def + 2 comments + engine call) plus comment-only factual refreshes forced by the same criterion (41 port headers de-self-referentialized after the sweep, builder_linked.go registry doc, package_directory_match registry-name prose, GetRuleName doc comment) | open |  | 2026-11-20T20:59:41.829Z |  |
 
 ````json
 [
@@ -225,6 +226,19 @@ last_updated: 2026-11-20T20:29:32.513Z
     "status": "open",
     "reason": "",
     "recorded_at": "2026-11-20T20:29:32.513Z",
+    "resolved_at": null,
+    "milestone": null
+  },
+  {
+    "id": 16,
+    "kind": "deviation",
+    "phase": "05",
+    "file": "internal/core/lint_linked_read.go",
+    "line": 139,
+    "description": "05-04 Rule 3: protoInfoFromLinked renamed to protoInfoFromLink (plan action listed only the 41 port types; the zero-reference criterion 'LintRuleName or word-Linked' == 0 forced the rename, 4 occurrences: def + 2 comments + engine call) plus comment-only factual refreshes forced by the same criterion (41 port headers de-self-referentialized after the sweep, builder_linked.go registry doc, package_directory_match registry-name prose, GetRuleName doc comment)",
+    "status": "open",
+    "reason": "",
+    "recorded_at": "2026-11-20T20:59:41.829Z",
     "resolved_at": null,
     "milestone": null
   }
