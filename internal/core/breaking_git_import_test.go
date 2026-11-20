@@ -13,6 +13,7 @@ import (
 
 	gitadapter "github.com/easyp-tech/easyp/internal/adapters/go_git"
 	"github.com/easyp-tech/easyp/internal/core"
+	"github.com/easyp-tech/easyp/internal/fs/fs"
 	"github.com/easyp-tech/easyp/internal/logger"
 )
 
@@ -33,8 +34,9 @@ func TestBreakingCheckResolvesWellKnownImportFromGitBaseline(t *testing.T) {
 			t.Parallel()
 
 			root := t.TempDir()
-			path := filepath.Join(root, "proto", "event.proto")
-			require.NoError(t, os.MkdirAll(filepath.Dir(path), 0o755))
+			protoDir := filepath.Join(root, "proto")
+			path := filepath.Join(protoDir, "event.proto")
+			require.NoError(t, os.MkdirAll(protoDir, 0o755))
 			contents := "syntax = \"proto3\";\npackage event.v1;\nimport \"" + tt.importName + "\";\nmessage Event { " + tt.fieldType + " created_at = 1; }\n"
 			require.NoError(t, os.WriteFile(path, []byte(contents), 0o644))
 			repository, err := git.PlainInit(root, false)
@@ -46,13 +48,24 @@ func TestBreakingCheckResolvesWellKnownImportFromGitBaseline(t *testing.T) {
 			commit, err := worktree.Commit("baseline", &git.CommitOptions{Author: &object.Signature{Name: "EasyP Test", Email: "test@example.com", When: time.Now()}})
 			require.NoError(t, err)
 			require.NoError(t, repository.Storer.SetReference(plumbing.NewHashReference(plumbing.NewBranchReferenceName("main"), commit)))
-			checker := core.New(core.Options{
-				Logger:                  logger.NewNop(),
-				CurrentProjectGitWalker: gitadapter.New(),
-				BreakingCheckConfig:     core.BreakingCheckConfig{AgainstGitRef: "main"},
+
+			snapshot, err := gitadapter.SnapshotRevision(t.Context(), root, "main")
+			require.NoError(t, err)
+			t.Cleanup(func() {
+				require.NoError(t, snapshot.Close())
 			})
 
-			issues, err := checker.BreakingCheck(t.Context(), root, filepath.Join(root, "proto"), ".")
+			checker := core.New(core.Options{
+				Logger:              logger.NewNop(),
+				BreakingCheckConfig: core.BreakingCheckConfig{Categories: []string{"FILE"}},
+			})
+
+			issues, err := checker.CompareBreaking(
+				t.Context(),
+				fs.NewFSWalker(protoDir, "."),
+				fs.NewFSWalker(filepath.Join(snapshot.Root, "proto"), "."),
+				nil,
+			)
 
 			require.NoError(t, err)
 			require.Empty(t, issues)
