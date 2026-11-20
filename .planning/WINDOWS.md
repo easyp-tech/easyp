@@ -1,10 +1,10 @@
 ---
 schema_version: 1
-open_count: 9
+open_count: 12
 waived_count: 0
 fixed_count: 0
-total_count: 9
-last_updated: 2026-11-20T15:23:46.927Z
+total_count: 12
+last_updated: 2026-11-20T19:51:55.295Z
 ---
 
 # Broken Windows Ledger
@@ -24,6 +24,9 @@ last_updated: 2026-11-20T15:23:46.927Z
 | 7 | 04 | deviation | internal/rules/parity_full_registry_test.go |  | Task-3 corpus file created although the task's <files> list is empty (Rule 3): the full-registry closure acceptance criterion requires the broad 41-rule corpus to live in a test file; parity_full_registry_test.go (TestLinkedParityFullRegistry) is its home | open |  | 2026-11-20T15:23:46.354Z |  |
 | 8 | 04 | deviation | internal/rules/parity_full_registry_test.go |  | Fixture corrections before GREEN (live old-engine oracle): the dir_only_msg suppression directive was missing from the first draft and the public/weak imports used unqualified references (parsed against the SOURCE package), so all three imports read unused; directive added and references qualified (dep.v1.Outer, wdep.v1.WDepMsg) | open |  | 2026-11-20T15:23:46.565Z |  |
 | 9 | 04 | deviation | internal/rules/parity_full_registry_test.go |  | Fixture correction before GREEN: the rpc payload messages (GetReq/GetResp/DoStreamRequest/DoStreamResponse/DupRequest/DupResponse/DupAgainResponse) were undeclared, so the linked engine's full type resolution routed the corpus to COMPILE (8 findings) while the syntax-only old engine reported rules; documented PascalCase declarations restored compiling parity | open |  | 2026-11-20T15:23:46.927Z |  |
+| 10 | 05 | deviation | internal/rules/golden_full_registry_test.go |  | 05-01: plan's Task-1 verify chain (git status \| grep -vc \| grep -q under pipefail) cannot exit 0 when the guard PASSES (grep -c exits 1 on zero selected lines); gate run with corrected plumbing preserving the exact intended semantics (count == 0), test green; re-run before any narration | open |  | 2026-11-20T19:21:06.311Z |  |
+| 11 | 05 | deviation | internal/core/lint_linked_matrix_test.go |  | 05-02: WR-01 cell re-derived against live source (Rule 3): the plan's directory fixture cannot drive the resolver error path — FSWalker.Open refuses non-regular files with ErrUnsupported and a directory named dep.proto is walked as a corpus file so pass-1 readErrs skip linking before the resolver runs; permission bits are not root-safe in CI; the cell injects an *os.PathError (os.ErrPermission) through Options.OpenSourceFile exercising the identical openDiskSource funnel, and the post-fix expectation is re-derived from the plan's 'returns no error' to a command error carrying the OS cause — the plan's own must-have truth ('behaves like the old per-file engine') and threat model T-05-02 ('the OS cause surfaces as a command error') both require the command-error outcome; verified pre-fix RED shows the misleading COMPILE remark | open |  | 2026-11-20T19:51:54.957Z |  |
+| 12 | 05 | deviation | internal/core/lint_linked_matrix_test.go |  | 05-02: WR-02 cell re-derived against live source (Rule 3): an engine-level RED is impossible because pass-1 readSource consults the same openDiskSource policy funnel, so the plan's 'run succeeds and lints b.proto from memory' pre-fix state does not exist (probe: the run errors with the exact os.ErrNotExist carrier pre-fix); the cell drives the lintResolver corpus branch directly (pre-fix it serves the denied content from memory — the actual WR-02 bypass) and pins openDiskSource's exact carrier plus the engine-level end-to-end denial | open |  | 2026-11-20T19:51:55.295Z |  |
 
 ````json
 [
@@ -141,6 +144,45 @@ last_updated: 2026-11-20T15:23:46.927Z
     "status": "open",
     "reason": "",
     "recorded_at": "2026-11-20T15:23:46.927Z",
+    "resolved_at": null,
+    "milestone": null
+  },
+  {
+    "id": 10,
+    "kind": "deviation",
+    "phase": "05",
+    "file": "internal/rules/golden_full_registry_test.go",
+    "line": null,
+    "description": "05-01: plan's Task-1 verify chain (git status | grep -vc | grep -q under pipefail) cannot exit 0 when the guard PASSES (grep -c exits 1 on zero selected lines); gate run with corrected plumbing preserving the exact intended semantics (count == 0), test green; re-run before any narration",
+    "status": "open",
+    "reason": "",
+    "recorded_at": "2026-11-20T19:21:06.311Z",
+    "resolved_at": null,
+    "milestone": null
+  },
+  {
+    "id": 11,
+    "kind": "deviation",
+    "phase": "05",
+    "file": "internal/core/lint_linked_matrix_test.go",
+    "line": null,
+    "description": "05-02: WR-01 cell re-derived against live source (Rule 3): the plan's directory fixture cannot drive the resolver error path — FSWalker.Open refuses non-regular files with ErrUnsupported and a directory named dep.proto is walked as a corpus file so pass-1 readErrs skip linking before the resolver runs; permission bits are not root-safe in CI; the cell injects an *os.PathError (os.ErrPermission) through Options.OpenSourceFile exercising the identical openDiskSource funnel, and the post-fix expectation is re-derived from the plan's 'returns no error' to a command error carrying the OS cause — the plan's own must-have truth ('behaves like the old per-file engine') and threat model T-05-02 ('the OS cause surfaces as a command error') both require the command-error outcome; verified pre-fix RED shows the misleading COMPILE remark",
+    "status": "open",
+    "reason": "",
+    "recorded_at": "2026-11-20T19:51:54.957Z",
+    "resolved_at": null,
+    "milestone": null
+  },
+  {
+    "id": 12,
+    "kind": "deviation",
+    "phase": "05",
+    "file": "internal/core/lint_linked_matrix_test.go",
+    "line": null,
+    "description": "05-02: WR-02 cell re-derived against live source (Rule 3): an engine-level RED is impossible because pass-1 readSource consults the same openDiskSource policy funnel, so the plan's 'run succeeds and lints b.proto from memory' pre-fix state does not exist (probe: the run errors with the exact os.ErrNotExist carrier pre-fix); the cell drives the lintResolver corpus branch directly (pre-fix it serves the denied content from memory — the actual WR-02 bypass) and pins openDiskSource's exact carrier plus the engine-level end-to-end denial",
+    "status": "open",
+    "reason": "",
+    "recorded_at": "2026-11-20T19:51:55.295Z",
     "resolved_at": null,
     "milestone": null
   }

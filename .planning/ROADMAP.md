@@ -134,13 +134,13 @@ Plans:
   1. `easyp lint` выдаёт замечания в неизменном формате: пути, формат issues и коды выхода CLI совпадают с main до переключения на фиксатурном корпусе, включая новые `COMPILE`-замечания в существующем формате
   2. Старый lint-контур и старые реализации правил удалены из кодовой базы; `easyp lint` обслуживается только движком на компиляторе (врезка — одно изменение в шве `buildCore`)
   3. breaking, generate, `mod tidy` и `migrate` проходят свои тестовые наборы в том же прогоне CI — поведение как до изменения; `go-protoparser` и `protocompile` остаются в `go.mod`
-**Plans**: 1/4 plans executed
+**Plans**: 2/4 plans executed
 Plans:
 **Wave 1**
 - [x] 05-01-PLAN.md — Golden capture (tracer): full-registry 73-finding golden incl. Message + D-01 order from the frozen old engine, linked-drive message-parity proof, CLI stdout/exit-code golden (LINT-COMPAT-01)
 
 **Wave 1** *(parallel with 05-01)*
-- [ ] 05-02-PLAN.md — Linker error-path fixes (TDD): WR-01 broken-flag fallback, WR-02 corpus-branch importFileAllowed policy, IN-01 ctx guard, IN-02 keep-decision pinned (LINT-COMPAT-01)
+- [x] 05-02-PLAN.md — Linker error-path fixes (TDD): WR-01 broken-flag fallback, WR-02 corpus-branch importFileAllowed policy, IN-01 ctx guard, IN-02 keep-decision pinned (LINT-COMPAT-01)
 
 **Wave 2** *(blocked on Wave 1)*
 - [ ] 05-03-PLAN.md — THE FLIP: one atomic commit deletes the old lint contour (44 prod + 15 test files), collapses the rename map (buildCore/lint_v1.go textually unchanged), lands class-1 COMPILE cells through actionV1; SC3 subsystem battery + dormancy-audit inversion (LINT-COMPAT-01/02)
@@ -185,7 +185,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 | 2. Линкер и маршрутизация ошибок | 4/4 | Complete    | 2026-11-19 |
 | 3. Двухпроходный движок и подавления | 4/4 | Complete    | 2026-11-19 |
 | 4. Перенос 43 правил с батч-паритетом | 8/8 | Complete    | 2026-11-20 |
-| 5. Переключение lint-пути и ворота совместимости | 1/4 | In Progress | - |
+| 5. Переключение lint-пути и ворота совместимости | 2/4 | In Progress | - |
 | 6. Новые правила и регенерация схем/MCP | 0/TBD | Not started | - |
 | 7. Приёмка — паритет корпусов и производительность | 0/TBD | Not started | - |
 

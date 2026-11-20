@@ -3,11 +3,11 @@ gsd_state_version: "1.0"
 current_phase: 05
 current_phase_name: Переключение lint-пути и ворота совместимости
 status: executing
-stopped_at: Completed 05-01-PLAN.md
-last_updated: "2026-11-20T19:23:33.283Z"
+stopped_at: Completed 05-02-PLAN.md
+last_updated: "2026-11-20T19:53:11.216Z"
 last_activity: 2026-11-20
 last_activity_desc: Phase 05 execution started
-state_head: 98b9975aaf599ae67589e6f9a7fd322343cd778f
+state_head: 94860c09732719d4c3d54c41182d240db35a1558
 progress:
   total_phases: 7
   completed_phases: 4
@@ -41,7 +41,7 @@ See: .planning/PROJECT.md (updated 2026-11-19)
 ## Current Position
 
 Phase: 05 (Переключение lint-пути и ворота совместимости) — EXECUTING
-Plan: 2 of 4
+Plan: 3 of 4
 Status: Ready to execute
 Last activity: 2026-11-20 — Phase 05 execution started
 
@@ -91,6 +91,7 @@ Progress: [███░░░░░░░] 29%
 | Phase 04 P07 | 25 min | 3 tasks | 11 files |
 | Phase 04 P08 | 15 min | 4 tasks | 15 files |
 | Phase 05 P01 | 20 min | 3 tasks | 3 files |
+| Phase 05 P02 | 22 min | 3 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -163,6 +164,9 @@ Recent decisions affecting current work:
 - [Phase 05]: 05-01 v1 per-path rule suppression spelling confirmed as issues.exclude-rules (path + linters): the v1 policy grammar has no ignore_only key (KnownFields strict decode rejects it); engine-level ignore_only stays covered by rules-package tests — The plan's own confirm-the-spelling loop fired; the semantic (rule suppressed on exactly one of two files) is observable in the pinned stdout golden
 - [Phase 05]: 05-01 linked parity drive compares the engine's emitted order as-is (no re-sort): LintLinked already applies the D-01 total sort, so re-sorting would mask an engine-order regression; the old drive sorts via a local D-01 replica (SortStableFunc + cmp.Or) — Stronger contract: the test pins the engine's own deterministic sort, not merely sortability
 - [Phase 05]: 05-01 corpus re-hosted verbatim under goldenCorpusFiles (new names so it coexists with the living parity file until the flip); verbatimness mechanically diff-verified; both engines' full structs proven identical on the corpus incl. Filename/Offset — The parity file dies with the oracle at the flip; the corpus must survive in the golden file collision-free
+- [Phase 05]: 05-02 WR-01 cell re-derived against live source: the plan's directory fixture cannot drive the resolver error path (FSWalker.Open refuses non-regular files with ErrUnsupported; a directory named dep.proto is itself walked as a corpus file, so pass-1 readErrs skip linking before the resolver runs) and the expected outcome is a command error carrying the OS cause, not 'no error' — the plan's own must-have parity truth and threat model T-05-02 require it; EACCES injected through Options.OpenSourceFile exercises the identical openDiskSource funnel
+- [Phase 05]: 05-02 WR-02 cell re-derived to the resolver boundary: engine-level RED is impossible because pass-1 readSource consults the same openDiskSource policy funnel (pre-fix the run already errors with the exact os.ErrNotExist carrier), so the corpus-branch denial is pinned at the lintResolver level (pre-fix it serves denied content from memory — the actual bypass) plus the carrier and end-to-end engine assertions
+- [Phase 05]: 05-02 typed broken discrimination via errors.As on *os.PathError keeps the etalon A4 non-local COMPILE classification (the plain non-local rejection wraps no PathError and stays raw); IN-02 keep-decision (COMPILE diagnostics bypass all suppression machinery) recorded in the linkSources doc comment and pinned by ignored_broken_dependency_not_suppressed
 
 ### Pending Todos
 
@@ -190,6 +194,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-11-20T19:23:32.351Z
-Stopped at: Completed 05-01-PLAN.md
+Last session: 2026-11-20T19:53:10.488Z
+Stopped at: Completed 05-02-PLAN.md
 Resume file: None
