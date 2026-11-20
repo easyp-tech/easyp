@@ -6,11 +6,9 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
-	"slices"
 
 	"github.com/urfave/cli/v2"
 
-	"github.com/easyp-tech/easyp/internal/adapters/go_git"
 	"github.com/easyp-tech/easyp/internal/config"
 	"github.com/easyp-tech/easyp/internal/core"
 	"github.com/easyp-tech/easyp/internal/logger"
@@ -71,21 +69,18 @@ func buildCore(log logger.Logger, cfg config.Config, importRoots modules.SourceR
 
 	allowed := importRoots.FileAllowed()
 	return core.New(core.Options{
-		Rules:                   lintRules,
-		Ignore:                  append(append([]string(nil), cfg.Lint.Ignore...), defaultVendorDir),
-		IgnoreOnly:              ignoreOnly,
-		AllowCommentIgnores:     cfg.Lint.AllowCommentIgnores,
-		KnownLintRules:          rules.AllRuleNames(),
-		Logger:                  log,
-		ImportRoots:             importRoots.Paths(),
-		ImportFileAllowed:       allowed,
-		OpenSourceFile:          importRoots.SourceOpenerIn(session, allowed),
-		SourceSession:           session,
-		CurrentProjectGitWalker: go_git.New(),
+		Rules:               lintRules,
+		Ignore:              append(append([]string(nil), cfg.Lint.Ignore...), defaultVendorDir),
+		IgnoreOnly:          ignoreOnly,
+		AllowCommentIgnores: cfg.Lint.AllowCommentIgnores,
+		KnownLintRules:      rules.AllRuleNames(),
+		Logger:              log,
+		ImportRoots:         importRoots.Paths(),
+		ImportFileAllowed:   allowed,
+		OpenSourceFile:      importRoots.SourceOpenerIn(session, allowed),
+		SourceSession:       session,
 		BreakingCheckConfig: core.BreakingCheckConfig{
 			IgnoreDirs:     append(append([]string(nil), cfg.BreakingCheck.Ignore...), defaultVendorDir),
-			AgainstGitRef:  cfg.BreakingCheck.AgainstGitRef,
-			FilesCheck:     slices.Contains(cfg.BreakingCheck.Use, core.BreakingCheckFilesCheck),
 			Categories:     cfg.BreakingCheck.Categories,
 			IgnoreUnstable: cfg.BreakingCheck.IgnoreUnstable,
 		},

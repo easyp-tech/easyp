@@ -53,17 +53,18 @@ enum State { STATE_UNSPECIFIED = 0; }
 service ItemService { rpc Get(Item) returns (Item); }`
 	tests := []struct {
 		name, baselinePackage, currentPackage, currentFile, currentBody string
-		ignore, files                                                   bool
+		categories                                                      []string
+		ignore                                                          bool
 		wantCount                                                       int
 	}{
-		{name: "unstable_enabled", baselinePackage: "example.v1beta1", currentPackage: "example.v1beta1", ignore: true},
-		{name: "unstable_disabled", baselinePackage: "example.v1beta1", currentPackage: "example.v1beta1", wantCount: 4},
-		{name: "stable_enabled", baselinePackage: "example.v1", currentPackage: "example.v1", ignore: true, wantCount: 4},
-		{name: "baseline_unstable_current_stable", baselinePackage: "example.v1beta1", currentPackage: "example.v1", ignore: true},
-		{name: "baseline_stable_current_unstable", baselinePackage: "example.v1", currentPackage: "example.v1beta1", currentBody: declarations, ignore: true, wantCount: 4},
-		{name: "stable_file_moves", baselinePackage: "example.v1", currentPackage: "example.v1", currentFile: "new.proto", currentBody: declarations, ignore: true, files: true, wantCount: 4},
-		{name: "unstable_file_moves", baselinePackage: "example.v1alpha", currentPackage: "example.v1alpha", currentFile: "new.proto", currentBody: declarations, ignore: true, files: true},
-		{name: "unstable_not_last", baselinePackage: "example.v1beta1.service", currentPackage: "example.v1beta1.service", ignore: true, wantCount: 4},
+		{name: "unstable_enabled", baselinePackage: "example.v1beta1", currentPackage: "example.v1beta1", categories: []string{"PACKAGE"}, ignore: true},
+		{name: "unstable_disabled", baselinePackage: "example.v1beta1", currentPackage: "example.v1beta1", categories: []string{"PACKAGE"}, wantCount: 3},
+		{name: "stable_enabled", baselinePackage: "example.v1", currentPackage: "example.v1", categories: []string{"PACKAGE"}, ignore: true, wantCount: 3},
+		{name: "baseline_unstable_current_stable", baselinePackage: "example.v1beta1", currentPackage: "example.v1", categories: []string{"PACKAGE"}, ignore: true},
+		{name: "baseline_stable_current_unstable", baselinePackage: "example.v1", currentPackage: "example.v1beta1", currentBody: declarations, categories: []string{"PACKAGE"}, ignore: true, wantCount: 4},
+		{name: "stable_file_moves", baselinePackage: "example.v1", currentPackage: "example.v1", currentFile: "new.proto", currentBody: declarations, categories: []string{"FILE"}, ignore: true, wantCount: 5},
+		{name: "unstable_file_moves", baselinePackage: "example.v1alpha", currentPackage: "example.v1alpha", currentFile: "new.proto", currentBody: declarations, categories: []string{"FILE"}, ignore: true},
+		{name: "unstable_not_last", baselinePackage: "example.v1beta1.service", currentPackage: "example.v1beta1.service", categories: []string{"PACKAGE"}, ignore: true, wantCount: 3},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -75,7 +76,7 @@ service ItemService { rpc Get(Item) returns (Item); }`
 				currentFile = "old.proto"
 			}
 			writeUnstableProto(t, current, currentFile, "syntax = \"proto3\"; package "+tt.currentPackage+"; "+tt.currentBody)
-			app := New(Options{Logger: logger.NewNop(), BreakingCheckConfig: BreakingCheckConfig{IgnoreUnstable: tt.ignore, FilesCheck: tt.files}})
+			app := New(Options{Logger: logger.NewNop(), BreakingCheckConfig: BreakingCheckConfig{IgnoreUnstable: tt.ignore, Categories: tt.categories}})
 			issues, err := app.CompareBreaking(t.Context(), fs.NewFSWalker(current, "."), fs.NewFSWalker(baseline, "."), nil)
 			require.NoError(t, err)
 			assert.Len(t, issues, tt.wantCount, "%+v", issues)
@@ -89,8 +90,8 @@ func TestIgnoreUnstablePreservesStableReferencesAndDependencyBaselines(t *testin
 		name, dependencyPackage string
 		wantCount               int
 	}{
-		{name: "unstable_dependency", dependencyPackage: "dep.v1beta1", wantCount: 4},
-		{name: "stable_dependency", dependencyPackage: "dep.v1", wantCount: 5},
+		{name: "unstable_dependency", dependencyPackage: "dep.v1beta1", wantCount: 3},
+		{name: "stable_dependency", dependencyPackage: "dep.v1", wantCount: 4},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -101,8 +102,8 @@ func TestIgnoreUnstablePreservesStableReferencesAndDependencyBaselines(t *testin
 			writeUnstableProto(t, baselineDeps, "removed.proto", "syntax = \"proto3\"; package old.v1beta1;")
 			writeUnstableProto(t, baseline, "use.proto", "syntax = \"proto3\"; package stable.v1; import \"dep.proto\"; import \"removed.proto\"; message Use { "+tt.dependencyPackage+".Item item = 1; } service API { rpc Get("+tt.dependencyPackage+".Item) returns ("+tt.dependencyPackage+".Item); }")
 			writeUnstableProto(t, current, "use.proto", "syntax = \"proto3\"; package stable.v1; import \"dep.proto\"; message Use { "+tt.dependencyPackage+".Other item = 1; } service API { rpc Get("+tt.dependencyPackage+".Other) returns ("+tt.dependencyPackage+".Other); }")
-			app := New(Options{Logger: logger.NewNop(), ImportRoots: []string{currentDeps}, BreakingCheckConfig: BreakingCheckConfig{IgnoreUnstable: true}})
-			issues, err := app.CompareBreaking(t.Context(), fs.NewFSWalker(current, "."), fs.NewFSWalker(baseline, "."), []string{baselineDeps})
+			app := New(Options{Logger: logger.NewNop(), ImportRoots: []string{current, currentDeps}, BreakingCheckConfig: BreakingCheckConfig{IgnoreUnstable: true}})
+			issues, err := app.CompareBreaking(t.Context(), fs.NewFSWalker(current, "."), fs.NewFSWalker(baseline, "."), []string{baseline, baselineDeps})
 			require.NoError(t, err)
 			assert.Len(t, issues, tt.wantCount, "%+v", issues)
 			stableCount := 0
@@ -111,7 +112,7 @@ func TestIgnoreUnstablePreservesStableReferencesAndDependencyBaselines(t *testin
 					stableCount++
 				}
 			}
-			assert.Equal(t, 4, stableCount)
+			assert.Equal(t, 3, stableCount)
 		})
 	}
 }
@@ -119,33 +120,4 @@ func TestIgnoreUnstablePreservesStableReferencesAndDependencyBaselines(t *testin
 func writeUnstableProto(t *testing.T, root, name, content string) {
 	t.Helper()
 	require.NoError(t, os.WriteFile(filepath.Join(root, name), []byte(content), 0o600))
-}
-
-func TestLegacyBreakingCheckIgnoreUnstable(t *testing.T) {
-	t.Parallel()
-	for _, tt := range []struct {
-		name      string
-		ignore    bool
-		wantCount int
-	}{
-		{name: "enabled", ignore: true},
-		{name: "disabled", wantCount: 1},
-	} {
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-			baseline, current := t.TempDir(), t.TempDir()
-			writeUnstableProto(t, baseline, "item.proto", "syntax = \"proto3\"; package example.v1test; message Item {}")
-			writeUnstableProto(t, current, "item.proto", "syntax = \"proto3\"; package example.v1test;")
-			app := New(Options{Logger: logger.NewNop(), BreakingCheckConfig: BreakingCheckConfig{IgnoreUnstable: tt.ignore}, CurrentProjectGitWalker: unstableBaselineWalker{DirWalker: fs.NewFSWalker(baseline, ".")}})
-			issues, err := app.BreakingCheck(t.Context(), current, current, ".")
-			require.NoError(t, err)
-			assert.Len(t, issues, tt.wantCount)
-		})
-	}
-}
-
-type unstableBaselineWalker struct{ DirWalker }
-
-func (w unstableBaselineWalker) GetDirWalker(_, _, _ string) (DirWalker, error) {
-	return w.DirWalker, nil
 }

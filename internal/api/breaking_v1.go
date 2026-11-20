@@ -157,8 +157,7 @@ func (b BreakingCheck) checkV1Policies(ctx *cli.Context, log logger.Logger, conf
 			currentAllowed, currentOpen := breakingRevisionSources(currentImports, session)
 			baselineAllowed, baselineOpen := breakingRevisionSources(baselineImports, session)
 			app := core.New(core.Options{Logger: log, ImportRoots: currentImports.Paths(), ImportFileAllowed: currentAllowed, OpenSourceFile: currentOpen, SourceSession: session, BreakingCheckConfig: core.BreakingCheckConfig{
-				IgnoreDirs: append(append([]string(nil), ignorePaths...), defaultVendorDir), AgainstGitRef: cfg.AgainstGitRef,
-				FilesCheck:     slices.Contains(cfg.Use, core.BreakingCheckFilesCheck),
+				IgnoreDirs:     append(append([]string(nil), ignorePaths...), defaultVendorDir),
 				Categories:     cfg.Categories,
 				IgnoreUnstable: cfg.IgnoreUnstable,
 			}})
@@ -477,8 +476,7 @@ func (b BreakingCheck) checkV1ExtendedBreakingSource(
 		currentAllowed, currentOpen := breakingRevisionSources(currentImports, session)
 		baselineAllowed, baselineOpen := breakingRevisionSources(baselineImports, session)
 		app := core.New(core.Options{Logger: log, ImportRoots: currentImports.Paths(), ImportFileAllowed: currentAllowed, OpenSourceFile: currentOpen, SourceSession: session, BreakingCheckConfig: core.BreakingCheckConfig{
-			IgnoreDirs: append(append([]string(nil), ignorePaths...), defaultVendorDir), AgainstGitRef: cfg.AgainstGitRef,
-			FilesCheck: slices.Contains(cfg.Use, core.BreakingCheckFilesCheck), Categories: cfg.Categories, IgnoreUnstable: cfg.IgnoreUnstable,
+			IgnoreDirs: append(append([]string(nil), ignorePaths...), defaultVendorDir), Categories: cfg.Categories, IgnoreUnstable: cfg.IgnoreUnstable,
 		}})
 		findings, err := app.CompareBreakingWithImports(ctx.Context, newBreakingWalker(repositoryRoot, currentFiles), newBreakingWalker(snapshot.Root, baselineFiles), core.BreakingImports{Paths: baselineImports.Paths(), FileAllowed: baselineAllowed, Open: baselineOpen})
 		if err != nil {
