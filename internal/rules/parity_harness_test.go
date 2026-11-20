@@ -107,3 +107,42 @@ func fingerprint(infos []core.IssueInfo) []core.IssueInfo {
 	})
 	return out
 }
+
+// TestFingerprintSourceNameTiebreak pins the fifth sort term (04-REVIEW
+// WR-04): issues tying on (path, rule, line, col) but differing only in
+// SourceName must come out ordered by SourceName, and SourceName is part of
+// the compared value — it is user-visible in both output printers
+// (internal/api/lint.go text and JSON).
+func TestFingerprintSourceNameTiebreak(t *testing.T) {
+	t.Parallel()
+
+	alpha := core.IssueInfo{
+		Issue: core.Issue{
+			Position:   core.Position{Line: 5, Column: 1},
+			SourceName: "alpha",
+			RuleName:   "RULE_ONE",
+		},
+		Path: "a/b.proto",
+	}
+	beta := core.IssueInfo{
+		Issue: core.Issue{
+			Position:   core.Position{Line: 5, Column: 1},
+			SourceName: "beta",
+			RuleName:   "RULE_ONE",
+		},
+		Path: "a/b.proto",
+	}
+
+	// Sort pin: fed in reverse order, the fingerprint must still come out
+	// ordered by SourceName (RED until the fifth cmp.Or term lands).
+	got := fingerprint([]core.IssueInfo{beta, alpha})
+	require.Len(t, got, 2)
+	require.Equal(t, "alpha", got[0].SourceName,
+		"ties on (path, rule, line, col) must order by SourceName")
+	require.Equal(t, "beta", got[1].SourceName)
+
+	// Value-compare pin: two one-element fingerprints differing only in
+	// SourceName are NotEqual.
+	require.NotEqual(t, fingerprint([]core.IssueInfo{alpha}), fingerprint([]core.IssueInfo{beta}),
+		"SourceName is part of the parity value")
+}
