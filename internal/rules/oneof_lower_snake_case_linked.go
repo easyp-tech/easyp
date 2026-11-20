@@ -6,29 +6,24 @@ import (
 	"github.com/easyp-tech/easyp/internal/core"
 )
 
-var _ core.Rule = (*OneofLowerSnakeCaseLinked)(nil)
+var _ core.Rule = (*OneofLowerSnakeCase)(nil)
 
-// OneofLowerSnakeCaseLinked is the linked-engine port of OneofLowerSnakeCase
+// OneofLowerSnakeCase
 // (research inventory #14, main-diverged): main's regexp wins over the lab's
 // casing-helper equality (casing.go) — digits fail main ("oneof1") but pass
 // the helper — and the position is the declaration keyword (oneof.Meta.Pos ≡
 // Decl.Pos), not the lab's declared-name token. Walk shape: oneofs of
 // TOP-LEVEL messages only (main's shallow loop); the recursion-capable
 // Visitor walk is not used.
-type OneofLowerSnakeCaseLinked struct{}
-
-// LintRuleName returns the canonical registry name (no _LINKED suffix).
-func (c *OneofLowerSnakeCaseLinked) LintRuleName() string {
-	return "ONEOF_LOWER_SNAKE_CASE"
-}
+type OneofLowerSnakeCase struct{}
 
 // Message implements lint.Rule.
-func (c *OneofLowerSnakeCaseLinked) Message() string {
+func (c *OneofLowerSnakeCase) Message() string {
 	return "oneof name should be lower_snake_case"
 }
 
 // Validate implements lint.Rule.
-func (c *OneofLowerSnakeCaseLinked) Validate(info core.ProtoInfo) ([]core.Issue, error) {
+func (c *OneofLowerSnakeCase) Validate(info core.ProtoInfo) ([]core.Issue, error) {
 	var res []core.Issue
 
 	lowerSnakeCase := regexp.MustCompile("^[a-z]+(_[a-z]+)*$")

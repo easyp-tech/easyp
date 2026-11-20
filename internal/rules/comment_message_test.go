@@ -17,7 +17,7 @@ func TestCommentMessage_Message(t *testing.T) {
 
 	const expMessage = "message comments must not be empty"
 
-	rule := rules.CommentMessageLinked{}
+	rule := rules.CommentMessage{}
 	message := rule.Message()
 
 	assert.Equal(expMessage, message)
@@ -58,7 +58,7 @@ func TestCommentMessage_Validate(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			rule := rules.CommentMessageLinked{}
+			rule := rules.CommentMessage{}
 
 			issues, err := rule.Validate(parseLinkedFile(t, tc.fileName))
 			require.ErrorIs(t, err, tc.wantErr)

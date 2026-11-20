@@ -19,7 +19,7 @@ func TestPackageSameSwiftPrefix_Message(t *testing.T) {
 
 	const expMessage = "all files in the same package must have the same swift_prefix option"
 
-	rule := rules.PackageSameSwiftPrefixLinked{}
+	rule := rules.PackageSameSwiftPrefix{}
 	message := rule.Message()
 
 	assert.Equal(expMessage, message)
@@ -65,7 +65,7 @@ func TestPackageSameSwiftPrefix_Validate(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			rule := &rules.PackageSameSwiftPrefixLinked{}
+			rule := &rules.PackageSameSwiftPrefix{}
 
 			var infos []core.ProtoInfo
 			for _, fileName := range tc.fileNames {
@@ -113,7 +113,7 @@ func TestPackageSameSwiftPrefix_RubyPackageBugPin(t *testing.T) {
 			"b.proto": "syntax = \"proto3\";\n\npackage pin;\n\noption ruby_package = \"b.ruby\";\n\nmessage Bm {}\n",
 		})
 
-		issues, err := validate(&rules.PackageSameSwiftPrefixLinked{}, infos...)
+		issues, err := validate(&rules.PackageSameSwiftPrefix{}, infos...)
 		require.NoError(t, err)
 		require.Len(t, issues, 1)
 		require.Equal(t, "PACKAGE_SAME_SWIFT_PREFIX", issues[0].RuleName)
@@ -130,7 +130,7 @@ func TestPackageSameSwiftPrefix_RubyPackageBugPin(t *testing.T) {
 			"b.proto": "syntax = \"proto3\";\n\npackage pin2;\n\noption swift_prefix = \"pre.b\";\n\nmessage Bm {}\n",
 		})
 
-		issues, err := validate(&rules.PackageSameSwiftPrefixLinked{}, infos...)
+		issues, err := validate(&rules.PackageSameSwiftPrefix{}, infos...)
 		require.NoError(t, err)
 		require.Empty(t, issues)
 	})

@@ -17,7 +17,7 @@ func TestRPCRequestStandardName_Message(t *testing.T) {
 
 	const expMessage = "rpc request should have suffix 'Request'"
 
-	rule := rules.RPCRequestStandardNameLinked{}
+	rule := rules.RPCRequestStandardName{}
 	message := rule.Message()
 
 	assert.Equal(expMessage, message)
@@ -56,7 +56,7 @@ func TestRPCRequestStandardName_Validate(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			rule := rules.RPCRequestStandardNameLinked{}
+			rule := rules.RPCRequestStandardName{}
 
 			issues, err := rule.Validate(parseLinkedFile(t, tc.fileName))
 			require.ErrorIs(t, err, tc.wantErr)

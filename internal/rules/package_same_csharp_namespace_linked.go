@@ -4,9 +4,8 @@ import (
 	"github.com/easyp-tech/easyp/internal/core"
 )
 
-var _ core.ModuleRule = (*PackageSameCsharpNamespaceLinked)(nil)
+var _ core.ModuleRule = (*PackageSameCsharpNamespace)(nil)
 
-// PackageSameCsharpNamespaceLinked is the linked-engine port of
 // PackageSameCsharpNamespace (research inventory #16, main-diverged + adapt):
 // all files of one package must declare the same csharp_namespace option.
 // The Collect/Finish mechanics come from the etalon's ModuleRule shape; the
@@ -23,27 +22,22 @@ var _ core.ModuleRule = (*PackageSameCsharpNamespaceLinked)(nil)
 //     (groupedValues.firstExemptMismatches — the lab's
 //     report-everyone Finish is not reachable from ports);
 //   - a file without a package never joins a group (main returns early).
-type PackageSameCsharpNamespaceLinked struct {
+type PackageSameCsharpNamespace struct {
 	files groupedValues
 }
 
-// LintRuleName returns the canonical registry name (no _LINKED suffix).
-func (p *PackageSameCsharpNamespaceLinked) LintRuleName() string {
-	return "PACKAGE_SAME_CSHARP_NAMESPACE"
-}
-
 // Message implements lint.Rule.
-func (p *PackageSameCsharpNamespaceLinked) Message() string {
+func (p *PackageSameCsharpNamespace) Message() string {
 	return "different proto files in the same package should have the same csharp_namespace"
 }
 
 // Validate implements lint.Rule. Lint calls Collect and Finish instead.
-func (p *PackageSameCsharpNamespaceLinked) Validate(core.ProtoInfo) ([]core.Issue, error) {
+func (p *PackageSameCsharpNamespace) Validate(core.ProtoInfo) ([]core.Issue, error) {
 	return nil, nil
 }
 
 // Collect implements core.ModuleRule.
-func (p *PackageSameCsharpNamespaceLinked) Collect(info core.ProtoInfo) error {
+func (p *PackageSameCsharpNamespace) Collect(info core.ProtoInfo) error {
 	if len(info.File.Packages) == 0 {
 		// main returns early: packageless files never join groups.
 		return nil
@@ -71,6 +65,6 @@ func (p *PackageSameCsharpNamespaceLinked) Collect(info core.ProtoInfo) error {
 }
 
 // Finish implements core.ModuleRule.
-func (p *PackageSameCsharpNamespaceLinked) Finish() []core.IssueInfo {
+func (p *PackageSameCsharpNamespace) Finish() []core.IssueInfo {
 	return p.files.firstExemptMismatches(p)
 }

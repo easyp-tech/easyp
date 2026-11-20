@@ -17,7 +17,7 @@ func TestEnumNoAllowAlias_Message(t *testing.T) {
 
 	const expMessage = "enum must not allow alias"
 
-	rule := rules.EnumNoAllowAliasLinked{}
+	rule := rules.EnumNoAllowAlias{}
 	message := rule.Message()
 
 	assert.Equal(expMessage, message)
@@ -72,7 +72,7 @@ func TestEnumNoAllowAlias_Validate(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			rule := rules.EnumNoAllowAliasLinked{}
+			rule := rules.EnumNoAllowAlias{}
 
 			issues, err := rule.Validate(parseLinkedFile(t, tc.fileName))
 			require.ErrorIs(t, err, tc.wantErr)

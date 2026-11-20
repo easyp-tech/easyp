@@ -4,9 +4,9 @@ import (
 	"github.com/easyp-tech/easyp/internal/core"
 )
 
-var _ core.ModuleRule = (*PackageSamePHPNamespaceLinked)(nil)
+var _ core.ModuleRule = (*PackageSamePHPNamespace)(nil)
 
-// PackageSamePHPNamespaceLinked is the linked-engine port of PackageSamePHPNamespace
+// PackageSamePHPNamespace
 // (research inventory main-diverged + adapt): all files of one package must
 // declare the same php_namespace option. The Collect/Finish mechanics come from
 // the etalon's ModuleRule shape; the semantics are main's (threat T-04-11):
@@ -22,27 +22,22 @@ var _ core.ModuleRule = (*PackageSamePHPNamespaceLinked)(nil)
 //     (groupedValues.firstExemptMismatches — the lab's
 //     report-everyone Finish is not reachable from ports);
 //   - a file without a package never joins a group (main returns early).
-type PackageSamePHPNamespaceLinked struct {
+type PackageSamePHPNamespace struct {
 	files groupedValues
 }
 
-// LintRuleName returns the canonical registry name (no _LINKED suffix).
-func (p *PackageSamePHPNamespaceLinked) LintRuleName() string {
-	return "PACKAGE_SAME_PHP_NAMESPACE"
-}
-
 // Message implements lint.Rule.
-func (p *PackageSamePHPNamespaceLinked) Message() string {
+func (p *PackageSamePHPNamespace) Message() string {
 	return "all files in the same package must have the same php_namespace option"
 }
 
 // Validate implements lint.Rule. Lint calls Collect and Finish instead.
-func (p *PackageSamePHPNamespaceLinked) Validate(core.ProtoInfo) ([]core.Issue, error) {
+func (p *PackageSamePHPNamespace) Validate(core.ProtoInfo) ([]core.Issue, error) {
 	return nil, nil
 }
 
 // Collect implements core.ModuleRule.
-func (p *PackageSamePHPNamespaceLinked) Collect(info core.ProtoInfo) error {
+func (p *PackageSamePHPNamespace) Collect(info core.ProtoInfo) error {
 	if len(info.File.Packages) == 0 {
 		// main returns early: packageless files never join groups.
 		return nil
@@ -70,6 +65,6 @@ func (p *PackageSamePHPNamespaceLinked) Collect(info core.ProtoInfo) error {
 }
 
 // Finish implements core.ModuleRule.
-func (p *PackageSamePHPNamespaceLinked) Finish() []core.IssueInfo {
+func (p *PackageSamePHPNamespace) Finish() []core.IssueInfo {
 	return p.files.firstExemptMismatches(p)
 }

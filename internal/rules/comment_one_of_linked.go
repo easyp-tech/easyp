@@ -4,9 +4,9 @@ import (
 	"github.com/easyp-tech/easyp/internal/core"
 )
 
-var _ core.Rule = (*CommentOneofLinked)(nil)
+var _ core.Rule = (*CommentOneof)(nil)
 
-// CommentOneofLinked is the linked-engine port of CommentOneof (research
+// CommentOneof (research
 // inventory #37, main-diverged). Presence predicate is MAIN'S: a declaration
 // is undocumented iff no comment at all precedes it — HasCommentAbove()
 // (Leading+Detached) reproduces main's "no attached comment" reading,
@@ -23,20 +23,15 @@ var _ core.Rule = (*CommentOneofLinked)(nil)
 // Walk shape is main's: oneofs of TOP-LEVEL messages only (direct field
 // iteration, no recursion); findings report the declaration keyword position
 // (main Meta.Pos ≡ Decl.Pos) with the oneof name as source.
-type CommentOneofLinked struct{}
-
-// LintRuleName returns the canonical registry name (no _LINKED suffix).
-func (c *CommentOneofLinked) LintRuleName() string {
-	return "COMMENT_ONEOF"
-}
+type CommentOneof struct{}
 
 // Message implements lint.Rule.
-func (c *CommentOneofLinked) Message() string {
+func (c *CommentOneof) Message() string {
 	return "oneof comments must not be empty"
 }
 
 // Validate implements lint.Rule.
-func (c *CommentOneofLinked) Validate(info core.ProtoInfo) ([]core.Issue, error) {
+func (c *CommentOneof) Validate(info core.ProtoInfo) ([]core.Issue, error) {
 	var res []core.Issue
 
 	for _, msg := range info.File.Messages {

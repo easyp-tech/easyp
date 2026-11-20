@@ -17,7 +17,7 @@ func TestPackageSameGoPackage_Message(t *testing.T) {
 
 	const expMessage = "all files in the same package must have the same go_package name"
 
-	rule := rules.PackageSameGoPackageLinked{}
+	rule := rules.PackageSameGoPackage{}
 	message := rule.Message()
 
 	assert.Equal(expMessage, message)
@@ -60,7 +60,7 @@ func TestPackageSameGoPackage_Validate(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			rule := &rules.PackageSameGoPackageLinked{}
+			rule := &rules.PackageSameGoPackage{}
 
 			var infos []core.ProtoInfo
 			for _, fileName := range tc.fileNames {

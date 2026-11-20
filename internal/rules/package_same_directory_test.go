@@ -17,7 +17,7 @@ func TestPackageSameDirectory_Message(t *testing.T) {
 
 	const expMessage = "different proto files in the same package should be in the same directory"
 
-	rule := rules.PackageSameDirectoryLinked{}
+	rule := rules.PackageSameDirectory{}
 	message := rule.Message()
 
 	assert.Equal(expMessage, message)
@@ -60,7 +60,7 @@ func TestPackageSameDirectory_Validate(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			rule := &rules.PackageSameDirectoryLinked{}
+			rule := &rules.PackageSameDirectory{}
 
 			var infos []core.ProtoInfo
 			for _, fileName := range tc.fileNames {

@@ -6,9 +6,9 @@ import (
 	"github.com/easyp-tech/easyp/internal/core"
 )
 
-var _ core.Rule = (*MessagePascalCaseLinked)(nil)
+var _ core.Rule = (*MessagePascalCase)(nil)
 
-// MessagePascalCaseLinked is the linked-engine port of MessagePascalCase
+// MessagePascalCase
 // (research inventory #13, main-diverged): main's regexp wins over the lab's
 // casing-helper equality (casing.go) — a single-char message ("A") fails main
 // but would pass the helper — and the position is the declaration keyword
@@ -17,20 +17,15 @@ var _ core.Rule = (*MessagePascalCaseLinked)(nil)
 // Walk shape: TOP-LEVEL messages only (main's shallow loop); nested messages
 // are outside main's predicate, so the recursion-capable Visitor walk is not
 // used.
-type MessagePascalCaseLinked struct{}
-
-// LintRuleName returns the canonical registry name (no _LINKED suffix).
-func (c *MessagePascalCaseLinked) LintRuleName() string {
-	return "MESSAGE_PASCAL_CASE"
-}
+type MessagePascalCase struct{}
 
 // Message implements lint.Rule.
-func (c *MessagePascalCaseLinked) Message() string {
+func (c *MessagePascalCase) Message() string {
 	return "message name should be PascalCase"
 }
 
 // Validate implements lint.Rule.
-func (c *MessagePascalCaseLinked) Validate(info core.ProtoInfo) ([]core.Issue, error) {
+func (c *MessagePascalCase) Validate(info core.ProtoInfo) ([]core.Issue, error) {
 	var res []core.Issue
 
 	pascalCase := regexp.MustCompile("^[A-Z][a-zA-Z0-9]+(?:[A-Z][a-zA-Z0-9]+)*$")

@@ -17,7 +17,7 @@ func TestPackageSameCsharpNamespace_Message(t *testing.T) {
 
 	const expMessage = "different proto files in the same package should have the same csharp_namespace"
 
-	rule := rules.PackageSameCsharpNamespaceLinked{}
+	rule := rules.PackageSameCsharpNamespace{}
 	message := rule.Message()
 
 	assert.Equal(expMessage, message)
@@ -60,7 +60,7 @@ func TestPackageSameCsharpNamespace_Validate(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			rule := &rules.PackageSameCsharpNamespaceLinked{}
+			rule := &rules.PackageSameCsharpNamespace{}
 
 			var infos []core.ProtoInfo
 			for _, fileName := range tc.fileNames {

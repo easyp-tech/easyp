@@ -17,7 +17,7 @@ func TestRPCPascalCase_Message(t *testing.T) {
 
 	const expMessage = "RPC names should be PascalCase"
 
-	rule := rules.RPCPascalCaseLinked{}
+	rule := rules.RPCPascalCase{}
 	message := rule.Message()
 
 	assert.Equal(expMessage, message)
@@ -56,7 +56,7 @@ func TestRPCPascalCase_Validate(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			rule := rules.RPCPascalCaseLinked{}
+			rule := rules.RPCPascalCase{}
 
 			issues, err := rule.Validate(parseLinkedFile(t, tc.fileName))
 			require.ErrorIs(t, err, tc.wantErr)

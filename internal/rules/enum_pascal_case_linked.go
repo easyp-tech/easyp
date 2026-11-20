@@ -6,9 +6,9 @@ import (
 	"github.com/easyp-tech/easyp/internal/core"
 )
 
-var _ core.Rule = (*EnumPascalCaseLinked)(nil)
+var _ core.Rule = (*EnumPascalCase)(nil)
 
-// EnumPascalCaseLinked is the linked-engine port of EnumPascalCase (research
+// EnumPascalCase (research
 // inventory #7, main-diverged): main's regexp wins over the lab's
 // casing-helper equality (casing.go) — acronym enums like "ABC" fail main but
 // would pass the helper — and the position is the declaration keyword
@@ -16,20 +16,15 @@ var _ core.Rule = (*EnumPascalCaseLinked)(nil)
 // main's two-level loop — top-level enums plus enums of TOP-LEVEL messages;
 // deeper nesting is outside main's predicate, so the recursion-capable
 // Visitor walk is not used.
-type EnumPascalCaseLinked struct{}
-
-// LintRuleName returns the canonical registry name (no _LINKED suffix).
-func (c *EnumPascalCaseLinked) LintRuleName() string {
-	return "ENUM_PASCAL_CASE"
-}
+type EnumPascalCase struct{}
 
 // Message implements lint.Rule.
-func (c *EnumPascalCaseLinked) Message() string {
+func (c *EnumPascalCase) Message() string {
 	return "enum name must be in PascalCase"
 }
 
 // Validate implements lint.Rule.
-func (c *EnumPascalCaseLinked) Validate(info core.ProtoInfo) ([]core.Issue, error) {
+func (c *EnumPascalCase) Validate(info core.ProtoInfo) ([]core.Issue, error) {
 	var res []core.Issue
 
 	pascalCase := regexp.MustCompile("^[A-Z][a-z]+(?:[A-Z][a-z]+)*$")

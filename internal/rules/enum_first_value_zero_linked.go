@@ -4,9 +4,9 @@ import (
 	"github.com/easyp-tech/easyp/internal/core"
 )
 
-var _ core.Rule = (*EnumFirstValueZeroLinked)(nil)
+var _ core.Rule = (*EnumFirstValueZero)(nil)
 
-// EnumFirstValueZeroLinked is the linked-engine port of EnumFirstValueZero
+// EnumFirstValueZero
 // (research inventory #5, main-diverged with one documented deviation): main's
 // STRING compare (`Number != "0"`) wins over the lab's numeric
 // parse-and-compare — the octal "00" and hex "0x0" spellings of zero issue
@@ -20,20 +20,15 @@ var _ core.Rule = (*EnumFirstValueZeroLinked)(nil)
 // kept as the ONE deliberate crash-fix deviation. It is unreachable through
 // the engine (protoc rejects empty enums, so the lint path sees only files
 // that compile) and is unit-pinned in enum_first_value_zero_test.go.
-type EnumFirstValueZeroLinked struct{}
-
-// LintRuleName returns the canonical registry name (no _LINKED suffix).
-func (c *EnumFirstValueZeroLinked) LintRuleName() string {
-	return "ENUM_FIRST_VALUE_ZERO"
-}
+type EnumFirstValueZero struct{}
 
 // Message implements lint.Rule.
-func (c *EnumFirstValueZeroLinked) Message() string {
+func (c *EnumFirstValueZero) Message() string {
 	return "enum first value must be zero"
 }
 
 // Validate implements lint.Rule.
-func (c *EnumFirstValueZeroLinked) Validate(info core.ProtoInfo) ([]core.Issue, error) {
+func (c *EnumFirstValueZero) Validate(info core.ProtoInfo) ([]core.Issue, error) {
 	var res []core.Issue
 
 	for _, enum := range info.File.Enums {

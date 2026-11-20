@@ -6,29 +6,23 @@ import (
 	"github.com/easyp-tech/easyp/internal/core"
 )
 
-var _ core.Rule = (*PackageVersionSuffixLinked)(nil)
+var _ core.Rule = (*PackageVersionSuffix)(nil)
 
-// PackageVersionSuffixLinked is the linked-engine port of
 // PackageVersionSuffix (research inventory #31, main-diverged; threat
 // T-04-12): main's regexp is UNANCHORED — a single-component "v1" matches
 // `.*v\d+` — where the lab's two-component version helper
 // (lint_helpers.go) would fail it. That helper is not used by this port
 // (grep-clean). The position is the package declaration keyword (main
 // Meta.Pos ≡ Decl.Pos).
-type PackageVersionSuffixLinked struct{}
-
-// LintRuleName returns the canonical registry name (no _LINKED suffix).
-func (p *PackageVersionSuffixLinked) LintRuleName() string {
-	return "PACKAGE_VERSION_SUFFIX"
-}
+type PackageVersionSuffix struct{}
 
 // Message implements lint.Rule.
-func (p *PackageVersionSuffixLinked) Message() string {
+func (p *PackageVersionSuffix) Message() string {
 	return "package name should have a version suffix"
 }
 
 // Validate implements lint.Rule.
-func (p *PackageVersionSuffixLinked) Validate(info core.ProtoInfo) ([]core.Issue, error) {
+func (p *PackageVersionSuffix) Validate(info core.ProtoInfo) ([]core.Issue, error) {
 	var res []core.Issue
 
 	// main's matchVersionSuffix regexp, byte-verbatim and UNANCHORED.

@@ -130,63 +130,63 @@ func defaultIfEmpty(val, fallback string) string {
 }
 
 func addMinimal(res []string) []string {
-	res = append(res, core.GetRuleName(&DirectorySamePackageLinked{}))
-	res = append(res, core.GetRuleName(&PackageDefinedLinked{}))
-	res = append(res, core.GetRuleName(&PackageDirectoryMatchLinked{}))
-	res = append(res, core.GetRuleName(&PackageSameDirectoryLinked{}))
+	res = append(res, core.GetRuleName(&DirectorySamePackage{}))
+	res = append(res, core.GetRuleName(&PackageDefined{}))
+	res = append(res, core.GetRuleName(&PackageDirectoryMatch{}))
+	res = append(res, core.GetRuleName(&PackageSameDirectory{}))
 
 	return res
 }
 
 func addBasic(res []string) []string {
-	res = append(res, core.GetRuleName(&EnumFirstValueZeroLinked{}))
-	res = append(res, core.GetRuleName(&EnumNoAllowAliasLinked{}))
-	res = append(res, core.GetRuleName(&EnumPascalCaseLinked{}))
-	res = append(res, core.GetRuleName(&EnumValueUpperSnakeCaseLinked{}))
-	res = append(res, core.GetRuleName(&FieldLowerSnakeCaseLinked{}))
-	res = append(res, core.GetRuleName(&ImportNoPublicLinked{}))
-	res = append(res, core.GetRuleName(&ImportNoWeakLinked{}))
-	res = append(res, core.GetRuleName(&ImportUsedLinked{}))
-	res = append(res, core.GetRuleName(&MessagePascalCaseLinked{}))
-	res = append(res, core.GetRuleName(&OneofLowerSnakeCaseLinked{}))
-	res = append(res, core.GetRuleName(&PackageLowerSnakeCaseLinked{}))
-	res = append(res, core.GetRuleName(&PackageSameCsharpNamespaceLinked{}))
-	res = append(res, core.GetRuleName(&PackageSameGoPackageLinked{}))
-	res = append(res, core.GetRuleName(&PackageSameJavaMultipleFilesLinked{}))
-	res = append(res, core.GetRuleName(&PackageSameJavaPackageLinked{}))
-	res = append(res, core.GetRuleName(&PackageSamePHPNamespaceLinked{}))
-	res = append(res, core.GetRuleName(&PackageSameRubyPackageLinked{}))
-	res = append(res, core.GetRuleName(&PackageSameSwiftPrefixLinked{}))
-	res = append(res, core.GetRuleName(&RPCPascalCaseLinked{}))
-	res = append(res, core.GetRuleName(&ServicePascalCaseLinked{}))
+	res = append(res, core.GetRuleName(&EnumFirstValueZero{}))
+	res = append(res, core.GetRuleName(&EnumNoAllowAlias{}))
+	res = append(res, core.GetRuleName(&EnumPascalCase{}))
+	res = append(res, core.GetRuleName(&EnumValueUpperSnakeCase{}))
+	res = append(res, core.GetRuleName(&FieldLowerSnakeCase{}))
+	res = append(res, core.GetRuleName(&ImportNoPublic{}))
+	res = append(res, core.GetRuleName(&ImportNoWeak{}))
+	res = append(res, core.GetRuleName(&ImportUsed{}))
+	res = append(res, core.GetRuleName(&MessagePascalCase{}))
+	res = append(res, core.GetRuleName(&OneofLowerSnakeCase{}))
+	res = append(res, core.GetRuleName(&PackageLowerSnakeCase{}))
+	res = append(res, core.GetRuleName(&PackageSameCsharpNamespace{}))
+	res = append(res, core.GetRuleName(&PackageSameGoPackage{}))
+	res = append(res, core.GetRuleName(&PackageSameJavaMultipleFiles{}))
+	res = append(res, core.GetRuleName(&PackageSameJavaPackage{}))
+	res = append(res, core.GetRuleName(&PackageSamePHPNamespace{}))
+	res = append(res, core.GetRuleName(&PackageSameRubyPackage{}))
+	res = append(res, core.GetRuleName(&PackageSameSwiftPrefix{}))
+	res = append(res, core.GetRuleName(&RPCPascalCase{}))
+	res = append(res, core.GetRuleName(&ServicePascalCase{}))
 	return res
 }
 
 func addDefault(res []string) []string {
-	res = append(res, core.GetRuleName(&EnumValuePrefixLinked{}))
-	res = append(res, core.GetRuleName(&EnumZeroValueSuffixLinked{}))
-	res = append(res, core.GetRuleName(&FileLowerSnakeCaseLinked{}))
-	res = append(res, core.GetRuleName(&RPCRequestResponseUniqueLinked{}))
-	res = append(res, core.GetRuleName(&RPCRequestStandardNameLinked{}))
-	res = append(res, core.GetRuleName(&RPCResponseStandardNameLinked{}))
-	res = append(res, core.GetRuleName(&PackageVersionSuffixLinked{}))
-	res = append(res, core.GetRuleName(&ServiceSuffixLinked{}))
+	res = append(res, core.GetRuleName(&EnumValuePrefix{}))
+	res = append(res, core.GetRuleName(&EnumZeroValueSuffix{}))
+	res = append(res, core.GetRuleName(&FileLowerSnakeCase{}))
+	res = append(res, core.GetRuleName(&RPCRequestResponseUnique{}))
+	res = append(res, core.GetRuleName(&RPCRequestStandardName{}))
+	res = append(res, core.GetRuleName(&RPCResponseStandardName{}))
+	res = append(res, core.GetRuleName(&PackageVersionSuffix{}))
+	res = append(res, core.GetRuleName(&ServiceSuffix{}))
 	return res
 }
 
 func addComments(res []string) []string {
-	res = append(res, core.GetRuleName(&CommentEnumLinked{}))
-	res = append(res, core.GetRuleName(&CommentEnumValueLinked{}))
-	res = append(res, core.GetRuleName(&CommentFieldLinked{}))
-	res = append(res, core.GetRuleName(&CommentMessageLinked{}))
-	res = append(res, core.GetRuleName(&CommentOneofLinked{}))
-	res = append(res, core.GetRuleName(&CommentRPCLinked{}))
-	res = append(res, core.GetRuleName(&CommentServiceLinked{}))
+	res = append(res, core.GetRuleName(&CommentEnum{}))
+	res = append(res, core.GetRuleName(&CommentEnumValue{}))
+	res = append(res, core.GetRuleName(&CommentField{}))
+	res = append(res, core.GetRuleName(&CommentMessage{}))
+	res = append(res, core.GetRuleName(&CommentOneof{}))
+	res = append(res, core.GetRuleName(&CommentRPC{}))
+	res = append(res, core.GetRuleName(&CommentService{}))
 	return res
 }
 
 func addUnary(res []string) []string {
-	res = append(res, core.GetRuleName(&RPCNoClientStreamingLinked{}))
-	res = append(res, core.GetRuleName(&RPCNoServerStreamingLinked{}))
+	res = append(res, core.GetRuleName(&RPCNoClientStreaming{}))
+	res = append(res, core.GetRuleName(&RPCNoServerStreaming{}))
 	return res
 }

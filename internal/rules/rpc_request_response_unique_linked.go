@@ -4,9 +4,8 @@ import (
 	"github.com/easyp-tech/easyp/internal/core"
 )
 
-var _ core.ModuleRule = (*RPCRequestResponseUniqueLinked)(nil)
+var _ core.ModuleRule = (*RPCRequestResponseUnique)(nil)
 
-// RPCRequestResponseUniqueLinked is the linked-engine port of
 // RPCRequestResponseUnique (research inventory #28, main-diverged + adapt;
 // threat T-04-13): main is PER-FILE uniqueness on the WRITTEN type strings
 // with the first user exempt — later users issue at the rpc keyword
@@ -20,7 +19,7 @@ var _ core.ModuleRule = (*RPCRequestResponseUniqueLinked)(nil)
 //
 // Collect runs in the engine's serial drain in walk order; Finish reports
 // once after the last file and resets the receiver state.
-type RPCRequestResponseUniqueLinked struct {
+type RPCRequestResponseUnique struct {
 	occurrences []uniqueOccurrence
 }
 
@@ -32,23 +31,18 @@ type uniqueOccurrence struct {
 	name string
 }
 
-// LintRuleName returns the canonical registry name (no _LINKED suffix).
-func (r *RPCRequestResponseUniqueLinked) LintRuleName() string {
-	return "RPC_REQUEST_RESPONSE_UNIQUE"
-}
-
 // Message implements lint.Rule.
-func (r *RPCRequestResponseUniqueLinked) Message() string {
+func (r *RPCRequestResponseUnique) Message() string {
 	return "request and response types must be unique across all RPCs"
 }
 
 // Validate implements lint.Rule. Lint calls Collect and Finish instead.
-func (r *RPCRequestResponseUniqueLinked) Validate(core.ProtoInfo) ([]core.Issue, error) {
+func (r *RPCRequestResponseUnique) Validate(core.ProtoInfo) ([]core.Issue, error) {
 	return nil, nil
 }
 
 // Collect implements core.ModuleRule.
-func (r *RPCRequestResponseUniqueLinked) Collect(info core.ProtoInfo) error {
+func (r *RPCRequestResponseUnique) Collect(info core.ProtoInfo) error {
 	for _, service := range info.File.Services {
 		for _, rpc := range service.RPCs {
 			// rpc.Pos is the rpc keyword — the same position main reported as
@@ -73,7 +67,7 @@ func (r *RPCRequestResponseUniqueLinked) Collect(info core.ProtoInfo) error {
 }
 
 // Finish implements core.ModuleRule.
-func (r *RPCRequestResponseUniqueLinked) Finish() []core.IssueInfo {
+func (r *RPCRequestResponseUnique) Finish() []core.IssueInfo {
 	var res []core.IssueInfo
 
 	var order []string

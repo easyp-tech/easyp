@@ -17,7 +17,7 @@ func TestEnumZeroValueSuffix_Message(t *testing.T) {
 
 	const expMessage = "enum zero value suffix is not valid"
 
-	rule := rules.EnumZeroValueSuffixLinked{}
+	rule := rules.EnumZeroValueSuffix{}
 	message := rule.Message()
 
 	assert.Equal(expMessage, message)
@@ -72,7 +72,7 @@ func TestEnumZeroValueSuffix_Validate(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			rule := rules.EnumZeroValueSuffixLinked{
+			rule := rules.EnumZeroValueSuffix{
 				Suffix: "NONE",
 			}
 

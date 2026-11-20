@@ -17,7 +17,7 @@ func TestPackageVersionSuffix_Message(t *testing.T) {
 
 	const expMessage = "package name should have a version suffix"
 
-	rule := rules.PackageVersionSuffixLinked{}
+	rule := rules.PackageVersionSuffix{}
 	message := rule.Message()
 
 	assert.Equal(expMessage, message)
@@ -56,7 +56,7 @@ func TestPackageVersionSuffix_Validate(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			rule := rules.PackageVersionSuffixLinked{}
+			rule := rules.PackageVersionSuffix{}
 
 			issues, err := rule.Validate(parseLinkedFile(t, tc.fileName))
 			require.ErrorIs(t, err, tc.wantErr)

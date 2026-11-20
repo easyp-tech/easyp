@@ -18,7 +18,7 @@ func TestCommentOneof_Message(t *testing.T) {
 
 	const expMessage = "oneof comments must not be empty"
 
-	rule := rules.CommentOneofLinked{}
+	rule := rules.CommentOneof{}
 	message := rule.Message()
 
 	assert.Equal(expMessage, message)
@@ -58,7 +58,7 @@ func TestCommentOneOf_Validate(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			rule := rules.CommentOneofLinked{}
+			rule := rules.CommentOneof{}
 
 			issues, err := rule.Validate(parseLinkedFile(t, tc.fileName))
 			require.ErrorIs(t, err, tc.wantErr)

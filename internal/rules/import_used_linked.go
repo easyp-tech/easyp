@@ -5,9 +5,9 @@ import (
 	"github.com/easyp-tech/easyp/internal/protoast"
 )
 
-var _ core.Rule = (*ImportUsedLinked)(nil)
+var _ core.Rule = (*ImportUsed)(nil)
 
-// ImportUsedLinked is the linked-engine port of ImportUsed (research inventory
+// ImportUsed (research inventory
 // #12, adapt + parity-risk, threat T-04-08): main's syntax-walk semantics are
 // ported UNCONDITIONALLY — ProtoInfo.Resolved is never read, and the
 // lab's resolution-based validateResolved is a deferred post-parity decision,
@@ -40,7 +40,7 @@ var _ core.Rule = (*ImportUsedLinked)(nil)
 // surface, not a parser-rejected input — pinned by the
 // duplicate_import_last_occurrence parity cell (04-REVIEW WR-03). The
 // engine's D-01 sort normalizes order either way.
-type ImportUsedLinked struct{}
+type ImportUsed struct{}
 
 // importUsage tracks, for one file, which of its written names point into
 // which import (main's receiver state extracted per call — the etalon's
@@ -51,18 +51,13 @@ type importUsage struct {
 	pkgToImport  map[core.PackageName][]core.ImportPath
 }
 
-// LintRuleName returns the canonical registry name (no _LINKED suffix).
-func (i *ImportUsedLinked) LintRuleName() string {
-	return "IMPORT_USED"
-}
-
 // Message implements lint.Rule.
-func (i *ImportUsedLinked) Message() string {
+func (i *ImportUsed) Message() string {
 	return "import is not used"
 }
 
 // Validate implements lint.Rule.
-func (i *ImportUsedLinked) Validate(info core.ProtoInfo) ([]core.Issue, error) {
+func (i *ImportUsed) Validate(info core.ProtoInfo) ([]core.Issue, error) {
 	var res []core.Issue
 
 	u := &importUsage{}

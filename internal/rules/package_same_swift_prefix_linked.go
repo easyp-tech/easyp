@@ -4,9 +4,8 @@ import (
 	"github.com/easyp-tech/easyp/internal/core"
 )
 
-var _ core.ModuleRule = (*PackageSameSwiftPrefixLinked)(nil)
+var _ core.ModuleRule = (*PackageSameSwiftPrefix)(nil)
 
-// PackageSameSwiftPrefixLinked is the linked-engine port of
 // PackageSameSwiftPrefix (research inventory #22, main-diverged + adapt +
 // BUG PIN, threat T-04-09): all files of one package must declare the same
 // swift_prefix option — except that MAIN COMPARES THE ruby_package OPTION.
@@ -35,27 +34,22 @@ var _ core.ModuleRule = (*PackageSameSwiftPrefixLinked)(nil)
 //     (groupedValues.firstExemptMismatches — the lab's report-everyone
 //     Finish is not reachable from ports);
 //   - a file without a package never joins a group (main returns early).
-type PackageSameSwiftPrefixLinked struct {
+type PackageSameSwiftPrefix struct {
 	files groupedValues
 }
 
-// LintRuleName returns the canonical registry name (no _LINKED suffix).
-func (p *PackageSameSwiftPrefixLinked) LintRuleName() string {
-	return "PACKAGE_SAME_SWIFT_PREFIX"
-}
-
 // Message implements lint.Rule.
-func (p *PackageSameSwiftPrefixLinked) Message() string {
+func (p *PackageSameSwiftPrefix) Message() string {
 	return "all files in the same package must have the same swift_prefix option"
 }
 
 // Validate implements lint.Rule. Lint calls Collect and Finish instead.
-func (p *PackageSameSwiftPrefixLinked) Validate(core.ProtoInfo) ([]core.Issue, error) {
+func (p *PackageSameSwiftPrefix) Validate(core.ProtoInfo) ([]core.Issue, error) {
 	return nil, nil
 }
 
 // Collect implements core.ModuleRule.
-func (p *PackageSameSwiftPrefixLinked) Collect(info core.ProtoInfo) error {
+func (p *PackageSameSwiftPrefix) Collect(info core.ProtoInfo) error {
 	if len(info.File.Packages) == 0 {
 		// main returns early: packageless files never join groups.
 		return nil
@@ -86,6 +80,6 @@ func (p *PackageSameSwiftPrefixLinked) Collect(info core.ProtoInfo) error {
 }
 
 // Finish implements core.ModuleRule.
-func (p *PackageSameSwiftPrefixLinked) Finish() []core.IssueInfo {
+func (p *PackageSameSwiftPrefix) Finish() []core.IssueInfo {
 	return p.files.firstExemptMismatches(p)
 }

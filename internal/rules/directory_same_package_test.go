@@ -17,7 +17,7 @@ func TestDirectorySamePackage_Message(t *testing.T) {
 
 	const expMessage = "all files in the same directory must have the same package name"
 
-	rule := rules.DirectorySamePackageLinked{}
+	rule := rules.DirectorySamePackage{}
 	message := rule.Message()
 
 	assert.Equal(expMessage, message)
@@ -58,7 +58,7 @@ func TestDirectorySamePackage_Validate(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			rule := &rules.DirectorySamePackageLinked{}
+			rule := &rules.DirectorySamePackage{}
 
 			var infos []core.ProtoInfo
 			for _, fileName := range tc.fileNames {

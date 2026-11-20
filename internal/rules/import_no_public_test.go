@@ -17,7 +17,7 @@ func TestImportNoPublic_Message(t *testing.T) {
 
 	const expMessage = "import should not be public"
 
-	rule := rules.ImportNoPublicLinked{}
+	rule := rules.ImportNoPublic{}
 	message := rule.Message()
 
 	assert.Equal(expMessage, message)
@@ -57,7 +57,7 @@ func TestImportNoPublic_Validate(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			rule := rules.ImportNoPublicLinked{}
+			rule := rules.ImportNoPublic{}
 
 			issues, err := rule.Validate(parseLinkedFile(t, tc.fileName))
 			require.ErrorIs(t, err, tc.wantErr)

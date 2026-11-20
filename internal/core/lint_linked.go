@@ -95,7 +95,7 @@ func (c *Core) Lint(ctx context.Context, fsWalker DirWalker) ([]IssueInfo, error
 				return nil
 			}
 			if linked != nil {
-				infos[i], infoErrs[i] = c.protoInfoFromLinked(fsWalker, linked, window[i])
+				infos[i], infoErrs[i] = c.protoInfoFromLink(fsWalker, linked, window[i])
 			} else {
 				infos[i], infoErrs[i] = c.protoInfoFromSource(ctx, fsWalker, window[i], sources[start+i])
 			}

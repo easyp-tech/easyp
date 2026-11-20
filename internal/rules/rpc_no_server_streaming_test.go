@@ -17,7 +17,7 @@ func TestRPCNoServerStreaming_Message(t *testing.T) {
 
 	const expMessage = "server streaming RPCs are not allowed"
 
-	rule := rules.RPCNoServerStreamingLinked{}
+	rule := rules.RPCNoServerStreaming{}
 	message := rule.Message()
 
 	assert.Equal(expMessage, message)
@@ -56,7 +56,7 @@ func TestRPCNoServerStreaming_Validate(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			rule := rules.RPCNoServerStreamingLinked{}
+			rule := rules.RPCNoServerStreaming{}
 
 			issues, err := rule.Validate(parseLinkedFile(t, tc.fileName))
 			require.ErrorIs(t, err, tc.wantErr)

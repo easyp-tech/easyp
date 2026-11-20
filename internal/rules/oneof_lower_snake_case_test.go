@@ -17,7 +17,7 @@ func TestOneofLowerSnakeCase_Message(t *testing.T) {
 
 	const expMessage = "oneof name should be lower_snake_case"
 
-	rule := rules.OneofLowerSnakeCaseLinked{}
+	rule := rules.OneofLowerSnakeCase{}
 	message := rule.Message()
 
 	assert.Equal(expMessage, message)
@@ -57,7 +57,7 @@ func TestOneofLowerSnakeCase_Validate(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			rule := rules.OneofLowerSnakeCaseLinked{}
+			rule := rules.OneofLowerSnakeCase{}
 
 			issues, err := rule.Validate(parseLinkedFile(t, tc.fileName))
 			require.ErrorIs(t, err, tc.wantErr)

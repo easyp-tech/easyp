@@ -17,7 +17,7 @@ func TestImportNoWeak_Message(t *testing.T) {
 
 	const expMessage = "import should not be weak"
 
-	rule := rules.ImportNoWeakLinked{}
+	rule := rules.ImportNoWeak{}
 	message := rule.Message()
 
 	assert.Equal(expMessage, message)
@@ -57,7 +57,7 @@ func TestImportNoWeak_Validate(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			rule := rules.ImportNoWeakLinked{}
+			rule := rules.ImportNoWeak{}
 
 			issues, err := rule.Validate(parseLinkedFile(t, tc.fileName))
 			require.ErrorIs(t, err, tc.wantErr)

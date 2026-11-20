@@ -4,9 +4,9 @@ import (
 	"github.com/easyp-tech/easyp/internal/core"
 )
 
-var _ core.Rule = (*EnumZeroValueSuffixLinked)(nil)
+var _ core.Rule = (*EnumZeroValueSuffix)(nil)
 
-// EnumZeroValueSuffixLinked is the linked-engine port of EnumZeroValueSuffix
+// EnumZeroValueSuffix
 // (research inventory #26, main-diverged; threat T-04-15): main checks ONLY
 // the first value and requires EXACT equality with the carried helper of the
 // enum name plus "_" and the configured suffix — a later value with a wrong
@@ -24,28 +24,23 @@ var _ core.Rule = (*EnumZeroValueSuffixLinked)(nil)
 // EnumFirstValueZero (research A7): main indexes the first value unguarded
 // and panics on an empty enum; protoc rejects empty enums, so the engine
 // path never sees one.
-type EnumZeroValueSuffixLinked struct {
+type EnumZeroValueSuffix struct {
 	Suffix string `json:"suffix" yaml:"suffix" ENV:"ENUM_ZERO_VALUE_SUFFIX"`
 }
 
-// LintRuleName returns the canonical registry name (no _LINKED suffix).
-func (e *EnumZeroValueSuffixLinked) LintRuleName() string {
-	return "ENUM_ZERO_VALUE_SUFFIX"
-}
-
 // Message implements lint.Rule.
-func (e *EnumZeroValueSuffixLinked) Message() string {
+func (e *EnumZeroValueSuffix) Message() string {
 	return "enum zero value suffix is not valid"
 }
 
 // Validate implements lint.Rule.
-func (e *EnumZeroValueSuffixLinked) Validate(info core.ProtoInfo) ([]core.Issue, error) {
+func (e *EnumZeroValueSuffix) Validate(info core.ProtoInfo) ([]core.Issue, error) {
 	var res []core.Issue
 
 	for _, enum := range info.File.Enums {
 		// Documented deviation (research A7): main panics on an empty enum
 		// (unguarded Values[0]); the guard keeps the port total — same
-		// crash-safety note as EnumFirstValueZeroLinked.
+		// crash-safety note as EnumFirstValueZero.
 		if len(enum.Values) == 0 {
 			continue
 		}

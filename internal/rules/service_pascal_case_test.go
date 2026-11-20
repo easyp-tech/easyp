@@ -17,7 +17,7 @@ func TestServicePascalCase_Message(t *testing.T) {
 
 	const expMessage = "service names must be PascalCase"
 
-	rule := rules.ServicePascalCaseLinked{}
+	rule := rules.ServicePascalCase{}
 	message := rule.Message()
 
 	assert.Equal(expMessage, message)
@@ -56,7 +56,7 @@ func TestServicePascalCase_Validate(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			rule := rules.ServicePascalCaseLinked{}
+			rule := rules.ServicePascalCase{}
 
 			issues, err := rule.Validate(parseLinkedFile(t, tc.fileName))
 			require.ErrorIs(t, err, tc.wantErr)

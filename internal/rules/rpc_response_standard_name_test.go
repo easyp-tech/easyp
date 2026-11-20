@@ -17,7 +17,7 @@ func TestRPCResponseStandardName_Message(t *testing.T) {
 
 	const expMessage = "rpc response should have suffix 'Response'"
 
-	rule := rules.RPCResponseStandardNameLinked{}
+	rule := rules.RPCResponseStandardName{}
 	message := rule.Message()
 
 	assert.Equal(expMessage, message)
@@ -56,7 +56,7 @@ func TestRPCResponseStandardName_Validate(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			rule := rules.RPCResponseStandardNameLinked{}
+			rule := rules.RPCResponseStandardName{}
 
 			issues, err := rule.Validate(parseLinkedFile(t, tc.fileName))
 			require.ErrorIs(t, err, tc.wantErr)

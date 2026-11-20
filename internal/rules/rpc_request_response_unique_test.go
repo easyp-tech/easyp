@@ -17,7 +17,7 @@ func TestRPCRequestResponseUnique_Message(t *testing.T) {
 
 	const expMessage = "request and response types must be unique across all RPCs"
 
-	rule := rules.RPCRequestResponseUniqueLinked{}
+	rule := rules.RPCRequestResponseUnique{}
 	message := rule.Message()
 
 	assert.Equal(expMessage, message)
@@ -60,7 +60,7 @@ func TestRPCRequestResponseUnique_Validate(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			rule := &rules.RPCRequestResponseUniqueLinked{}
+			rule := &rules.RPCRequestResponseUnique{}
 
 			var infos []core.ProtoInfo
 			for _, fileName := range tc.fileNames {

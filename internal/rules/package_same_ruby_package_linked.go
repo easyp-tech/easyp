@@ -4,9 +4,9 @@ import (
 	"github.com/easyp-tech/easyp/internal/core"
 )
 
-var _ core.ModuleRule = (*PackageSameRubyPackageLinked)(nil)
+var _ core.ModuleRule = (*PackageSameRubyPackage)(nil)
 
-// PackageSameRubyPackageLinked is the linked-engine port of PackageSameRubyPackage
+// PackageSameRubyPackage
 // (research inventory main-diverged + adapt): all files of one package must
 // declare the same ruby_package option. The Collect/Finish mechanics come from
 // the etalon's ModuleRule shape; the semantics are main's (threat T-04-11):
@@ -22,27 +22,22 @@ var _ core.ModuleRule = (*PackageSameRubyPackageLinked)(nil)
 //     (groupedValues.firstExemptMismatches — the lab's
 //     report-everyone Finish is not reachable from ports);
 //   - a file without a package never joins a group (main returns early).
-type PackageSameRubyPackageLinked struct {
+type PackageSameRubyPackage struct {
 	files groupedValues
 }
 
-// LintRuleName returns the canonical registry name (no _LINKED suffix).
-func (p *PackageSameRubyPackageLinked) LintRuleName() string {
-	return "PACKAGE_SAME_RUBY_PACKAGE"
-}
-
 // Message implements lint.Rule.
-func (p *PackageSameRubyPackageLinked) Message() string {
+func (p *PackageSameRubyPackage) Message() string {
 	return "all files in the same package must have the same ruby_package option"
 }
 
 // Validate implements lint.Rule. Lint calls Collect and Finish instead.
-func (p *PackageSameRubyPackageLinked) Validate(core.ProtoInfo) ([]core.Issue, error) {
+func (p *PackageSameRubyPackage) Validate(core.ProtoInfo) ([]core.Issue, error) {
 	return nil, nil
 }
 
 // Collect implements core.ModuleRule.
-func (p *PackageSameRubyPackageLinked) Collect(info core.ProtoInfo) error {
+func (p *PackageSameRubyPackage) Collect(info core.ProtoInfo) error {
 	if len(info.File.Packages) == 0 {
 		// main returns early: packageless files never join groups.
 		return nil
@@ -70,6 +65,6 @@ func (p *PackageSameRubyPackageLinked) Collect(info core.ProtoInfo) error {
 }
 
 // Finish implements core.ModuleRule.
-func (p *PackageSameRubyPackageLinked) Finish() []core.IssueInfo {
+func (p *PackageSameRubyPackage) Finish() []core.IssueInfo {
 	return p.files.firstExemptMismatches(p)
 }

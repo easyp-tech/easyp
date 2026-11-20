@@ -80,13 +80,8 @@ func AppendIssue(issues []Issue, rule Rule, pos Position, sourceName string) []I
 }
 
 // GetRuleName returns the registry name of a rule: the UPPER_SNAKE spelling
-// the registry, findings, and config speak. A rule may override the
-// reflection-derived name with an optional LintRuleName method — suffixed
-// port types (<Name>Linked) report their canonical registry name through it,
-// so no _LINKED suffix leaks into findings, config, or schemas.
+// the registry, findings, and config speak, derived by pure reflection over
+// the rule's canonical (unsuffixed) type name.
 func GetRuleName(rule Rule) string {
-	if named, ok := rule.(interface{ LintRuleName() string }); ok {
-		return named.LintRuleName()
-	}
 	return toUpperSnakeCase(reflect.TypeOf(rule).Elem().Name())
 }

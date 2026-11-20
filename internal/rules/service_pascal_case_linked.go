@@ -6,27 +6,22 @@ import (
 	"github.com/easyp-tech/easyp/internal/core"
 )
 
-var _ core.Rule = (*ServicePascalCaseLinked)(nil)
+var _ core.Rule = (*ServicePascalCase)(nil)
 
-// ServicePascalCaseLinked is the linked-engine port of ServicePascalCase
+// ServicePascalCase
 // (research inventory #24, main-diverged): main's regexp wins over the lab's
 // casing-helper equality — acronym services ("AB", "ABC") fail main but pass
 // the helper — and the position is the declaration keyword (service.Meta.Pos
 // ≡ Decl.Pos, main's test pins column 1), not the lab's declared-name token.
-type ServicePascalCaseLinked struct{}
-
-// LintRuleName returns the canonical registry name (no _LINKED suffix).
-func (c *ServicePascalCaseLinked) LintRuleName() string {
-	return "SERVICE_PASCAL_CASE"
-}
+type ServicePascalCase struct{}
 
 // Message implements lint.Rule.
-func (c *ServicePascalCaseLinked) Message() string {
+func (c *ServicePascalCase) Message() string {
 	return "service names must be PascalCase"
 }
 
 // Validate implements lint.Rule.
-func (c *ServicePascalCaseLinked) Validate(info core.ProtoInfo) ([]core.Issue, error) {
+func (c *ServicePascalCase) Validate(info core.ProtoInfo) ([]core.Issue, error) {
 	var res []core.Issue
 
 	pascalCase := regexp.MustCompile("^[A-Z][a-z]+([A-Z]|[a-z]+)*$")

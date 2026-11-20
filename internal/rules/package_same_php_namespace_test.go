@@ -17,7 +17,7 @@ func TestPackageSamePHPNamespace_Message(t *testing.T) {
 
 	const expMessage = "all files in the same package must have the same php_namespace option"
 
-	rule := rules.PackageSamePHPNamespaceLinked{}
+	rule := rules.PackageSamePHPNamespace{}
 	message := rule.Message()
 
 	assert.Equal(expMessage, message)
@@ -60,7 +60,7 @@ func TestPackageSamePHPNamespace_Validate(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			rule := &rules.PackageSamePHPNamespaceLinked{}
+			rule := &rules.PackageSamePHPNamespace{}
 
 			var infos []core.ProtoInfo
 			for _, fileName := range tc.fileNames {

@@ -17,7 +17,7 @@ func TestPackageSameRubyPackage_Message(t *testing.T) {
 
 	const expMessage = "all files in the same package must have the same ruby_package option"
 
-	rule := rules.PackageSameRubyPackageLinked{}
+	rule := rules.PackageSameRubyPackage{}
 	message := rule.Message()
 
 	assert.Equal(expMessage, message)
@@ -60,7 +60,7 @@ func TestPackageSameRubyPackage_Validate(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			rule := &rules.PackageSameRubyPackageLinked{}
+			rule := &rules.PackageSameRubyPackage{}
 
 			var infos []core.ProtoInfo
 			for _, fileName := range tc.fileNames {

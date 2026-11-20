@@ -4,9 +4,9 @@ import (
 	"github.com/easyp-tech/easyp/internal/core"
 )
 
-var _ core.ModuleRule = (*PackageSameGoPackageLinked)(nil)
+var _ core.ModuleRule = (*PackageSameGoPackage)(nil)
 
-// PackageSameGoPackageLinked is the linked-engine port of PackageSameGoPackage
+// PackageSameGoPackage
 // (research inventory main-diverged + adapt): all files of one package must
 // declare the same go_package option. The Collect/Finish mechanics come from
 // the etalon's ModuleRule shape; the semantics are main's (threat T-04-11):
@@ -22,27 +22,22 @@ var _ core.ModuleRule = (*PackageSameGoPackageLinked)(nil)
 //     (groupedValues.firstExemptMismatches — the lab's
 //     report-everyone Finish is not reachable from ports);
 //   - a file without a package never joins a group (main returns early).
-type PackageSameGoPackageLinked struct {
+type PackageSameGoPackage struct {
 	files groupedValues
 }
 
-// LintRuleName returns the canonical registry name (no _LINKED suffix).
-func (p *PackageSameGoPackageLinked) LintRuleName() string {
-	return "PACKAGE_SAME_GO_PACKAGE"
-}
-
 // Message implements lint.Rule.
-func (p *PackageSameGoPackageLinked) Message() string {
+func (p *PackageSameGoPackage) Message() string {
 	return "all files in the same package must have the same go_package name"
 }
 
 // Validate implements lint.Rule. Lint calls Collect and Finish instead.
-func (p *PackageSameGoPackageLinked) Validate(core.ProtoInfo) ([]core.Issue, error) {
+func (p *PackageSameGoPackage) Validate(core.ProtoInfo) ([]core.Issue, error) {
 	return nil, nil
 }
 
 // Collect implements core.ModuleRule.
-func (p *PackageSameGoPackageLinked) Collect(info core.ProtoInfo) error {
+func (p *PackageSameGoPackage) Collect(info core.ProtoInfo) error {
 	if len(info.File.Packages) == 0 {
 		// main returns early: packageless files never join groups.
 		return nil
@@ -70,6 +65,6 @@ func (p *PackageSameGoPackageLinked) Collect(info core.ProtoInfo) error {
 }
 
 // Finish implements core.ModuleRule.
-func (p *PackageSameGoPackageLinked) Finish() []core.IssueInfo {
+func (p *PackageSameGoPackage) Finish() []core.IssueInfo {
 	return p.files.firstExemptMismatches(p)
 }

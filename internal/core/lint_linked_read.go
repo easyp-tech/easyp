@@ -27,7 +27,7 @@ func (c *Core) readSource(ctx context.Context, fs FS, path string) ([]byte, erro
 }
 
 // protoInfoFromSource builds the model of a file parsed on its own, without
-// the linked set. It is the fallback of protoInfoFromLinked.
+// the linked set. It is the fallback of protoInfoFromLink.
 func (c *Core) protoInfoFromSource(ctx context.Context, fs FS, path string, src []byte) (ProtoInfo, error) {
 	file, err := protoast.Parse(path, src)
 	if err != nil {
@@ -134,9 +134,9 @@ func (c *Core) parseOnTheirOwn(ctx context.Context, disk FS, paths []string, sou
 	})
 }
 
-// protoInfoFromLinked builds a linted file's model from its linked tree, then
+// protoInfoFromLink builds a linted file's model from its linked tree, then
 // drops the tree; its outline stays available to files importing it.
-func (c *Core) protoInfoFromLinked(disk FS, linked *linkedFiles, path string) (ProtoInfo, error) {
+func (c *Core) protoInfoFromLink(disk FS, linked *linkedFiles, path string) (ProtoInfo, error) {
 	file, ok := linked.linked.File(path)
 	if !ok || file.Syntax == nil {
 		return ProtoInfo{}, fmt.Errorf("Parse: %s was not linked", path)

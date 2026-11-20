@@ -17,7 +17,7 @@ func TestCommentRPC_Message(t *testing.T) {
 
 	const expMessage = "rpc comments must not be empty"
 
-	rule := rules.CommentRPCLinked{}
+	rule := rules.CommentRPC{}
 	message := rule.Message()
 
 	assert.Equal(expMessage, message)
@@ -57,7 +57,7 @@ func TestCommentRPC_Validate(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			rule := rules.CommentRPCLinked{}
+			rule := rules.CommentRPC{}
 
 			issues, err := rule.Validate(parseLinkedFile(t, tc.fileName))
 			require.ErrorIs(t, err, tc.wantErr)

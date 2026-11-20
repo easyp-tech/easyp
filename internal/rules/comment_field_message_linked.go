@@ -4,9 +4,9 @@ import (
 	"github.com/easyp-tech/easyp/internal/core"
 )
 
-var _ core.Rule = (*CommentFieldLinked)(nil)
+var _ core.Rule = (*CommentField)(nil)
 
-// CommentFieldLinked is the linked-engine port of CommentField (research
+// CommentField (research
 // inventory #35, main-diverged). Presence predicate is MAIN'S: a declaration
 // is undocumented iff no comment at all precedes it — HasCommentAbove()
 // (Leading+Detached) reproduces main's "no attached comment" reading,
@@ -27,20 +27,15 @@ var _ core.Rule = (*CommentFieldLinked)(nil)
 // enter this loop — research A4 resolved at source. Findings report the
 // field's first-token position (main Meta.Pos ≡ Decl.Pos, the type token)
 // with the field name as source.
-type CommentFieldLinked struct{}
-
-// LintRuleName returns the canonical registry name (no _LINKED suffix).
-func (c *CommentFieldLinked) LintRuleName() string {
-	return "COMMENT_FIELD"
-}
+type CommentField struct{}
 
 // Message implements lint.Rule.
-func (c *CommentFieldLinked) Message() string {
+func (c *CommentField) Message() string {
 	return "field comments must not be empty"
 }
 
 // Validate implements lint.Rule.
-func (c *CommentFieldLinked) Validate(info core.ProtoInfo) ([]core.Issue, error) {
+func (c *CommentField) Validate(info core.ProtoInfo) ([]core.Issue, error) {
 	var res []core.Issue
 
 	for _, message := range info.File.Messages {

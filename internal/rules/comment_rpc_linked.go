@@ -4,9 +4,9 @@ import (
 	"github.com/easyp-tech/easyp/internal/core"
 )
 
-var _ core.Rule = (*CommentRPCLinked)(nil)
+var _ core.Rule = (*CommentRPC)(nil)
 
-// CommentRPCLinked is the linked-engine port of CommentRPC (research
+// CommentRPC (research
 // inventory #38, main-diverged). Presence predicate is MAIN'S: a declaration
 // is undocumented iff no comment at all precedes it — HasCommentAbove()
 // (Leading+Detached) reproduces main's "no attached comment" reading,
@@ -23,20 +23,15 @@ var _ core.Rule = (*CommentRPCLinked)(nil)
 // Walk shape is main's: RPCs of top-level services only (direct field
 // iteration); findings report the rpc keyword position (main Meta.Pos ≡
 // Decl.Pos) with the rpc name as source.
-type CommentRPCLinked struct{}
-
-// LintRuleName returns the canonical registry name (no _LINKED suffix).
-func (c *CommentRPCLinked) LintRuleName() string {
-	return "COMMENT_RPC"
-}
+type CommentRPC struct{}
 
 // Message implements lint.Rule.
-func (c *CommentRPCLinked) Message() string {
+func (c *CommentRPC) Message() string {
 	return "rpc comments must not be empty"
 }
 
 // Validate implements lint.Rule.
-func (c *CommentRPCLinked) Validate(info core.ProtoInfo) ([]core.Issue, error) {
+func (c *CommentRPC) Validate(info core.ProtoInfo) ([]core.Issue, error) {
 	var res []core.Issue
 
 	for _, service := range info.File.Services {

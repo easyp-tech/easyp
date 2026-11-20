@@ -17,7 +17,7 @@ func TestCommentEnumValue_Message(t *testing.T) {
 
 	const expMessage = "enum value comments must not be empty"
 
-	rule := rules.CommentEnumValueLinked{}
+	rule := rules.CommentEnumValue{}
 	message := rule.Message()
 
 	assert.Equal(expMessage, message)
@@ -72,7 +72,7 @@ func TestCommentEnumValue_Validate(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			rule := rules.CommentEnumValueLinked{}
+			rule := rules.CommentEnumValue{}
 
 			issues, err := rule.Validate(parseLinkedFile(t, tc.fileName))
 			require.ErrorIs(t, err, tc.wantErr)

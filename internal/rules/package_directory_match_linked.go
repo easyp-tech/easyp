@@ -8,31 +8,24 @@ import (
 	"github.com/easyp-tech/easyp/internal/core"
 )
 
-var _ core.Rule = (*PackageDirectoryMatchLinked)(nil)
+var _ core.Rule = (*PackageDirectoryMatch)(nil)
 
-// PackageDirectoryMatchLinked is the linked-engine port of
 // PackageDirectoryMatch (research inventory #3, verbatim-from-lab): a rule for
 // checking consistency of directory and package names. The struct tags stay
-// byte-verbatim from main (config plumbing unchanged); the registry name is
-// pinned through LintRuleName because the suffixed port type would otherwise
-// reflect to PACKAGE_DIRECTORY_MATCH_LINKED.
-type PackageDirectoryMatchLinked struct {
+// byte-verbatim from main (config plumbing unchanged); the registry name
+// reflects directly from the canonical (unsuffixed) type name.
+type PackageDirectoryMatch struct {
 	Root   string `json:"root" yaml:"root" env:"PACKAGE_DIRECTORY_MATCH_ROOT"`
 	Prefix string `json:"-" yaml:"-"`
 }
 
-// LintRuleName returns the canonical registry name (no _LINKED suffix).
-func (d *PackageDirectoryMatchLinked) LintRuleName() string {
-	return "PACKAGE_DIRECTORY_MATCH"
-}
-
 // Message implements lint.Rule.
-func (d *PackageDirectoryMatchLinked) Message() string {
+func (d *PackageDirectoryMatch) Message() string {
 	return "package does not match directory path"
 }
 
 // Validate implements lint.Rule.
-func (d *PackageDirectoryMatchLinked) Validate(info core.ProtoInfo) ([]core.Issue, error) {
+func (d *PackageDirectoryMatch) Validate(info core.ProtoInfo) ([]core.Issue, error) {
 	var res []core.Issue
 
 	name := strings.TrimPrefix(info.Path, d.Root)

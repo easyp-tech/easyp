@@ -17,7 +17,7 @@ func TestEnumValueUpperSnakeCase_Message(t *testing.T) {
 
 	const expMessage = "enum value must be in UPPER_SNAKE_CASE"
 
-	rule := rules.EnumValueUpperSnakeCaseLinked{}
+	rule := rules.EnumValueUpperSnakeCase{}
 	message := rule.Message()
 
 	assert.Equal(expMessage, message)
@@ -72,7 +72,7 @@ func TestEnumValueUpperSnakeCase_Validate(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			rule := rules.EnumValueUpperSnakeCaseLinked{}
+			rule := rules.EnumValueUpperSnakeCase{}
 
 			issues, err := rule.Validate(parseLinkedFile(t, tc.fileName))
 			require.ErrorIs(t, err, tc.wantErr)

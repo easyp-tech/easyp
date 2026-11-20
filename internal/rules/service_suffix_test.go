@@ -17,7 +17,7 @@ func TestServiceSuffix_Message(t *testing.T) {
 
 	const expMessage = "service name should have suffix"
 
-	rule := rules.ServiceSuffixLinked{}
+	rule := rules.ServiceSuffix{}
 	message := rule.Message()
 
 	assert.Equal(expMessage, message)
@@ -56,7 +56,7 @@ func TestServiceSuffix_Validate(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			rule := rules.ServiceSuffixLinked{
+			rule := rules.ServiceSuffix{
 				Suffix: "API",
 			}
 

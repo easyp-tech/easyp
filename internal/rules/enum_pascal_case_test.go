@@ -17,7 +17,7 @@ func TestEnumPascalCase_Message(t *testing.T) {
 
 	const expMessage = "enum name must be in PascalCase"
 
-	rule := rules.EnumPascalCaseLinked{}
+	rule := rules.EnumPascalCase{}
 	message := rule.Message()
 
 	assert.Equal(expMessage, message)
@@ -72,7 +72,7 @@ func TestEnumPascalCase_Validate(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			rule := rules.EnumPascalCaseLinked{}
+			rule := rules.EnumPascalCase{}
 
 			issues, err := rule.Validate(parseLinkedFile(t, tc.fileName))
 			require.ErrorIs(t, err, tc.wantErr)

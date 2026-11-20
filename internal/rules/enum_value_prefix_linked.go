@@ -7,9 +7,9 @@ import (
 	"github.com/easyp-tech/easyp/internal/core"
 )
 
-var _ core.Rule = (*EnumValuePrefixLinked)(nil)
+var _ core.Rule = (*EnumValuePrefix)(nil)
 
-// EnumValuePrefixLinked is the linked-engine port of EnumValuePrefix
+// EnumValuePrefix
 // (research inventory #25, main-diverged; threat T-04-12): the prefix is
 // main's private helper carried byte-verbatim below — an underscore before
 // EVERY uppercase rune, so "HTTPCode" becomes "H_T_T_P_CODE" — and the
@@ -30,20 +30,15 @@ var _ core.Rule = (*EnumValuePrefixLinked)(nil)
 // file enum_value_prefix.go still declares the original in this package —
 // Phase 5 drops the suffix when it deletes the old types; rename map:
 // pascalToUpperSnake -> pascalToUpperSnake).
-type EnumValuePrefixLinked struct{}
-
-// LintRuleName returns the canonical registry name (no _LINKED suffix).
-func (e *EnumValuePrefixLinked) LintRuleName() string {
-	return "ENUM_VALUE_PREFIX"
-}
+type EnumValuePrefix struct{}
 
 // Message implements lint.Rule.
-func (e *EnumValuePrefixLinked) Message() string {
+func (e *EnumValuePrefix) Message() string {
 	return "enum value prefix is not valid"
 }
 
 // Validate implements lint.Rule.
-func (e *EnumValuePrefixLinked) Validate(info core.ProtoInfo) ([]core.Issue, error) {
+func (e *EnumValuePrefix) Validate(info core.ProtoInfo) ([]core.Issue, error) {
 	var res []core.Issue
 
 	for _, enum := range info.File.Enums {

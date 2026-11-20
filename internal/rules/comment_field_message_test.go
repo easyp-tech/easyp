@@ -17,7 +17,7 @@ func TestCommentField_Message(t *testing.T) {
 
 	const expMessage = "field comments must not be empty"
 
-	rule := rules.CommentFieldLinked{}
+	rule := rules.CommentField{}
 	message := rule.Message()
 
 	assert.Equal(expMessage, message)
@@ -58,7 +58,7 @@ func TestCommentField_Validate(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			rule := rules.CommentFieldLinked{}
+			rule := rules.CommentField{}
 
 			issues, err := rule.Validate(parseLinkedFile(t, tc.fileName))
 			require.ErrorIs(t, err, tc.wantErr)

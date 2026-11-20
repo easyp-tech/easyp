@@ -17,7 +17,7 @@ func TestFieldLowerSnakeCase_Message(t *testing.T) {
 
 	const expMessage = "message field should be lower_snake_case"
 
-	rule := rules.FieldLowerSnakeCaseLinked{}
+	rule := rules.FieldLowerSnakeCase{}
 	message := rule.Message()
 
 	assert.Equal(expMessage, message)
@@ -57,7 +57,7 @@ func TestMessageFieldLowerSnakeCase_Validate(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			rule := rules.FieldLowerSnakeCaseLinked{}
+			rule := rules.FieldLowerSnakeCase{}
 
 			issues, err := rule.Validate(parseLinkedFile(t, tc.fileName))
 			require.ErrorIs(t, err, tc.wantErr)

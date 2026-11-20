@@ -17,7 +17,7 @@ func TestEnumValuePrefix_Message(t *testing.T) {
 
 	const expMessage = "enum value prefix is not valid"
 
-	rule := rules.EnumValuePrefixLinked{}
+	rule := rules.EnumValuePrefix{}
 	message := rule.Message()
 
 	assert.Equal(expMessage, message)
@@ -72,7 +72,7 @@ func TestEnumValuePrefix_Validate(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			rule := rules.EnumValuePrefixLinked{}
+			rule := rules.EnumValuePrefix{}
 
 			issues, err := rule.Validate(parseLinkedFile(t, tc.fileName))
 			require.ErrorIs(t, err, tc.wantErr)

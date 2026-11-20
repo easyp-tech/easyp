@@ -17,7 +17,7 @@ func TestEnumFirstValueZero_Message(t *testing.T) {
 
 	const expMessage = "enum first value must be zero"
 
-	rule := rules.EnumFirstValueZeroLinked{}
+	rule := rules.EnumFirstValueZero{}
 	message := rule.Message()
 
 	assert.Equal(expMessage, message)
@@ -72,7 +72,7 @@ func TestEnumFirstValueZero_Validate(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			rule := rules.EnumFirstValueZeroLinked{}
+			rule := rules.EnumFirstValueZero{}
 
 			issues, err := rule.Validate(parseLinkedFile(t, tc.fileName))
 			require.ErrorIs(t, err, tc.wantErr)
@@ -105,7 +105,7 @@ enum Empty {
 	file, err := protoast.Parse("empty.proto", []byte(src))
 	require.NoError(t, err)
 
-	rule := rules.EnumFirstValueZeroLinked{}
+	rule := rules.EnumFirstValueZero{}
 
 	issues, err := rule.Validate(core.ProtoInfo{Path: "empty.proto", File: file})
 	require.NoError(t, err)

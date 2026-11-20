@@ -17,7 +17,7 @@ func TestMessagePascalCase_Message(t *testing.T) {
 
 	const expMessage = "message name should be PascalCase"
 
-	rule := rules.MessagePascalCaseLinked{}
+	rule := rules.MessagePascalCase{}
 	message := rule.Message()
 
 	assert.Equal(expMessage, message)
@@ -57,7 +57,7 @@ func TestMessagePascalCase_Validate(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			rule := rules.MessagePascalCaseLinked{}
+			rule := rules.MessagePascalCase{}
 
 			issues, err := rule.Validate(parseLinkedFile(t, tc.fileName))
 			require.ErrorIs(t, err, tc.wantErr)

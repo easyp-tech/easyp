@@ -17,7 +17,7 @@ func TestPackageDefined_Message(t *testing.T) {
 
 	const expMessage = "package should be defined"
 
-	rule := rules.PackageDefinedLinked{}
+	rule := rules.PackageDefined{}
 	message := rule.Message()
 
 	assert.Equal(expMessage, message)
@@ -57,7 +57,7 @@ func TestPackageDefined_Validate(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			rule := rules.PackageDefinedLinked{}
+			rule := rules.PackageDefined{}
 
 			issues, err := rule.Validate(parseLinkedFile(t, tc.fileName))
 			require.ErrorIs(t, err, tc.wantErr)

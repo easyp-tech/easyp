@@ -7,9 +7,9 @@ import (
 	"github.com/easyp-tech/easyp/internal/core"
 )
 
-var _ core.Rule = (*FileLowerSnakeCaseLinked)(nil)
+var _ core.Rule = (*FileLowerSnakeCase)(nil)
 
-// FileLowerSnakeCaseLinked is the linked-engine port of FileLowerSnakeCase
+// FileLowerSnakeCase
 // (research inventory #27, main-diverged position + regexp; threat T-04-12):
 // main checks the FULL filename including ".proto" against the
 // package-style lower-snake regexp — no extension stripping (the lab's
@@ -18,20 +18,15 @@ var _ core.Rule = (*FileLowerSnakeCaseLinked)(nil)
 // reported at the zero Position literal (Filename only; Line 0, Column 0 —
 // main's meta.Position zero value), never the lab's 1:1 file-level position
 // and never a name-token position.
-type FileLowerSnakeCaseLinked struct{}
-
-// LintRuleName returns the canonical registry name (no _LINKED suffix).
-func (f *FileLowerSnakeCaseLinked) LintRuleName() string {
-	return "FILE_LOWER_SNAKE_CASE"
-}
+type FileLowerSnakeCase struct{}
 
 // Message implements lint.Rule.
-func (f *FileLowerSnakeCaseLinked) Message() string {
+func (f *FileLowerSnakeCase) Message() string {
 	return "file name should be lower_snake_case.proto"
 }
 
 // Validate implements lint.Rule.
-func (f *FileLowerSnakeCaseLinked) Validate(info core.ProtoInfo) ([]core.Issue, error) {
+func (f *FileLowerSnakeCase) Validate(info core.ProtoInfo) ([]core.Issue, error) {
 	var res []core.Issue
 
 	// main's matchLowerSnakeCase regexp, checked against the full filename

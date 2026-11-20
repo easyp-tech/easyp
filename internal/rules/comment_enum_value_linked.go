@@ -4,9 +4,9 @@ import (
 	"github.com/easyp-tech/easyp/internal/core"
 )
 
-var _ core.Rule = (*CommentEnumValueLinked)(nil)
+var _ core.Rule = (*CommentEnumValue)(nil)
 
-// CommentEnumValueLinked is the linked-engine port of CommentEnumValue
+// CommentEnumValue
 // (research inventory #34, main-diverged). Presence predicate is MAIN'S: a
 // declaration is undocumented iff no comment at all precedes it —
 // HasCommentAbove() (Leading+Detached) reproduces main's "no attached
@@ -24,20 +24,15 @@ var _ core.Rule = (*CommentEnumValueLinked)(nil)
 // of top-level messages (direct field iteration, no recursion); findings
 // report the value's first-token position (main Meta.Pos ≡ Decl.Pos) with
 // the value name as source.
-type CommentEnumValueLinked struct{}
-
-// LintRuleName returns the canonical registry name (no _LINKED suffix).
-func (c *CommentEnumValueLinked) LintRuleName() string {
-	return "COMMENT_ENUM_VALUE"
-}
+type CommentEnumValue struct{}
 
 // Message implements lint.Rule.
-func (c *CommentEnumValueLinked) Message() string {
+func (c *CommentEnumValue) Message() string {
 	return "enum value comments must not be empty"
 }
 
 // Validate implements lint.Rule.
-func (c *CommentEnumValueLinked) Validate(info core.ProtoInfo) ([]core.Issue, error) {
+func (c *CommentEnumValue) Validate(info core.ProtoInfo) ([]core.Issue, error) {
 	var res []core.Issue
 
 	for _, enum := range info.File.Enums {

@@ -4,26 +4,21 @@ import (
 	"github.com/easyp-tech/easyp/internal/core"
 )
 
-var _ core.Rule = (*ImportNoWeakLinked)(nil)
+var _ core.Rule = (*ImportNoWeak)(nil)
 
-// ImportNoWeakLinked is the linked-engine port of ImportNoWeak (research
+// ImportNoWeak (research
 // inventory #11, verbatim-from-lab): the etalon body carries over with the
 // imp.Weak flag replacing main's Modifier comparison; the position is
 // test-verified equal to main's Meta.Pos (imp.Pos, the import keyword).
-type ImportNoWeakLinked struct{}
-
-// LintRuleName returns the canonical registry name (no _LINKED suffix).
-func (i *ImportNoWeakLinked) LintRuleName() string {
-	return "IMPORT_NO_WEAK"
-}
+type ImportNoWeak struct{}
 
 // Message implements lint.Rule.
-func (i *ImportNoWeakLinked) Message() string {
+func (i *ImportNoWeak) Message() string {
 	return "import should not be weak"
 }
 
 // Validate implements lint.Rule.
-func (i *ImportNoWeakLinked) Validate(info core.ProtoInfo) ([]core.Issue, error) {
+func (i *ImportNoWeak) Validate(info core.ProtoInfo) ([]core.Issue, error) {
 	var res []core.Issue
 
 	for _, imp := range info.File.Imports {

@@ -4,9 +4,9 @@ import (
 	"github.com/easyp-tech/easyp/internal/core"
 )
 
-var _ core.ModuleRule = (*PackageSameJavaMultipleFilesLinked)(nil)
+var _ core.ModuleRule = (*PackageSameJavaMultipleFiles)(nil)
 
-// PackageSameJavaMultipleFilesLinked is the linked-engine port of PackageSameJavaMultipleFiles
+// PackageSameJavaMultipleFiles
 // (research inventory main-diverged + adapt): all files of one package must
 // declare the same java_multiple_files option. The Collect/Finish mechanics come from
 // the etalon's ModuleRule shape; the semantics are main's (threat T-04-11):
@@ -22,27 +22,22 @@ var _ core.ModuleRule = (*PackageSameJavaMultipleFilesLinked)(nil)
 //     (groupedValues.firstExemptMismatches — the lab's
 //     report-everyone Finish is not reachable from ports);
 //   - a file without a package never joins a group (main returns early).
-type PackageSameJavaMultipleFilesLinked struct {
+type PackageSameJavaMultipleFiles struct {
 	files groupedValues
 }
 
-// LintRuleName returns the canonical registry name (no _LINKED suffix).
-func (p *PackageSameJavaMultipleFilesLinked) LintRuleName() string {
-	return "PACKAGE_SAME_JAVA_MULTIPLE_FILES"
-}
-
 // Message implements lint.Rule.
-func (p *PackageSameJavaMultipleFilesLinked) Message() string {
+func (p *PackageSameJavaMultipleFiles) Message() string {
 	return "all files in the same package must have the same java_multiple_files option"
 }
 
 // Validate implements lint.Rule. Lint calls Collect and Finish instead.
-func (p *PackageSameJavaMultipleFilesLinked) Validate(core.ProtoInfo) ([]core.Issue, error) {
+func (p *PackageSameJavaMultipleFiles) Validate(core.ProtoInfo) ([]core.Issue, error) {
 	return nil, nil
 }
 
 // Collect implements core.ModuleRule.
-func (p *PackageSameJavaMultipleFilesLinked) Collect(info core.ProtoInfo) error {
+func (p *PackageSameJavaMultipleFiles) Collect(info core.ProtoInfo) error {
 	if len(info.File.Packages) == 0 {
 		// main returns early: packageless files never join groups.
 		return nil
@@ -70,6 +65,6 @@ func (p *PackageSameJavaMultipleFilesLinked) Collect(info core.ProtoInfo) error 
 }
 
 // Finish implements core.ModuleRule.
-func (p *PackageSameJavaMultipleFilesLinked) Finish() []core.IssueInfo {
+func (p *PackageSameJavaMultipleFiles) Finish() []core.IssueInfo {
 	return p.files.firstExemptMismatches(p)
 }

@@ -17,7 +17,7 @@ func TestImportUsed_Message(t *testing.T) {
 
 	const expMessage = "import is not used"
 
-	rule := rules.ImportUsedLinked{}
+	rule := rules.ImportUsed{}
 	message := rule.Message()
 
 	assert.Equal(expMessage, message)
@@ -57,7 +57,7 @@ func TestImportUsed_Validate(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			rule := rules.ImportUsedLinked{}
+			rule := rules.ImportUsed{}
 
 			issues, err := rule.Validate(parseLinkedFile(t, tc.fileName))
 			require.ErrorIs(t, err, tc.wantErr)

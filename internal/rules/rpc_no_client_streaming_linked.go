@@ -4,29 +4,24 @@ import (
 	"github.com/easyp-tech/easyp/internal/core"
 )
 
-var _ core.Rule = (*RPCNoClientStreamingLinked)(nil)
+var _ core.Rule = (*RPCNoClientStreaming)(nil)
 
-// RPCNoClientStreamingLinked is the linked-engine port of RPCNoClientStreaming
+// RPCNoClientStreaming
 // (research inventory #40, verbatim-from-lab): the etalon's streaming
 // predicate (rpc.Request.Stream — the lab's IsStream field renamed by main's
 // protoast model) over main's shallow services→rpcs walk; the finding
 // position is the declaration keyword (rpc.Meta.Pos ≡ Decl.Pos — main and
 // etalon carried tests assert the identical literal on the shared auth
 // fixture, the alias-only test diff).
-type RPCNoClientStreamingLinked struct{}
-
-// LintRuleName returns the canonical registry name (no _LINKED suffix).
-func (r *RPCNoClientStreamingLinked) LintRuleName() string {
-	return "RPC_NO_CLIENT_STREAMING"
-}
+type RPCNoClientStreaming struct{}
 
 // Message implements lint.Rule.
-func (r *RPCNoClientStreamingLinked) Message() string {
+func (r *RPCNoClientStreaming) Message() string {
 	return "client streaming RPCs are not allowed"
 }
 
 // Validate implements lint.Rule.
-func (r *RPCNoClientStreamingLinked) Validate(info core.ProtoInfo) ([]core.Issue, error) {
+func (r *RPCNoClientStreaming) Validate(info core.ProtoInfo) ([]core.Issue, error) {
 	var res []core.Issue
 
 	for _, service := range info.File.Services {

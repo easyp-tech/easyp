@@ -6,9 +6,9 @@ import (
 	"github.com/easyp-tech/easyp/internal/core"
 )
 
-var _ core.ModuleRule = (*DirectorySamePackageLinked)(nil)
+var _ core.ModuleRule = (*DirectorySamePackage)(nil)
 
-// DirectorySamePackageLinked is the linked-engine port of DirectorySamePackage
+// DirectorySamePackage
 // (research inventory #1, main-diverged + adapt): a rule for checking that all
 // files in a given directory are in the same package. The walk mechanics come
 // from the etalon's ModuleRule shape; the Finish semantics are main's
@@ -16,27 +16,22 @@ var _ core.ModuleRule = (*DirectorySamePackageLinked)(nil)
 // differing files issue at their own package positions) — NOT the lab's
 // report-everyone groupedValues.mismatches. A file without a package
 // declaration contributes nothing: main's loop iterates Packages only.
-type DirectorySamePackageLinked struct {
+type DirectorySamePackage struct {
 	files groupedValues
 }
 
-// LintRuleName returns the canonical registry name (no _LINKED suffix).
-func (d *DirectorySamePackageLinked) LintRuleName() string {
-	return "DIRECTORY_SAME_PACKAGE"
-}
-
 // Message implements lint.Rule.
-func (d *DirectorySamePackageLinked) Message() string {
+func (d *DirectorySamePackage) Message() string {
 	return "all files in the same directory must have the same package name"
 }
 
 // Validate implements lint.Rule. Lint calls Collect and Finish instead.
-func (d *DirectorySamePackageLinked) Validate(core.ProtoInfo) ([]core.Issue, error) {
+func (d *DirectorySamePackage) Validate(core.ProtoInfo) ([]core.Issue, error) {
 	return nil, nil
 }
 
 // Collect implements core.ModuleRule.
-func (d *DirectorySamePackageLinked) Collect(info core.ProtoInfo) error {
+func (d *DirectorySamePackage) Collect(info core.ProtoInfo) error {
 	for _, pkg := range info.File.Packages {
 		d.files.add(filepath.Dir(info.Path), groupedValue{
 			path:   info.Path,
@@ -49,6 +44,6 @@ func (d *DirectorySamePackageLinked) Collect(info core.ProtoInfo) error {
 }
 
 // Finish implements core.ModuleRule.
-func (d *DirectorySamePackageLinked) Finish() []core.IssueInfo {
+func (d *DirectorySamePackage) Finish() []core.IssueInfo {
 	return d.files.firstExemptMismatches(d)
 }

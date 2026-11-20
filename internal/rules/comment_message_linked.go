@@ -4,9 +4,9 @@ import (
 	"github.com/easyp-tech/easyp/internal/core"
 )
 
-var _ core.Rule = (*CommentMessageLinked)(nil)
+var _ core.Rule = (*CommentMessage)(nil)
 
-// CommentMessageLinked is the linked-engine port of CommentMessage (research
+// CommentMessage (research
 // inventory #36, main-diverged). Presence predicate is MAIN'S: a declaration
 // is undocumented iff no comment at all precedes it — HasCommentAbove()
 // (Leading+Detached) reproduces main's "no attached comment" reading,
@@ -23,20 +23,15 @@ var _ core.Rule = (*CommentMessageLinked)(nil)
 // Walk shape is main's: top-level messages only (direct field iteration, no
 // recursion into nested messages); findings report the declaration keyword
 // position (main Meta.Pos ≡ Decl.Pos) with the message name as source.
-type CommentMessageLinked struct{}
-
-// LintRuleName returns the canonical registry name (no _LINKED suffix).
-func (c *CommentMessageLinked) LintRuleName() string {
-	return "COMMENT_MESSAGE"
-}
+type CommentMessage struct{}
 
 // Message implements lint.Rule.
-func (c *CommentMessageLinked) Message() string {
+func (c *CommentMessage) Message() string {
 	return "message comments must not be empty"
 }
 
 // Validate implements lint.Rule.
-func (c *CommentMessageLinked) Validate(info core.ProtoInfo) ([]core.Issue, error) {
+func (c *CommentMessage) Validate(info core.ProtoInfo) ([]core.Issue, error) {
 	var res []core.Issue
 
 	for _, message := range info.File.Messages {

@@ -4,29 +4,24 @@ import (
 	"github.com/easyp-tech/easyp/internal/core"
 )
 
-var _ core.Rule = (*EnumNoAllowAliasLinked)(nil)
+var _ core.Rule = (*EnumNoAllowAlias)(nil)
 
-// EnumNoAllowAliasLinked is the linked-engine port of EnumNoAllowAlias
+// EnumNoAllowAlias
 // (research inventory #6, main-diverged): main issues for ANY enum-level
 // option named allow_alias, regardless of its value (allow_alias = false
 // included), at the ENUM keyword position (main's Meta.Pos ≡ Decl.Pos) with
 // the enum name as the source, re-reporting per matching option occurrence —
 // exactly main's loop shape. The lab's Value=="true"-at-option-position
 // reading is not ported.
-type EnumNoAllowAliasLinked struct{}
-
-// LintRuleName returns the canonical registry name (no _LINKED suffix).
-func (e *EnumNoAllowAliasLinked) LintRuleName() string {
-	return "ENUM_NO_ALLOW_ALIAS"
-}
+type EnumNoAllowAlias struct{}
 
 // Message implements lint.Rule.
-func (e *EnumNoAllowAliasLinked) Message() string {
+func (e *EnumNoAllowAlias) Message() string {
 	return "enum must not allow alias"
 }
 
 // Validate implements lint.Rule.
-func (e *EnumNoAllowAliasLinked) Validate(info core.ProtoInfo) ([]core.Issue, error) {
+func (e *EnumNoAllowAlias) Validate(info core.ProtoInfo) ([]core.Issue, error) {
 	var res []core.Issue
 
 	for _, enum := range info.File.Enums {

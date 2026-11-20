@@ -16,7 +16,7 @@ func TestPackageDirectoryMatch_Message(t *testing.T) {
 
 	const expMessage = "package does not match directory path"
 
-	rule := rules.PackageDirectoryMatchLinked{}
+	rule := rules.PackageDirectoryMatch{}
 	message := rule.Message()
 
 	assert.Equal(expMessage, message)
@@ -58,7 +58,7 @@ func TestPackageDirectoryMatch_Validate(t *testing.T) {
 
 			r := require.New(t)
 
-			rule := rules.PackageDirectoryMatchLinked{
+			rule := rules.PackageDirectoryMatch{
 				Root: "./../../testdata/",
 			}
 			issues, err := rule.Validate(parseLinkedFile(t, tc.fileName))
@@ -79,7 +79,7 @@ func TestPackageDirectoryMatch_ModuleQualifiedPackage(t *testing.T) {
 	r := require.New(t)
 	info := parseLinkedFile(t, validAuthProto)
 	info.ImportPath = "v1/service.proto"
-	rule := rules.PackageDirectoryMatchLinked{Root: ".", Prefix: "user"}
+	rule := rules.PackageDirectoryMatch{Root: ".", Prefix: "user"}
 
 	info.File.Packages[0].Name = "user.v1"
 	issues, err := rule.Validate(info)
