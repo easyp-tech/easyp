@@ -55,6 +55,14 @@ package rules_test
 // same file included — compares at its own position); the ports' last-wins
 // fileOption read collapsed both files to one agreeing value and reported
 // nothing (old 2 findings vs new 0 — the RED failure of duplicate_file_option).
+//
+// Gap-closure probe provenance (04-08, corpus per 04-REVIEW WR-03, re-proven
+// by the verifier via go test -overlay): both engines accept a file importing
+// the same path twice — no COMPILE issues on either side — but main reports
+// the unused import at its LAST written occurrence (line 6 on the probe
+// corpus) while the port reported the first (line 5): same count, different
+// position, fingerprint mismatch on an input both engines accept (the RED
+// failure of duplicate_import_last_occurrence).
 
 import (
 	"os"
@@ -578,5 +586,35 @@ message Second {}
 `,
 		}
 		assertBatchParity(t, cfg, files, 2)
+	})
+
+	t.Run("duplicate_import_last_occurrence", func(t *testing.T) {
+		t.Parallel()
+
+		// 04-REVIEW WR-03 probe cell (re-proven old line 6 vs new line 5, no
+		// COMPILE issues on either side): dup.proto imports dep.proto twice
+		// with no reference to Dep. Main builds importInfo as an overwrite map
+		// keyed by import path — the LAST written occurrence wins — so the
+		// unused import reports once, at the SECOND import statement (line 6,
+		// col 1). The port's first-occurrence dedup set reported line 5: same
+		// count, different position. Hand-derived old-side count: 1.
+		files := map[string]string{
+			"dupimp/dep.proto": `syntax = "proto3";
+
+package dupimp;
+
+message Dep {}
+`,
+			"dupimp/dup.proto": `syntax = "proto3";
+
+package dupimp;
+
+import "dupimp/dep.proto";
+import "dupimp/dep.proto";
+
+message Dup {}
+`,
+		}
+		assertBatchParity(t, cfg, files, 1)
 	})
 }
