@@ -10,7 +10,6 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/yoheimuta/go-protoparser/v4/parser/meta"
 	"google.golang.org/protobuf/reflect/protodesc"
 	"google.golang.org/protobuf/reflect/protoreflect"
 	"google.golang.org/protobuf/types/descriptorpb"
@@ -305,7 +304,7 @@ func compareBreakingGraphs(against, current *breakingGraph, profile breakingProf
 		}
 		issues = append(issues, IssueInfo{
 			Path: path,
-			Issue: Issue{RuleName: rule, Message: message, Position: meta.Position{
+			Issue: Issue{RuleName: rule, Message: message, Position: Position{
 				Filename: path, Line: location.StartLine + 1, Column: location.StartColumn + 1,
 			}},
 		})

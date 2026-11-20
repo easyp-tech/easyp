@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"github.com/yoheimuta/go-protoparser/v4/parser/meta"
 
 	"github.com/easyp-tech/easyp/internal/core"
 	"github.com/easyp-tech/easyp/internal/rules"
@@ -34,7 +33,7 @@ func TestPackageDefined_Validate(t *testing.T) {
 		"invalid": {
 			fileName: invalidAuthProtoEmptyPkg,
 			wantIssues: &core.Issue{
-				Position: meta.Position{
+				Position: core.Position{
 					Filename: "./../../testdata/auth/empty_pkg.proto",
 					Offset:   0,
 					Line:     0,
