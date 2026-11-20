@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
+	"sync"
 
 	v1 "github.com/easyp-tech/easyp/internal/config/v1"
 	"github.com/easyp-tech/easyp/internal/core/path_helpers"
@@ -131,7 +132,39 @@ func (root SourceRoot) boundary() string {
 
 // OpenSourceFile opens a source at its logical location through its owning root.
 func (roots SourceRoots) OpenSourceFile(path string) (io.ReadCloser, error) {
-	allowed := roots.FileAllowed()
+	return roots.SourceOpener(roots.FileAllowed())(path)
+}
+
+// SourceOpener returns OpenSourceFile bound to allowed, which must come from
+// FileAllowed on the same roots. Callers that open many files reuse one filter
+// instead of rebuilding it on every open.
+func (roots SourceRoots) SourceOpener(allowed func(string) bool) func(string) (io.ReadCloser, error) {
+	return roots.SourceOpenerIn(nil, allowed)
+}
+
+// SourceOpenerIn is SourceOpener with opens going through session, which keeps
+// each root's directory handles open across files. A nil session behaves like
+// SourceOpener.
+func (roots SourceRoots) SourceOpenerIn(session *sourceview.Session, allowed func(string) bool) func(string) (io.ReadCloser, error) {
+	var mu sync.Mutex
+	boundaries := make(map[string]string, len(roots))
+	physicalBoundary := func(root SourceRoot) string {
+		boundary := root.boundary()
+		mu.Lock()
+		defer mu.Unlock()
+		physical, ok := boundaries[boundary]
+		if !ok {
+			physical = physicalSourcePath(boundary)
+			boundaries[boundary] = physical
+		}
+		return physical
+	}
+	return func(path string) (io.ReadCloser, error) {
+		return roots.openSourceFile(session, path, allowed, physicalBoundary)
+	}
+}
+
+func (roots SourceRoots) openSourceFile(session *sourceview.Session, path string, allowed func(string) bool, physicalBoundary func(SourceRoot) string) (io.ReadCloser, error) {
 	if allowed != nil && !allowed(path) {
 		return nil, &os.PathError{Op: "open", Path: path, Err: os.ErrNotExist}
 	}
@@ -144,9 +177,9 @@ func (roots SourceRoots) OpenSourceFile(path string) (io.ReadCloser, error) {
 			return nil, fmt.Errorf("Rel: %w", err)
 		}
 		physicalPath := func(resolved sourceview.Resolution) string {
-			return filepath.Join(physicalSourcePath(root.boundary()), filepath.FromSlash(resolved.Path))
+			return filepath.Join(physicalBoundary(root), filepath.FromSlash(resolved.Path))
 		}
-		file, err := sourceview.OpenLocalSelected(context.Background(), root.boundary(), relative, func(resolved sourceview.Resolution) bool { return allowed == nil || allowed(physicalPath(resolved)) }, func(resolved sourceview.Resolution) bool { return roots.ownsSelectedPhysical(physicalPath(resolved)) })
+		file, err := session.OpenLocalSelected(context.Background(), root.boundary(), relative, func(resolved sourceview.Resolution) bool { return allowed == nil || allowed(physicalPath(resolved)) }, func(resolved sourceview.Resolution) bool { return roots.ownsSelectedPhysical(physicalPath(resolved)) })
 		if err != nil {
 			return nil, fmt.Errorf("OpenLocal: %w", err)
 		}
@@ -175,6 +208,12 @@ func (root SourceRoot) allows(path, importRoot string) bool {
 }
 
 func (root SourceRoot) allowsPath(path, importRoot string) bool {
+	return root.allowsPathWith(path, importRoot, path_helpers.ShouldSkipV1SourceDir)
+}
+
+// allowsPathWith is allowsPath with the nested-module directory check supplied
+// by the caller, so a long-lived filter can memoize it.
+func (root SourceRoot) allowsPathWith(path, importRoot string, skipDir func(root, dir string) bool) bool {
 	if root.index != nil {
 		relative, err := filepath.Rel(importRoot, path)
 		return err == nil && root.index.names[relative]
@@ -185,7 +224,7 @@ func (root SourceRoot) allowsPath(path, importRoot string) bool {
 	// A containing consumer root does not own files inside a nested module.
 	// Import lookup must use the same boundaries as source discovery.
 	for directory := filepath.Dir(path); sourcePathWithin(directory, importRoot) && filepath.Clean(directory) != filepath.Clean(importRoot); directory = filepath.Dir(directory) {
-		if path_helpers.ShouldSkipV1SourceDir(importRoot, directory) {
+		if skipDir(importRoot, directory) {
 			return false
 		}
 	}
@@ -196,7 +235,10 @@ func (root SourceRoot) allowsPath(path, importRoot string) bool {
 // Paths outside these roots remain available to the consumer's own inputs.
 // Overlapping roots select the union of their allowed files. Both the import's
 // spelling and its physical target must pass their respective owning selections.
+// The filter memoizes directory checks and symlink resolution for its lifetime,
+// which callers bound to a single command; it is safe for concurrent use.
 func (roots SourceRoots) FileAllowed() func(string) bool {
+	memo := newSourceFilterMemo()
 
 	type selection struct {
 		path string
@@ -222,7 +264,7 @@ func (roots SourceRoots) FileAllowed() func(string) bool {
 				continue
 			}
 			inside = true
-			if root.root.allowsPath(path, root.path) {
+			if root.root.allowsPathWith(path, root.path, memo.skipDir) {
 				return true
 			}
 		}
@@ -240,8 +282,61 @@ func (roots SourceRoots) FileAllowed() func(string) bool {
 				return true
 			}
 		}
-		return allowedPath(physicalSourcePath(path))
+		return allowedPath(memo.physical(path))
 	}
+}
+
+// sourceFilterMemo caches the filesystem checks behind one FileAllowed filter.
+type sourceFilterMemo struct {
+	mu        sync.Mutex
+	skipped   map[[2]string]bool
+	canonical map[string]string
+}
+
+func newSourceFilterMemo() *sourceFilterMemo {
+	return &sourceFilterMemo{
+		skipped:   make(map[[2]string]bool),
+		canonical: make(map[string]string),
+	}
+}
+
+func (m *sourceFilterMemo) skipDir(root, dir string) bool {
+	key := [2]string{root, dir}
+	m.mu.Lock()
+	skip, ok := m.skipped[key]
+	m.mu.Unlock()
+	if ok {
+		return skip
+	}
+	skip = path_helpers.ShouldSkipV1SourceDir(root, dir)
+	m.mu.Lock()
+	m.skipped[key] = skip
+	m.mu.Unlock()
+	return skip
+}
+
+// physical resolves symlinks for path. A regular file takes the cached
+// resolution of its directory plus its base name; links, directories, and
+// missing files resolve in full.
+func (m *sourceFilterMemo) physical(path string) string {
+	if info, err := os.Lstat(path); err == nil && info.Mode()&os.ModeSymlink == 0 && !info.IsDir() {
+		return filepath.Join(m.physicalPath(filepath.Dir(path)), filepath.Base(path))
+	}
+	return m.physicalPath(path)
+}
+
+func (m *sourceFilterMemo) physicalPath(path string) string {
+	m.mu.Lock()
+	canonical, ok := m.canonical[path]
+	m.mu.Unlock()
+	if ok {
+		return canonical
+	}
+	canonical = physicalSourcePath(path)
+	m.mu.Lock()
+	m.canonical[path] = canonical
+	m.mu.Unlock()
+	return canonical
 }
 
 func sourcePathWithin(path, directory string) bool {

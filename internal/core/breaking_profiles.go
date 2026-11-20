@@ -18,7 +18,6 @@ import (
 	"github.com/easyp-tech/easyp/internal/compilerbackend"
 	"github.com/easyp-tech/easyp/internal/config"
 	"github.com/easyp-tech/easyp/internal/core/path_helpers"
-	"github.com/easyp-tech/easyp/internal/sourceview"
 )
 
 type breakingGraph struct {
@@ -145,7 +144,7 @@ func (c *Core) breakingSourceAccessor(ctx context.Context, root string) func(str
 		}
 		relative, err := filepath.Rel(root, filename)
 		if err == nil && filepath.IsLocal(relative) {
-			return sourceview.OpenLocal(ctx, root, relative)
+			return c.sourceSession.OpenLocal(ctx, root, relative)
 		}
 		return c.openSourceFile(filename)
 	}
