@@ -3,16 +3,16 @@ gsd_state_version: "1.0"
 current_phase: 05
 current_phase_name: Переключение lint-пути и ворота совместимости
 status: executing
-stopped_at: Phase 04 complete, ready to plan Phase 5
-last_updated: "2026-11-20T18:59:36.207Z"
+stopped_at: Completed 05-01-PLAN.md
+last_updated: "2026-11-20T19:23:33.283Z"
 last_activity: 2026-11-20
-last_activity_desc: Phase 04 complete, transitioned to Phase 5
-state_head: 4629c7c3df16de258d5b7ff9aad610fc45855857
+last_activity_desc: Phase 05 execution started
+state_head: 98b9975aaf599ae67589e6f9a7fd322343cd778f
 progress:
   total_phases: 7
   completed_phases: 4
   total_plans: 24
-  completed_plans: 20
+  completed_plans: 21
   percent: 57
 ---
 
@@ -36,14 +36,14 @@ progress:[██████░░░░] 57%
 See: .planning/PROJECT.md (updated 2026-11-19)
 
 **Core value:** EasyP остаётся drop-in buf-совместимым инструментом: формат вывода, коды выхода и конфигурация не ломаются между версиями — миграции внутренностей незаметны пользователю.
-**Current focus:** Phase 04 — Перенос 43 правил с батч-паритетом
+**Current focus:** Phase 05 — Переключение lint-пути и ворота совместимости
 
 ## Current Position
 
-Phase: 05 (Переключение lint-пути и ворота совместимости) — READY TO EXECUTE
-Plan: Not started
+Phase: 05 (Переключение lint-пути и ворота совместимости) — EXECUTING
+Plan: 2 of 4
 Status: Ready to execute
-Last activity: 2026-11-20 — Phase 04 complete, transitioned to Phase 5
+Last activity: 2026-11-20 — Phase 05 execution started
 
 Progress: [███░░░░░░░] 29%
 
@@ -90,6 +90,7 @@ Progress: [███░░░░░░░] 29%
 | Phase 04 P06 | 9 min | 3 tasks | 16 files |
 | Phase 04 P07 | 25 min | 3 tasks | 11 files |
 | Phase 04 P08 | 15 min | 4 tasks | 15 files |
+| Phase 05 P01 | 20 min | 3 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -158,6 +159,10 @@ Recent decisions affecting current work:
 - [Phase 04]: WR-02 keeps empty-loop semantics (optionless files add nothing); the swift-prefix port reads the same ruby_package literal per occurrence — the sweep changes only how many occurrences are read, never which option; fileOption joined the kept-unused list (nine helpers) with mirrored header/.golangci.yml comment updates
 - [Phase 04]: WR-03 reports through an overwrite map (importInfo keyed by ImportPath) instead of a reported dedup set; map iteration order is normalized by the D-01 sort now total through SourceName; the protoc-rejection justification was deleted as unsupported
 - [Phase 04]: The regression-pin cells (mismatching_file_ignored, per_file_rule_ignored) were expected red pre-fix through the WR-01 nil-vs-set gap — documented in the task-1 RED evidence as anticipated, the proof the threading was load-bearing
+- [Phase 05]: 05-01 golden captures Position.Offset too (70/73 nonzero, engines agree byte-for-byte): full-struct fidelity per must_haves truth 1; the literal helper takes eight arguments, not the plan's sketched six — Filename/Offset are user-visible in JSON output; strictness is the right bias for a compat net
+- [Phase 05]: 05-01 v1 per-path rule suppression spelling confirmed as issues.exclude-rules (path + linters): the v1 policy grammar has no ignore_only key (KnownFields strict decode rejects it); engine-level ignore_only stays covered by rules-package tests — The plan's own confirm-the-spelling loop fired; the semantic (rule suppressed on exactly one of two files) is observable in the pinned stdout golden
+- [Phase 05]: 05-01 linked parity drive compares the engine's emitted order as-is (no re-sort): LintLinked already applies the D-01 total sort, so re-sorting would mask an engine-order regression; the old drive sorts via a local D-01 replica (SortStableFunc + cmp.Or) — Stronger contract: the test pins the engine's own deterministic sort, not merely sortability
+- [Phase 05]: 05-01 corpus re-hosted verbatim under goldenCorpusFiles (new names so it coexists with the living parity file until the flip); verbatimness mechanically diff-verified; both engines' full structs proven identical on the corpus incl. Filename/Offset — The parity file dies with the oracle at the flip; the corpus must survive in the golden file collision-free
 
 ### Pending Todos
 
@@ -185,6 +190,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-11-20T16:52:25.933Z
-Stopped at: Phase 04 complete, ready to plan Phase 5
+Last session: 2026-11-20T19:23:32.351Z
+Stopped at: Completed 05-01-PLAN.md
 Resume file: None

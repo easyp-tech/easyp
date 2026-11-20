@@ -40,8 +40,8 @@ created: "2026-11-20"
 
 | Task ID | Plan | Wave | Requirement | Threat Ref | Secure Behavior | Test Type | Automated Command | File Exists | Status |
 |---------|------|------|-------------|------------|-----------------|-----------|-------------------|-------------|--------|
-| (заполняется планами) | 0X | X | LINT-COMPAT-01 | T-05-* | Golden full-registry corpus захвачен из старого движка ДО переключения; after-flip идентичен (incl. SourceName, D-01 порядок, COMPILE в существующем формате) | golden | `go test -race -count=1 ./internal/core/ -run 'TestFlipCorpusGolden'` | ❌ W0 | ⬜ pending |
-| (заполняется планами) | 0X | X | LINT-COMPAT-01 | T-05-* | Exit-коды и CLI stdout golden через buildEasypBinary/runEasypLint; класс 1 (COMPILE) через Action — полное исполнение ratified A1 | subprocess | `go test -race -count=1 ./internal/api/ -run 'TestLintFlipExit'` | ❌ W0 | ⬜ pending |
+| 05-01 T1+T2 | 01 | 1 | LINT-COMPAT-01 | T-05-05 | Golden full-registry corpus захвачен из старого движка ДО переключения (73 findings, все поля incl. Message/Filename/Offset, D-01 порядок); linked drive доказывает message-level parity; zero-COMPILE + 41-name coverage + totality guards | golden | `go test -race -count=1 ./internal/rules/ -run 'TestLintGoldenFullRegistry'` | ✅ | ✅ green |
+| 05-01 T3 | 01 | 1 | LINT-COMPAT-01 | T-05-05 | CLI stdout golden (byte-exact, 2 строки) + exit 1 через реальный бинарник over findings/exclusion/directive/PDM-rewrite corpus; класс 1 (COMPILE) через Action — 05-03 исполняет ratified A1 | subprocess | `go test -count=1 ./internal/api/ -run TestLintStdoutGolden` | ✅ | ✅ green |
 | (заполняется планами) | 0X | X | LINT-COMPAT-02 | T-05-* | breaking/generate/tidy/migrate зелёные в том же прогоне; go.mod содержит оба модуля; breaking-path zero-diff | suite | `go test -race -count=1 ./...` | ✅ | ⬜ pending |
 | (заполняется планами) | 0X | X | LINT-COMPAT-01 | T-05-* | WR-01/WR-02 исправлены ДО переключения (probe cells) | unit | `go test -race -count=1 ./internal/core/ -run 'TestResolverGuard'` | ❌ W0 | ⬜ pending |
 
@@ -51,7 +51,7 @@ created: "2026-11-20"
 
 ## Wave 0 Requirements
 
-- [ ] Golden full-registry corpus capture (73 findings, все 41 правило, из замороженного старого движка) — ДО flip-коммита
+- [x] Golden full-registry corpus capture (73 findings, все 41 правило, из замороженного старого движка) — ДО flip-коммита (05-01, commits afc9a2f/8f88380)
 - [ ] WR-01/WR-02 probe cells — до flip-коммита
 - [ ] `Existing infrastructure covers test framework`
 
