@@ -10,14 +10,12 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/bufbuild/protocompile"
-	"github.com/bufbuild/protocompile/linker"
-	"github.com/bufbuild/protocompile/protoutil"
-	"github.com/bufbuild/protocompile/wellknownimports"
 	"github.com/yoheimuta/go-protoparser/v4/parser/meta"
+	"google.golang.org/protobuf/reflect/protodesc"
 	"google.golang.org/protobuf/reflect/protoreflect"
 	"google.golang.org/protobuf/types/descriptorpb"
 
+	"github.com/easyp-tech/easyp/internal/compilerbackend"
 	"github.com/easyp-tech/easyp/internal/config"
 	"github.com/easyp-tech/easyp/internal/core/path_helpers"
 	"github.com/easyp-tech/easyp/internal/sourceview"
@@ -25,6 +23,7 @@ import (
 
 type breakingGraph struct {
 	files    map[string]protoreflect.FileDescriptor
+	protos   map[string]*descriptorpb.FileDescriptorProto
 	targets  map[string]bool
 	paths    map[string]string
 	messages map[protoreflect.FullName]protoreflect.MessageDescriptor
@@ -118,11 +117,13 @@ func (c *Core) compileBreakingGraph(ctx context.Context, walker DirWalker) (*bre
 	if len(imports) == 0 {
 		imports = []string{root}
 	}
-	compiler := protocompile.Compiler{
-		Resolver:       wellknownimports.WithStandardImports(&protocompile.SourceResolver{ImportPaths: imports, Accessor: c.breakingSourceAccessor(ctx, root)}),
-		SourceInfoMode: protocompile.SourceInfoStandard,
-	}
-	compiled, err := compiler.Compile(ctx, targets...)
+	compiled, err := compilerbackend.Compile(ctx, compilerbackend.Request{
+		Files:           targets,
+		ImportPaths:     imports,
+		Accessor:        c.breakingSourceAccessor(ctx, root),
+		StandardImports: true,
+		SourceInfo:      true,
+	})
 	if err != nil {
 		return nil, fmt.Errorf("Compile: %w", err)
 	}
@@ -176,7 +177,10 @@ func uniqueLogicalRoots(roots []string) []string {
 
 func newBreakingGraph() *breakingGraph {
 	return &breakingGraph{
-		files: make(map[string]protoreflect.FileDescriptor), targets: make(map[string]bool), paths: make(map[string]string),
+		files:    make(map[string]protoreflect.FileDescriptor),
+		protos:   make(map[string]*descriptorpb.FileDescriptorProto),
+		targets:  make(map[string]bool),
+		paths:    make(map[string]string),
 		messages: make(map[protoreflect.FullName]protoreflect.MessageDescriptor),
 		enums:    make(map[protoreflect.FullName]protoreflect.EnumDescriptor),
 		services: make(map[protoreflect.FullName]protoreflect.ServiceDescriptor),
@@ -185,7 +189,7 @@ func newBreakingGraph() *breakingGraph {
 	}
 }
 
-func buildBreakingGraph(files linker.Files, targetPaths map[string]string) *breakingGraph {
+func buildBreakingGraph(compiled *compilerbackend.Result, targetPaths map[string]string) *breakingGraph {
 	graph := newBreakingGraph()
 	for name := range targetPaths {
 		graph.targets[name] = true
@@ -197,14 +201,18 @@ func buildBreakingGraph(files linker.Files, targetPaths map[string]string) *brea
 			return
 		}
 		seen[file] = true
-		graph.files[string(file.Path())] = file
-		if path, ok := targetPaths[string(file.Path())]; ok {
-			graph.paths[string(file.Path())] = path
+		name := string(file.Path())
+		graph.files[name] = file
+		if fdp, ok := compiled.Protos[name]; ok {
+			graph.protos[name] = fdp
+		}
+		if path, ok := targetPaths[name]; ok {
+			graph.paths[name] = path
 		} else {
-			graph.paths[string(file.Path())] = filepath.ToSlash(file.Path())
+			graph.paths[name] = filepath.ToSlash(file.Path())
 		}
 		for i := range file.Imports().Len() {
-			visit(file.Imports().Get(i))
+			visit(file.Imports().Get(i).FileDescriptor)
 		}
 		for i := range file.Messages().Len() {
 			addBreakingMessage(graph, file.Messages().Get(i))
@@ -224,7 +232,7 @@ func buildBreakingGraph(files linker.Files, targetPaths map[string]string) *brea
 			graph.ext[file.Extensions().Get(i).FullName()] = file.Extensions().Get(i)
 		}
 	}
-	for _, file := range files {
+	for _, file := range compiled.Files {
 		visit(file)
 	}
 	return graph
@@ -275,6 +283,7 @@ func filterUnstableBreakingGraph(graph *breakingGraph) {
 	for name, d := range graph.files {
 		if isUnstablePackage(PackageName(d.Package())) {
 			delete(graph.files, name)
+			delete(graph.protos, name)
 			delete(graph.paths, name)
 		}
 	}
@@ -773,7 +782,11 @@ func compareBreakingFileOptions(against, current *breakingGraph, profile breakin
 			return
 		}
 		seen[key] = true
-		compareBreakingFilePair(oldFile, newFile, profile, report)
+		compareBreakingFilePair(
+			oldFile, newFile,
+			against.protos[oldFile.Path()], current.protos[newFile.Path()],
+			profile, report,
+		)
 	}
 	for name, old := range against.files {
 		if next := current.files[name]; next != nil {
@@ -805,7 +818,12 @@ func compareBreakingFileOptions(against, current *breakingGraph, profile breakin
 	}
 }
 
-func compareBreakingFilePair(oldFile, newFile protoreflect.FileDescriptor, profile breakingProfiles, report func(protoreflect.Descriptor, string, string)) {
+func compareBreakingFilePair(
+	oldFile, newFile protoreflect.FileDescriptor,
+	oldProto, newProto *descriptorpb.FileDescriptorProto,
+	profile breakingProfiles,
+	report func(protoreflect.Descriptor, string, string),
+) {
 	name := oldFile.Path()
 	if oldFile.Package() != newFile.Package() {
 		report(oldFile, "FILE_SAME_PACKAGE", fmt.Sprintf("File %q changed package from %q to %q.", name, oldFile.Package(), newFile.Package()))
@@ -835,8 +853,12 @@ func compareBreakingFilePair(oldFile, newFile protoreflect.FileDescriptor, profi
 	if oldFile.Syntax() != newFile.Syntax() {
 		report(oldFile, "FILE_SAME_SYNTAX", fmt.Sprintf("File %q changed syntax from %s to %s.", name, oldFile.Syntax(), newFile.Syntax()))
 	}
-	oldProto := protoutil.ProtoFromFileDescriptor(oldFile)
-	newProto := protoutil.ProtoFromFileDescriptor(newFile)
+	if oldProto == nil {
+		oldProto = protodesc.ToFileDescriptorProto(oldFile)
+	}
+	if newProto == nil {
+		newProto = protodesc.ToFileDescriptorProto(newFile)
+	}
 	if oldProto.GetEdition() != newProto.GetEdition() {
 		report(oldFile, "FILE_SAME_SYNTAX", fmt.Sprintf("File %q changed edition from %s to %s.", name, oldProto.GetEdition(), newProto.GetEdition()))
 	}

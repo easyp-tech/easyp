@@ -14,16 +14,14 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/bufbuild/protocompile"
-	"github.com/bufbuild/protocompile/linker"
-	"github.com/bufbuild/protocompile/protoutil"
-	"github.com/bufbuild/protocompile/wellknownimports"
 	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/reflect/protodesc"
 	"google.golang.org/protobuf/reflect/protoreflect"
 	"google.golang.org/protobuf/types/descriptorpb"
 	"google.golang.org/protobuf/types/pluginpb"
 
 	pluginexecutor "github.com/easyp-tech/easyp/internal/adapters/plugin"
+	"github.com/easyp-tech/easyp/internal/compilerbackend"
 	"github.com/easyp-tech/easyp/internal/core/path_helpers"
 	"github.com/easyp-tech/easyp/internal/parallel"
 	"github.com/easyp-tech/easyp/internal/sourceview"
@@ -148,12 +146,13 @@ func (c *Core) prepareGeneration(ctx context.Context, root string, selected []st
 	// Search local roots before dependency roots.
 	slices.Reverse(imports)
 
-	compiler := protocompile.Compiler{
-		Resolver:       wellknownimports.WithStandardImports(&protocompile.SourceResolver{ImportPaths: imports, Accessor: c.openSourceFile}),
-		SourceInfoMode: protocompile.SourceInfoStandard,
-	}
-
-	compiled, err := compiler.Compile(ctx, files...)
+	compiled, err := compilerbackend.Compile(ctx, compilerbackend.Request{
+		Files:           files,
+		ImportPaths:     imports,
+		Accessor:        c.openSourceFile,
+		StandardImports: true,
+		SourceInfo:      true,
+	})
 	if err != nil {
 		return nil, fmt.Errorf("Compile: %w", err)
 	}
@@ -242,7 +241,7 @@ func (p *GenerationPlan) ExecuteInto(ctx context.Context, filesToWrite *Generate
 
 // collectFileDescriptors orders each descriptor after its imports, preserving
 // the compiler's target order and recording files first reached as dependencies.
-func collectFileDescriptors(files linker.Files) ([]*descriptorpb.FileDescriptorProto, []string) {
+func collectFileDescriptors(compiled *compilerbackend.Result) ([]*descriptorpb.FileDescriptorProto, []string) {
 	var descriptors []*descriptorpb.FileDescriptorProto
 	var dependencies []string
 	processed := make(map[string]bool)
@@ -254,16 +253,20 @@ func collectFileDescriptors(files linker.Files) ([]*descriptorpb.FileDescriptorP
 			return
 		}
 		for i := range file.Imports().Len() {
-			visit(file.Imports().Get(i), true)
+			visit(file.Imports().Get(i).FileDescriptor, true)
 		}
-		descriptors = append(descriptors, protoutil.ProtoFromFileDescriptor(file))
+		fdp, ok := compiled.Protos[name]
+		if !ok {
+			fdp = protodesc.ToFileDescriptorProto(file)
+		}
+		descriptors = append(descriptors, fdp)
 		processed[name] = true
 		if dependency {
 			dependencies = append(dependencies, name)
 		}
 	}
 
-	for _, file := range files {
+	for _, file := range compiled.Files {
 		visit(file, false)
 	}
 	return descriptors, dependencies
