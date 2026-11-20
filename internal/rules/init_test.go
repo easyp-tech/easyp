@@ -26,6 +26,7 @@ const (
 	importNotUsed            = "./../../testdata/import_used/not_used.proto"
 	noLintBufComment         = "./../../testdata/no_lint/no_lint_buf_comment.proto"
 	noLintEasypComment       = "./../../testdata/no_lint/no_lint_easyp_comment.proto"
+	noSyntaxProto            = `./../../testdata/no_syntax/no_syntax.proto`
 )
 
 // parseLinkedFile builds a ProtoInfo for a testdata file (the linked
