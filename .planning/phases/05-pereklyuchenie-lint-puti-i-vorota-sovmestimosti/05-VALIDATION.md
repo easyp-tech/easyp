@@ -2,10 +2,10 @@
 phase: "05"
 slug: "pereklyuchenie-lint-puti-i-vorota-sovmestimosti"
 # status lifecycle: draft (seeded by plan-phase) → validated (set by validate-phase §6)
-# audit-milestone §5.5 distinguishes NOT-VALIDATED (draft) from PARTIAL (validated + nyquist_compliant: false) (#2117)
-status: draft
+# audit-milestone §5.5 distinguishes NOT-VALIDATED (draft) from PARTIAL (validated + nyquist_compliant: true) (#2117)
+status: validated
 nyquist_compliant: false
-wave_0_complete: false
+wave_0_complete: true
 created: "2026-11-20"
 ---
 
@@ -42,7 +42,9 @@ created: "2026-11-20"
 |---------|------|------|-------------|------------|-----------------|-----------|-------------------|-------------|--------|
 | 05-01 T1+T2 | 01 | 1 | LINT-COMPAT-01 | T-05-05 | Golden full-registry corpus захвачен из старого движка ДО переключения (73 findings, все поля incl. Message/Filename/Offset, D-01 порядок); linked drive доказывает message-level parity; zero-COMPILE + 41-name coverage + totality guards | golden | `go test -race -count=1 ./internal/rules/ -run 'TestLintGoldenFullRegistry'` | ✅ | ✅ green |
 | 05-01 T3 | 01 | 1 | LINT-COMPAT-01 | T-05-05 | CLI stdout golden (byte-exact, 2 строки) + exit 1 через реальный бинарник over findings/exclusion/directive/PDM-rewrite corpus; класс 1 (COMPILE) через Action — 05-03 исполняет ratified A1 | subprocess | `go test -count=1 ./internal/api/ -run TestLintStdoutGolden` | ✅ | ✅ green |
-| (заполняется планами) | 0X | X | LINT-COMPAT-02 | T-05-* | breaking/generate/tidy/migrate зелёные в том же прогоне; go.mod содержит оба модуля; breaking-path zero-diff | suite | `go test -race -count=1 ./...` | ✅ | ⬜ pending |
+| 05-03-T2 | 05-03 | 2 | LINT-COMPAT-02 | T-05-SC, T-05-05 | SC3 battery: six-root same-run -race, go.mod both modules, breaking freeze | suite | `go test -race -count=1 ./...` | ✅ | ✅ green |
+| 05-04-T2 | 05-04 | 3 | LINT-COMPAT-01, LINT-COMPAT-02 | T-05-SC | Final battery on consolidated names | suite | `go test -race -count=1 ./...` | ✅ | ✅ green |
+| 05-05-T3 | 05-05 | 5 | LINT-COMPAT-01 | T-05-08 | Sentinel discrimination; goldens byte-identical | battery | `go test -race -count=1 ./internal/core/ ./internal/api/` | ✅ | ✅ green |
 | 05-02 T1-T3 | 02 | 1 | LINT-COMPAT-01 | T-05-01/02/03 | WR-01/WR-02/IN-01 исправлены ДО переключения: нерекрываемый import → command error с OS-причиной (никогда не COMPILE-remark), corpus-ветка линкера соблюдает importFileAllowed (тот же rooted-path вход, что openDiskSource — ASVS V4), ctx-guard в FindFileByPath; IN-02 keep-decision записан в doc-коммент linkSources и запинен ignored_broken_dependency_not_suppressed; freeze-гейт breaking-файлов, tidy diff-empty и golangci 0 issues зелёные | unit/integration | `go test -race -count=1 ./internal/core/ -run 'TestLintLinkedErrorPathFidelity\|TestLinkSources'` | ✅ | ✅ green |
 | 05-05 T1-T3 | 05 | 5 | LINT-COMPAT-01 | T-05-08 | WR-01 gap closure: sentinel-носители воронки без PathError (dangling alias / ErrChanged / nested repository — зеркала local.go :33+:176, :56, :209) деградируют в command error с причиной воронки через fallback — никогда не misleading not-found COMPILE-remark; типизированный errors.Is по трём sentinel'ам, A4-классификация non-local сохранена; IN-01 dead readErrs re-check удалён (владелец hasPerFileSyntaxError указан в комментарии); IN-02 оба stale-комментария обновлены; goldens byte-identical, breaking-freeze пуст, golangci 0 issues | unit/integration | `go test -race -count=1 ./internal/core/... ./internal/rules/...` | ✅ | ✅ green |
 
@@ -75,4 +77,4 @@ created: "2026-11-20"
 - [ ] Feedback latency < 240s
 - [ ] `nyquist_compliant: true` set in frontmatter
 
-**Approval:** pending
+**Approval:** approved 2026-11-20 (nyquist audit: rows filled by executors with real suites; verifier re-proved SC1-SC3 with own runs)
