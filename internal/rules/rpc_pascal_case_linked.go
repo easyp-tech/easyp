@@ -6,7 +6,7 @@ import (
 	"github.com/easyp-tech/easyp/internal/core"
 )
 
-var _ core.LintRule = (*RPCPascalCaseLinked)(nil)
+var _ core.Rule = (*RPCPascalCaseLinked)(nil)
 
 // RPCPascalCaseLinked is the linked-engine port of RPCPascalCase (research
 // inventory #23, main-diverged): main's regexp wins over the lab's
@@ -22,13 +22,13 @@ func (c *RPCPascalCaseLinked) LintRuleName() string {
 	return "RPC_PASCAL_CASE"
 }
 
-// Message implements lint.LintRule.
+// Message implements lint.Rule.
 func (c *RPCPascalCaseLinked) Message() string {
 	return "RPC names should be PascalCase"
 }
 
-// Validate implements lint.LintRule.
-func (c *RPCPascalCaseLinked) Validate(info core.LinkedFileInfo) ([]core.Issue, error) {
+// Validate implements lint.Rule.
+func (c *RPCPascalCaseLinked) Validate(info core.ProtoInfo) ([]core.Issue, error) {
 	var res []core.Issue
 
 	pascalCase := regexp.MustCompile("^[A-Z][a-zA-Z0-9]*$")
@@ -36,7 +36,7 @@ func (c *RPCPascalCaseLinked) Validate(info core.LinkedFileInfo) ([]core.Issue, 
 	for _, service := range info.File.Services {
 		for _, rpc := range service.RPCs {
 			if !pascalCase.MatchString(rpc.Name) {
-				res = core.AppendLinkedIssue(res, c, rpc.Pos, rpc.Name)
+				res = core.AppendIssue(res, c, rpc.Pos, rpc.Name)
 			}
 		}
 	}

@@ -6,7 +6,7 @@ import (
 	"github.com/easyp-tech/easyp/internal/core"
 )
 
-var _ core.LintRule = (*PackageVersionSuffixLinked)(nil)
+var _ core.Rule = (*PackageVersionSuffixLinked)(nil)
 
 // PackageVersionSuffixLinked is the linked-engine port of
 // PackageVersionSuffix (research inventory #31, main-diverged; threat
@@ -22,13 +22,13 @@ func (p *PackageVersionSuffixLinked) LintRuleName() string {
 	return "PACKAGE_VERSION_SUFFIX"
 }
 
-// Message implements lint.LintRule.
+// Message implements lint.Rule.
 func (p *PackageVersionSuffixLinked) Message() string {
 	return "package name should have a version suffix"
 }
 
-// Validate implements lint.LintRule.
-func (p *PackageVersionSuffixLinked) Validate(info core.LinkedFileInfo) ([]core.Issue, error) {
+// Validate implements lint.Rule.
+func (p *PackageVersionSuffixLinked) Validate(info core.ProtoInfo) ([]core.Issue, error) {
 	var res []core.Issue
 
 	// main's matchVersionSuffix regexp, byte-verbatim and UNANCHORED.
@@ -38,7 +38,7 @@ func (p *PackageVersionSuffixLinked) Validate(info core.LinkedFileInfo) ([]core.
 
 	for _, pkg := range info.File.Packages {
 		if !versionSuffix.MatchString(pkg.Name) {
-			res = core.AppendLinkedIssue(res, p, pkg.Pos, pkg.Name)
+			res = core.AppendIssue(res, p, pkg.Pos, pkg.Name)
 		}
 	}
 

@@ -23,11 +23,11 @@ var messagePascalCaseName = regexp.MustCompile("^[A-Z][a-zA-Z0-9]+(?:[A-Z][a-zA-
 // the old-path suppression fixtures drive (rules.MessagePascalCase).
 type messagePascalCase struct{}
 
-var _ LintRule = (*messagePascalCase)(nil)
+var _ Rule = (*messagePascalCase)(nil)
 
 func (m *messagePascalCase) Message() string { return "message name should be PascalCase" }
 
-func (m *messagePascalCase) Validate(info LinkedFileInfo) ([]Issue, error) {
+func (m *messagePascalCase) Validate(info ProtoInfo) ([]Issue, error) {
 	var res []Issue
 	for _, msg := range info.File.Messages {
 		if !messagePascalCaseName.MatchString(msg.Name) {
@@ -52,9 +52,9 @@ var _ ModuleRule = (*finishIssueModuleRule)(nil)
 
 func (m *finishIssueModuleRule) Message() string { return "module finish finding" }
 
-func (m *finishIssueModuleRule) Validate(LinkedFileInfo) ([]Issue, error) { return nil, nil }
+func (m *finishIssueModuleRule) Validate(ProtoInfo) ([]Issue, error) { return nil, nil }
 
-func (m *finishIssueModuleRule) Collect(LinkedFileInfo) error { return nil }
+func (m *finishIssueModuleRule) Collect(ProtoInfo) error { return nil }
 
 func (m *finishIssueModuleRule) Finish() []IssueInfo { return m.issues }
 
@@ -68,13 +68,13 @@ func writeCorpusInto(t *testing.T, root string, files map[string]string) {
 	}
 }
 
-// TestLintLinkedSuppressionParity re-drives main's suppression fixture matrix
+// TestLintSuppressionParity re-drives main's suppression fixture matrix
 // through the linked engine (LINT-ENG-05, D-04/D-05). The old-path fixtures
 // (comment_suppressions_eof_test.go, comment_suppressions_test.go) are the
 // byte-identical parity oracle, so their expected values carry over unchanged;
 // the only algorithmic delta is the comment walk, which reads protoast's owner
 // map instead of reflecting over go-protoparser metadata.
-func TestLintLinkedSuppressionParity(t *testing.T) {
+func TestLintSuppressionParity(t *testing.T) {
 	t.Parallel()
 
 	const (
@@ -122,7 +122,7 @@ func TestLintLinkedSuppressionParity(t *testing.T) {
 			root := t.TempDir()
 			require.NoError(t, os.WriteFile(filepath.Join(root, "test.proto"), []byte(prefix+tc.body), 0o600))
 			app := newLinkedEngine([]string{"MESSAGE_PASCAL_CASE"}, tc.allow, nil, &messagePascalCase{})
-			got, err := app.LintLinked(t.Context(), fs.NewFSWalker(root, "test.proto"))
+			got, err := app.Lint(t.Context(), fs.NewFSWalker(root, "test.proto"))
 			if tc.wantErr != "" {
 				require.ErrorContains(t, err, tc.wantErr)
 				return
@@ -152,12 +152,12 @@ func TestLintLinkedSuppressionParity(t *testing.T) {
 		recording := &recordingRule{}
 		app := New(Options{
 			Logger:              logger.NewNop(),
-			LinkedRules:         []LintRule{recording, &doubleRuleAlpha{}},
+			Rules:               []Rule{recording, &doubleRuleAlpha{}},
 			Ignore:              []string{"sub"},
 			AllowCommentIgnores: false,
 			KnownLintRules:      []string{"DOUBLE_RULE_ALPHA"},
 		})
-		got, err := app.LintLinked(t.Context(), fs.NewFSWalker(root, "."))
+		got, err := app.Lint(t.Context(), fs.NewFSWalker(root, "."))
 		require.NoError(t, err)
 
 		// The walk filter drops sub/ before any rule runs: the recording rule
@@ -179,12 +179,12 @@ func TestLintLinkedSuppressionParity(t *testing.T) {
 		})
 		app := New(Options{
 			Logger:              logger.NewNop(),
-			LinkedRules:         []LintRule{&doubleRuleAlpha{}},
+			Rules:               []Rule{&doubleRuleAlpha{}},
 			IgnoreOnly:          map[string][]string{"DOUBLE_RULE_ALPHA": {"sub"}},
 			AllowCommentIgnores: false,
 			KnownLintRules:      []string{"DOUBLE_RULE_ALPHA"},
 		})
-		got, err := app.LintLinked(t.Context(), fs.NewFSWalker(root, "."))
+		got, err := app.Lint(t.Context(), fs.NewFSWalker(root, "."))
 		require.NoError(t, err)
 
 		// Prefix semantics, not exact match: the "sub" entry suppresses
@@ -208,10 +208,10 @@ func TestLintLinkedSuppressionParity(t *testing.T) {
 			{Path: "b.proto", Issue: Issue{Position: Position{Line: 1, Column: 1}, Message: "module finish finding", RuleName: "FINISH_ISSUE_MODULE_RULE"}},
 		}}
 		app := newLinkedEngine(nil, false, map[string][]string{"FINISH_ISSUE_MODULE_RULE": {"sub"}}, module)
-		got, err := app.LintLinked(t.Context(), fs.NewFSWalker(root, "."))
+		got, err := app.Lint(t.Context(), fs.NewFSWalker(root, "."))
 		require.NoError(t, err)
 
-		// shouldIgnoreLinked applies to Finish output (D-05): the ignoreOnly
+		// shouldIgnore applies to Finish output (D-05): the ignoreOnly
 		// path's Finish finding is dropped, the one outside survives. The
 		// ignoreOnly key is the rule's registry name, as in main.
 		require.Len(t, got, 1)
@@ -242,7 +242,7 @@ func TestLintLinkedSuppressionParity(t *testing.T) {
 					Issue: Issue{Position: Position{Line: 6, Column: 1}, Message: "module finish finding", RuleName: "DOUBLE_RULE_ALPHA"},
 				}}}
 				app := newLinkedEngine([]string{"DOUBLE_RULE_ALPHA"}, tc.allow, nil, module)
-				got, err := app.LintLinked(t.Context(), fs.NewFSWalker(root, "."))
+				got, err := app.Lint(t.Context(), fs.NewFSWalker(root, "."))
 				require.NoError(t, err)
 
 				// The Finish-side half of the central filter: the Finish
@@ -267,7 +267,7 @@ func TestLintLinkedSuppressionParity(t *testing.T) {
 			"tabbed.proto": prefix + "\t// easyp:disable DOUBLE_RULE_ALPHA\nmessage tabbed_bad {}\n",
 		})
 		app := newLinkedEngine([]string{"DOUBLE_RULE_ALPHA"}, true, nil, &doubleRuleAlpha{})
-		got, err := app.LintLinked(t.Context(), fs.NewFSWalker(root, "."))
+		got, err := app.Lint(t.Context(), fs.NewFSWalker(root, "."))
 		require.NoError(t, err)
 		require.Empty(t, got)
 
@@ -282,7 +282,7 @@ func TestLintLinkedSuppressionParity(t *testing.T) {
 			"taberr.proto": prefix + "message keep_me {}\n\n\t// nolint:UNKNOWN_DOUBLE\n",
 		})
 		app = newLinkedEngine([]string{"DOUBLE_RULE_ALPHA"}, true, nil, &doubleRuleAlpha{})
-		_, err = app.LintLinked(t.Context(), fs.NewFSWalker(root, "."))
+		_, err = app.Lint(t.Context(), fs.NewFSWalker(root, "."))
 		require.ErrorContains(t, err, `taberr.proto:4:2: unknown or unsupported lint rule "UNKNOWN_DOUBLE" in comment directive`)
 	})
 }

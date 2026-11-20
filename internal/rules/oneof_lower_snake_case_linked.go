@@ -6,7 +6,7 @@ import (
 	"github.com/easyp-tech/easyp/internal/core"
 )
 
-var _ core.LintRule = (*OneofLowerSnakeCaseLinked)(nil)
+var _ core.Rule = (*OneofLowerSnakeCaseLinked)(nil)
 
 // OneofLowerSnakeCaseLinked is the linked-engine port of OneofLowerSnakeCase
 // (research inventory #14, main-diverged): main's regexp wins over the lab's
@@ -22,13 +22,13 @@ func (c *OneofLowerSnakeCaseLinked) LintRuleName() string {
 	return "ONEOF_LOWER_SNAKE_CASE"
 }
 
-// Message implements lint.LintRule.
+// Message implements lint.Rule.
 func (c *OneofLowerSnakeCaseLinked) Message() string {
 	return "oneof name should be lower_snake_case"
 }
 
-// Validate implements lint.LintRule.
-func (c *OneofLowerSnakeCaseLinked) Validate(info core.LinkedFileInfo) ([]core.Issue, error) {
+// Validate implements lint.Rule.
+func (c *OneofLowerSnakeCaseLinked) Validate(info core.ProtoInfo) ([]core.Issue, error) {
 	var res []core.Issue
 
 	lowerSnakeCase := regexp.MustCompile("^[a-z]+(_[a-z]+)*$")
@@ -36,7 +36,7 @@ func (c *OneofLowerSnakeCaseLinked) Validate(info core.LinkedFileInfo) ([]core.I
 	for _, message := range info.File.Messages {
 		for _, oneof := range message.Oneofs {
 			if !lowerSnakeCase.MatchString(oneof.Name) {
-				res = core.AppendLinkedIssue(res, c, oneof.Pos, oneof.Name)
+				res = core.AppendIssue(res, c, oneof.Pos, oneof.Name)
 			}
 		}
 	}

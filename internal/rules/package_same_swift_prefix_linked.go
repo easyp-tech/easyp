@@ -44,18 +44,18 @@ func (p *PackageSameSwiftPrefixLinked) LintRuleName() string {
 	return "PACKAGE_SAME_SWIFT_PREFIX"
 }
 
-// Message implements lint.LintRule.
+// Message implements lint.Rule.
 func (p *PackageSameSwiftPrefixLinked) Message() string {
 	return "all files in the same package must have the same swift_prefix option"
 }
 
-// Validate implements lint.LintRule. Lint calls Collect and Finish instead.
-func (p *PackageSameSwiftPrefixLinked) Validate(core.LinkedFileInfo) ([]core.Issue, error) {
+// Validate implements lint.Rule. Lint calls Collect and Finish instead.
+func (p *PackageSameSwiftPrefixLinked) Validate(core.ProtoInfo) ([]core.Issue, error) {
 	return nil, nil
 }
 
 // Collect implements core.ModuleRule.
-func (p *PackageSameSwiftPrefixLinked) Collect(info core.LinkedFileInfo) error {
+func (p *PackageSameSwiftPrefixLinked) Collect(info core.ProtoInfo) error {
 	if len(info.File.Packages) == 0 {
 		// main returns early: packageless files never join groups.
 		return nil

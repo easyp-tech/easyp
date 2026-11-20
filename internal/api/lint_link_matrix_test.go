@@ -59,9 +59,11 @@ func runLinkMatrixAction(t *testing.T, root string) error {
 
 // TestLintLinkMatrix proves the D-05 error-class matrix in process: each class
 // routes to its existing error carrier through the unchanged actionV1 path.
-// The per-file read path is what runs here (the linker stays dormant, D-04),
-// so no COMPILE remarks can appear at this layer — that absence is the
-// "without COMPILE issues" guarantee for the missing-import class.
+// Missing imports still fall back per file, so no COMPILE remark can appear
+// for that class; the class-1 cell proves the complementary guarantee — a
+// corpus that fails compilation without a missing import prints COMPILE
+// issues and routes to ErrHasLintIssue (Phase-2 flagged assumption A1, first
+// reachable with the Phase 5 flip, which this cell landed in).
 func TestLintLinkMatrix(t *testing.T) {
 	t.Parallel()
 
@@ -119,6 +121,23 @@ func TestLintLinkMatrix(t *testing.T) {
 			},
 			check: func(t *testing.T, err error) {
 				require.NoError(t, err)
+			},
+		},
+		{
+			// class-1 (Phase-2 A1): the corpus fails compilation without a
+			// missing import (proto3 `required` field — the file's syntax
+			// parses, so no per-file syntax error outranks it). Through
+			// actionV1 the linked engine's COMPILE issues print in the
+			// existing format and the run routes to ErrHasLintIssue (exit 1).
+			// The old engine parsed this file and found nothing, so the cell
+			// is RED on the old wiring and became reachable in the Phase 5
+			// flip commit it landed in.
+			name: "compile_issue_exit1_class",
+			files: map[string]string{
+				"example_pkg/req.proto": "syntax = \"proto3\";\n\npackage example_pkg;\n\nmessage Req {\n  required string name = 1;\n}\n",
+			},
+			check: func(t *testing.T, err error) {
+				require.ErrorIs(t, err, ErrHasLintIssue)
 			},
 		},
 	}
@@ -224,6 +243,20 @@ func TestLintLinkMatrixExitCodes(t *testing.T) {
 			check: func(t *testing.T, stdout, stderr string, code int) {
 				require.Equal(t, 0, code)
 				require.Empty(t, stdout)
+			},
+		},
+		{
+			// class-1 exit code: a corpus that parses but fails compilation
+			// (proto3 `required`) prints its COMPILE issues in the existing
+			// text format and exits 1 — the class-1 cell of the exit-code
+			// matrix (Phase-2 A1 execution, reachable from the Phase 5 flip).
+			name: "compile_error_code_1",
+			files: map[string]string{
+				"example_pkg/req.proto": "syntax = \"proto3\";\n\npackage example_pkg;\n\nmessage Req {\n  required string name = 1;\n}\n",
+			},
+			check: func(t *testing.T, stdout, stderr string, code int) {
+				require.Equal(t, 1, code)
+				require.Contains(t, stdout, "(COMPILE)")
 			},
 		},
 	}

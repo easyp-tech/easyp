@@ -18,14 +18,14 @@ import (
 
 // Engine test doubles for the linked lint engine: the per-file rules are
 // stateless and share one instance across the whole corpus; the ModuleRule
-// double records its lifecycle calls. Struct names drive LinkedRuleName, so
+// double records its lifecycle calls. Struct names drive GetRuleName, so
 // IgnoreOnly keys and directive names use the UPPER_SNAKE spelling of these
 // names (doubleRuleAlpha -> DOUBLE_RULE_ALPHA).
 
 var (
-	_ LintRule   = (*doubleRuleAlpha)(nil)
-	_ LintRule   = (*doubleRuleBeta)(nil)
-	_ LintRule   = (*recordingRule)(nil)
+	_ Rule       = (*doubleRuleAlpha)(nil)
+	_ Rule       = (*doubleRuleBeta)(nil)
+	_ Rule       = (*recordingRule)(nil)
 	_ ModuleRule = (*doubleModuleRule)(nil)
 )
 
@@ -40,7 +40,7 @@ type recordingRule struct {
 
 func (r *recordingRule) Message() string { return "recording finding" }
 
-func (r *recordingRule) Validate(info LinkedFileInfo) ([]Issue, error) {
+func (r *recordingRule) Validate(info ProtoInfo) ([]Issue, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	r.paths = append(r.paths, info.Path)
@@ -72,7 +72,7 @@ type doubleRuleAlpha struct{}
 
 func (d *doubleRuleAlpha) Message() string { return "alpha double finding" }
 
-func (d *doubleRuleAlpha) Validate(info LinkedFileInfo) ([]Issue, error) {
+func (d *doubleRuleAlpha) Validate(info ProtoInfo) ([]Issue, error) {
 	return messageIssues(info, d.Message(), "DOUBLE_RULE_ALPHA"), nil
 }
 
@@ -82,12 +82,12 @@ type doubleRuleBeta struct{}
 
 func (d *doubleRuleBeta) Message() string { return "beta double finding" }
 
-func (d *doubleRuleBeta) Validate(info LinkedFileInfo) ([]Issue, error) {
+func (d *doubleRuleBeta) Validate(info ProtoInfo) ([]Issue, error) {
 	return messageIssues(info, d.Message(), "DOUBLE_RULE_BETA"), nil
 }
 
 // messageIssues builds one finding per message declaration at its position.
-func messageIssues(info LinkedFileInfo, message, ruleName string) []Issue {
+func messageIssues(info ProtoInfo, message, ruleName string) []Issue {
 	issues := make([]Issue, 0, len(info.File.Messages))
 	for _, msg := range info.File.Messages {
 		issues = append(issues, Issue{
@@ -110,12 +110,12 @@ type doubleModuleRule struct {
 
 func (m *doubleModuleRule) Message() string { return "module double finding" }
 
-func (m *doubleModuleRule) Validate(LinkedFileInfo) ([]Issue, error) {
+func (m *doubleModuleRule) Validate(ProtoInfo) ([]Issue, error) {
 	m.validates.Add(1)
 	return nil, nil
 }
 
-func (m *doubleModuleRule) Collect(info LinkedFileInfo) error {
+func (m *doubleModuleRule) Collect(info ProtoInfo) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	m.collected = append(m.collected, info.Path)
@@ -153,21 +153,21 @@ func writeCorpus(t *testing.T, files map[string]string) string {
 // newLinkedEngine constructs the linked engine through the public Options
 // surface. KnownLintRules feeds the suppression directive validation, so cells
 // using directives pass their double rule names explicitly.
-func newLinkedEngine(known []string, allowCommentIgnores bool, ignoreOnly map[string][]string, rules ...LintRule) *Core {
+func newLinkedEngine(known []string, allowCommentIgnores bool, ignoreOnly map[string][]string, rules ...Rule) *Core {
 	return New(Options{
 		Logger:              logger.NewNop(),
-		LinkedRules:         rules,
+		Rules:               rules,
 		KnownLintRules:      known,
 		AllowCommentIgnores: allowCommentIgnores,
 		IgnoreOnly:          ignoreOnly,
 	})
 }
 
-// TestLintLinked drives the dormant two-pass linked engine end to end with
+// TestLint drives the dormant two-pass linked engine end to end with
 // test-double rules (research A2): corpus walk -> parallel read -> link ->
 // windowed model build from linked trees -> central suppression filter ->
 // indexed serial drain in walk order -> ModuleRule.Finish -> D-01 total sort.
-func TestLintLinked(t *testing.T) {
+func TestLint(t *testing.T) {
 	t.Parallel()
 
 	t.Run("linked_corpus_deterministic", func(t *testing.T) {
@@ -187,9 +187,9 @@ func TestLintLinked(t *testing.T) {
 		)
 		walker := fs.NewFSWalker(root, ".")
 
-		first, err := app.LintLinked(t.Context(), walker)
+		first, err := app.Lint(t.Context(), walker)
 		require.NoError(t, err)
-		second, err := app.LintLinked(t.Context(), walker)
+		second, err := app.Lint(t.Context(), walker)
 		require.NoError(t, err)
 
 		// a.proto carries two messages, b.proto and c.proto one each: 2 rules
@@ -220,7 +220,7 @@ func TestLintLinked(t *testing.T) {
 		// D-01 total sort the walk-order drain would emit BETA before ALPHA
 		// inside every file.
 		app := newLinkedEngine(nil, false, nil, &doubleRuleBeta{}, &doubleRuleAlpha{})
-		got, err := app.LintLinked(t.Context(), fs.NewFSWalker(root, "."))
+		got, err := app.Lint(t.Context(), fs.NewFSWalker(root, "."))
 		require.NoError(t, err)
 
 		// Both messages sit on line 3 of their file; the total order is
@@ -250,7 +250,7 @@ func TestLintLinked(t *testing.T) {
 			"test.proto": "syntax = \"proto3\";\npackage example;\nmessage bad_name {\n  required string s = 1;\n}\n",
 		})
 		app := newLinkedEngine(nil, false, nil, &doubleRuleAlpha{}, &doubleRuleBeta{})
-		got, err := app.LintLinked(t.Context(), fs.NewFSWalker(root, "."))
+		got, err := app.Lint(t.Context(), fs.NewFSWalker(root, "."))
 		require.NoError(t, err)
 
 		// Like buf, rules do not run on files that do not compile: exactly the
@@ -282,7 +282,7 @@ func TestLintLinked(t *testing.T) {
 
 				root := writeCorpus(t, map[string]string{"single.proto": single})
 				app := newLinkedEngine([]string{"DOUBLE_RULE_ALPHA"}, tc.allow, nil, &doubleRuleAlpha{})
-				got, err := app.LintLinked(t.Context(), fs.NewFSWalker(root, "."))
+				got, err := app.Lint(t.Context(), fs.NewFSWalker(root, "."))
 				require.NoError(t, err)
 
 				// The disable comment annotates SuppressedOne (line 6), so the
@@ -308,7 +308,7 @@ func TestLintLinked(t *testing.T) {
 		})
 		module := &doubleModuleRule{}
 		app := newLinkedEngine(nil, false, nil, module)
-		got, err := app.LintLinked(t.Context(), fs.NewFSWalker(root, "."))
+		got, err := app.Lint(t.Context(), fs.NewFSWalker(root, "."))
 		require.NoError(t, err)
 
 		// Validate is never called on a ModuleRule (D-03).
@@ -334,7 +334,7 @@ func TestLintLinked(t *testing.T) {
 			"b.proto": "syntax = \"proto3\";\npackage beta;\nmessage B {}\n",
 		})
 		app := newLinkedEngine(nil, false, map[string][]string{"DOUBLE_RULE_ALPHA": {"b.proto"}}, &doubleRuleAlpha{})
-		got, err := app.LintLinked(t.Context(), fs.NewFSWalker(root, "."))
+		got, err := app.Lint(t.Context(), fs.NewFSWalker(root, "."))
 		require.NoError(t, err)
 
 		// The b.proto finding is gone; the a.proto finding stays.
@@ -360,7 +360,7 @@ func TestLintLinked(t *testing.T) {
 		// the f0 outline through the shared linkedFiles adapter (T-03-02
 		// mutex + sync.Once discipline under -race).
 		app := newLinkedEngine(nil, false, nil, &doubleRuleAlpha{}, &doubleRuleBeta{}, &doubleModuleRule{})
-		got, err := app.LintLinked(t.Context(), fs.NewFSWalker(root, "."))
+		got, err := app.Lint(t.Context(), fs.NewFSWalker(root, "."))
 		require.NoError(t, err)
 
 		// Exact counts, never range bounds: 8 files x 2 messages x 2 rules +
@@ -397,7 +397,7 @@ func TestLintLinked(t *testing.T) {
 			"orphan.proto": "syntax = \"proto3\";\n\npackage example;\n\nimport \"missing.proto\";\n",
 		})
 		app := newLinkedEngine(nil, false, nil, &doubleRuleAlpha{})
-		got, err := app.LintLinked(t.Context(), fs.NewFSWalker(root, "."))
+		got, err := app.Lint(t.Context(), fs.NewFSWalker(root, "."))
 		require.Error(t, err)
 		require.Nil(t, got)
 
@@ -417,7 +417,7 @@ func TestLintLinked(t *testing.T) {
 			"truncated.proto": "syntax = \"proto3\";\n\npackage broken;\n\nmessage Truncated {\n  string name = 1;\n",
 		})
 		app := newLinkedEngine(nil, false, nil, &doubleRuleAlpha{})
-		got, err := app.LintLinked(t.Context(), fs.NewFSWalker(root, "."))
+		got, err := app.Lint(t.Context(), fs.NewFSWalker(root, "."))
 		require.Error(t, err)
 		require.Nil(t, got)
 
@@ -439,7 +439,7 @@ func TestLintLinked(t *testing.T) {
 		})
 
 		app := newLinkedEngine(nil, false, nil, &doubleRuleAlpha{})
-		got, err := app.LintLinked(t.Context(), fs.NewFSWalker(root, "."))
+		got, err := app.Lint(t.Context(), fs.NewFSWalker(root, "."))
 		require.Error(t, err)
 		require.Nil(t, got)
 
@@ -459,7 +459,7 @@ func TestLintLinked(t *testing.T) {
 		recording := &recordingRule{}
 		module := &doubleModuleRule{}
 		app := newLinkedEngine(nil, false, nil, recording, &doubleRuleAlpha{}, module)
-		got, err := app.LintLinked(t.Context(), fs.NewFSWalker(root, "."))
+		got, err := app.Lint(t.Context(), fs.NewFSWalker(root, "."))
 		require.Error(t, err)
 		require.Nil(t, got)
 
@@ -492,7 +492,7 @@ func TestLintLinked(t *testing.T) {
 		})
 		recording := &recordingRule{}
 		app := newLinkedEngine(nil, false, nil, recording)
-		_, err := app.LintLinked(t.Context(), fs.NewFSWalker(root, "."))
+		_, err := app.Lint(t.Context(), fs.NewFSWalker(root, "."))
 		require.Error(t, err)
 
 		// Within the fell-back corpus, user.proto's import of its sibling

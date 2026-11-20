@@ -7,21 +7,6 @@ linters:
     # in compiler-lab and arrive by re-sync. See internal/easypc/VENDORED.md.
     paths:
       - internal/easypc
-      # D-02 fallback (plan 01-04, applied on actual lint failure), Phase-4
-      # state resolved by plan 04-07, adjusted by 04-08: groupedValues.add and
-      # firstExemptMismatches are wired into the *_linked.go ports; fileOption
-      # lost its last consumer to 04-08's per-occurrence option iteration
-      # (04-REVIEW WR-02) and joined the D-01-kept helpers, which stay
-      # verbatim and unused until Phase 5 deletes them together with the old
-      # rule path: fileOption, optionString, enumNumber,
-      # leadingCommentDocuments, isLintDirective, packagePosition, mismatches,
-      # packageHasVersionSuffix, versionNumber. The unused check would report
-      # those dead, so the exclusion stays scoped to this one file (the casing
-      # files are NOT excluded); the Phase-5 consolidation removes the helpers
-      # and this exclusion in one commit. (PATTERNS.md's "drop the exclusion
-      # line at the finishing batch" was superseded — deleting the helpers now
-      # would contradict D-01 whole-file vendoring for lab re-syncs.)
-      - internal/rules/lint_helpers.go
     rules:
       # Exported callee labels are required by .spec/agent-rules.md.
       # Keep ST1005 for capitalized sentences; only identifier-style wrappers
@@ -29,11 +14,3 @@ linters:
       - linters: [staticcheck]
         text: '^ST1005:'
         source: 'fmt\.Errorf\("[A-Z][A-Za-z0-9_]*: '
-      # Vendored byte-verbatim code (D-01): casing.go must stay identical to
-      # compiler-lab main@08cef10, so its single upstream QF1001 (De Morgan
-      # quickfix suggestion inside toSnakeCase) is silenced, not applied.
-      # The fix goes upstream and arrives by re-sync. Only this finding code
-      # is exempt for this file; every other linter stays active on it.
-      - linters: [staticcheck]
-        text: '^QF1001:'
-        paths: internal/rules/casing\.go

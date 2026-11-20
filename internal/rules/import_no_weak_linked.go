@@ -4,7 +4,7 @@ import (
 	"github.com/easyp-tech/easyp/internal/core"
 )
 
-var _ core.LintRule = (*ImportNoWeakLinked)(nil)
+var _ core.Rule = (*ImportNoWeakLinked)(nil)
 
 // ImportNoWeakLinked is the linked-engine port of ImportNoWeak (research
 // inventory #11, verbatim-from-lab): the etalon body carries over with the
@@ -17,18 +17,18 @@ func (i *ImportNoWeakLinked) LintRuleName() string {
 	return "IMPORT_NO_WEAK"
 }
 
-// Message implements lint.LintRule.
+// Message implements lint.Rule.
 func (i *ImportNoWeakLinked) Message() string {
 	return "import should not be weak"
 }
 
-// Validate implements lint.LintRule.
-func (i *ImportNoWeakLinked) Validate(info core.LinkedFileInfo) ([]core.Issue, error) {
+// Validate implements lint.Rule.
+func (i *ImportNoWeakLinked) Validate(info core.ProtoInfo) ([]core.Issue, error) {
 	var res []core.Issue
 
 	for _, imp := range info.File.Imports {
 		if imp.Weak {
-			res = core.AppendLinkedIssue(res, i, imp.Pos, imp.Location)
+			res = core.AppendIssue(res, i, imp.Pos, imp.Location)
 		}
 	}
 

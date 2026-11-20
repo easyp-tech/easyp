@@ -44,8 +44,8 @@ func TestLinkSources(t *testing.T) {
 			},
 		},
 		{
-			name:  "compiling_with_wkt",
-			paths: []string{"event.proto"},
+			name:    "compiling_with_wkt",
+			paths:   []string{"event.proto"},
 			sources: [][]byte{[]byte("syntax = \"proto3\";\n\npackage example;\n\nimport \"google/protobuf/timestamp.proto\";\n\nmessage Event {\n  google.protobuf.Timestamp at = 1;\n}\n")},
 			assert: func(t *testing.T, engine *Core, walker *fs.FSWalker, linked *protoc.Linked, issues []IssueInfo) {
 				require.NotNil(t, linked)
@@ -53,8 +53,8 @@ func TestLinkSources(t *testing.T) {
 			},
 		},
 		{
-			name:  "missing_import",
-			paths: []string{"orphan.proto"},
+			name:    "missing_import",
+			paths:   []string{"orphan.proto"},
 			sources: [][]byte{[]byte("syntax = \"proto3\";\n\npackage example;\n\nimport \"missing.proto\";\n")},
 			assert: func(t *testing.T, engine *Core, walker *fs.FSWalker, linked *protoc.Linked, issues []IssueInfo) {
 				require.Nil(t, linked)
@@ -167,9 +167,12 @@ func TestLinkSources(t *testing.T) {
 
 				// The corpus fell back because the per-file path it lands on
 				// carries the typed missing-import error to the exit-2 route.
-				// The direct importer is b.proto: readFilesFromImport reads one
-				// level, so processing b.proto is where missing.proto surfaces.
-				_, err := engine.lintProtoInfoRead(t.Context(), walker, "b.proto")
+				// The direct importer is b.proto: the per-file read path is
+				// one-level, so processing b.proto is where missing.proto
+				// surfaces.
+				src, err := os.ReadFile(filepath.Join(walker.RootPath(), "b.proto"))
+				require.NoError(t, err)
+				_, err = engine.protoInfoFromSource(t.Context(), walker, "b.proto", src)
 				require.Error(t, err)
 				var notFound *OpenImportFileError
 				require.ErrorAs(t, err, &notFound)
@@ -204,7 +207,9 @@ func TestLinkSources(t *testing.T) {
 
 				// Blocked imports fall back exactly like missing ones, and the
 				// per-file path errors with the exit-2 carrier naming the dep.
-				_, err := engine.lintProtoInfoRead(t.Context(), walker, "a.proto")
+				src, err := os.ReadFile(filepath.Join(walker.RootPath(), "a.proto"))
+				require.NoError(t, err)
+				_, err = engine.protoInfoFromSource(t.Context(), walker, "a.proto", src)
 				require.Error(t, err)
 				var notFound *OpenImportFileError
 				require.ErrorAs(t, err, &notFound)
@@ -293,7 +298,7 @@ func TestLinkSources(t *testing.T) {
 			},
 		},
 		{
-			name:  "multi_file_matrix_order",
+			name: "multi_file_matrix_order",
 			// Natural input order names the erroneous dep file first, so any
 			// unsorted emission would list b.proto before a.proto.
 			paths: []string{"b.proto", "a.proto"},

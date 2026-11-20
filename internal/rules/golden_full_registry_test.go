@@ -1,51 +1,36 @@
 package rules_test
 
-// The Gate-1 compatibility golden (05-01): the old lint engine's complete
-// observable output over the Phase-4 full-registry corpus, frozen as
-// committed literals while the oracle still exists. After the Phase-5 flip
-// deletes the old engine there is no oracle left to capture from, so the
-// capture must precede the flip commit (05-RESEARCH anti-pattern "Skipping
-// the golden capture pre-flip").
+// The Gate-1 compatibility golden (05-01): the byte-frozen old engine's
+// complete observable output over the Phase-4 full-registry corpus, frozen as
+// committed literals while the oracle still existed (05-01 captured it
+// pre-flip; the Phase 5 flip deleted the old engine in the same commit that
+// re-pointed this drive, so there is no oracle left to capture from — the
+// literals ARE the compatibility contract).
 //
-// The file holds two drives over ONE committed golden:
+// TestLintGoldenFullRegistry is THE golden drive: the linked engine must
+// reproduce the committed literals exactly — every field including Message
+// and Position (Filename/Offset), in the engine's own D-01 order.
 //
-//   - TestLintGoldenFullRegistryOld drives the old engine (rules.New +
-//     Options.Rules + app.Lint) and is the capture proof: the old engine
-//     reproduces the committed literals. It DIES in the 05-03 flip commit —
-//     by then its value has transferred into the literals and the linked
-//     drive.
-//   - TestLintGoldenFullRegistryLinked drives the dormant linked engine
-//     (rules.NewLinked + Options.LinkedRules + app.LintLinked) and is the
-//     parity proof: message-level equality, upgrading the Phase-4 fingerprint
-//     which deliberately excluded Message and whole-struct equality. It
-//     SURVIVES the flip: 05-03 mechanically renames its symbols (NewLinked →
-//     New, LinkedRules → Rules, LintLinked → Lint) and it becomes THE
-//     post-flip golden test.
-//
-// Anti-vacuity and purity guards on every drive:
+// Anti-vacuity and purity guards on the drive:
 //   - the pinned 73-finding count is asserted BEFORE the golden compare
 //     (T-04-02 pattern);
 //   - zero findings named COMPILE — the corpus must keep compiling under the
-//     linked engine's full type resolution; an uncompiling fixture routes the
-//     linked side to COMPILE and vacates the rule-finding golden (Pitfall 7);
+//     engine's full type resolution; an uncompiling fixture routes the run to
+//     COMPILE and vacates the rule-finding golden (Pitfall 7);
 //   - the coverage assertion requires every registry rule to fire at least
 //     once (a silent rule is a corpus hole, not a pass);
 //   - the D-01 totality guard halts on any five-term tie — a tie would make
 //     the frozen order engine-nondeterministic (flagged assumption 3), so it
 //     must never be papered over.
 //
-// The corpus map below is re-hosted VERBATIM from
-// parity_full_registry_test.go (same 13 file keys, same contents, same
-// comments): the parity file dies with its oracle in the flip commit, and the
-// corpus — with its declared rpc payload types and directive placements —
-// lives on here unchanged. Do not "improve" any fixture.
-
+// The corpus map below is re-hosted VERBATIM from the Phase-4 parity corpus
+// (same 13 file keys, same contents, same comments): the parity file died
+// with its oracle in the flip commit, and the corpus — with its declared rpc
+// payload types and directive placements — lives on here unchanged. Do not
+// "improve" any fixture.
 import (
-	"cmp"
 	"os"
 	"path/filepath"
-	"slices"
-	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -391,26 +376,6 @@ func writeGoldenCorpus(t *testing.T, files map[string]string) string {
 	return root
 }
 
-// sortD01 copies and sorts issues by the engine's D-01 key (path, rule, line,
-// column, source) with slices.SortStableFunc + cmp.Or — the exact sort
-// internal/core/lint_linked.go applies to its own output. The old engine's
-// output order is nondeterministic (map iteration inside its rules), so the
-// capture drive sorts before comparing against the frozen literals.
-func sortD01(infos []core.IssueInfo) []core.IssueInfo {
-	out := make([]core.IssueInfo, len(infos))
-	copy(out, infos)
-	slices.SortStableFunc(out, func(a, b core.IssueInfo) int {
-		return cmp.Or(
-			strings.Compare(a.Path, b.Path),
-			strings.Compare(a.RuleName, b.RuleName),
-			cmp.Compare(a.Position.Line, b.Position.Line),
-			cmp.Compare(a.Position.Column, b.Position.Column),
-			strings.Compare(a.SourceName, b.SourceName),
-		)
-	})
-	return out
-}
-
 // requireTotalOrder is the D-01 totality guard (flagged assumption 3): no two
 // adjacent findings may share all five sort terms. A five-term tie means the
 // engine's order between the pair is nondeterministic and must not be frozen;
@@ -454,65 +419,33 @@ func requireGoldenPurity(t *testing.T, got []core.IssueInfo) {
 	require.Empty(t, missing, "every rule must fire at least once on the full-registry corpus")
 }
 
-// TestLintGoldenFullRegistryOld is the capture drive: the old engine must
-// reproduce the committed golden exactly. The engine's own output order is
-// nondeterministic, so the drive applies the engine's D-01 sort before
-// comparing; the frozen literals hold the D-01 order of the corpus output.
-// This function DIES in the 05-03 flip commit.
-func TestLintGoldenFullRegistryOld(t *testing.T) {
-	t.Parallel()
-
-	cfg := config.LintConfig{Use: goldenCorpusUse}
-	root := writeGoldenCorpus(t, goldenCorpusFiles)
-
-	oldRules, oldIgnoreOnly, err := rules.New(cfg)
-	require.NoError(t, err)
-	oldApp := core.New(core.Options{
-		Logger:              logger.NewNop(),
-		Rules:               oldRules,
-		IgnoreOnly:          oldIgnoreOnly,
-		AllowCommentIgnores: true,
-		KnownLintRules:      rules.AllRuleNames(),
-	})
-	issues, err := oldApp.Lint(t.Context(), fs.NewFSWalker(root, "."))
-	require.NoError(t, err)
-
-	got := sortD01(issues)
-	requireGoldenPurity(t, got)
-	requireTotalOrder(t, got)
-
-	require.Equal(t, goldenIssues, got, "the byte-frozen old engine must reproduce the committed golden on the full-registry corpus")
-}
-
-// TestLintGoldenFullRegistryLinked is the parity drive: the DORMANT linked
-// engine must reproduce the old-captured golden exactly — the full compare
-// including Message, Position (Filename/Offset/Line/Column), SourceName and
-// the D-01 order, upgrading the Phase-4 fingerprint which deliberately
-// excluded Message and whole-struct equality. Proven PRE-flip while both
-// engines exist to diff; this function SURVIVES the flip (05-03 renames its
-// symbols mechanically and it becomes THE post-flip golden test).
+// TestLintGoldenFullRegistry drives THE engine over the committed golden:
+// the full compare including Message, Position (Filename/Offset/Line/Column),
+// SourceName and the D-01 order. The drive was captured pre-flip as the
+// linked parity drive and re-pointed by the flip commit; the old drive that
+// froze the literals died with the old engine in the same commit.
 //
-// The engine output is compared as emitted: LintLinked already applies the
-// D-01 total sort, so re-sorting here would mask an engine-order regression.
-// The totality guard runs on the engine's own order — a five-term tie means
-// the engine's stable sort had nothing to order the pair by and the frozen
+// The engine output is compared as emitted: Lint already applies the D-01
+// total sort, so re-sorting here would mask an engine-order regression. The
+// totality guard runs on the engine's own order — a five-term tie means the
+// engine's stable sort had nothing to order the pair by and the frozen
 // sequence would be nondeterministic.
-func TestLintGoldenFullRegistryLinked(t *testing.T) {
+func TestLintGoldenFullRegistry(t *testing.T) {
 	t.Parallel()
 
 	cfg := config.LintConfig{Use: goldenCorpusUse}
 	root := writeGoldenCorpus(t, goldenCorpusFiles)
 
-	linkedRules, linkedIgnoreOnly, err := rules.NewLinked(cfg)
+	lintRules, ignoreOnly, err := rules.New(cfg)
 	require.NoError(t, err)
-	linkedApp := core.New(core.Options{
+	app := core.New(core.Options{
 		Logger:              logger.NewNop(),
-		LinkedRules:         linkedRules,
-		IgnoreOnly:          linkedIgnoreOnly,
+		Rules:               lintRules,
+		IgnoreOnly:          ignoreOnly,
 		AllowCommentIgnores: true,
 		KnownLintRules:      rules.AllRuleNames(),
 	})
-	got, err := linkedApp.LintLinked(t.Context(), fs.NewFSWalker(root, "."))
+	got, err := app.Lint(t.Context(), fs.NewFSWalker(root, "."))
 	require.NoError(t, err)
 
 	requireGoldenPurity(t, got)

@@ -68,10 +68,17 @@ const stdoutGoldenConfig = "version: v1\n" +
 var stdoutGoldenFiles = map[string]string{
 	"example_pkg/Bad_File.proto": "syntax = \"proto3\";\n\npackage example_pkg;\n\nmessage CleanFile {\n  string name = 1;\n}\n",
 
-	// The excluded twin: identical violation, identical rule, suppressed
-	// per path — the per-path rule suppression is observable only against
-	// Bad_File.proto's printed line.
-	"example_pkg/Excluded_File.proto": "syntax = \"proto3\";\n\npackage example_pkg;\n\nmessage CleanFile {\n  string name = 1;\n}\n",
+	// The excluded twin: identical violation (the file name), identical
+	// rule, suppressed per path — the per-path rule suppression is
+	// observable only against Bad_File.proto's printed line. The message
+	// name differs from Bad_File.proto's on purpose: the corpus must compile
+	// under the linked engine's full type resolution, and two same-package
+	// files declaring the same message name would route the whole run to
+	// COMPILE, vacating the rule-finding golden (research Pitfall 7; the
+	// pinned stdout lines were re-captured from the byte-frozen pre-flip
+	// binary over this corrected fixture and are byte-identical to the 05-01
+	// literals).
+	"example_pkg/Excluded_File.proto": "syntax = \"proto3\";\n\npackage example_pkg;\n\nmessage ExcludedMsg {\n  string name = 1;\n}\n",
 
 	// The package/directory mismatch that prints: the directory does not
 	// match the package, and the finding renders through the

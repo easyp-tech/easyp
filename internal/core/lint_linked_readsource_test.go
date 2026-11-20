@@ -78,7 +78,7 @@ func TestReadSourceOnce(t *testing.T) {
 		KnownLintRules:      []string{"PACKAGE_DIRECTORY_MATCH", "MESSAGE_PASCAL_CASE"},
 	})
 
-	issues, err := app.LintLinked(t.Context(), walker)
+	issues, err := app.Lint(t.Context(), walker)
 	require.NoError(t, err)
 	require.Empty(t, issues, "compiling corpus, no rules wired: no findings expected")
 

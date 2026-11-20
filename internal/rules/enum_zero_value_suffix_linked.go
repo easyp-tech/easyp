@@ -4,7 +4,7 @@ import (
 	"github.com/easyp-tech/easyp/internal/core"
 )
 
-var _ core.LintRule = (*EnumZeroValueSuffixLinked)(nil)
+var _ core.Rule = (*EnumZeroValueSuffixLinked)(nil)
 
 // EnumZeroValueSuffixLinked is the linked-engine port of EnumZeroValueSuffix
 // (research inventory #26, main-diverged; threat T-04-15): main checks ONLY
@@ -17,7 +17,7 @@ var _ core.LintRule = (*EnumZeroValueSuffixLinked)(nil)
 //
 // The Suffix struct field carries main's tags byte-verbatim, INCLUDING the
 // ENV tag the lab dropped (config surface parity, T-04-15). The suffix
-// defaults to "UNSPECIFIED" through NewLinked's defaultIfEmpty, mirroring
+// defaults to "UNSPECIFIED" through New's defaultIfEmpty, mirroring
 // builder.go.
 //
 // The len(Values)==0 guard is the same documented crash-safety deviation as
@@ -33,13 +33,13 @@ func (e *EnumZeroValueSuffixLinked) LintRuleName() string {
 	return "ENUM_ZERO_VALUE_SUFFIX"
 }
 
-// Message implements lint.LintRule.
+// Message implements lint.Rule.
 func (e *EnumZeroValueSuffixLinked) Message() string {
 	return "enum zero value suffix is not valid"
 }
 
-// Validate implements lint.LintRule.
-func (e *EnumZeroValueSuffixLinked) Validate(info core.LinkedFileInfo) ([]core.Issue, error) {
+// Validate implements lint.Rule.
+func (e *EnumZeroValueSuffixLinked) Validate(info core.ProtoInfo) ([]core.Issue, error) {
 	var res []core.Issue
 
 	for _, enum := range info.File.Enums {
@@ -50,8 +50,8 @@ func (e *EnumZeroValueSuffixLinked) Validate(info core.LinkedFileInfo) ([]core.I
 			continue
 		}
 		zeroValue := enum.Values[0]
-		if zeroValue.Name != pascalToUpperSnakeLinked(enum.Name)+"_"+e.Suffix {
-			res = core.AppendLinkedIssue(res, e, zeroValue.Pos, zeroValue.Name)
+		if zeroValue.Name != pascalToUpperSnake(enum.Name)+"_"+e.Suffix {
+			res = core.AppendIssue(res, e, zeroValue.Pos, zeroValue.Name)
 		}
 	}
 
@@ -61,8 +61,8 @@ func (e *EnumZeroValueSuffixLinked) Validate(info core.LinkedFileInfo) ([]core.I
 				continue
 			}
 			zeroValue := enum.Values[0]
-			if zeroValue.Name != pascalToUpperSnakeLinked(enum.Name)+"_"+e.Suffix {
-				res = core.AppendLinkedIssue(res, e, zeroValue.Pos, zeroValue.Name)
+			if zeroValue.Name != pascalToUpperSnake(enum.Name)+"_"+e.Suffix {
+				res = core.AppendIssue(res, e, zeroValue.Pos, zeroValue.Name)
 			}
 		}
 	}

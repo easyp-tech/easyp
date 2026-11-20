@@ -4,7 +4,7 @@ import (
 	"github.com/easyp-tech/easyp/internal/core"
 )
 
-var _ core.LintRule = (*ImportNoPublicLinked)(nil)
+var _ core.Rule = (*ImportNoPublicLinked)(nil)
 
 // ImportNoPublicLinked is the linked-engine port of ImportNoPublic (research
 // inventory #10, verbatim-from-lab): the etalon body carries over with the
@@ -17,18 +17,18 @@ func (i *ImportNoPublicLinked) LintRuleName() string {
 	return "IMPORT_NO_PUBLIC"
 }
 
-// Message implements lint.LintRule.
+// Message implements lint.Rule.
 func (i *ImportNoPublicLinked) Message() string {
 	return "import should not be public"
 }
 
-// Validate implements lint.LintRule.
-func (i *ImportNoPublicLinked) Validate(info core.LinkedFileInfo) ([]core.Issue, error) {
+// Validate implements lint.Rule.
+func (i *ImportNoPublicLinked) Validate(info core.ProtoInfo) ([]core.Issue, error) {
 	var res []core.Issue
 
 	for _, imp := range info.File.Imports {
 		if imp.Public {
-			res = core.AppendLinkedIssue(res, i, imp.Pos, imp.Location)
+			res = core.AppendIssue(res, i, imp.Pos, imp.Location)
 		}
 	}
 

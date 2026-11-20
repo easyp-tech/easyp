@@ -31,18 +31,18 @@ func (p *PackageSameGoPackageLinked) LintRuleName() string {
 	return "PACKAGE_SAME_GO_PACKAGE"
 }
 
-// Message implements lint.LintRule.
+// Message implements lint.Rule.
 func (p *PackageSameGoPackageLinked) Message() string {
 	return "all files in the same package must have the same go_package name"
 }
 
-// Validate implements lint.LintRule. Lint calls Collect and Finish instead.
-func (p *PackageSameGoPackageLinked) Validate(core.LinkedFileInfo) ([]core.Issue, error) {
+// Validate implements lint.Rule. Lint calls Collect and Finish instead.
+func (p *PackageSameGoPackageLinked) Validate(core.ProtoInfo) ([]core.Issue, error) {
 	return nil, nil
 }
 
 // Collect implements core.ModuleRule.
-func (p *PackageSameGoPackageLinked) Collect(info core.LinkedFileInfo) error {
+func (p *PackageSameGoPackageLinked) Collect(info core.ProtoInfo) error {
 	if len(info.File.Packages) == 0 {
 		// main returns early: packageless files never join groups.
 		return nil

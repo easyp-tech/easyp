@@ -6,7 +6,7 @@ import (
 	"github.com/easyp-tech/easyp/internal/core"
 )
 
-var _ core.LintRule = (*FieldLowerSnakeCaseLinked)(nil)
+var _ core.Rule = (*FieldLowerSnakeCaseLinked)(nil)
 
 // FieldLowerSnakeCaseLinked is the linked-engine port of FieldLowerSnakeCase
 // (research inventory #9, main-diverged): main's regexp wins over the lab's
@@ -24,13 +24,13 @@ func (c *FieldLowerSnakeCaseLinked) LintRuleName() string {
 	return "FIELD_LOWER_SNAKE_CASE"
 }
 
-// Message implements lint.LintRule.
+// Message implements lint.Rule.
 func (c *FieldLowerSnakeCaseLinked) Message() string {
 	return "message field should be lower_snake_case"
 }
 
-// Validate implements lint.LintRule.
-func (c *FieldLowerSnakeCaseLinked) Validate(info core.LinkedFileInfo) ([]core.Issue, error) {
+// Validate implements lint.Rule.
+func (c *FieldLowerSnakeCaseLinked) Validate(info core.ProtoInfo) ([]core.Issue, error) {
 	var res []core.Issue
 
 	lowerSnakeCase := regexp.MustCompile("^[a-z0-9]+(_[a-z0-9]+)*$")
@@ -38,7 +38,7 @@ func (c *FieldLowerSnakeCaseLinked) Validate(info core.LinkedFileInfo) ([]core.I
 	for _, message := range info.File.Messages {
 		for _, field := range message.Fields {
 			if !lowerSnakeCase.MatchString(field.Name) {
-				res = core.AppendLinkedIssue(res, c, field.Pos, field.Name)
+				res = core.AppendIssue(res, c, field.Pos, field.Name)
 			}
 		}
 	}

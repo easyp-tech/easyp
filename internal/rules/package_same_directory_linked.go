@@ -25,18 +25,18 @@ func (d *PackageSameDirectoryLinked) LintRuleName() string {
 	return "PACKAGE_SAME_DIRECTORY"
 }
 
-// Message implements lint.LintRule.
+// Message implements lint.Rule.
 func (d *PackageSameDirectoryLinked) Message() string {
 	return "different proto files in the same package should be in the same directory"
 }
 
-// Validate implements lint.LintRule. Lint calls Collect and Finish instead.
-func (d *PackageSameDirectoryLinked) Validate(core.LinkedFileInfo) ([]core.Issue, error) {
+// Validate implements lint.Rule. Lint calls Collect and Finish instead.
+func (d *PackageSameDirectoryLinked) Validate(core.ProtoInfo) ([]core.Issue, error) {
 	return nil, nil
 }
 
 // Collect implements core.ModuleRule.
-func (d *PackageSameDirectoryLinked) Collect(info core.LinkedFileInfo) error {
+func (d *PackageSameDirectoryLinked) Collect(info core.ProtoInfo) error {
 	for _, pkg := range info.File.Packages {
 		d.files.add(pkg.Name, groupedValue{
 			path:   info.Path,

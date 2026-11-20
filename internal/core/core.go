@@ -16,11 +16,7 @@ import (
 
 // Core provide to business logic of EasyP.
 type Core struct {
-	rules []Rule
-	// linkedRules are the rules of the linked lint engine (lint_model.go).
-	// D-04 dormancy: the old engine keeps reading rules; nothing populates
-	// linkedRules until a phase flips the CLI onto the linked path.
-	linkedRules           []LintRule
+	rules                 []Rule
 	ignore                []string
 	ignoreOnly            map[string][]string
 	allowCommentIgnores   bool
@@ -66,10 +62,7 @@ var (
 
 // Options configures the lint, breaking, and generation engines.
 type Options struct {
-	Rules []Rule
-	// LinkedRules are the rules of the linked lint engine (lint_model.go);
-	// the old engine ignores them (D-04 dormancy).
-	LinkedRules         []LintRule
+	Rules               []Rule
 	Ignore              []string
 	IgnoreOnly          map[string][]string
 	AllowCommentIgnores bool
@@ -102,7 +95,6 @@ func New(options Options) *Core {
 	terminal := console.New()
 	return &Core{
 		rules:                   options.Rules,
-		linkedRules:             options.LinkedRules,
 		ignore:                  options.Ignore,
 		ignoreOnly:              options.IgnoreOnly,
 		allowCommentIgnores:     options.AllowCommentIgnores,

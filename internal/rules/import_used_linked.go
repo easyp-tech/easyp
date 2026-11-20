@@ -5,11 +5,11 @@ import (
 	"github.com/easyp-tech/easyp/internal/protoast"
 )
 
-var _ core.LintRule = (*ImportUsedLinked)(nil)
+var _ core.Rule = (*ImportUsedLinked)(nil)
 
 // ImportUsedLinked is the linked-engine port of ImportUsed (research inventory
 // #12, adapt + parity-risk, threat T-04-08): main's syntax-walk semantics are
-// ported UNCONDITIONALLY — LinkedFileInfo.Resolved is never read, and the
+// ported UNCONDITIONALLY — ProtoInfo.Resolved is never read, and the
 // lab's resolution-based validateResolved is a deferred post-parity decision,
 // never silently adopted (grep-enforced by the batch gate). The etalon's
 // stateless importUsage local struct is kept, so files can be checked
@@ -27,7 +27,7 @@ var _ core.LintRule = (*ImportUsedLinked)(nil)
 //     inside MessageBody.Extends, so they are outside main's walk too;
 //   - file-level option names.
 //
-// existInProtoLinked keeps main's reading of the imported file: the extend
+// existInProto keeps main's reading of the imported file: the extend
 // FIELDS' names, the top-level message names, the top-level enum names — a
 // qualified reference into an imported nested message does not match and
 // leaves the import unused (pinned by the syntax_walk_only parity cell).
@@ -56,13 +56,13 @@ func (i *ImportUsedLinked) LintRuleName() string {
 	return "IMPORT_USED"
 }
 
-// Message implements lint.LintRule.
+// Message implements lint.Rule.
 func (i *ImportUsedLinked) Message() string {
 	return "import is not used"
 }
 
-// Validate implements lint.LintRule.
-func (i *ImportUsedLinked) Validate(info core.LinkedFileInfo) ([]core.Issue, error) {
+// Validate implements lint.Rule.
+func (i *ImportUsedLinked) Validate(info core.ProtoInfo) ([]core.Issue, error) {
 	var res []core.Issue
 
 	u := &importUsage{}
@@ -112,18 +112,18 @@ func (i *ImportUsedLinked) Validate(info core.LinkedFileInfo) ([]core.Issue, err
 		if u.isImportUsed[importPath] {
 			continue
 		}
-		res = core.AppendLinkedIssue(res, i, imp.Pos, imp.Location)
+		res = core.AppendIssue(res, i, imp.Pos, imp.Location)
 	}
 
 	return res, nil
 }
 
 // checkIsImportUsed check if passed import is used in proto file
-func (u *importUsage) checkIsImportUsed(key string, info core.LinkedFileInfo) {
+func (u *importUsage) checkIsImportUsed(key string, info core.ProtoInfo) {
 	instruction := u.instrParser.Parse(key)
 	for _, importPath := range u.pkgToImport[instruction.PkgName] {
 		proto := info.ImportedFiles[importPath]
-		exist := existInProtoLinked(instruction.Instruction, proto)
+		exist := existInProto(instruction.Instruction, proto)
 
 		if exist {
 			if _, ok := u.isImportUsed[importPath]; ok {
@@ -134,7 +134,7 @@ func (u *importUsage) checkIsImportUsed(key string, info core.LinkedFileInfo) {
 }
 
 // check used imports in services
-func (u *importUsage) checkInServices(services []*protoast.Service, info core.LinkedFileInfo) {
+func (u *importUsage) checkInServices(services []*protoast.Service, info core.ProtoInfo) {
 	for _, service := range services {
 		for _, rpc := range service.RPCs {
 			// look for in request
@@ -152,7 +152,7 @@ func (u *importUsage) checkInServices(services []*protoast.Service, info core.Li
 }
 
 // check used imports in messages
-func (u *importUsage) checkInMessages(messages []*protoast.Message, info core.LinkedFileInfo) {
+func (u *importUsage) checkInMessages(messages []*protoast.Message, info core.ProtoInfo) {
 	for _, msg := range messages {
 		u.checkInMessages(msg.Messages, info)
 
@@ -174,24 +174,24 @@ func (u *importUsage) checkInMessages(messages []*protoast.Message, info core.Li
 	}
 }
 
-func (u *importUsage) checkInExtends(extends []*protoast.Extend, info core.LinkedFileInfo) {
+func (u *importUsage) checkInExtends(extends []*protoast.Extend, info core.ProtoInfo) {
 	for _, extend := range extends {
 		u.checkIsImportUsed(extend.Type, info)
 	}
 }
 
-func (u *importUsage) checkInOptions(options []*protoast.Option, info core.LinkedFileInfo) {
+func (u *importUsage) checkInOptions(options []*protoast.Option, info core.ProtoInfo) {
 	for _, option := range options {
 		u.checkIsImportUsed(option.Name, info)
 	}
 }
 
-// existInProtoLinked looks for key in imported proto file — the etalon named
+// existInProto looks for key in imported proto file — the etalon named
 // it existInProto; the name is taken in this package by main's byte-frozen
 // import_used.go, so the port carries the Linked suffix (rename map). The
 // reading is main's: the extend fields, the top-level message names and the
 // top-level enum names.
-func existInProtoLinked(key string, proto *protoast.File) bool {
+func existInProto(key string, proto *protoast.File) bool {
 	// look for key in extends
 	for _, extend := range proto.Extends {
 		for _, field := range extend.Fields {

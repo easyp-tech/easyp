@@ -4,7 +4,7 @@ import (
 	"github.com/easyp-tech/easyp/internal/core"
 )
 
-var _ core.LintRule = (*EnumNoAllowAliasLinked)(nil)
+var _ core.Rule = (*EnumNoAllowAliasLinked)(nil)
 
 // EnumNoAllowAliasLinked is the linked-engine port of EnumNoAllowAlias
 // (research inventory #6, main-diverged): main issues for ANY enum-level
@@ -20,19 +20,19 @@ func (e *EnumNoAllowAliasLinked) LintRuleName() string {
 	return "ENUM_NO_ALLOW_ALIAS"
 }
 
-// Message implements lint.LintRule.
+// Message implements lint.Rule.
 func (e *EnumNoAllowAliasLinked) Message() string {
 	return "enum must not allow alias"
 }
 
-// Validate implements lint.LintRule.
-func (e *EnumNoAllowAliasLinked) Validate(info core.LinkedFileInfo) ([]core.Issue, error) {
+// Validate implements lint.Rule.
+func (e *EnumNoAllowAliasLinked) Validate(info core.ProtoInfo) ([]core.Issue, error) {
 	var res []core.Issue
 
 	for _, enum := range info.File.Enums {
 		for _, opt := range enum.Options {
 			if opt.Name == "allow_alias" {
-				res = core.AppendLinkedIssue(res, e, enum.Pos, enum.Name)
+				res = core.AppendIssue(res, e, enum.Pos, enum.Name)
 			}
 		}
 	}
@@ -41,7 +41,7 @@ func (e *EnumNoAllowAliasLinked) Validate(info core.LinkedFileInfo) ([]core.Issu
 		for _, enum := range msg.Enums {
 			for _, opt := range enum.Options {
 				if opt.Name == "allow_alias" {
-					res = core.AppendLinkedIssue(res, e, enum.Pos, enum.Name)
+					res = core.AppendIssue(res, e, enum.Pos, enum.Name)
 				}
 			}
 		}

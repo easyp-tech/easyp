@@ -62,7 +62,7 @@ func TestPackageSameCsharpNamespace_Validate(t *testing.T) {
 
 			rule := &rules.PackageSameCsharpNamespaceLinked{}
 
-			var infos []core.LinkedFileInfo
+			var infos []core.ProtoInfo
 			for _, fileName := range tc.fileNames {
 				infos = append(infos, parseLinkedFile(t, fileName))
 			}

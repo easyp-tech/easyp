@@ -62,7 +62,7 @@ func TestPackageSameJavaPackage_Validate(t *testing.T) {
 
 			rule := &rules.PackageSameJavaPackageLinked{}
 
-			var infos []core.LinkedFileInfo
+			var infos []core.ProtoInfo
 			for _, fileName := range tc.fileNames {
 				infos = append(infos, parseLinkedFile(t, fileName))
 			}

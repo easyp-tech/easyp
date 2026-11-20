@@ -6,8 +6,6 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"github.com/yoheimuta/go-protoparser/v4"
-	"github.com/yoheimuta/go-protoparser/v4/interpret/unordered"
 
 	"github.com/easyp-tech/easyp/internal/core"
 	"github.com/easyp-tech/easyp/internal/protoast"
@@ -30,79 +28,11 @@ const (
 	noLintEasypComment       = "./../../testdata/no_lint/no_lint_easyp_comment.proto"
 )
 
-func start(t testing.TB) (*require.Assertions, map[string]core.ProtoInfo) {
-	t.Helper()
-
-	assert := require.New(t)
-
-	protos := map[string]core.ProtoInfo{
-		invalidAuthProto:         parseFile(t, assert, invalidAuthProto),
-		invalidAuthProto2:        parseFile(t, assert, invalidAuthProto2),
-		invalidAuthProto3:        parseFile(t, assert, invalidAuthProto3),
-		invalidAuthProto4:        parseFile(t, assert, invalidAuthProto4),
-		invalidAuthProto5:        parseFile(t, assert, invalidAuthProto5),
-		invalidAuthProto6:        parseFile(t, assert, invalidAuthProto6),
-		invalidAuthProtoEmptyPkg: parseFile(t, assert, invalidAuthProtoEmptyPkg),
-		invalidsSessionProto:     parseFile(t, assert, invalidsSessionProto),
-		validAuthProto:           parseFile(t, assert, validAuthProto),
-		validAuthProto2:          parseFile(t, assert, validAuthProto2),
-		importUsed:               parseFile(t, assert, importUsed),
-		importNotUsed:            parseFile(t, assert, importNotUsed),
-		noLintBufComment:         parseFile(t, assert, noLintBufComment),
-		noLintEasypComment:       parseFile(t, assert, noLintEasypComment),
-	}
-
-	return assert, protos
-}
-
-func parseFile(t testing.TB, assert *require.Assertions, path string) core.ProtoInfo {
-	t.Helper()
-
-	f, err := os.Open(path)
-	assert.NoError(err)
-	t.Cleanup(func() { assert.NoError(f.Close()) })
-
-	got, err := protoparser.Parse(f)
-	assert.NoError(err)
-
-	res, err := unordered.InterpretProto(got)
-	assert.NoError(err)
-
-	protoFilesFromImport := make(map[core.ImportPath]*unordered.Proto)
-
-	// read imports files
-	for _, imp := range res.ProtoBody.Imports {
-		importPath := core.ConvertImportPath(imp.Location)
-		fullPath := filepath.Join("./../../testdata", string(importPath))
-
-		f, err := os.Open(fullPath)
-		if err != nil {
-			continue
-		}
-
-		t.Cleanup(func() { assert.NoError(f.Close()) })
-
-		got, err := protoparser.Parse(f)
-		assert.NoError(err)
-
-		res, err := unordered.InterpretProto(got)
-		assert.NoError(err)
-
-		protoFilesFromImport[importPath] = res
-	}
-
-	return core.ProtoInfo{
-		Path:                 path,
-		Info:                 res,
-		ProtoFilesFromImport: protoFilesFromImport,
-	}
-}
-
-// parseLinkedFile builds a LinkedFileInfo for a testdata file (the linked
+// parseLinkedFile builds a ProtoInfo for a testdata file (the linked
 // contract's helper, mirroring the etalon's protoast-era parseFile): the file
 // itself is parsed with protoast.Parse and its direct imports are parsed from
 // ./../../testdata, skipping the ones that are not stored there.
-func parseLinkedFile(t testing.TB, path string) core.LinkedFileInfo {
+func parseLinkedFile(t testing.TB, path string) core.ProtoInfo {
 	t.Helper()
 
 	src, err := os.ReadFile(path)
@@ -129,7 +59,7 @@ func parseLinkedFile(t testing.TB, path string) core.LinkedFileInfo {
 		imported[importPath] = parsed
 	}
 
-	return core.LinkedFileInfo{
+	return core.ProtoInfo{
 		Path:          path,
 		File:          file,
 		ImportedFiles: imported,
@@ -138,7 +68,7 @@ func parseLinkedFile(t testing.TB, path string) core.LinkedFileInfo {
 
 // validate runs a linked-contract rule over infos the way lint does: module
 // rules collect every file and report once, other rules report per file.
-func validate(rule core.LintRule, infos ...core.LinkedFileInfo) ([]core.Issue, error) {
+func validate(rule core.Rule, infos ...core.ProtoInfo) ([]core.Issue, error) {
 	moduleRule, ok := rule.(core.ModuleRule)
 	if !ok {
 		var issues []core.Issue

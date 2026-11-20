@@ -67,7 +67,7 @@ func TestPackageSameSwiftPrefix_Validate(t *testing.T) {
 
 			rule := &rules.PackageSameSwiftPrefixLinked{}
 
-			var infos []core.LinkedFileInfo
+			var infos []core.ProtoInfo
 			for _, fileName := range tc.fileNames {
 				infos = append(infos, parseLinkedFile(t, fileName))
 			}
@@ -93,10 +93,10 @@ func TestPackageSameSwiftPrefix_Validate(t *testing.T) {
 func TestPackageSameSwiftPrefix_RubyPackageBugPin(t *testing.T) {
 	t.Parallel()
 
-	writeInfos := func(t *testing.T, files map[string]string) []core.LinkedFileInfo {
+	writeInfos := func(t *testing.T, files map[string]string) []core.ProtoInfo {
 		t.Helper()
 
-		var infos []core.LinkedFileInfo
+		var infos []core.ProtoInfo
 		for _, name := range []string{"a.proto", "b.proto"} {
 			full := filepath.Join(t.TempDir(), name)
 			require.NoError(t, os.WriteFile(full, []byte(files[name]), 0o644))

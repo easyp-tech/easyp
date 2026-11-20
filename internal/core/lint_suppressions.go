@@ -14,8 +14,8 @@ type linkedDirectiveComment struct {
 	first, last int
 }
 
-// linkedParsedDirective is one recognized lint directive comment.
-type linkedParsedDirective struct {
+// parsedDirective is one recognized lint directive comment.
+type parsedDirective struct {
 	action  string
 	rules   []string
 	comment linkedDirectiveComment
@@ -38,14 +38,14 @@ func directiveComments(file *protoast.File) []linkedDirectiveComment {
 	return comments
 }
 
-// linkedCommentSuppressions computes the comment-directive suppression ranges
+// commentSuppressions computes the comment-directive suppression ranges
 // of one file from its protoast model. It carries the old engine's
 // pairing-machine logic and error texts verbatim (REQ-2.5 main-wins), reading
 // positions from protoast comments where the old method reads go-protoparser
 // metadata; the comment walk is protoast's owner map instead of the old
 // reflection walk. It uses parser comments, not textual substring matching, so
 // marker-like text inside strings is never interpreted as a directive.
-func (c *Core) linkedCommentSuppressions(info LinkedFileInfo) (suppressionRanges, error) {
+func (c *Core) commentSuppressions(info ProtoInfo) (suppressionRanges, error) {
 	comments := directiveComments(info.File)
 	known := make(map[string]bool)
 	for _, name := range c.knownLintRules {
@@ -56,7 +56,7 @@ func (c *Core) linkedCommentSuppressions(info LinkedFileInfo) (suppressionRanges
 			known[GetRuleName(rule)] = true
 		}
 	}
-	var parsed []linkedParsedDirective
+	var parsed []parsedDirective
 	for _, comment := range comments {
 		for _, text := range comment.comment.Lines() {
 			text = strings.TrimSpace(strings.TrimPrefix(strings.TrimSpace(text), "*"))
@@ -74,7 +74,7 @@ func (c *Core) linkedCommentSuppressions(info LinkedFileInfo) (suppressionRanges
 					return nil, fmt.Errorf("%s:%d:%d: unknown or unsupported lint rule %q in comment directive", info.Path, comment.comment.Pos.Line, comment.comment.Pos.Column, name)
 				}
 			}
-			parsed = append(parsed, linkedParsedDirective{action: action, rules: names, comment: comment})
+			parsed = append(parsed, parsedDirective{action: action, rules: names, comment: comment})
 		}
 	}
 	var ranges suppressionRanges

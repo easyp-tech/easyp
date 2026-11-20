@@ -4,7 +4,7 @@ import (
 	"github.com/easyp-tech/easyp/internal/core"
 )
 
-var _ core.LintRule = (*CommentMessageLinked)(nil)
+var _ core.Rule = (*CommentMessageLinked)(nil)
 
 // CommentMessageLinked is the linked-engine port of CommentMessage (research
 // inventory #36, main-diverged). Presence predicate is MAIN'S: a declaration
@@ -30,18 +30,18 @@ func (c *CommentMessageLinked) LintRuleName() string {
 	return "COMMENT_MESSAGE"
 }
 
-// Message implements lint.LintRule.
+// Message implements lint.Rule.
 func (c *CommentMessageLinked) Message() string {
 	return "message comments must not be empty"
 }
 
-// Validate implements lint.LintRule.
-func (c *CommentMessageLinked) Validate(info core.LinkedFileInfo) ([]core.Issue, error) {
+// Validate implements lint.Rule.
+func (c *CommentMessageLinked) Validate(info core.ProtoInfo) ([]core.Issue, error) {
 	var res []core.Issue
 
 	for _, message := range info.File.Messages {
 		if !message.HasCommentAbove() {
-			res = core.AppendLinkedIssue(res, c, message.Pos, message.Name)
+			res = core.AppendIssue(res, c, message.Pos, message.Name)
 		}
 	}
 

@@ -4,7 +4,7 @@ import (
 	"github.com/easyp-tech/easyp/internal/core"
 )
 
-var _ core.LintRule = (*CommentRPCLinked)(nil)
+var _ core.Rule = (*CommentRPCLinked)(nil)
 
 // CommentRPCLinked is the linked-engine port of CommentRPC (research
 // inventory #38, main-diverged). Presence predicate is MAIN'S: a declaration
@@ -30,19 +30,19 @@ func (c *CommentRPCLinked) LintRuleName() string {
 	return "COMMENT_RPC"
 }
 
-// Message implements lint.LintRule.
+// Message implements lint.Rule.
 func (c *CommentRPCLinked) Message() string {
 	return "rpc comments must not be empty"
 }
 
-// Validate implements lint.LintRule.
-func (c *CommentRPCLinked) Validate(info core.LinkedFileInfo) ([]core.Issue, error) {
+// Validate implements lint.Rule.
+func (c *CommentRPCLinked) Validate(info core.ProtoInfo) ([]core.Issue, error) {
 	var res []core.Issue
 
 	for _, service := range info.File.Services {
 		for _, rpc := range service.RPCs {
 			if !rpc.HasCommentAbove() {
-				res = core.AppendLinkedIssue(res, c, rpc.Pos, rpc.Name)
+				res = core.AppendIssue(res, c, rpc.Pos, rpc.Name)
 			}
 		}
 	}

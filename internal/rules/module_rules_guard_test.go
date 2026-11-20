@@ -35,13 +35,13 @@ func TestModuleRuleSet(t *testing.T) {
 
 	// The registry is complete, so the whole construction must succeed: a
 	// construction failure here is a registry gap, not a port-in-flight skip.
-	got, _, err := rules.NewLinked(config.LintConfig{Use: rules.AllRuleNames()})
+	got, _, err := rules.New(config.LintConfig{Use: rules.AllRuleNames()})
 	require.NoError(t, err, "the linked registry is complete — every rule must construct")
 
 	var gotNames []string
 	for _, rule := range got {
 		if _, ok := rule.(core.ModuleRule); ok {
-			gotNames = append(gotNames, core.LinkedRuleName(rule))
+			gotNames = append(gotNames, core.GetRuleName(rule))
 		}
 	}
 

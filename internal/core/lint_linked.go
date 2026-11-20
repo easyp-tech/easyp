@@ -18,11 +18,11 @@ import (
 // and parsed in parallel a window at a time, then checked in walk order.
 const lintWindow = 256
 
-// LintLinked lints the proto files with the two-pass linked engine: pass 1
+// Lint lints the proto files with the two-pass linked engine: pass 1
 // reads every file once and links the corpus, pass 2 builds each file's model
 // from the linked syntax trees and checks it, in windows; rules that look at
 // files alone run concurrently, cross-file rules run serially in walk order.
-func (c *Core) LintLinked(ctx context.Context, fsWalker DirWalker) ([]IssueInfo, error) {
+func (c *Core) Lint(ctx context.Context, fsWalker DirWalker) ([]IssueInfo, error) {
 	c.logger.Info(ctx, "starting lint")
 
 	var paths []string
@@ -81,7 +81,7 @@ func (c *Core) LintLinked(ctx context.Context, fsWalker DirWalker) ([]IssueInfo,
 
 	var res []IssueInfo
 	suppressed := make(map[string]suppressionRanges, len(paths))
-	infos := make([]LinkedFileInfo, min(lintWindow, len(paths)))
+	infos := make([]ProtoInfo, min(lintWindow, len(paths)))
 	infoErrs := make([]error, len(infos))
 	checked := make([]checkedFile, len(infos))
 	for start := 0; start < len(paths); start += lintWindow {
@@ -89,7 +89,7 @@ func (c *Core) LintLinked(ctx context.Context, fsWalker DirWalker) ([]IssueInfo,
 		// Pass 2 builds models and resolves imports a window at a time. Rules
 		// keep cross-file state, so they run below in the original order.
 		err := parallel.Run(ctx, len(window), 0, func(i int) error {
-			infos[i], infoErrs[i] = LinkedFileInfo{}, nil
+			infos[i], infoErrs[i] = ProtoInfo{}, nil
 			if readErrs[start+i] != nil {
 				infoErrs[i] = readErrs[start+i]
 				return nil
@@ -123,17 +123,17 @@ func (c *Core) LintLinked(ctx context.Context, fsWalker DirWalker) ([]IssueInfo,
 			}
 			suppressed[path] = checked[i].suppressions
 			res = append(res, checked[i].issues...)
-			infos[i], checked[i] = LinkedFileInfo{}, checkedFile{}
+			infos[i], checked[i] = ProtoInfo{}, checkedFile{}
 		}
 	}
 
-	for _, rule := range c.linkedRules {
+	for _, rule := range c.rules {
 		moduleRule, ok := rule.(ModuleRule)
 		if !ok {
 			continue
 		}
 		for _, issue := range moduleRule.Finish() {
-			if c.shouldIgnoreLinked(rule, issue.Path) {
+			if c.shouldIgnore(rule, issue.Path) {
 				continue
 			}
 			if c.allowCommentIgnores && suppressed[issue.Path].contains(issue.RuleName, issue.Position.Line) {
@@ -174,17 +174,17 @@ type checkedFile struct {
 // checkFile applies suppressions and the rules that look at one file at a
 // time. Those rules keep no state between files, so files can be checked
 // concurrently.
-func (c *Core) checkFile(ctx context.Context, path string, info LinkedFileInfo) checkedFile {
-	suppressions, err := c.linkedCommentSuppressions(info)
+func (c *Core) checkFile(ctx context.Context, path string, info ProtoInfo) checkedFile {
+	suppressions, err := c.commentSuppressions(info)
 	if err != nil {
 		return checkedFile{err: fmt.Errorf("commentSuppressions: %w", err)}
 	}
 	var res []IssueInfo
-	for _, rule := range c.linkedRules {
+	for _, rule := range c.rules {
 		if ctx.Err() != nil {
 			return checkedFile{err: ctx.Err()}
 		}
-		if _, ok := rule.(ModuleRule); ok || c.shouldIgnoreLinked(rule, path) {
+		if _, ok := rule.(ModuleRule); ok || c.shouldIgnore(rule, path) {
 			continue
 		}
 		results, err := rule.Validate(info)
@@ -206,10 +206,10 @@ func (c *Core) checkFile(ctx context.Context, path string, info LinkedFileInfo) 
 // never join the group (REQ-2.5 parity; see 04-REVIEW CR-01). The Finish
 // drain's path filter below stays as-is: defense in depth for group rules,
 // and the per-file RPC_REQUEST_RESPONSE_UNIQUE findings.
-func (c *Core) collectFile(info LinkedFileInfo) error {
-	for _, rule := range c.linkedRules {
+func (c *Core) collectFile(info ProtoInfo) error {
+	for _, rule := range c.rules {
 		if moduleRule, ok := rule.(ModuleRule); ok {
-			if c.shouldIgnoreLinked(rule, info.Path) {
+			if c.shouldIgnore(rule, info.Path) {
 				continue
 			}
 			if err := moduleRule.Collect(info); err != nil {
@@ -220,12 +220,10 @@ func (c *Core) collectFile(info LinkedFileInfo) error {
 	return nil
 }
 
-// shouldIgnoreLinked mirrors the old engine's shouldIgnore for the linked rule
-// contract: the parameter type pins the original to the old rules, so the
-// linked engine carries a byte-equivalent copy (see the lint_model.go rename
-// map).
-func (c *Core) shouldIgnoreLinked(rule LintRule, path string) bool {
-	ruleName := LinkedRuleName(rule)
+// shouldIgnore reports whether a rule is ignore_only-suppressed on a path:
+// an exact file match or a directory prefix match.
+func (c *Core) shouldIgnore(rule Rule, path string) bool {
+	ruleName := GetRuleName(rule)
 	ignoreFilesOrDirs := c.ignoreOnly[ruleName]
 
 	for _, fileOrDir := range ignoreFilesOrDirs {

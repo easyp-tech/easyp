@@ -7,7 +7,7 @@ import (
 	"github.com/easyp-tech/easyp/internal/core"
 )
 
-var _ core.LintRule = (*FileLowerSnakeCaseLinked)(nil)
+var _ core.Rule = (*FileLowerSnakeCaseLinked)(nil)
 
 // FileLowerSnakeCaseLinked is the linked-engine port of FileLowerSnakeCase
 // (research inventory #27, main-diverged position + regexp; threat T-04-12):
@@ -25,13 +25,13 @@ func (f *FileLowerSnakeCaseLinked) LintRuleName() string {
 	return "FILE_LOWER_SNAKE_CASE"
 }
 
-// Message implements lint.LintRule.
+// Message implements lint.Rule.
 func (f *FileLowerSnakeCaseLinked) Message() string {
 	return "file name should be lower_snake_case.proto"
 }
 
-// Validate implements lint.LintRule.
-func (f *FileLowerSnakeCaseLinked) Validate(info core.LinkedFileInfo) ([]core.Issue, error) {
+// Validate implements lint.Rule.
+func (f *FileLowerSnakeCaseLinked) Validate(info core.ProtoInfo) ([]core.Issue, error) {
 	var res []core.Issue
 
 	// main's matchLowerSnakeCase regexp, checked against the full filename
@@ -41,7 +41,7 @@ func (f *FileLowerSnakeCaseLinked) Validate(info core.LinkedFileInfo) ([]core.Is
 
 	fileName := filepath.Base(info.Path)
 	if !lowerSnakeCase.MatchString(fileName) {
-		res = core.AppendLinkedIssue(res, f, core.Position{
+		res = core.AppendIssue(res, f, core.Position{
 			Filename: info.Path,
 		}, info.Path)
 	}

@@ -6,7 +6,7 @@ import (
 	"github.com/easyp-tech/easyp/internal/core"
 )
 
-var _ core.LintRule = (*EnumPascalCaseLinked)(nil)
+var _ core.Rule = (*EnumPascalCaseLinked)(nil)
 
 // EnumPascalCaseLinked is the linked-engine port of EnumPascalCase (research
 // inventory #7, main-diverged): main's regexp wins over the lab's
@@ -23,13 +23,13 @@ func (c *EnumPascalCaseLinked) LintRuleName() string {
 	return "ENUM_PASCAL_CASE"
 }
 
-// Message implements lint.LintRule.
+// Message implements lint.Rule.
 func (c *EnumPascalCaseLinked) Message() string {
 	return "enum name must be in PascalCase"
 }
 
-// Validate implements lint.LintRule.
-func (c *EnumPascalCaseLinked) Validate(info core.LinkedFileInfo) ([]core.Issue, error) {
+// Validate implements lint.Rule.
+func (c *EnumPascalCaseLinked) Validate(info core.ProtoInfo) ([]core.Issue, error) {
 	var res []core.Issue
 
 	pascalCase := regexp.MustCompile("^[A-Z][a-z]+(?:[A-Z][a-z]+)*$")
@@ -38,14 +38,14 @@ func (c *EnumPascalCaseLinked) Validate(info core.LinkedFileInfo) ([]core.Issue,
 		if !pascalCase.MatchString(enum.Name) {
 			// enum.Pos is the declaration's first token — the same position
 			// main reported as Meta.Pos (pinned by TestDeclPositionProbe).
-			res = core.AppendLinkedIssue(res, c, enum.Pos, enum.Name)
+			res = core.AppendIssue(res, c, enum.Pos, enum.Name)
 		}
 	}
 
 	for _, msg := range info.File.Messages {
 		for _, enum := range msg.Enums {
 			if !pascalCase.MatchString(enum.Name) {
-				res = core.AppendLinkedIssue(res, c, enum.Pos, enum.Name)
+				res = core.AppendIssue(res, c, enum.Pos, enum.Name)
 			}
 		}
 	}

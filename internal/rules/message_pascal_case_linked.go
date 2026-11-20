@@ -6,7 +6,7 @@ import (
 	"github.com/easyp-tech/easyp/internal/core"
 )
 
-var _ core.LintRule = (*MessagePascalCaseLinked)(nil)
+var _ core.Rule = (*MessagePascalCaseLinked)(nil)
 
 // MessagePascalCaseLinked is the linked-engine port of MessagePascalCase
 // (research inventory #13, main-diverged): main's regexp wins over the lab's
@@ -24,13 +24,13 @@ func (c *MessagePascalCaseLinked) LintRuleName() string {
 	return "MESSAGE_PASCAL_CASE"
 }
 
-// Message implements lint.LintRule.
+// Message implements lint.Rule.
 func (c *MessagePascalCaseLinked) Message() string {
 	return "message name should be PascalCase"
 }
 
-// Validate implements lint.LintRule.
-func (c *MessagePascalCaseLinked) Validate(info core.LinkedFileInfo) ([]core.Issue, error) {
+// Validate implements lint.Rule.
+func (c *MessagePascalCaseLinked) Validate(info core.ProtoInfo) ([]core.Issue, error) {
 	var res []core.Issue
 
 	pascalCase := regexp.MustCompile("^[A-Z][a-zA-Z0-9]+(?:[A-Z][a-zA-Z0-9]+)*$")
@@ -39,7 +39,7 @@ func (c *MessagePascalCaseLinked) Validate(info core.LinkedFileInfo) ([]core.Iss
 		if !pascalCase.MatchString(message.Name) {
 			// message.Pos is the declaration's first token — the same position
 			// main reported as Meta.Pos (pinned by TestDeclPositionProbe).
-			res = core.AppendLinkedIssue(res, c, message.Pos, message.Name)
+			res = core.AppendIssue(res, c, message.Pos, message.Name)
 		}
 	}
 

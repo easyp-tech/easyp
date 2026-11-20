@@ -31,18 +31,18 @@ func (p *PackageSameJavaPackageLinked) LintRuleName() string {
 	return "PACKAGE_SAME_JAVA_PACKAGE"
 }
 
-// Message implements lint.LintRule.
+// Message implements lint.Rule.
 func (p *PackageSameJavaPackageLinked) Message() string {
 	return "all files in the same package must have the same java_package option"
 }
 
-// Validate implements lint.LintRule. Lint calls Collect and Finish instead.
-func (p *PackageSameJavaPackageLinked) Validate(core.LinkedFileInfo) ([]core.Issue, error) {
+// Validate implements lint.Rule. Lint calls Collect and Finish instead.
+func (p *PackageSameJavaPackageLinked) Validate(core.ProtoInfo) ([]core.Issue, error) {
 	return nil, nil
 }
 
 // Collect implements core.ModuleRule.
-func (p *PackageSameJavaPackageLinked) Collect(info core.LinkedFileInfo) error {
+func (p *PackageSameJavaPackageLinked) Collect(info core.ProtoInfo) error {
 	if len(info.File.Packages) == 0 {
 		// main returns early: packageless files never join groups.
 		return nil

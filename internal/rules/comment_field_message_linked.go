@@ -4,7 +4,7 @@ import (
 	"github.com/easyp-tech/easyp/internal/core"
 )
 
-var _ core.LintRule = (*CommentFieldLinked)(nil)
+var _ core.Rule = (*CommentFieldLinked)(nil)
 
 // CommentFieldLinked is the linked-engine port of CommentField (research
 // inventory #35, main-diverged). Presence predicate is MAIN'S: a declaration
@@ -34,19 +34,19 @@ func (c *CommentFieldLinked) LintRuleName() string {
 	return "COMMENT_FIELD"
 }
 
-// Message implements lint.LintRule.
+// Message implements lint.Rule.
 func (c *CommentFieldLinked) Message() string {
 	return "field comments must not be empty"
 }
 
-// Validate implements lint.LintRule.
-func (c *CommentFieldLinked) Validate(info core.LinkedFileInfo) ([]core.Issue, error) {
+// Validate implements lint.Rule.
+func (c *CommentFieldLinked) Validate(info core.ProtoInfo) ([]core.Issue, error) {
 	var res []core.Issue
 
 	for _, message := range info.File.Messages {
 		for _, field := range message.Fields {
 			if !field.HasCommentAbove() {
-				res = core.AppendLinkedIssue(res, c, field.Pos, field.Name)
+				res = core.AppendIssue(res, c, field.Pos, field.Name)
 			}
 		}
 	}

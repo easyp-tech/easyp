@@ -6,7 +6,7 @@ import (
 	"github.com/easyp-tech/easyp/internal/core"
 )
 
-var _ core.LintRule = (*PackageLowerSnakeCaseLinked)(nil)
+var _ core.Rule = (*PackageLowerSnakeCaseLinked)(nil)
 
 // PackageLowerSnakeCaseLinked is the linked-engine port of
 // PackageLowerSnakeCase (research inventory #15, main-diverged): main's
@@ -20,20 +20,20 @@ func (c *PackageLowerSnakeCaseLinked) LintRuleName() string {
 	return "PACKAGE_LOWER_SNAKE_CASE"
 }
 
-// Message implements lint.LintRule.
+// Message implements lint.Rule.
 func (c *PackageLowerSnakeCaseLinked) Message() string {
 	return "package name should be lower_snake_case"
 }
 
-// Validate implements lint.LintRule.
-func (c *PackageLowerSnakeCaseLinked) Validate(info core.LinkedFileInfo) ([]core.Issue, error) {
+// Validate implements lint.Rule.
+func (c *PackageLowerSnakeCaseLinked) Validate(info core.ProtoInfo) ([]core.Issue, error) {
 	var res []core.Issue
 
 	lowerSnakeCase := regexp.MustCompile("^[a-z]+([_|[.][a-z0-9]+)*$")
 
 	for _, pack := range info.File.Packages {
 		if !lowerSnakeCase.MatchString(pack.Name) {
-			res = core.AppendLinkedIssue(res, c, pack.Pos, pack.Name)
+			res = core.AppendIssue(res, c, pack.Pos, pack.Name)
 		}
 	}
 

@@ -25,18 +25,18 @@ func (d *DirectorySamePackageLinked) LintRuleName() string {
 	return "DIRECTORY_SAME_PACKAGE"
 }
 
-// Message implements lint.LintRule.
+// Message implements lint.Rule.
 func (d *DirectorySamePackageLinked) Message() string {
 	return "all files in the same directory must have the same package name"
 }
 
-// Validate implements lint.LintRule. Lint calls Collect and Finish instead.
-func (d *DirectorySamePackageLinked) Validate(core.LinkedFileInfo) ([]core.Issue, error) {
+// Validate implements lint.Rule. Lint calls Collect and Finish instead.
+func (d *DirectorySamePackageLinked) Validate(core.ProtoInfo) ([]core.Issue, error) {
 	return nil, nil
 }
 
 // Collect implements core.ModuleRule.
-func (d *DirectorySamePackageLinked) Collect(info core.LinkedFileInfo) error {
+func (d *DirectorySamePackageLinked) Collect(info core.ProtoInfo) error {
 	for _, pkg := range info.File.Packages {
 		d.files.add(filepath.Dir(info.Path), groupedValue{
 			path:   info.Path,

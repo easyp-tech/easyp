@@ -4,7 +4,7 @@ import (
 	"github.com/easyp-tech/easyp/internal/core"
 )
 
-var _ core.LintRule = (*RPCRequestStandardNameLinked)(nil)
+var _ core.Rule = (*RPCRequestStandardNameLinked)(nil)
 
 // RPCRequestStandardNameLinked is the linked-engine port of
 // RPCRequestStandardName (research inventory #29, main-diverged; threat
@@ -22,20 +22,20 @@ func (r *RPCRequestStandardNameLinked) LintRuleName() string {
 	return "RPC_REQUEST_STANDARD_NAME"
 }
 
-// Message implements lint.LintRule.
+// Message implements lint.Rule.
 func (r *RPCRequestStandardNameLinked) Message() string {
 	return "rpc request should have suffix 'Request'"
 }
 
-// Validate implements lint.LintRule.
-func (r *RPCRequestStandardNameLinked) Validate(info core.LinkedFileInfo) ([]core.Issue, error) {
+// Validate implements lint.Rule.
+func (r *RPCRequestStandardNameLinked) Validate(info core.ProtoInfo) ([]core.Issue, error) {
 	var res []core.Issue
 
 	for _, service := range info.File.Services {
 		for _, rpc := range service.RPCs {
 			written := rpc.Request.Type
 			if written != rpc.Name+"Request" && written != service.Name+rpc.Name+"Request" {
-				res = core.AppendLinkedIssue(res, r, rpc.Pos, written)
+				res = core.AppendIssue(res, r, rpc.Pos, written)
 			}
 		}
 	}

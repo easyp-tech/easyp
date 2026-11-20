@@ -60,7 +60,7 @@ func TestDirectorySamePackage_Validate(t *testing.T) {
 
 			rule := &rules.DirectorySamePackageLinked{}
 
-			var infos []core.LinkedFileInfo
+			var infos []core.ProtoInfo
 			for _, fileName := range tc.fileNames {
 				infos = append(infos, parseLinkedFile(t, fileName))
 			}

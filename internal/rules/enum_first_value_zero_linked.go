@@ -4,7 +4,7 @@ import (
 	"github.com/easyp-tech/easyp/internal/core"
 )
 
-var _ core.LintRule = (*EnumFirstValueZeroLinked)(nil)
+var _ core.Rule = (*EnumFirstValueZeroLinked)(nil)
 
 // EnumFirstValueZeroLinked is the linked-engine port of EnumFirstValueZero
 // (research inventory #5, main-diverged with one documented deviation): main's
@@ -27,13 +27,13 @@ func (c *EnumFirstValueZeroLinked) LintRuleName() string {
 	return "ENUM_FIRST_VALUE_ZERO"
 }
 
-// Message implements lint.LintRule.
+// Message implements lint.Rule.
 func (c *EnumFirstValueZeroLinked) Message() string {
 	return "enum first value must be zero"
 }
 
-// Validate implements lint.LintRule.
-func (c *EnumFirstValueZeroLinked) Validate(info core.LinkedFileInfo) ([]core.Issue, error) {
+// Validate implements lint.Rule.
+func (c *EnumFirstValueZeroLinked) Validate(info core.ProtoInfo) ([]core.Issue, error) {
 	var res []core.Issue
 
 	for _, enum := range info.File.Enums {
@@ -47,7 +47,7 @@ func (c *EnumFirstValueZeroLinked) Validate(info core.LinkedFileInfo) ([]core.Is
 		if val.Number != "0" {
 			// val.Pos is the value's first token — the same position main
 			// reported as Meta.Pos (pinned by TestDeclPositionProbe).
-			res = core.AppendLinkedIssue(res, c, val.Pos, val.Number)
+			res = core.AppendIssue(res, c, val.Pos, val.Number)
 		}
 	}
 
@@ -58,7 +58,7 @@ func (c *EnumFirstValueZeroLinked) Validate(info core.LinkedFileInfo) ([]core.Is
 			}
 			val := enum.Values[0]
 			if val.Number != "0" {
-				res = core.AppendLinkedIssue(res, c, val.Pos, val.Number)
+				res = core.AppendIssue(res, c, val.Pos, val.Number)
 			}
 		}
 	}

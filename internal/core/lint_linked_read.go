@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"log/slog"
 	"os"
 
 	"github.com/easyp-tech/easyp/internal/parallel"
@@ -27,18 +28,18 @@ func (c *Core) readSource(ctx context.Context, fs FS, path string) ([]byte, erro
 
 // protoInfoFromSource builds the model of a file parsed on its own, without
 // the linked set. It is the fallback of protoInfoFromLinked.
-func (c *Core) protoInfoFromSource(ctx context.Context, fs FS, path string, src []byte) (LinkedFileInfo, error) {
+func (c *Core) protoInfoFromSource(ctx context.Context, fs FS, path string, src []byte) (ProtoInfo, error) {
 	file, err := protoast.Parse(path, src)
 	if err != nil {
-		return LinkedFileInfo{}, fmt.Errorf("Parse: %w", err)
+		return ProtoInfo{}, fmt.Errorf("Parse: %w", err)
 	}
 
 	imported, err := c.linkedFilesFromImport(ctx, fs, file)
 	if err != nil {
-		return LinkedFileInfo{}, fmt.Errorf("readFilesFromImport: %w", err)
+		return ProtoInfo{}, fmt.Errorf("readFilesFromImport: %w", err)
 	}
 
-	return LinkedFileInfo{
+	return ProtoInfo{
 		Path:          path,
 		ImportPath:    c.sourceImportPath(fs, path),
 		File:          file,
@@ -135,10 +136,10 @@ func (c *Core) parseOnTheirOwn(ctx context.Context, disk FS, paths []string, sou
 
 // protoInfoFromLinked builds a linted file's model from its linked tree, then
 // drops the tree; its outline stays available to files importing it.
-func (c *Core) protoInfoFromLinked(disk FS, linked *linkedFiles, path string) (LinkedFileInfo, error) {
+func (c *Core) protoInfoFromLinked(disk FS, linked *linkedFiles, path string) (ProtoInfo, error) {
 	file, ok := linked.linked.File(path)
 	if !ok || file.Syntax == nil {
-		return LinkedFileInfo{}, fmt.Errorf("Parse: %s was not linked", path)
+		return ProtoInfo{}, fmt.Errorf("Parse: %s was not linked", path)
 	}
 	model := protoast.Build(file.Syntax)
 	linked.outline(path)
@@ -148,15 +149,27 @@ func (c *Core) protoInfoFromLinked(disk FS, linked *linkedFiles, path string) (L
 	for _, imp := range model.Imports {
 		outline, ok := linked.outline(imp.Path)
 		if !ok {
-			return LinkedFileInfo{}, fmt.Errorf("readFilesFromImport: %s was not linked", imp.Path)
+			return ProtoInfo{}, fmt.Errorf("readFilesFromImport: %s was not linked", imp.Path)
 		}
 		imported[ConvertImportPath(imp.Location)] = outline
 	}
-	return LinkedFileInfo{
+	return ProtoInfo{
 		Path:          path,
 		ImportPath:    c.sourceImportPath(disk, path),
 		File:          model,
 		ImportedFiles: imported,
 		Resolved:      resolution(linked.linked, path),
 	}, nil
+}
+
+func (c *Core) close(ctx context.Context, f io.Closer, path string) {
+	err := f.Close()
+	if err != nil {
+		c.logger.Warn(
+			ctx,
+			"failed to close file",
+			slog.Any("error", err),
+			slog.String("path", path),
+		)
+	}
 }

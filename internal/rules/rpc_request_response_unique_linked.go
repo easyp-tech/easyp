@@ -37,18 +37,18 @@ func (r *RPCRequestResponseUniqueLinked) LintRuleName() string {
 	return "RPC_REQUEST_RESPONSE_UNIQUE"
 }
 
-// Message implements lint.LintRule.
+// Message implements lint.Rule.
 func (r *RPCRequestResponseUniqueLinked) Message() string {
 	return "request and response types must be unique across all RPCs"
 }
 
-// Validate implements lint.LintRule. Lint calls Collect and Finish instead.
-func (r *RPCRequestResponseUniqueLinked) Validate(core.LinkedFileInfo) ([]core.Issue, error) {
+// Validate implements lint.Rule. Lint calls Collect and Finish instead.
+func (r *RPCRequestResponseUniqueLinked) Validate(core.ProtoInfo) ([]core.Issue, error) {
 	return nil, nil
 }
 
 // Collect implements core.ModuleRule.
-func (r *RPCRequestResponseUniqueLinked) Collect(info core.LinkedFileInfo) error {
+func (r *RPCRequestResponseUniqueLinked) Collect(info core.ProtoInfo) error {
 	for _, service := range info.File.Services {
 		for _, rpc := range service.RPCs {
 			// rpc.Pos is the rpc keyword — the same position main reported as
@@ -93,7 +93,7 @@ func (r *RPCRequestResponseUniqueLinked) Finish() []core.IssueInfo {
 				seen[occ.name] = struct{}{}
 				continue
 			}
-			for _, issue := range core.AppendLinkedIssue(nil, r, occ.pos, occ.name) {
+			for _, issue := range core.AppendIssue(nil, r, occ.pos, occ.name) {
 				res = append(res, core.IssueInfo{Issue: issue, Path: occ.path})
 			}
 		}

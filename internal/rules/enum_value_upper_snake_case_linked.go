@@ -6,7 +6,7 @@ import (
 	"github.com/easyp-tech/easyp/internal/core"
 )
 
-var _ core.LintRule = (*EnumValueUpperSnakeCaseLinked)(nil)
+var _ core.Rule = (*EnumValueUpperSnakeCaseLinked)(nil)
 
 // EnumValueUpperSnakeCaseLinked is the linked-engine port of
 // EnumValueUpperSnakeCase (research inventory #8, main-diverged): main's
@@ -22,13 +22,13 @@ func (c *EnumValueUpperSnakeCaseLinked) LintRuleName() string {
 	return "ENUM_VALUE_UPPER_SNAKE_CASE"
 }
 
-// Message implements lint.LintRule.
+// Message implements lint.Rule.
 func (c *EnumValueUpperSnakeCaseLinked) Message() string {
 	return "enum value must be in UPPER_SNAKE_CASE"
 }
 
-// Validate implements lint.LintRule.
-func (c *EnumValueUpperSnakeCaseLinked) Validate(info core.LinkedFileInfo) ([]core.Issue, error) {
+// Validate implements lint.Rule.
+func (c *EnumValueUpperSnakeCaseLinked) Validate(info core.ProtoInfo) ([]core.Issue, error) {
 	var res []core.Issue
 
 	upperSnakeCase := regexp.MustCompile("^[A-Z0-9]+(_[A-Z0-9]+)*$")
@@ -36,7 +36,7 @@ func (c *EnumValueUpperSnakeCaseLinked) Validate(info core.LinkedFileInfo) ([]co
 	for _, enum := range info.File.Enums {
 		for _, field := range enum.Values {
 			if !upperSnakeCase.MatchString(field.Name) {
-				res = core.AppendLinkedIssue(res, c, field.Pos, field.Name)
+				res = core.AppendIssue(res, c, field.Pos, field.Name)
 			}
 		}
 	}
@@ -45,7 +45,7 @@ func (c *EnumValueUpperSnakeCaseLinked) Validate(info core.LinkedFileInfo) ([]co
 		for _, enum := range msg.Enums {
 			for _, field := range enum.Values {
 				if !upperSnakeCase.MatchString(field.Name) {
-					res = core.AppendLinkedIssue(res, c, field.Pos, field.Name)
+					res = core.AppendIssue(res, c, field.Pos, field.Name)
 				}
 			}
 		}

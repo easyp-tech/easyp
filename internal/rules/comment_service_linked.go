@@ -4,7 +4,7 @@ import (
 	"github.com/easyp-tech/easyp/internal/core"
 )
 
-var _ core.LintRule = (*CommentServiceLinked)(nil)
+var _ core.Rule = (*CommentServiceLinked)(nil)
 
 // CommentServiceLinked is the linked-engine port of CommentService (research
 // inventory #39, main-diverged). Presence predicate is MAIN'S: a declaration
@@ -30,18 +30,18 @@ func (c *CommentServiceLinked) LintRuleName() string {
 	return "COMMENT_SERVICE"
 }
 
-// Message implements lint.LintRule.
+// Message implements lint.Rule.
 func (c *CommentServiceLinked) Message() string {
 	return "service comments must not be empty"
 }
 
-// Validate implements lint.LintRule.
-func (c *CommentServiceLinked) Validate(info core.LinkedFileInfo) ([]core.Issue, error) {
+// Validate implements lint.Rule.
+func (c *CommentServiceLinked) Validate(info core.ProtoInfo) ([]core.Issue, error) {
 	var res []core.Issue
 
 	for _, service := range info.File.Services {
 		if !service.HasCommentAbove() {
-			res = core.AppendLinkedIssue(res, c, service.Pos, service.Name)
+			res = core.AppendIssue(res, c, service.Pos, service.Name)
 		}
 	}
 

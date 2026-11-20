@@ -10,16 +10,16 @@ import (
 	"github.com/easyp-tech/easyp/internal/core"
 )
 
-// parityLintRule is a minimal core.LintRule double for the construction cell:
+// parityLintRule is a minimal core.Rule double for the construction cell:
 // the linked engine consumes pre-validated rule lists, so the double needs no
 // name of its own.
 type parityLintRule struct{}
 
-var _ core.LintRule = parityLintRule{}
+var _ core.Rule = parityLintRule{}
 
 func (parityLintRule) Message() string { return "validation parity guard" }
 
-func (parityLintRule) Validate(_ core.LinkedFileInfo) ([]core.Issue, error) {
+func (parityLintRule) Validate(_ core.ProtoInfo) ([]core.Issue, error) {
 	return nil, nil
 }
 
@@ -101,11 +101,11 @@ func TestLintUseValidationParity(t *testing.T) {
 		assert.NotNil(t, ignoreOnly)
 
 		// The linked engine consumes pre-validated rule lists: core.New takes
-		// LintRule values directly and exposes no error surface at all — the
+		// Rule values directly and exposes no error surface at all — the
 		// absence of a second name validator IS the parity contract (one name
 		// surface: this registry feeds config validation, directive
 		// validation via KnownLintRules, and future schemas).
-		linked := core.New(core.Options{LinkedRules: []core.LintRule{parityLintRule{}}})
+		linked := core.New(core.Options{Rules: []core.Rule{parityLintRule{}}})
 		assert.NotNil(t, linked)
 	})
 

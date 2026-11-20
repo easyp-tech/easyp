@@ -2,7 +2,6 @@ package core
 
 import (
 	"fmt"
-	"reflect"
 	"strings"
 	"unicode"
 
@@ -20,14 +19,6 @@ import (
 type Position = protoast.Position
 
 type (
-	// Rule is an interface for a rule checking.
-	Rule interface {
-		// Message returns the message of the rule.
-		Message() string
-		// Validate validates the proto rule.
-		Validate(ProtoInfo) ([]Issue, error)
-	}
-
 	// CurrentProjectGitWalker is provider for fs walking for current project
 	CurrentProjectGitWalker interface {
 		GetDirWalker(workingDir, gitRef, path string) (DirWalker, error)
@@ -52,16 +43,6 @@ type (
 
 	// PackageName type alias for package name `package` section in protofile.
 	PackageName string
-
-	// ProtoInfo is the information of a proto file.
-	ProtoInfo struct {
-		directiveComments []directiveComment
-		Path              string
-		// ImportPath is relative to a declared source root, independently of the scan root.
-		ImportPath           string
-		Info                 *unordered.Proto
-		ProtoFilesFromImport map[ImportPath]*unordered.Proto
-	}
 
 	Import struct {
 		ProtoFilePath string
@@ -122,18 +103,6 @@ func GetPackageName(protoFile *unordered.Proto) PackageName {
 	return PackageName(protoFile.ProtoBody.Packages[0].Name)
 }
 
-// AppendIssue records a rule finding. The lint engine applies per-file suppressions.
-func AppendIssue(
-	issues []Issue, lintRule Rule, pos meta.Position, sourceName string, comments []*parser.Comment,
-) []Issue {
-	return append(issues, buildError(lintRule, fromMetaPos(pos), sourceName))
-}
-
-// GetRuleName returns rule name
-func GetRuleName(rule Rule) string {
-	return toUpperSnakeCase(reflect.TypeOf(rule).Elem().Name())
-}
-
 // toUpperSnakeCase converts a string from PascalCase or camelCase to UPPER_SNEAK_CASE.
 func toUpperSnakeCase(s string) string {
 	var result []rune
@@ -151,16 +120,6 @@ func toUpperSnakeCase(s string) string {
 	}
 
 	return string(result)
-}
-
-// buildError creates an Issue.
-func buildError(lintRule Rule, pos Position, sourceName string) Issue {
-	return Issue{
-		Position:   pos,
-		SourceName: sourceName,
-		Message:    lintRule.Message(),
-		RuleName:   GetRuleName(lintRule),
-	}
 }
 
 // fromMetaPos converts a go-protoparser source position to the issue position

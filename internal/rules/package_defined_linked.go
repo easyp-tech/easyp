@@ -4,7 +4,7 @@ import (
 	"github.com/easyp-tech/easyp/internal/core"
 )
 
-var _ core.LintRule = (*PackageDefinedLinked)(nil)
+var _ core.Rule = (*PackageDefinedLinked)(nil)
 
 // PackageDefinedLinked is the linked-engine port of PackageDefined (research
 // inventory #2, main-diverged position): a rule for checking that all files
@@ -18,17 +18,17 @@ func (p *PackageDefinedLinked) LintRuleName() string {
 	return "PACKAGE_DEFINED"
 }
 
-// Message implements lint.LintRule.
+// Message implements lint.Rule.
 func (p *PackageDefinedLinked) Message() string {
 	return "package should be defined"
 }
 
-// Validate implements lint.LintRule.
-func (p *PackageDefinedLinked) Validate(info core.LinkedFileInfo) ([]core.Issue, error) {
+// Validate implements lint.Rule.
+func (p *PackageDefinedLinked) Validate(info core.ProtoInfo) ([]core.Issue, error) {
 	var res []core.Issue
 
 	if len(info.File.Packages) == 0 {
-		res = core.AppendLinkedIssue(res, p, core.Position{
+		res = core.AppendIssue(res, p, core.Position{
 			Filename: info.Path,
 		}, info.Path)
 	}

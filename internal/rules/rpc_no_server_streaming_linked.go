@@ -4,7 +4,7 @@ import (
 	"github.com/easyp-tech/easyp/internal/core"
 )
 
-var _ core.LintRule = (*RPCNoServerStreamingLinked)(nil)
+var _ core.Rule = (*RPCNoServerStreamingLinked)(nil)
 
 // RPCNoServerStreamingLinked is the linked-engine port of RPCNoServerStreaming
 // (research inventory #41, verbatim-from-lab): the etalon's streaming
@@ -20,19 +20,19 @@ func (r *RPCNoServerStreamingLinked) LintRuleName() string {
 	return "RPC_NO_SERVER_STREAMING"
 }
 
-// Message implements lint.LintRule.
+// Message implements lint.Rule.
 func (r *RPCNoServerStreamingLinked) Message() string {
 	return "server streaming RPCs are not allowed"
 }
 
-// Validate implements lint.LintRule.
-func (r *RPCNoServerStreamingLinked) Validate(info core.LinkedFileInfo) ([]core.Issue, error) {
+// Validate implements lint.Rule.
+func (r *RPCNoServerStreamingLinked) Validate(info core.ProtoInfo) ([]core.Issue, error) {
 	var res []core.Issue
 
 	for _, service := range info.File.Services {
 		for _, rpc := range service.RPCs {
 			if rpc.Response.Stream {
-				res = core.AppendLinkedIssue(res, r, rpc.Pos, rpc.Name)
+				res = core.AppendIssue(res, r, rpc.Pos, rpc.Name)
 			}
 		}
 	}

@@ -62,7 +62,7 @@ func TestRPCRequestResponseUnique_Validate(t *testing.T) {
 
 			rule := &rules.RPCRequestResponseUniqueLinked{}
 
-			var infos []core.LinkedFileInfo
+			var infos []core.ProtoInfo
 			for _, fileName := range tc.fileNames {
 				infos = append(infos, parseLinkedFile(t, fileName))
 			}

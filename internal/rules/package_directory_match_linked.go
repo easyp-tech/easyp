@@ -8,7 +8,7 @@ import (
 	"github.com/easyp-tech/easyp/internal/core"
 )
 
-var _ core.LintRule = (*PackageDirectoryMatchLinked)(nil)
+var _ core.Rule = (*PackageDirectoryMatchLinked)(nil)
 
 // PackageDirectoryMatchLinked is the linked-engine port of
 // PackageDirectoryMatch (research inventory #3, verbatim-from-lab): a rule for
@@ -26,13 +26,13 @@ func (d *PackageDirectoryMatchLinked) LintRuleName() string {
 	return "PACKAGE_DIRECTORY_MATCH"
 }
 
-// Message implements lint.LintRule.
+// Message implements lint.Rule.
 func (d *PackageDirectoryMatchLinked) Message() string {
 	return "package does not match directory path"
 }
 
-// Validate implements lint.LintRule.
-func (d *PackageDirectoryMatchLinked) Validate(info core.LinkedFileInfo) ([]core.Issue, error) {
+// Validate implements lint.Rule.
+func (d *PackageDirectoryMatchLinked) Validate(info core.ProtoInfo) ([]core.Issue, error) {
 	var res []core.Issue
 
 	name := strings.TrimPrefix(info.Path, d.Root)
@@ -56,7 +56,7 @@ func (d *PackageDirectoryMatchLinked) Validate(info core.LinkedFileInfo) ([]core
 		}
 		// pkgInfo.Pos is the declaration's first token — the same position
 		// main reported as Meta.Pos (pinned by TestDeclPositionProbe).
-		res = core.AppendLinkedIssue(res, d, pkgInfo.Pos, sourceName)
+		res = core.AppendIssue(res, d, pkgInfo.Pos, sourceName)
 		if qualifiedPackage != expectedPackage {
 			res[len(res)-1].Message = fmt.Sprintf("package %q does not match module-relative directory %q; expected %q or module-qualified %q", pkgInfo.Name, preparePath, expectedPackage, qualifiedPackage)
 		} else {

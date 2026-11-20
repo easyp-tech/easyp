@@ -4,7 +4,7 @@ import (
 	"github.com/easyp-tech/easyp/internal/core"
 )
 
-var _ core.LintRule = (*CommentEnumValueLinked)(nil)
+var _ core.Rule = (*CommentEnumValueLinked)(nil)
 
 // CommentEnumValueLinked is the linked-engine port of CommentEnumValue
 // (research inventory #34, main-diverged). Presence predicate is MAIN'S: a
@@ -31,19 +31,19 @@ func (c *CommentEnumValueLinked) LintRuleName() string {
 	return "COMMENT_ENUM_VALUE"
 }
 
-// Message implements lint.LintRule.
+// Message implements lint.Rule.
 func (c *CommentEnumValueLinked) Message() string {
 	return "enum value comments must not be empty"
 }
 
-// Validate implements lint.LintRule.
-func (c *CommentEnumValueLinked) Validate(info core.LinkedFileInfo) ([]core.Issue, error) {
+// Validate implements lint.Rule.
+func (c *CommentEnumValueLinked) Validate(info core.ProtoInfo) ([]core.Issue, error) {
 	var res []core.Issue
 
 	for _, enum := range info.File.Enums {
 		for _, value := range enum.Values {
 			if !value.HasCommentAbove() {
-				res = core.AppendLinkedIssue(res, c, value.Pos, value.Name)
+				res = core.AppendIssue(res, c, value.Pos, value.Name)
 			}
 		}
 	}
@@ -52,7 +52,7 @@ func (c *CommentEnumValueLinked) Validate(info core.LinkedFileInfo) ([]core.Issu
 		for _, enum := range msg.Enums {
 			for _, value := range enum.Values {
 				if !value.HasCommentAbove() {
-					res = core.AppendLinkedIssue(res, c, value.Pos, value.Name)
+					res = core.AppendIssue(res, c, value.Pos, value.Name)
 				}
 			}
 		}

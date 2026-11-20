@@ -31,11 +31,11 @@ var _ ModuleRule = (*serialCollectModuleRule)(nil)
 
 func (m *serialCollectModuleRule) Message() string { return "serial collect finding" }
 
-func (m *serialCollectModuleRule) Validate(LinkedFileInfo) ([]Issue, error) {
+func (m *serialCollectModuleRule) Validate(ProtoInfo) ([]Issue, error) {
 	return nil, nil
 }
 
-func (m *serialCollectModuleRule) Collect(info LinkedFileInfo) error {
+func (m *serialCollectModuleRule) Collect(info ProtoInfo) error {
 	m.collected = append(m.collected, info.Path)
 	return nil
 }
@@ -57,14 +57,14 @@ func matrixCorpus() map[string]string {
 	return files
 }
 
-// TestLintLinkedMatrix is the parallel-correctness matrix for the linked lint
+// TestLintMatrix is the parallel-correctness matrix for the linked lint
 // engine: repeated-run byte determinism and the shared-instance statelessness
 // audit under -race (ROADMAP criteria 1 and 4), the serial walk-order Collect
 // lifecycle, ctx cancellation propagation, walk-order error precedence, and
 // the COMPILE-class contract driven through the engine one level above the
 // Phase 2 linkSources cells (mixed-corpus isolation, dep diagnostics,
 // suppression bypass per research A6, compile-order determinism).
-func TestLintLinkedMatrix(t *testing.T) {
+func TestLintMatrix(t *testing.T) {
 	t.Parallel()
 
 	t.Run("repeated_runs_byte_identical", func(t *testing.T) {
@@ -78,7 +78,7 @@ func TestLintLinkedMatrix(t *testing.T) {
 
 		var runs [][]IssueInfo
 		for range 5 {
-			got, err := app.LintLinked(t.Context(), walker)
+			got, err := app.Lint(t.Context(), walker)
 			require.NoError(t, err)
 			runs = append(runs, got)
 		}
@@ -103,7 +103,7 @@ func TestLintLinkedMatrix(t *testing.T) {
 		// shared linkedFiles adapter (ROADMAP criterion 4 statelessness
 		// audit; a stateful rule would trip the detector here).
 		app := newLinkedEngine(nil, false, nil, &doubleRuleAlpha{}, &doubleRuleBeta{}, &doubleModuleRule{})
-		got, err := app.LintLinked(t.Context(), fs.NewFSWalker(root, "."))
+		got, err := app.Lint(t.Context(), fs.NewFSWalker(root, "."))
 		require.NoError(t, err)
 
 		// Exact totals, never range bounds: 8 files x 2 messages x 2 rules +
@@ -171,7 +171,7 @@ func TestLintLinkedMatrix(t *testing.T) {
 		for run := range 2 {
 			module := &serialCollectModuleRule{}
 			app := newLinkedEngine(nil, false, nil, module)
-			_, err := app.LintLinked(t.Context(), walker)
+			_, err := app.Lint(t.Context(), walker)
 			require.NoError(t, err)
 
 			// The recorded Collect sequence equals the walk order exactly,
@@ -189,7 +189,7 @@ func TestLintLinkedMatrix(t *testing.T) {
 
 		ctx, cancel := context.WithCancel(t.Context())
 		cancel()
-		got, err := app.LintLinked(ctx, fs.NewFSWalker(root, "."))
+		got, err := app.Lint(ctx, fs.NewFSWalker(root, "."))
 
 		// Cancellation propagates out of the engine, never swallowed: the
 		// walk loop and both parallel.Run sites return ctx.Err() under %w
@@ -211,7 +211,7 @@ func TestLintLinkedMatrix(t *testing.T) {
 			"z_bad.proto": "syntax = \"proto3\";\n\npackage zeta;\n\nmessage Zed {\n  string x = 1;\n",
 		})
 		app := newLinkedEngine(nil, false, nil, &doubleRuleAlpha{})
-		got, err := app.LintLinked(t.Context(), fs.NewFSWalker(root, "."))
+		got, err := app.Lint(t.Context(), fs.NewFSWalker(root, "."))
 		require.Error(t, err)
 		require.Nil(t, got)
 
@@ -233,7 +233,7 @@ func TestLintLinkedMatrix(t *testing.T) {
 		// Doubles eligible for every clean declaration: if rules ran anywhere
 		// on this corpus they would report these messages.
 		app := newLinkedEngine(nil, false, nil, &doubleRuleAlpha{}, &doubleRuleBeta{}, &doubleModuleRule{})
-		got, err := app.LintLinked(t.Context(), fs.NewFSWalker(root, "."))
+		got, err := app.Lint(t.Context(), fs.NewFSWalker(root, "."))
 		require.NoError(t, err)
 
 		// COMPILE issues isolate to the erroneous file (exact count, exact
@@ -259,7 +259,7 @@ func TestLintLinkedMatrix(t *testing.T) {
 			"b.proto": "syntax = \"proto3\";\n\npackage dep;\n\nmessage B {\n  Ghost field = 1;\n}\n",
 		})
 		app := newLinkedEngine(nil, false, nil, &doubleRuleAlpha{}, &doubleRuleBeta{})
-		got, err := app.LintLinked(t.Context(), fs.NewFSWalker(root, "."))
+		got, err := app.Lint(t.Context(), fs.NewFSWalker(root, "."))
 		require.NoError(t, err)
 
 		// The dep file's semantic error surfaces as a COMPILE issue carried
@@ -295,7 +295,7 @@ func TestLintLinkedMatrix(t *testing.T) {
 			map[string][]string{"DOUBLE_RULE_ALPHA": {"broken.proto"}},
 			&doubleRuleAlpha{},
 		)
-		got, err := app.LintLinked(t.Context(), fs.NewFSWalker(root, "."))
+		got, err := app.Lint(t.Context(), fs.NewFSWalker(root, "."))
 		require.NoError(t, err)
 
 		// The COMPILE issue returns unchanged through every armed channel.
@@ -318,9 +318,9 @@ func TestLintLinkedMatrix(t *testing.T) {
 		app := newLinkedEngine(nil, false, nil, &doubleRuleAlpha{})
 		walker := fs.NewFSWalker(root, ".")
 
-		first, err := app.LintLinked(t.Context(), walker)
+		first, err := app.Lint(t.Context(), walker)
 		require.NoError(t, err)
-		second, err := app.LintLinked(t.Context(), walker)
+		second, err := app.Lint(t.Context(), walker)
 		require.NoError(t, err)
 
 		// Byte-identical across runs, with the sort stability holding through
@@ -345,7 +345,7 @@ func TestLintLinkedMatrix(t *testing.T) {
 	})
 }
 
-// TestLintLinkedErrorPathFidelity pins the linked engine's error-path
+// TestLintErrorPathFidelity pins the linked engine's error-path
 // classification (Phase 5 WR-01/WR-02/IN-01 fixes plus the IN-02
 // keep-decision): a real import open/read failure must degrade the run
 // exactly like the old per-file engine — a command error carrying the OS
@@ -354,7 +354,7 @@ func TestLintLinkedMatrix(t *testing.T) {
 // applies on disk reads, cancellation must be honored at the resolver
 // boundary like every sibling resolver, and COMPILE diagnostics stay outside
 // the suppression machinery.
-func TestLintLinkedErrorPathFidelity(t *testing.T) {
+func TestLintErrorPathFidelity(t *testing.T) {
 	t.Parallel()
 
 	t.Run("unreadable_import_falls_back", func(t *testing.T) {
@@ -380,8 +380,8 @@ func TestLintLinkedErrorPathFidelity(t *testing.T) {
 			"a.proto": "syntax = \"proto3\";\n\npackage alpha;\n\nimport \"dep.proto\";\n\nmessage A {\n  dep.B b = 1;\n}\n",
 		})
 		app := New(Options{
-			Logger:      logger.NewNop(),
-			LinkedRules: []LintRule{&doubleRuleAlpha{}},
+			Logger: logger.NewNop(),
+			Rules:  []Rule{&doubleRuleAlpha{}},
 			OpenSourceFile: func(p string) (io.ReadCloser, error) {
 				if strings.HasSuffix(filepath.ToSlash(p), "/dep.proto") {
 					return nil, &os.PathError{Op: "open", Path: p, Err: os.ErrPermission}
@@ -389,7 +389,7 @@ func TestLintLinkedErrorPathFidelity(t *testing.T) {
 				return os.Open(p)
 			},
 		})
-		got, err := app.LintLinked(t.Context(), fs.NewFSWalker(root, "."))
+		got, err := app.Lint(t.Context(), fs.NewFSWalker(root, "."))
 
 		// The fallback degrades nothing into COMPILE: the corpus falls back to
 		// the per-file path, whose import read errors through the same
@@ -426,8 +426,8 @@ func TestLintLinkedErrorPathFidelity(t *testing.T) {
 			require.NoError(t, os.WriteFile(filepath.Join(root, name), []byte(src), 0o644))
 		}
 		core := New(Options{
-			Logger:      logger.NewNop(),
-			LinkedRules: []LintRule{&doubleRuleAlpha{}},
+			Logger: logger.NewNop(),
+			Rules:  []Rule{&doubleRuleAlpha{}},
 			ImportFileAllowed: func(p string) bool {
 				return !strings.HasSuffix(filepath.ToSlash(p), "/b.proto")
 			},
@@ -472,7 +472,7 @@ func TestLintLinkedErrorPathFidelity(t *testing.T) {
 		// End to end, a policy-denied corpus file is a command error naming
 		// the file, with no findings for it (pass-1 readSource consults the
 		// same policy funnel).
-		gotEngine, errEngine := core.LintLinked(t.Context(), walker)
+		gotEngine, errEngine := core.Lint(t.Context(), walker)
 		require.Error(t, errEngine)
 		require.Nil(t, gotEngine)
 		require.ErrorIs(t, errEngine, os.ErrNotExist)
@@ -526,11 +526,11 @@ func TestLintLinkedErrorPathFidelity(t *testing.T) {
 			require.NoError(t, os.WriteFile(filepath.Join(root, name), []byte(src), 0o644))
 		}
 		app := New(Options{
-			Logger:      logger.NewNop(),
-			LinkedRules: []LintRule{&doubleRuleAlpha{}},
-			Ignore:      []string{"dep"},
+			Logger: logger.NewNop(),
+			Rules:  []Rule{&doubleRuleAlpha{}},
+			Ignore: []string{"dep"},
 		})
-		got, err := app.LintLinked(t.Context(), fs.NewFSWalker(root, "."))
+		got, err := app.Lint(t.Context(), fs.NewFSWalker(root, "."))
 		require.NoError(t, err)
 
 		// The COMPILE diagnostic on the ignored, broken dependency is present

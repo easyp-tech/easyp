@@ -107,7 +107,7 @@ enum Empty {
 
 	rule := rules.EnumFirstValueZeroLinked{}
 
-	issues, err := rule.Validate(core.LinkedFileInfo{Path: "empty.proto", File: file})
+	issues, err := rule.Validate(core.ProtoInfo{Path: "empty.proto", File: file})
 	require.NoError(t, err)
 	require.Empty(t, issues)
 }
