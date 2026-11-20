@@ -13,7 +13,6 @@ import (
 
 	"github.com/easyp-tech/easyp/internal/config"
 	v1 "github.com/easyp-tech/easyp/internal/config/v1"
-	"github.com/easyp-tech/easyp/internal/core"
 	"github.com/easyp-tech/easyp/internal/fs/fs"
 	"github.com/easyp-tech/easyp/internal/logger"
 )
@@ -21,36 +20,31 @@ import (
 func TestBreakingIgnoreUnstableConfigReachesCore(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
-		name                     string
-		legacy, ignore, explicit bool
-		wantCount                int
+		name             string
+		ignore, explicit bool
+		wantCount        int
 	}{
 		{name: "v1_enabled", ignore: true, wantCount: 1},
 		{name: "v1_disabled", wantCount: 2},
-		{name: "legacy_enabled", legacy: true, ignore: true, wantCount: 1},
-		{name: "legacy_disabled", legacy: true, wantCount: 2},
 		{name: "explicit_baseline_preserves_options", ignore: true, explicit: true, wantCount: 1},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			cfg := config.BreakingCheck{IgnoreUnstable: tt.ignore, AgainstGitRef: "release", Use: []string{core.BreakingCheckFilesCheck}}
-			if !tt.legacy {
-				policy, err := v1.ParsePolicy(strings.NewReader(fmt.Sprintf("version: v1\nbreaking:\n  baseline: git:release\n  categories: [FILE]\n  ignore_unstable: %t\n", tt.ignore)))
-				require.NoError(t, err)
-				set := flag.NewFlagSet("test", flag.ContinueOnError)
-				set.String(flagAgainstBranchName.Name, "master", "")
-				if tt.explicit {
-					require.NoError(t, set.Set(flagAgainstBranchName.Name, "override"))
-				}
-				cfg, err = resolveV1BreakingConfig(cli.NewContext(&cli.App{}, set, nil), policy)
-				require.NoError(t, err)
-				assert.Equal(t, tt.ignore, cfg.IgnoreUnstable)
-				if tt.explicit {
-					assert.Equal(t, "override", cfg.AgainstGitRef)
-				} else {
-					assert.Equal(t, "release", cfg.AgainstGitRef)
-				}
+			policy, err := v1.ParsePolicy(strings.NewReader(fmt.Sprintf("version: v1\nbreaking:\n  baseline: git:release\n  categories: [FILE]\n  ignore_unstable: %t\n", tt.ignore)))
+			require.NoError(t, err)
+			set := flag.NewFlagSet("test", flag.ContinueOnError)
+			set.String(flagAgainstBranchName.Name, "master", "")
+			if tt.explicit {
+				require.NoError(t, set.Set(flagAgainstBranchName.Name, "override"))
+			}
+			cfg, err := resolveV1BreakingConfig(cli.NewContext(&cli.App{}, set, nil), policy)
+			require.NoError(t, err)
+			assert.Equal(t, tt.ignore, cfg.IgnoreUnstable)
+			if tt.explicit {
+				assert.Equal(t, "override", cfg.AgainstGitRef)
+			} else {
+				assert.Equal(t, "release", cfg.AgainstGitRef)
 			}
 			baseline, current := t.TempDir(), t.TempDir()
 			for _, pkg := range []string{"stable.v1", "unstable.v1beta1"} {
@@ -62,11 +56,7 @@ func TestBreakingIgnoreUnstableConfigReachesCore(t *testing.T) {
 			require.NoError(t, err)
 			issues, err := app.CompareBreaking(t.Context(), fs.NewFSWalker(current, "."), fs.NewFSWalker(baseline, "."), nil)
 			require.NoError(t, err)
-			expected := tt.wantCount
-			if !tt.legacy {
-				expected *= 2
-			}
-			assert.Len(t, issues, expected)
+			assert.Len(t, issues, tt.wantCount*2)
 			moved, deleted := 0, 0
 			for _, issue := range issues {
 				if strings.Contains(issue.Message, "was moved") {
@@ -80,11 +70,7 @@ func TestBreakingIgnoreUnstableConfigReachesCore(t *testing.T) {
 				}
 			}
 			assert.Equal(t, tt.wantCount, moved)
-			if !tt.legacy {
-				assert.Equal(t, tt.wantCount, deleted)
-			} else {
-				assert.Zero(t, deleted)
-			}
+			assert.Equal(t, tt.wantCount, deleted)
 		})
 	}
 }

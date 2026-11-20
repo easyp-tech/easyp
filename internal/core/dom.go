@@ -20,11 +20,6 @@ type (
 		Validate(ProtoInfo) ([]Issue, error)
 	}
 
-	// CurrentProjectGitWalker is provider for fs walking for current project
-	CurrentProjectGitWalker interface {
-		GetDirWalker(workingDir, gitRef, path string) (DirWalker, error)
-	}
-
 	// IssueInfo contains the information of an issue and the path.
 	IssueInfo struct {
 		Issue
@@ -54,56 +49,6 @@ type (
 		Info                 *unordered.Proto
 		ProtoFilesFromImport map[ImportPath]*unordered.Proto
 	}
-
-	Import struct {
-		ProtoFilePath string
-		PackageName   PackageName
-		*parser.Import
-	}
-
-	Service struct {
-		ProtoFilePath string
-		PackageName   PackageName
-		*unordered.Service
-	}
-
-	Message struct {
-		MessagePath   string
-		ProtoFilePath string
-		PackageName   PackageName
-		*unordered.Message
-	}
-
-	OneOf struct {
-		OneOfPath     string
-		ProtoFilePath string
-		PackageName   PackageName
-		*parser.Oneof
-	}
-
-	Enum struct {
-		EnumPath      string
-		ProtoFilePath string
-		PackageName   PackageName
-		*unordered.Enum
-	}
-
-	Collection struct {
-		Imports  map[ImportPath]Import
-		Services map[string]Service
-		// key message path - for supporting nested messages:
-		// message MainMessage {
-		// 		message NestedMessage{};
-		// };
-		// will be: MainMessage.NestedMessage
-		Messages map[string]Message
-		OneOfs   map[string]OneOf
-		Enums    map[string]Enum
-	}
-
-	// collects proto data collections
-	// packageName -> services,messages etc
-	ProtoData map[PackageName]*Collection
 )
 
 func GetPackageName(protoFile *unordered.Proto) PackageName {
