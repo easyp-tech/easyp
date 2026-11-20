@@ -483,3 +483,40 @@ func TestLintGoldenFullRegistryOld(t *testing.T) {
 
 	require.Equal(t, goldenIssues, got, "the byte-frozen old engine must reproduce the committed golden on the full-registry corpus")
 }
+
+// TestLintGoldenFullRegistryLinked is the parity drive: the DORMANT linked
+// engine must reproduce the old-captured golden exactly — the full compare
+// including Message, Position (Filename/Offset/Line/Column), SourceName and
+// the D-01 order, upgrading the Phase-4 fingerprint which deliberately
+// excluded Message and whole-struct equality. Proven PRE-flip while both
+// engines exist to diff; this function SURVIVES the flip (05-03 renames its
+// symbols mechanically and it becomes THE post-flip golden test).
+//
+// The engine output is compared as emitted: LintLinked already applies the
+// D-01 total sort, so re-sorting here would mask an engine-order regression.
+// The totality guard runs on the engine's own order — a five-term tie means
+// the engine's stable sort had nothing to order the pair by and the frozen
+// sequence would be nondeterministic.
+func TestLintGoldenFullRegistryLinked(t *testing.T) {
+	t.Parallel()
+
+	cfg := config.LintConfig{Use: goldenCorpusUse}
+	root := writeGoldenCorpus(t, goldenCorpusFiles)
+
+	linkedRules, linkedIgnoreOnly, err := rules.NewLinked(cfg)
+	require.NoError(t, err)
+	linkedApp := core.New(core.Options{
+		Logger:              logger.NewNop(),
+		LinkedRules:         linkedRules,
+		IgnoreOnly:          linkedIgnoreOnly,
+		AllowCommentIgnores: true,
+		KnownLintRules:      rules.AllRuleNames(),
+	})
+	got, err := linkedApp.LintLinked(t.Context(), fs.NewFSWalker(root, "."))
+	require.NoError(t, err)
+
+	requireGoldenPurity(t, got)
+	requireTotalOrder(t, got)
+
+	require.Equal(t, goldenIssues, got, "the linked engine must reproduce the old-captured golden message-for-message, in the D-01 order")
+}
