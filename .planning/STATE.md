@@ -172,6 +172,8 @@ None yet.
 - Pre-existing wazero data race (internal/adapters/plugin, -race) — dedicated subsystem fix needed before the Phase 7 full-suite gate (deferred-items.md, Phase 1 acknowledged). VERIFIER CORRECTION (Phase 3): poisons TWO packages — internal/adapters/plugin AND internal/generation (race stack through BuiltinPluginExecutor.Execute()); same root cause
 - Phase 3 complete (4/4). Phase-4 standing constraints (UAT-ratified 2026-11-19, ROADMAP backlog 999.1/999.2): disk-instrumentation cell (readSource once per corpus file) + suppression-centrality at every rule-port batch (central-filter cells stay green); rules never self-suppress
 - Phase 3: engine reads rules from new additive Core.linkedRules []LintRule / Options.LinkedRules (old engine keeps c.rules — dormancy provable); rename map in lint_model.go header — consolidate at Phase 5
+- Phase 4 complete (8/8). CR-01 fixed: ignore_only = group MEMBERSHIP (collectFile skips shouldIgnoreLinked files before Collect — main's Validate-skip semantics); harness threads ignoreOnly; SourceName is the 5th fingerprint/sort term; duplicate inputs per-occurrence/last-wins. Phase-5 flip checklist lives in 04-07-SUMMARY.md deferred-decisions ledger (18 entries): helpers/exclusion deletion, rename-map consolidation, buildCore wiring
+- Phase 4 deferred lab improvements (pinned, Phase 5/7 decide): resolution-based ImportUsed, cross-file RPCRequestResponseUnique, swift_prefix fix, NamePos positions, helper-casing adoption — parity-first, each needs an explicit decision at flip
 
 ## Deferred Items
 
