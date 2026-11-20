@@ -3,16 +3,16 @@ gsd_state_version: "1.0"
 current_phase: 05
 current_phase_name: Переключение lint-пути и ворота совместимости
 status: executing
-stopped_at: Completed 05-02-PLAN.md
-last_updated: "2026-11-20T19:53:11.216Z"
+stopped_at: Completed 05-03-PLAN.md
+last_updated: "2026-11-20T20:32:53.425Z"
 last_activity: 2026-11-20
 last_activity_desc: Phase 05 execution started
-state_head: 94860c09732719d4c3d54c41182d240db35a1558
+state_head: 4238fbef11279cd6528593599d08bd0f9818f7d8
 progress:
   total_phases: 7
   completed_phases: 4
   total_plans: 24
-  completed_plans: 21
+  completed_plans: 23
   percent: 57
 ---
 
@@ -41,7 +41,7 @@ See: .planning/PROJECT.md (updated 2026-11-19)
 ## Current Position
 
 Phase: 05 (Переключение lint-пути и ворота совместимости) — EXECUTING
-Plan: 3 of 4
+Plan: 4 of 4
 Status: Ready to execute
 Last activity: 2026-11-20 — Phase 05 execution started
 
@@ -92,6 +92,7 @@ Progress: [███░░░░░░░] 29%
 | Phase 04 P08 | 15 min | 4 tasks | 15 files |
 | Phase 05 P01 | 20 min | 3 tasks | 3 files |
 | Phase 05 P02 | 22 min | 3 tasks | 3 files |
+| Phase 05 P03 | 16 min | 2 tasks | 135 files |
 
 ## Accumulated Context
 
@@ -167,6 +168,10 @@ Recent decisions affecting current work:
 - [Phase 05]: 05-02 WR-01 cell re-derived against live source: the plan's directory fixture cannot drive the resolver error path (FSWalker.Open refuses non-regular files with ErrUnsupported; a directory named dep.proto is itself walked as a corpus file, so pass-1 readErrs skip linking before the resolver runs) and the expected outcome is a command error carrying the OS cause, not 'no error' — the plan's own must-have parity truth and threat model T-05-02 require it; EACCES injected through Options.OpenSourceFile exercises the identical openDiskSource funnel
 - [Phase 05]: 05-02 WR-02 cell re-derived to the resolver boundary: engine-level RED is impossible because pass-1 readSource consults the same openDiskSource policy funnel (pre-fix the run already errors with the exact os.ErrNotExist carrier), so the corpus-branch denial is pinned at the lintResolver level (pre-fix it serves denied content from memory — the actual bypass) plus the carrier and end-to-end engine assertions
 - [Phase 05]: 05-02 typed broken discrimination via errors.As on *os.PathError keeps the etalon A4 non-local COMPILE classification (the plain non-local rejection wraps no PathError and stays raw); IN-02 keep-decision (COMPILE diagnostics bypass all suppression machinery) recorded in the linkSources doc comment and pinned by ignored_broken_dependency_not_suppressed
+- [Phase 05]: [Phase 05]: 05-03 THE FLIP is one atomic commit (feat 4238fbe, 135 files, +538/−6355): the old lint contour (44 production + 15 test files) deleted, the rename map collapsed so buildCore/actionV1 keep their text, class-1 COMPILE cells landed through actionV1 — rollback = git revert 4238fbe
+- [Phase 05]: [Phase 05]: 05-03 Gate-3 twin fixture corrected for the linked engine's full corpus linking (Excluded_File.proto message CleanFile -> ExcludedMsg, Pitfall 7): the pinned stdout literals re-captured from the byte-frozen pre-flip binary over the corrected fixture are byte-identical to the 05-01 literals — the golden literals never moved, only the fixture
+- [Phase 05]: [Phase 05]: 05-03 dormancy audit inverted: the Phase-3/4 "old path byte-frozen" audit is replaced by the breaking-path freeze gate (proto_info_read.go/proto_comments.go zero-diff), the deletion-completeness zero-LIVE-reference greps, and the six-root subsystem suite; the old audit command fails confusingly by design — verifier note recorded
+- [Phase 05]: The class-1 cells' RED evidence is machine-validated (two RED_EVIDENCE_OK records) rather than a committed test(05-03) commit — the plan's RATIFIED atomic-flip mandate requires the cells, deletions and renames in ONE commit, and the cells are unreachable before it — The plan's lintProtoInfoRead==1 criterion is reconciled to zero-LIVE-references (8 text lines remain: the byte-identical parity-pin comment+literal, the frozen-file comment, five exact-string proof cells — all mandated by the plan's own canonical-six C1 prohibition)
 
 ### Pending Todos
 
@@ -194,6 +199,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-11-20T19:53:10.488Z
-Stopped at: Completed 05-02-PLAN.md
+Last session: 2026-11-20T20:32:32.584Z
+Stopped at: Completed 05-03-PLAN.md
 Resume file: None

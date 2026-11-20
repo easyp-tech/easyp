@@ -1,10 +1,10 @@
 ---
 schema_version: 1
-open_count: 12
+open_count: 15
 waived_count: 0
 fixed_count: 0
-total_count: 12
-last_updated: 2026-11-20T19:51:55.295Z
+total_count: 15
+last_updated: 2026-11-20T20:29:32.513Z
 ---
 
 # Broken Windows Ledger
@@ -27,6 +27,9 @@ last_updated: 2026-11-20T19:51:55.295Z
 | 10 | 05 | deviation | internal/rules/golden_full_registry_test.go |  | 05-01: plan's Task-1 verify chain (git status \| grep -vc \| grep -q under pipefail) cannot exit 0 when the guard PASSES (grep -c exits 1 on zero selected lines); gate run with corrected plumbing preserving the exact intended semantics (count == 0), test green; re-run before any narration | open |  | 2026-11-20T19:21:06.311Z |  |
 | 11 | 05 | deviation | internal/core/lint_linked_matrix_test.go |  | 05-02: WR-01 cell re-derived against live source (Rule 3): the plan's directory fixture cannot drive the resolver error path — FSWalker.Open refuses non-regular files with ErrUnsupported and a directory named dep.proto is walked as a corpus file so pass-1 readErrs skip linking before the resolver runs; permission bits are not root-safe in CI; the cell injects an *os.PathError (os.ErrPermission) through Options.OpenSourceFile exercising the identical openDiskSource funnel, and the post-fix expectation is re-derived from the plan's 'returns no error' to a command error carrying the OS cause — the plan's own must-have truth ('behaves like the old per-file engine') and threat model T-05-02 ('the OS cause surfaces as a command error') both require the command-error outcome; verified pre-fix RED shows the misleading COMPILE remark | open |  | 2026-11-20T19:51:54.957Z |  |
 | 12 | 05 | deviation | internal/core/lint_linked_matrix_test.go |  | 05-02: WR-02 cell re-derived against live source (Rule 3): an engine-level RED is impossible because pass-1 readSource consults the same openDiskSource policy funnel, so the plan's 'run succeeds and lints b.proto from memory' pre-fix state does not exist (probe: the run errors with the exact os.ErrNotExist carrier pre-fix); the cell drives the lintResolver corpus branch directly (pre-fix it serves the denied content from memory — the actual WR-02 bypass) and pins openDiskSource's exact carrier plus the engine-level end-to-end denial | open |  | 2026-11-20T19:51:55.295Z |  |
+| 13 | 05 | deviation | internal/api/lint_stdout_golden_test.go |  | 05-03: Gate-3 twin fixture corrected (Rule 3): the 05-01 corpus declared the same message (CleanFile) in two same-package files — legal for the old per-file engine but a redeclaration under the linked engine's full corpus linking, routing the whole run to COMPILE and vacating the rule-finding golden (research Pitfall 7 applied to Gate 3); Excluded_File.proto's message renamed to ExcludedMsg so the corpus compiles; the pinned stdout literals were re-captured from the byte-frozen pre-flip binary (built from flip-HEAD via git archive) over the corrected fixture and are byte-identical to the 05-01 literals, md5-stable across 3 runs; TestLintStdoutGolden green post-flip | open |  | 2026-11-20T20:29:31.645Z |  |
+| 14 | 05 | deviation | internal/core/proto_info_read_test.go |  | 05-03: plan surface addition (Rule 3, blocking compile): internal/core/proto_info_read_test.go and link_test.go call the deleted lintProtoInfoRead directly but are absent from the plan's files_modified list; TestProtoInfoReadTwinsMirroring + TestLintProtoInfoReadErrorLabels died with their oracle, the two link_test.go fallback cells re-pointed to protoInfoFromSource (same openImportFile funnel, same typed OpenImportFileError carrier) — assertions preserved verbatim in intent | open |  | 2026-11-20T20:29:31.985Z |  |
+| 15 | 05 | deviation | internal/core/lint_linked.go |  | 05-03: acceptance-criterion baselines reconciled against the plan's own prohibitions (Rule 3): (a) grep lintProtoInfoRead lands at 8 lines, not the criterion's EXPECT==1 — the byte-identical parity-pin comment+literal (2), the frozen proto_info_read.go comment 'twin of lintProtoInfoRead' (1), and the five exact-string proof cells asserting the pin text (5) are all mandated by the plan's canonical-six C1 prohibition and Phase-3 main-wins proof; the achieved invariant is zero LIVE references (callable call sites) to the deleted function; (b) the api runtime.go removed-lines gate's raw grep -c '^- ' counts the diff header, so the corrected plumbing is grep -c '^-[^-]' = 0 (comment-only addition preserved); (c) the zero-ref grep HEAD baseline was 399 at execution time vs the plan's recorded 384 (05-02's cells postdate the plan); EXPECT==0 achieved | open |  | 2026-11-20T20:29:32.513Z |  |
 
 ````json
 [
@@ -183,6 +186,45 @@ last_updated: 2026-11-20T19:51:55.295Z
     "status": "open",
     "reason": "",
     "recorded_at": "2026-11-20T19:51:55.295Z",
+    "resolved_at": null,
+    "milestone": null
+  },
+  {
+    "id": 13,
+    "kind": "deviation",
+    "phase": "05",
+    "file": "internal/api/lint_stdout_golden_test.go",
+    "line": null,
+    "description": "05-03: Gate-3 twin fixture corrected (Rule 3): the 05-01 corpus declared the same message (CleanFile) in two same-package files — legal for the old per-file engine but a redeclaration under the linked engine's full corpus linking, routing the whole run to COMPILE and vacating the rule-finding golden (research Pitfall 7 applied to Gate 3); Excluded_File.proto's message renamed to ExcludedMsg so the corpus compiles; the pinned stdout literals were re-captured from the byte-frozen pre-flip binary (built from flip-HEAD via git archive) over the corrected fixture and are byte-identical to the 05-01 literals, md5-stable across 3 runs; TestLintStdoutGolden green post-flip",
+    "status": "open",
+    "reason": "",
+    "recorded_at": "2026-11-20T20:29:31.645Z",
+    "resolved_at": null,
+    "milestone": null
+  },
+  {
+    "id": 14,
+    "kind": "deviation",
+    "phase": "05",
+    "file": "internal/core/proto_info_read_test.go",
+    "line": null,
+    "description": "05-03: plan surface addition (Rule 3, blocking compile): internal/core/proto_info_read_test.go and link_test.go call the deleted lintProtoInfoRead directly but are absent from the plan's files_modified list; TestProtoInfoReadTwinsMirroring + TestLintProtoInfoReadErrorLabels died with their oracle, the two link_test.go fallback cells re-pointed to protoInfoFromSource (same openImportFile funnel, same typed OpenImportFileError carrier) — assertions preserved verbatim in intent",
+    "status": "open",
+    "reason": "",
+    "recorded_at": "2026-11-20T20:29:31.985Z",
+    "resolved_at": null,
+    "milestone": null
+  },
+  {
+    "id": 15,
+    "kind": "deviation",
+    "phase": "05",
+    "file": "internal/core/lint_linked.go",
+    "line": null,
+    "description": "05-03: acceptance-criterion baselines reconciled against the plan's own prohibitions (Rule 3): (a) grep lintProtoInfoRead lands at 8 lines, not the criterion's EXPECT==1 — the byte-identical parity-pin comment+literal (2), the frozen proto_info_read.go comment 'twin of lintProtoInfoRead' (1), and the five exact-string proof cells asserting the pin text (5) are all mandated by the plan's canonical-six C1 prohibition and Phase-3 main-wins proof; the achieved invariant is zero LIVE references (callable call sites) to the deleted function; (b) the api runtime.go removed-lines gate's raw grep -c '^- ' counts the diff header, so the corrected plumbing is grep -c '^-[^-]' = 0 (comment-only addition preserved); (c) the zero-ref grep HEAD baseline was 399 at execution time vs the plan's recorded 384 (05-02's cells postdate the plan); EXPECT==0 achieved",
+    "status": "open",
+    "reason": "",
+    "recorded_at": "2026-11-20T20:29:32.513Z",
     "resolved_at": null,
     "milestone": null
   }
