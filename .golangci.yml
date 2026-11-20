@@ -8,11 +8,12 @@ linters:
     paths:
       - internal/easypc
       # D-02 fallback (plan 01-04, applied on actual lint failure), Phase-4
-      # state resolved by plan 04-07: the vendored lint helpers now have the
-      # ported rules' consumers — fileOption, groupedValues.add and
-      # firstExemptMismatches are wired into the *_linked.go ports — but the
-      # D-01-kept helpers stay verbatim and unused until Phase 5 deletes them
-      # together with the old rule path: optionString, enumNumber,
+      # state resolved by plan 04-07, adjusted by 04-08: groupedValues.add and
+      # firstExemptMismatches are wired into the *_linked.go ports; fileOption
+      # lost its last consumer to 04-08's per-occurrence option iteration
+      # (04-REVIEW WR-02) and joined the D-01-kept helpers, which stay
+      # verbatim and unused until Phase 5 deletes them together with the old
+      # rule path: fileOption, optionString, enumNumber,
       # leadingCommentDocuments, isLintDirective, packagePosition, mismatches,
       # packageHasVersionSuffix, versionNumber. The unused check would report
       # those dead, so the exclusion stays scoped to this one file (the casing

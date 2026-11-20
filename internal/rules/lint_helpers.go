@@ -8,14 +8,15 @@
 //
 // Phase-4 re-alignment RESOLVED (04-07): the file compiles against the
 // linked-engine contract and the ports consume their helpers. Consumed by
-// the *_linked.go ports: fileOption, groupedValues.add,
+// the *_linked.go ports: groupedValues.add,
 // firstExemptMismatches (the 04-02 main-first-exempt Finish shape).
 // D-01-kept verbatim and unused until Phase 5 deletes them together with the
-// old rule path: optionString, enumNumber, leadingCommentDocuments,
-// isLintDirective, packagePosition, mismatches, packageHasVersionSuffix,
-// versionNumber. The .golangci.yml paths exclusion for this file stays for
-// exactly those unused helpers; Phase 5 removes helpers and exclusion in one
-// consolidation commit.
+// old rule path: fileOption (lost its last consumer to 04-08's per-occurrence
+// option iteration — 04-REVIEW WR-02), optionString, enumNumber,
+// leadingCommentDocuments, isLintDirective, packagePosition, mismatches,
+// packageHasVersionSuffix, versionNumber. The .golangci.yml paths exclusion
+// for this file stays for exactly those unused helpers; Phase 5 removes
+// helpers and exclusion in one consolidation commit.
 //
 // Delta from upstream (D-01 refinement, user-confirmed 2026-11-17; settled
 // state after the Phase-4 re-alignment):
@@ -46,7 +47,12 @@ import (
 	"github.com/easyp-tech/easyp/internal/protoast"
 )
 
-// fileOption returns the last file-level option called name.
+// fileOption scans file.Options and hands back its final entry with the
+// given name (a last-wins collapse — the body stays lab-verbatim). Kept
+// unused since 04-08: the seven option ports iterate info.File.Options per
+// occurrence (main's shape, 04-REVIEW WR-02), so no port consumes this
+// helper anymore; Phase 5 deletes it together with the old path (D-01
+// whole-file vendoring for lab re-syncs).
 func fileOption(file *protoast.File, name string) *protoast.Option {
 	var found *protoast.Option
 	for _, opt := range file.Options {
