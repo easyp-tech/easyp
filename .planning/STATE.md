@@ -3,15 +3,15 @@ gsd_state_version: "1.0"
 current_phase: 05
 current_phase_name: Переключение lint-пути и ворота совместимости
 status: verifying
-stopped_at: Completed 05-04-PLAN.md
-last_updated: "2026-11-20T21:01:46.227Z"
+stopped_at: Completed 05-05-PLAN.md
+last_updated: "2026-11-20T21:52:46.536Z"
 last_activity: 2026-11-20
 last_activity_desc: Phase 05 execution started
-state_head: d90fd98626884236e6b5786f8e5b61d5bf57f48d
+state_head: 78532408f286d8a47692ff67757168dc654a9557
 progress:
   total_phases: 7
   completed_phases: 4
-  total_plans: 24
+  total_plans: 25
   completed_plans: 24
   percent: 57
 ---
@@ -94,6 +94,7 @@ Progress: [███░░░░░░░] 29%
 | Phase 05 P02 | 22 min | 3 tasks | 3 files |
 | Phase 05 P03 | 16 min | 2 tasks | 135 files |
 | Phase 05 P04 | 16 min | 2 tasks | 87 files |
+| Phase 05 P05 | 10 min | 3 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -178,6 +179,9 @@ Recent decisions affecting current work:
 - [Phase 05]: protoInfoFromLinked renamed to protoInfoFromLink (Rule 3): the plan's zero-reference criterion (LintRuleName or word-Linked == 0) forced it beyond the plan's 41-port-type action list; comment-only factual refreshes (41 port headers, registry docs, GetRuleName doc) were the same criterion's fallout
 - [Phase 05]: Name neutrality proven pre-commit by three independent gates: TestAllRuleNames + TestAllGroups + TestModuleRuleSet green, TestLintGoldenFullRegistry byte-identical (full-struct incl. RuleName), schema-gen drift empty (threat T-05-07 mitigation)
 - [Phase 05]: Phase-final battery green on the committed final state (verbatim plan verify chain CHAIN_EXIT=0): six-root scoped -race suite with the wazero carve-out, tidy diff-empty with go-protoparser + protocompile required, schema drift-empty, golangci 0 issues, lint --help 0; breaking freeze + api seam gates (lint_v1.go zero-diff vs f27d2d1) intact; SC1 (golden, matrix incl. class-1 COMPILE, stdout golden) green
+- [Phase 05]: 05-05: RED probe carriers mirror production funnel shapes exactly — the OpenLocal wrap of SourceRoots.OpenSourceFile over the local.go sentinel joins (:33+:176 dangling alias with the not-exist cause as %v text, :56 ErrChanged, :209 nested-repository ErrUnsupported+ErrNestedRepository join), no PathError in any chain — os.PathError aliases io/fs.PathError, so the existing errors.As already caught the PathError-wrapped shapes (unreadable_import_falls_back); the gap is exactly the PathError-free shapes, and the carriers must reproduce them or the cell proves nothing
+- [Phase 05]: 05-05: sentinel discrimination is additive typed errors.Is on sourceview.ErrUnsupported/ErrChanged/ErrNestedRepository with one broken.Store, raw error returned; plain rejections stay raw — the etalon A4 non-local COMPILE classification preserved and pinned green — REQ-2.4 parity semantics restored on the edge input; diagnostic text parsing and path-locality re-checks excluded by D-01/A4 decisions
+- [Phase 05]: 05-05: IN-01 criterion baseline reconciled — the hasPerFileSyntaxError call lives in link.go's linkSources, not lint_linked.go (HEAD had 0 occurrences there); the ownership citation is stated in-comment twice (sweep + sole ownership of the COMPILE-vs-parse precedence) so the >=2 gate is met with truthful text — the criterion's '(the call plus the ownership comment)' parenthetical mis-located the call; the intent (ownership cited so a future editor does not read the removed term as load-bearing) is satisfied
 
 ### Pending Todos
 
@@ -205,6 +209,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-11-20T21:01:21.471Z
-Stopped at: Completed 05-04-PLAN.md
+Last session: 2026-11-20T21:52:45.523Z
+Stopped at: Completed 05-05-PLAN.md
 Resume file: None

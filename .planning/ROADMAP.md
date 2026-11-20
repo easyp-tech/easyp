@@ -134,7 +134,7 @@ Plans:
   1. `easyp lint` выдаёт замечания в неизменном формате: пути, формат issues и коды выхода CLI совпадают с main до переключения на фиксатурном корпусе, включая новые `COMPILE`-замечания в существующем формате
   2. Старый lint-контур и старые реализации правил удалены из кодовой базы; `easyp lint` обслуживается только движком на компиляторе (врезка — одно изменение в шве `buildCore`)
   3. breaking, generate, `mod tidy` и `migrate` проходят свои тестовые наборы в том же прогоне CI — поведение как до изменения; `go-protoparser` и `protocompile` остаются в `go.mod`
-**Plans**: 5 plans — 4/4 executed + 05-05 gap closure (05-REVIEW WR-01/IN-01/IN-02)
+**Plans**: 4/5 plans executed — 4/4 executed + 05-05 gap closure (05-REVIEW WR-01/IN-01/IN-02)
 Plans:
 **Wave 1**
 - [x] 05-01-PLAN.md — Golden capture (tracer): full-registry 73-finding golden incl. Message + D-01 order from the frozen old engine, linked-drive message-parity proof, CLI stdout/exit-code golden (LINT-COMPAT-01)
@@ -188,7 +188,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 | 2. Линкер и маршрутизация ошибок | 4/4 | Complete    | 2026-11-19 |
 | 3. Двухпроходный движок и подавления | 4/4 | Complete    | 2026-11-19 |
 | 4. Перенос 43 правил с батч-паритетом | 8/8 | Complete    | 2026-11-20 |
-| 5. Переключение lint-пути и ворота совместимости | 4/4 | In Progress | - |
+| 5. Переключение lint-пути и ворота совместимости | 4/5 | In Progress | - |
 | 6. Новые правила и регенерация схем/MCP | 0/TBD | Not started | - |
 | 7. Приёмка — паритет корпусов и производительность | 0/TBD | Not started | - |
 
