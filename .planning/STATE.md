@@ -3,16 +3,16 @@ gsd_state_version: "1.0"
 current_phase: 04
 current_phase_name: Перенос 43 правил с батч-паритетом
 status: verifying
-stopped_at: Completed 04-07-PLAN.md — Phase 4 complete (7/7), ready for verify-work
-last_updated: "2026-11-20T15:29:40.613Z"
+stopped_at: Completed 04-08-PLAN.md — Phase 4 gap closure complete (8/8), ready for verify-work
+last_updated: "2026-11-20T16:52:52.645Z"
 last_activity: 2026-11-19
 last_activity_desc: Phase 04 execution started
-state_head: fda72c70b8f0efeb4c64bab95b0d71361482c0c3
+state_head: 400a0f59145f9c639e10c8186e14b5e16838d1dd
 progress:
   total_phases: 7
   completed_phases: 3
-  total_plans: 19
-  completed_plans: 19
+  total_plans: 20
+  completed_plans: 20
   percent: 43
 ---
 
@@ -88,6 +88,7 @@ Progress: [███░░░░░░░] 29%
 | Phase 04 P05 | 13 min | 3 tasks | 19 files |
 | Phase 04 P06 | 9 min | 3 tasks | 16 files |
 | Phase 04 P07 | 25 min | 3 tasks | 11 files |
+| Phase 04 P08 | 15 min | 4 tasks | 15 files |
 
 ## Accumulated Context
 
@@ -151,6 +152,11 @@ Recent decisions affecting current work:
 - [Phase 04]: .golangci.yml lint_helpers.go exclusion KEPT with the accurate Phase-4 comment (consumed: fileOption/groupedValues.add/firstExemptMismatches; kept-unused: 8 helpers) — supersedes PATTERNS.md drop-line; Phase-5 consolidation removes helpers+exclusion in one commit
 - [Phase 04]: TestModuleRuleSet upgraded to exact-set ElementsMatch over the constructed full registry (the D-03 ten; PackageNoImportCycle absent until Phase 6); NEW TestRegistryParity proves NewLinked name-set/group-order/config-plumbing/ignoreOnly parity with New (T-04-18/T-04-19)
 - [Phase 04]: TestLinkedParityFullRegistry closure cell: broad 13-file/9-package corpus, coverage assertion requires all 41 rule names to fire, 73 old-side findings pinned before the multiset compare; parity fixtures must compile under BOTH engines (linked engine fully resolves rpc types — payload messages declared)
+- [Phase 04]: CR-01 fixed once in the engine (collectFile skips ModuleRule.Collect for shouldIgnoreLinked pairs, mirroring main's shouldIgnore-before-Validate) so all nine group ModuleRules gain main's membership semantics while rules stay suppression-free; the Finish drain path filter stays as defense in depth
+- [Phase 04]: WR-01 fixed by threading (assertBatchParity feeds NewLinked's unwrapped ignoreOnly into core.Options.IgnoreOnly) rather than an assertBatchParityWithIgnoreOnly variant — every cell compares identical suppression state by construction and existing cells needed no edits
+- [Phase 04]: WR-02 keeps empty-loop semantics (optionless files add nothing); the swift-prefix port reads the same ruby_package literal per occurrence — the sweep changes only how many occurrences are read, never which option; fileOption joined the kept-unused list (nine helpers) with mirrored header/.golangci.yml comment updates
+- [Phase 04]: WR-03 reports through an overwrite map (importInfo keyed by ImportPath) instead of a reported dedup set; map iteration order is normalized by the D-01 sort now total through SourceName; the protoc-rejection justification was deleted as unsupported
+- [Phase 04]: The regression-pin cells (mismatching_file_ignored, per_file_rule_ignored) were expected red pre-fix through the WR-01 nil-vs-set gap — documented in the task-1 RED evidence as anticipated, the proof the threading was load-bearing
 
 ### Pending Todos
 
@@ -176,6 +182,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-11-20T15:29:35.397Z
-Stopped at: Completed 04-07-PLAN.md — Phase 4 complete (7/7), ready for verify-work
+Last session: 2026-11-20T16:52:25.933Z
+Stopped at: Completed 04-08-PLAN.md — Phase 4 gap closure complete (8/8), ready for verify-work
 Resume file: None

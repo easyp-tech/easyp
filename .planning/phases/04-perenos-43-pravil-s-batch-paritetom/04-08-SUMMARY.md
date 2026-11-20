@@ -256,6 +256,13 @@ None - no external service configuration required.
 
 Ready for `/gsd:verify-work` re-verification of Phase 4.
 
+## Self-Check: PASSED
+
+- All 20 task files exist on disk (1 created rule test + 14 modified code files + .golangci.yml + 3 RED evidence records + this SUMMARY), verified via `[ -f ]`
+- All 8 commits are ancestors of HEAD: ad0e5d3 (RED t1), b58ccc7 (GREEN t1), 2a045eb (RED t2), 9ee1121 (GREEN t2), 3043dfb (RED t3), 509e78a (GREEN t3), fe11d9d (chore t4), 400a0f5 (docs)
+- Commits measured from the persisted ledger: `git rev-list --count 8a42a8f..HEAD` = 7 task commits (plan_head_before 8a42a8fa6bd406507fcc77d75e47a8d01f23aa50, plan_head_after fe11d9d30a33abe2e0755f71419d1958b360f3b1 before this docs commit)
+- All three RED evidence records machine-validated RED_EVIDENCE_OK; no stubs, no skipped tests, no unrun verifies
+
 ---
 *Phase: 04-perenos-43-pravil-s-batch-paritetom*
 *Completed: 2026-11-20*
