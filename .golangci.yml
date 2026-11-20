@@ -7,10 +7,19 @@ linters:
     # in compiler-lab and arrive by re-sync. See internal/easypc/VENDORED.md.
     paths:
       - internal/easypc
-      # D-02 fallback (plan 01-04, applied on actual lint failure): the lint
-      # helpers are vendored per D-01 but deliberately unwired until Phase 4,
-      # so the unused check reports them dead in the meantime. Scoped to this
-      # one file; the casing files are NOT excluded.
+      # D-02 fallback (plan 01-04, applied on actual lint failure), Phase-4
+      # state resolved by plan 04-07: the vendored lint helpers now have the
+      # ported rules' consumers — fileOption, groupedValues.add and
+      # firstExemptMismatches are wired into the *_linked.go ports — but the
+      # D-01-kept helpers stay verbatim and unused until Phase 5 deletes them
+      # together with the old rule path: optionString, enumNumber,
+      # leadingCommentDocuments, isLintDirective, packagePosition, mismatches,
+      # packageHasVersionSuffix, versionNumber. The unused check would report
+      # those dead, so the exclusion stays scoped to this one file (the casing
+      # files are NOT excluded); the Phase-5 consolidation removes the helpers
+      # and this exclusion in one commit. (PATTERNS.md's "drop the exclusion
+      # line at the finishing batch" was superseded — deleting the helpers now
+      # would contradict D-01 whole-file vendoring for lab re-syncs.)
       - internal/rules/lint_helpers.go
     rules:
       # Exported callee labels are required by .spec/agent-rules.md.

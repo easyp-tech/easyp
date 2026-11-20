@@ -2,18 +2,23 @@
 // easyp-cli/internal/rules/lint_helpers.go, pinned SHA
 // 08cef10909c0722f7042ba17b5c11951f9c6b6f6, vendored 2026-11-18.
 //
-// D-01 keeps the whole lint helper set in Phase 1 (целиком, как в
-// лаборатории) so the future compiler sync stays trivial and the Phase-4
-// rule-port diff stays minimal; the helpers are compiled but deliberately
-// unwired until Phase 4. Sync procedure: internal/easypc/VENDORED.md.
+// D-01 keeps the whole lint helper set (целиком, как в лаборатории) so the
+// future compiler sync stays trivial and the Phase-4 rule-port diff stays
+// minimal. Sync procedure: internal/easypc/VENDORED.md.
 //
-// Delta from upstream (D-01 refinement, user-confirmed 2026-11-17): exactly
-// the model-coupled declarations below are minimally adapted so the file
-// compiles against main's core API; every other body is verbatim. Phase 4
-// re-aligns the helpers with the ported rules. The Phase-4 re-alignment
-// (04-02) adds firstExemptMismatches below — the ported group rules' Finish
-// with main's first-exempt semantics; mismatches stays the lab-faithful
-// report-everyone shape and is not reached by the ports.
+// Phase-4 re-alignment RESOLVED (04-07): the file compiles against the
+// linked-engine contract and the ports consume their helpers. Consumed by
+// the *_linked.go ports: fileOption, groupedValues.add,
+// firstExemptMismatches (the 04-02 main-first-exempt Finish shape).
+// D-01-kept verbatim and unused until Phase 5 deletes them together with the
+// old rule path: optionString, enumNumber, leadingCommentDocuments,
+// isLintDirective, packagePosition, mismatches, packageHasVersionSuffix,
+// versionNumber. The .golangci.yml paths exclusion for this file stays for
+// exactly those unused helpers; Phase 5 removes helpers and exclusion in one
+// consolidation commit.
+//
+// Delta from upstream (D-01 refinement, user-confirmed 2026-11-17; settled
+// state after the Phase-4 re-alignment):
 //
 //  1. packagePosition — the lab signature consumed the lab's protoast-based
 //     core.ProtoInfo.File; it now takes the protoast file directly
@@ -22,20 +27,20 @@
 //  2. groupedValue.pos — no textual change was needed: main's core.Position
 //     is an alias of protoast.Position (settled by 01-03), so the lab
 //     declaration compiles verbatim.
-//  3. groupedValues.mismatches — the lab called the lab's 4-arg AppendIssue
-//     (nil, rule, v.pos, v.source); main's is the 5-arg AppendIssue
-//     (issues, rule, pos meta.Position, sourceName, comments) settled by
-//     01-03. The call adds nil comments and converts v.pos field-for-field
-//     to meta.Position (mirror of core.fromMetaPos); this forced the one
-//     added parser/meta import.
+//  3. groupedValues.mismatches — the 01-04 seam adaptation (5-arg AppendIssue
+//     with the meta.Position conversion and the parser/meta import) is GONE:
+//     with the ports on the linked contract, the helper is back to the
+//     lab-faithful shape — mismatches(rule core.LintRule) calls the linked
+//     constructor (nil, rule, v.pos, v.source) verbatim. mismatches remains
+//     the report-everyone shape and is not reached by the ports (the ports'
+//     Finish is firstExemptMismatches); it stays vendored for re-sync
+//     fidelity.
 
 package rules
 
 import (
 	"strconv"
 	"strings"
-
-	"github.com/yoheimuta/go-protoparser/v4/parser/meta"
 
 	"github.com/easyp-tech/easyp/internal/core"
 	"github.com/easyp-tech/easyp/internal/protoast"
@@ -127,8 +132,10 @@ func (g *groupedValues) add(group string, value groupedValue) {
 }
 
 // mismatches returns an issue for every file of each group with more than one
-// distinct value, then resets the collector.
-func (g *groupedValues) mismatches(rule core.Rule) []core.IssueInfo {
+// distinct value, then resets the collector. Lab-faithful report-everyone
+// shape on the linked contract (04-07 re-alignment): the ports' Finish is
+// firstExemptMismatches below.
+func (g *groupedValues) mismatches(rule core.LintRule) []core.IssueInfo {
 	var res []core.IssueInfo
 	for _, group := range g.order {
 		values := g.groups[group]
@@ -140,12 +147,7 @@ func (g *groupedValues) mismatches(rule core.Rule) []core.IssueInfo {
 			continue
 		}
 		for _, v := range values {
-			for _, issue := range core.AppendIssue(nil, rule, meta.Position{
-				Filename: v.pos.Filename,
-				Offset:   v.pos.Offset,
-				Line:     v.pos.Line,
-				Column:   v.pos.Column,
-			}, v.source, nil) {
+			for _, issue := range core.AppendLinkedIssue(nil, rule, v.pos, v.source) {
 				res = append(res, core.IssueInfo{Issue: issue, Path: v.path})
 			}
 		}
