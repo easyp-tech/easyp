@@ -3,14 +3,20 @@ package core
 import (
 	"context"
 	"fmt"
+	"io"
 	"maps"
+	"os"
+	"path/filepath"
 	"slices"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/easyp-tech/easyp/internal/easypc/protoc"
 	"github.com/easyp-tech/easyp/internal/fs/fs"
+	"github.com/easyp-tech/easyp/internal/logger"
 )
 
 // serialCollectModuleRule appends to an unsynchronized slice on every Collect:
@@ -336,5 +342,202 @@ func TestLintLinkedMatrix(t *testing.T) {
 			assert.Equal(t, w.line, first[i].Position.Line, "finding %d", i)
 			assert.Equal(t, 3, first[i].Position.Column, "finding %d", i)
 		}
+	})
+}
+
+// TestLintLinkedErrorPathFidelity pins the linked engine's error-path
+// classification (Phase 5 WR-01/WR-02/IN-01 fixes plus the IN-02
+// keep-decision): a real import open/read failure must degrade the run
+// exactly like the old per-file engine — a command error carrying the OS
+// cause, never a misleading "not found"-shaped COMPILE remark — the linker's
+// corpus branch must honor the same importFileAllowed policy openDiskSource
+// applies on disk reads, cancellation must be honored at the resolver
+// boundary like every sibling resolver, and COMPILE diagnostics stay outside
+// the suppression machinery.
+func TestLintLinkedErrorPathFidelity(t *testing.T) {
+	t.Parallel()
+
+	t.Run("unreadable_import_falls_back", func(t *testing.T) {
+		t.Parallel()
+
+		// WR-01: an import whose open fails for a non-notFound OS reason must
+		// force the classifier fallback, so the run behaves like the old
+		// per-file engine (whose readFilesFromImport errors through the same
+		// openImportFile funnels) and the OS cause surfaces as a command
+		// error — never as a misleading "Import ... was not found or had
+		// errors." COMPILE remark masking the real failure.
+		//
+		// Fixture note (plan re-derivation against live source): the plan's
+		// directory fixture cannot drive this path — FSWalker.Open refuses
+		// non-regular files with ErrUnsupported before any read happens, and a
+		// directory named dep.proto is itself walked as a corpus file, so
+		// pass-1 readErrs skip linking before the resolver ever runs.
+		// Permission bits are not root-safe in CI. An *os.PathError carrier
+		// injected through Options.OpenSourceFile is deterministic, root-safe,
+		// and exercises the identical openDiskSource funnel an OS open
+		// failure would.
+		root := writeCorpus(t, map[string]string{
+			"a.proto": "syntax = \"proto3\";\n\npackage alpha;\n\nimport \"dep.proto\";\n\nmessage A {\n  dep.B b = 1;\n}\n",
+		})
+		app := New(Options{
+			Logger:      logger.NewNop(),
+			LinkedRules: []LintRule{&doubleRuleAlpha{}},
+			OpenSourceFile: func(p string) (io.ReadCloser, error) {
+				if strings.HasSuffix(filepath.ToSlash(p), "/dep.proto") {
+					return nil, &os.PathError{Op: "open", Path: p, Err: os.ErrPermission}
+				}
+				return os.Open(p)
+			},
+		})
+		got, err := app.LintLinked(t.Context(), fs.NewFSWalker(root, "."))
+
+		// The fallback degrades nothing into COMPILE: the corpus falls back to
+		// the per-file path, whose import read errors through the same
+		// openImportFile funnel with the OS cause attached.
+		require.Error(t, err)
+		require.Nil(t, got)
+		require.ErrorIs(t, err, os.ErrPermission)
+		assert.Contains(t, err.Error(), "dep.proto")
+	})
+
+	t.Run("blocked_corpus_file_errors", func(t *testing.T) {
+		t.Parallel()
+
+		// WR-02: the linker's corpus branch (the linted-map hit) must honor
+		// the same importFileAllowed policy openDiskSource applies on disk
+		// reads — the rooted full path is computed exactly as openDiskSource
+		// computes it — so a policy-excluded file can never be served from
+		// memory. On denial the resolver stores missing and returns
+		// protoc.ErrFileNotFound; the per-file fallback then yields
+		// openDiskSource's exact os.ErrNotExist carrier.
+		//
+		// The denial itself is driven at the resolver boundary: pass 1 reads
+		// corpus files through the same openDiskSource funnel, so an
+		// engine-level run already errors before linking when OpenSourceFile
+		// is set — the corpus-branch check is the defense in depth that keeps
+		// the linker from ever serving a denied file the pass-1 funnel did not
+		// consult.
+		root := t.TempDir()
+		files := map[string]string{
+			"a.proto": "syntax = \"proto3\";\n\npackage alpha;\n\nmessage A {\n  string name = 1;\n}\n",
+			"b.proto": "syntax = \"proto3\";\n\npackage beta;\n\nmessage B {\n  string id = 1;\n}\n",
+		}
+		for name, src := range files {
+			require.NoError(t, os.WriteFile(filepath.Join(root, name), []byte(src), 0o644))
+		}
+		core := New(Options{
+			Logger:      logger.NewNop(),
+			LinkedRules: []LintRule{&doubleRuleAlpha{}},
+			ImportFileAllowed: func(p string) bool {
+				return !strings.HasSuffix(filepath.ToSlash(p), "/b.proto")
+			},
+			OpenSourceFile: func(p string) (io.ReadCloser, error) { return os.Open(p) },
+		})
+		walker := fs.NewFSWalker(root, ".")
+		resolver := &lintResolver{
+			core:   core,
+			disk:   walker,
+			linted: map[string][]byte{"b.proto": []byte(files["b.proto"])},
+		}
+
+		// The corpus branch denies the policy-excluded file: ErrFileNotFound,
+		// no content, missing stored for the classifier.
+		got, err := resolver.FindFileByPath(t.Context(), "b.proto")
+		require.ErrorIs(t, err, protoc.ErrFileNotFound)
+		require.Nil(t, got)
+		require.True(t, resolver.missing.Load(), "denial must store missing for the classifier fallback")
+
+		// An allowed corpus file is still served from memory unchanged.
+		allowed := &lintResolver{
+			core:   core,
+			disk:   walker,
+			linted: map[string][]byte{"a.proto": []byte(files["a.proto"])},
+		}
+		gotAllowed, errAllowed := allowed.FindFileByPath(t.Context(), "a.proto")
+		require.NoError(t, errAllowed)
+		require.Equal(t, files["a.proto"], string(gotAllowed))
+
+		// The per-file funnel's denial carrier: openDiskSource answers the
+		// same denial with the exact os.ErrNotExist PathError the old engine
+		// surfaces (frozen-file behavior the fallback inherits).
+		f, openErr := core.openDiskSource(walker, "b.proto")
+		require.Error(t, openErr)
+		require.ErrorIs(t, openErr, os.ErrNotExist)
+		var pathErr *os.PathError
+		require.ErrorAs(t, openErr, &pathErr)
+		assert.Equal(t, "open", pathErr.Op)
+		assert.Equal(t, "b.proto", pathErr.Path)
+		require.Nil(t, f)
+
+		// End to end, a policy-denied corpus file is a command error naming
+		// the file, with no findings for it (pass-1 readSource consults the
+		// same policy funnel).
+		gotEngine, errEngine := core.LintLinked(t.Context(), walker)
+		require.Error(t, errEngine)
+		require.Nil(t, gotEngine)
+		require.ErrorIs(t, errEngine, os.ErrNotExist)
+		assert.Contains(t, errEngine.Error(), "b.proto")
+	})
+
+	t.Run("find_by_path_honors_ctx", func(t *testing.T) {
+		t.Parallel()
+
+		// IN-01: the ctx guard every sibling resolver carries
+		// (internal/easypc/protoc/resolver.go): a cancelled context returns
+		// the context error before any file access, from the corpus branch and
+		// the disk branch alike.
+		root := writeCorpus(t, map[string]string{
+			"a.proto": "syntax = \"proto3\";\npackage alpha;\nmessage A {}\n",
+		})
+		resolver := &lintResolver{
+			core:   New(Options{Logger: logger.NewNop()}),
+			disk:   fs.NewFSWalker(root, "."),
+			linted: map[string][]byte{"cached.proto": []byte("cached content")},
+		}
+		ctx, cancel := context.WithCancel(t.Context())
+		cancel()
+
+		gotCached, errCached := resolver.FindFileByPath(ctx, "cached.proto")
+		require.ErrorIs(t, errCached, context.Canceled)
+		require.Nil(t, gotCached)
+
+		gotDisk, errDisk := resolver.FindFileByPath(ctx, "a.proto")
+		require.ErrorIs(t, errDisk, context.Canceled)
+		require.Nil(t, gotDisk)
+	})
+
+	t.Run("ignored_broken_dependency_not_suppressed", func(t *testing.T) {
+		t.Parallel()
+
+		// IN-02 keep-decision pin (green by construction): a broken dependency
+		// excluded from the lint corpus by Ignore still yields its COMPILE
+		// diagnostics — compiler diagnostics are not rule findings and stay
+		// outside the suppression machinery (the walk filter, ignoreOnly, and
+		// comment directives). The broken dep carries the file's established
+		// broken-file shape (proto3 required field), and the cell stays green
+		// through the flip.
+		root := t.TempDir()
+		require.NoError(t, os.MkdirAll(filepath.Join(root, "dep"), 0o755))
+		files := map[string]string{
+			"a.proto":          "syntax = \"proto3\";\n\npackage alpha;\n\nimport \"dep/broken.proto\";\n\nmessage A {\n  dep.B b = 1;\n}\n",
+			"dep/broken.proto": "syntax = \"proto3\";\n\npackage dep;\n\nmessage B {\n  required string s = 1;\n}\n",
+		}
+		for name, src := range files {
+			require.NoError(t, os.WriteFile(filepath.Join(root, name), []byte(src), 0o644))
+		}
+		app := New(Options{
+			Logger:      logger.NewNop(),
+			LinkedRules: []LintRule{&doubleRuleAlpha{}},
+			Ignore:      []string{"dep"},
+		})
+		got, err := app.LintLinked(t.Context(), fs.NewFSWalker(root, "."))
+		require.NoError(t, err)
+
+		// The COMPILE diagnostic on the ignored, broken dependency is present
+		// despite the ignore, and rules are skipped corpus-wide (zero double
+		// findings) exactly as in the compile_bypasses_suppression cell.
+		require.Len(t, got, 1)
+		assert.Equal(t, CompileRuleName, got[0].RuleName)
+		assert.Equal(t, "dep/broken.proto", got[0].Path)
 	})
 }
