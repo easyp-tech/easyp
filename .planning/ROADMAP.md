@@ -162,10 +162,10 @@ Plans:
   1. Группа `MINIMAL` включает `PACKAGE_NO_IMPORT_CYCLE` (кросс-файловое, на ModuleRule); группа `BASIC` включает `SYNTAX_SPECIFIED` и `FIELD_NOT_REQUIRED` (размещение как в лабораторном CLI); спец-отклонение `PACKAGE_NO_IMPORT_CYCLE` в валидации имён правил убрано
   2. Замечания новых правил на приёмочных корпусах идентичны выводу лабораторного CLI на тех же корпусах
   3. Сгенерированные JSON-схемы включают имена новых правил и групп в enum значений `lint.use`; `task schema:check` без дрейфа; MCP-описания `mcp/easypconfig` отражают обновлённый набор — правила, схемы и MCP-описания меняются согласованно, одним изменением
-**Plans**: 3 plans
+**Plans**: 1/3 plans executed
 Plans:
 **Wave 1**
-- [ ] 06-01-PLAN.md — Verbatim ports (tracer: SYNTAX_SPECIFIED, then FIELD_NOT_REQUIRED + PACKAGE_NO_IMPORT_CYCLE): three lab rule files @ 08cef10 byte-verbatim + fresh colocated tests + repo-root testdata fixtures (package-cycle trio, no-syntax, required-field); registry surface provably untouched (LINT-NEWRULES-01/02/03)
+- [x] 06-01-PLAN.md — Verbatim ports (tracer: SYNTAX_SPECIFIED, then FIELD_NOT_REQUIRED + PACKAGE_NO_IMPORT_CYCLE): three lab rule files @ 08cef10 byte-verbatim + fresh colocated tests + repo-root testdata fixtures (package-cycle trio, no-syntax, required-field); registry surface provably untouched (LINT-NEWRULES-01/02/03)
 
 **Wave 2** *(blocked on Wave 1)*
 - [ ] 06-02-PLAN.md — Registry atomic commit (TDD): builder add*/New lab-order wiring + selection.go special-case deletion + six pin flips + golden-corpus extension (coverage invariant forces it) + schema regen — ONE feat commit; schemas/MCP/directives/migration update through the closed derivation loop (LINT-NEWRULES-01/02/04)
@@ -199,7 +199,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 | 3. Двухпроходный движок и подавления | 4/4 | Complete    | 2026-11-19 |
 | 4. Перенос 43 правил с батч-паритетом | 8/8 | Complete    | 2026-11-20 |
 | 5. Переключение lint-пути и ворота совместимости | 5/5 | Complete    | 2026-11-21 |
-| 6. Новые правила и регенерация схем/MCP | 0/3 | Not started | - |
+| 6. Новые правила и регенерация схем/MCP | 1/3 | In Progress | - |
 | 7. Приёмка — паритет корпусов и производительность | 0/TBD | Not started | - |
 
 ---

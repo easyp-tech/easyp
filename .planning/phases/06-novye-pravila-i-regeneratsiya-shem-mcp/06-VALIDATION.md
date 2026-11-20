@@ -40,10 +40,12 @@ created: "2026-11-20"
 
 | Task ID | Plan | Wave | Requirement | Threat Ref | Secure Behavior | Test Type | Automated Command | File Exists | Status |
 |---------|------|------|-------------|------------|-----------------|-----------|-------------------|-------------|--------|
-| (заполняется планами) | 0X | X | LINT-NEWRULES-01 | T-06-* | PACKAGE_NO_IMPORT_CYCLE в MINIMAL; special-deviation удалён; TestModuleRuleSet 11 имён | unit/guard | `go test -race -count=1 ./internal/rules/ -run 'TestModuleRuleSet\|TestAllRuleNames'` | ❌ W0 | ⬜ pending |
-| (заполняется планами) | 0X | X | LINT-NEWRULES-02 | T-06-* | SYNTAX_SPECIFIED/FIELD_NOT_REQUIRED в BASIC | unit/guard | `go test -race -count=1 ./internal/rules/ -run 'TestAllGroups'` | ❌ W0 | ⬜ pending |
-| (заполняется планами) | 0X | X | LINT-NEWRULES-03 | T-06-* | Teeth corpus (no-syntax/required/cycle) активирует все три правила; parity vs lab CLI @ 08cef10 | parity | `go test -race -count=1 ./internal/rules/ -run 'TestNewRulesParity'` | ❌ W0 | ⬜ pending |
-| (заполняется планами) | 0X | X | LINT-NEWRULES-04 | T-06-* | Схемы включают новые имена; schema:check без дрейфа; MCP отражает | golden/drift | `go run ./cmd/easyp schema-gen && git diff --exit-code schemas/` | ❌ W0 | ⬜ pending |
+| 06-01 T1 | 01 | 1 | LINT-NEWRULES-02 | T-06-01 | SYNTAX_SPECIFIED verbatim port; lab FilePosition 1:1 + SourceName=path pinned pre-registration (dormancy) | unit | `go test -race -count=1 ./internal/rules/ -run 'TestSyntaxSpecified'` | ✅ | ✅ green |
+| 06-01 T2 | 01 | 1 | LINT-NEWRULES-02 | T-06-01 | FIELD_NOT_REQUIRED verbatim port; NamePos declared-name token (6:18/71) + bare field name + optional/repeated negatives pinned | unit | `go test -race -count=1 ./internal/rules/ -run 'TestFieldNotRequired'` | ✅ | ✅ green |
+| 06-01 T3 | 01 | 1 | LINT-NEWRULES-01 | T-06-01 | PACKAGE_NO_IMPORT_CYCLE verbatim port; both cycle directions + Path pinned; dormancy: guard ten-name set green, schema drift empty | unit/guard | `go test -race -count=1 ./internal/rules/ -run 'TestPackageNoImportCycle\|TestModuleRuleSet\|TestAllRuleNames\|TestAllGroups' && go run ./cmd/easyp schema-gen && git diff --exit-code schemas/` | ✅ | ✅ green |
+| (06-02 T1) | 02 | 1 | LINT-NEWRULES-01 | T-06-* | PACKAGE_NO_IMPORT_CYCLE в MINIMAL; special-deviation удалён; TestModuleRuleSet 11 имён | unit/guard | `go test -race -count=1 ./internal/rules/ -run 'TestModuleRuleSet\|TestAllRuleNames'` | ❌ W0 | ⬜ pending (06-02) |
+| (06-03 T1) | 03 | 1 | LINT-NEWRULES-03 | T-06-* | Teeth corpus (no-syntax/required/package-cycle) активирует все три правила; parity vs lab CLI @ 08cef10 | parity | `go test -race -count=1 ./internal/rules/ -run 'TestNewRulesParity'` | ❌ W0 | ⬜ pending (06-03) |
+| (06-02) | 02 | 1 | LINT-NEWRULES-04 | T-06-* | Схемы включают новые имена; schema:check без дрейфа; MCP отражает | golden/drift | `go run ./cmd/easyp schema-gen && git diff --exit-code schemas/` | ❌ W0 | ⬜ pending (06-02) |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
 
@@ -51,7 +53,7 @@ created: "2026-11-20"
 
 ## Wave 0 Requirements
 
-- [ ] Teeth-corpus фиксатуры (no-syntax.proto, required-field proto2, A↔B cycle) — Wave 0
+- [x] Teeth-corpus фиксатуры (no-syntax.proto, required-field proto2, 3-file/2-package import cycle) — delivered by 06-01 under repo-root `testdata/` (`no_syntax/`, `required_field/`, `import_cycle/`)
 - [ ] Lab CLI binary built @ 08cef10 (researcher already built in-session; rebuild step in plan)
 - [ ] `Existing infrastructure covers test framework`
 

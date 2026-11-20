@@ -3,16 +3,16 @@ gsd_state_version: "1.0"
 current_phase: 06
 current_phase_name: Новые правила и регенерация схем/MCP
 status: executing
-stopped_at: Phase 05 complete, ready to plan Phase 6
-last_updated: "2026-11-20T23:35:01.326Z"
+stopped_at: Completed 06-01-PLAN.md
+last_updated: "2026-11-20T23:46:55.286Z"
 last_activity: 2026-11-21
-last_activity_desc: Phase 05 complete, transitioned to Phase 6
-state_head: 9aa0ca528d8fde1baadd59f484c3973b274c3757
+last_activity_desc: Phase 06 execution started
+state_head: 65d81bc6eeeefa6c4c7dc7d7575038b17665629d
 progress:
   total_phases: 7
   completed_phases: 5
   total_plans: 28
-  completed_plans: 25
+  completed_plans: 26
   percent: 71
 ---
 
@@ -36,14 +36,14 @@ progress:[███████░░░] 71%
 See: .planning/PROJECT.md (updated 2026-11-19)
 
 **Core value:** EasyP остаётся drop-in buf-совместимым инструментом: формат вывода, коды выхода и конфигурация не ломаются между версиями — миграции внутренностей незаметны пользователю.
-**Current focus:** Phase 05 — Переключение lint-пути и ворота совместимости
+**Current focus:** Phase 06 — Новые правила и регенерация схем/MCP
 
 ## Current Position
 
-Phase: 06 (Новые правила и регенерация схем/MCP) — READY TO EXECUTE
-Plan: Not started
+Phase: 06 (Новые правила и регенерация схем/MCP) — EXECUTING
+Plan: 2 of 3
 Status: Ready to execute
-Last activity: 2026-11-21 — Phase 05 complete, transitioned to Phase 6
+Last activity: 2026-11-21 — Phase 06 execution started
 
 Progress: [███░░░░░░░] 29%
 
@@ -96,6 +96,7 @@ Progress: [███░░░░░░░] 29%
 | Phase 05 P03 | 16 min | 2 tasks | 135 files |
 | Phase 05 P04 | 16 min | 2 tasks | 87 files |
 | Phase 05 P05 | 10 min | 3 tasks | 5 files |
+| Phase 06 P01 | 6 min | 3 tasks | 14 files |
 
 ## Accumulated Context
 
@@ -183,6 +184,9 @@ Recent decisions affecting current work:
 - [Phase 05]: 05-05: RED probe carriers mirror production funnel shapes exactly — the OpenLocal wrap of SourceRoots.OpenSourceFile over the local.go sentinel joins (:33+:176 dangling alias with the not-exist cause as %v text, :56 ErrChanged, :209 nested-repository ErrUnsupported+ErrNestedRepository join), no PathError in any chain — os.PathError aliases io/fs.PathError, so the existing errors.As already caught the PathError-wrapped shapes (unreadable_import_falls_back); the gap is exactly the PathError-free shapes, and the carriers must reproduce them or the cell proves nothing
 - [Phase 05]: 05-05: sentinel discrimination is additive typed errors.Is on sourceview.ErrUnsupported/ErrChanged/ErrNestedRepository with one broken.Store, raw error returned; plain rejections stay raw — the etalon A4 non-local COMPILE classification preserved and pinned green — REQ-2.4 parity semantics restored on the edge input; diagnostic text parsing and path-locality re-checks excluded by D-01/A4 decisions
 - [Phase 05]: 05-05: IN-01 criterion baseline reconciled — the hasPerFileSyntaxError call lives in link.go's linkSources, not lint_linked.go (HEAD had 0 occurrences there); the ownership citation is stated in-comment twice (sweep + sole ownership of the COMPILE-vs-parse precedence) so the >=2 gate is met with truthful text — the criterion's '(the call plus the ownership comment)' parenthetical mis-located the call; the intent (ownership cited so a future editor does not read the removed term as load-bearing) is satisfied
+- [Phase 06]: [Phase 06-01]: Three lab rules ported byte-verbatim via cp + empty per-file diff gates @ 08cef10 (unsuffixed filenames); fresh tests pin lab positions (FilePosition 1:1, Decl.NamePos, import-keyword Pos) — lab parity is the oracle for NEW rules, no main-wins adaptations
+- [Phase 06]: [Phase 06-01]: Cycle fixtures are a 3-file/2-package PACKAGE cycle at repo-root testdata/import_cycle/ (file DAG acyclic — the linker rejects direct file cycles); shapes reused by 06-02 golden corpus and 06-03 teeth corpus
+- [Phase 06]: [Phase 06-01]: TDD compile-gap RED documented per plan (type-referencing tests cannot be machine-validated RED before the verbatim port) — machine-validated RED deferred to 06-02 Task 1 registry guard flip; tasks land as single atomic feat commits with registry dormancy gates green (TestModuleRuleSet ten-name set, schema drift empty)
 
 ### Pending Todos
 
@@ -211,6 +215,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-11-20T21:52:45.523Z
-Stopped at: Phase 05 complete, ready to plan Phase 6
+Last session: 2026-11-20T23:46:53.827Z
+Stopped at: Completed 06-01-PLAN.md
 Resume file: None
