@@ -50,8 +50,11 @@ type (
 	// ModuleRule needs every file before it can report, such as rules that
 	// compare files of one package or directory. The engine passes each file
 	// to Collect and asks for findings once, after the last file; it does not
-	// call Validate. Suppressions and ignore_only apply to the findings by
-	// path.
+	// call Validate. Files ignored for the rule never reach Collect at all
+	// (main skips their Validate, so they never join the group nor seed its
+	// first value — REQ-2.5 parity, 04-REVIEW CR-01); what remains
+	// path-scoped is only the residual filtering — comment suppressions and
+	// the drain's path filter still gate the findings by path.
 	//
 	// The rules that implement it after the Phase 4 port (D-03; the registry
 	// source of truth is internal/rules/builder.go, which constructs 41 rules

@@ -2,10 +2,13 @@ package rules_test
 
 // The batch parity harness (04-RESEARCH "Batch-Verification Mechanism"): it
 // drives the live old engine and the dormant linked engine in-process over the
-// same compiling fixture tree and compares sorted (rule, path, line, col)
-// multisets. Every later batch plan reuses requirePorted as its RED guard and
-// assertBatchParity as its only comparison mechanism; corpus lint-diff stays
-// the Phase-7 FINISH gate.
+// same compiling fixture tree and compares sorted (path, rule, line, col,
+// source) multisets. Both engines run identical suppression state:
+// assertBatchParity feeds NewLinked's unwrapped ignoreOnly into the linked
+// app's core.Options.IgnoreOnly (04-REVIEW WR-01), so ignore_only parity is
+// testable by construction. Every later batch plan reuses requirePorted as its
+// RED guard and assertBatchParity as its only comparison mechanism; corpus
+// lint-diff stays the Phase-7 FINISH gate.
 
 import (
 	"cmp"
@@ -45,7 +48,10 @@ func requirePorted(t *testing.T, names ...string) {
 }
 
 // assertBatchParity runs one config over one compiling fixture tree through
-// both engines and requires equal fingerprints. wantOldCount is the expected
+// both engines — with identical ignore_only state: NewLinked's second return
+// value feeds core.Options.IgnoreOnly on the linked app, so suppression parity
+// is testable by construction (04-REVIEW WR-01) — and requires equal
+// fingerprints. wantOldCount is the expected
 // old-side finding count, asserted BEFORE the multiset compare so a vacuous
 // both-empty run can never pass silently (T-04-02); fixtures must compile —
 // on broken files the engines legitimately diverge (COMPILE routing), and
@@ -72,11 +78,12 @@ func assertBatchParity(t *testing.T, cfg config.LintConfig, files map[string]str
 	oldIssues, err := oldApp.Lint(t.Context(), fs.NewFSWalker(root, "."))
 	require.NoError(t, err)
 
-	newRules, _, err := rules.NewLinked(cfg)
+	newRules, newIgnoreOnly, err := rules.NewLinked(cfg)
 	require.NoError(t, err)
 	newApp := core.New(core.Options{
 		Logger:              logger.NewNop(),
 		LinkedRules:         newRules,
+		IgnoreOnly:          newIgnoreOnly, // parity must include suppression state (04-REVIEW WR-01)
 		AllowCommentIgnores: true,
 		KnownLintRules:      rules.AllRuleNames(),
 	})
@@ -87,13 +94,16 @@ func assertBatchParity(t *testing.T, cfg config.LintConfig, files map[string]str
 	require.Len(t, oldFp, wantOldCount, "old-side finding count (asserted before the multiset compare)")
 
 	require.Equal(t, oldFp, fingerprint(newIssues),
-		"old-vs-new parity: sorted (rule, path, line, col) multisets must match")
+		"old-vs-new parity: sorted (path, rule, line, col, source) multisets must match")
 }
 
 // fingerprint copies and sorts issues by the D-01 key (path, rule, line,
-// column): the old engine's output order is nondeterministic (map iteration),
-// so both sides sort before require.Equal. Messages are not part of the
-// parity contract (rule, file, line, col is).
+// column, source): the old engine's output order is nondeterministic (map
+// iteration), so both sides sort before require.Equal. The parity contract is
+// (path, rule, line, col, source) — SourceName is user-visible in both output
+// printers (internal/api/lint.go text and JSON); Messages are not part of the
+// contract because Message() equality is separately proven by the carried
+// per-rule tests.
 func fingerprint(infos []core.IssueInfo) []core.IssueInfo {
 	out := make([]core.IssueInfo, len(infos))
 	copy(out, infos)
@@ -103,6 +113,7 @@ func fingerprint(infos []core.IssueInfo) []core.IssueInfo {
 			strings.Compare(a.RuleName, b.RuleName),
 			cmp.Compare(a.Position.Line, b.Position.Line),
 			cmp.Compare(a.Position.Column, b.Position.Column),
+			strings.Compare(a.SourceName, b.SourceName),
 		)
 	})
 	return out

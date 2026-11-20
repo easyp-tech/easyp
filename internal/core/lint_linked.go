@@ -143,15 +143,19 @@ func (c *Core) LintLinked(ctx context.Context, fsWalker DirWalker) ([]IssueInfo,
 		}
 	}
 
-	// Deterministic issue order: by path, then rule, then line, then column.
-	// This total sort is the one deliberate delta vs the etalon, which leaves
-	// the drain order unsorted (D-01).
+	// Deterministic issue order: by path, then rule, then line, then column,
+	// then source. This total sort is the one deliberate delta vs the etalon,
+	// which leaves the drain order unsorted (D-01); SourceName is
+	// user-visible in both output printers, so the sort stays total through
+	// it. Message stays out: Message() equality is separately proven by the
+	// carried per-rule tests.
 	slices.SortStableFunc(res, func(a, b IssueInfo) int {
 		return cmp.Or(
 			strings.Compare(a.Path, b.Path),
 			strings.Compare(a.RuleName, b.RuleName),
 			cmp.Compare(a.Position.Line, b.Position.Line),
 			cmp.Compare(a.Position.Column, b.Position.Column),
+			strings.Compare(a.SourceName, b.SourceName),
 		)
 	})
 
@@ -197,12 +201,17 @@ func (c *Core) checkFile(ctx context.Context, path string, info LinkedFileInfo) 
 	return checkedFile{issues: res, suppressions: suppressions}
 }
 
-// collectFile hands the file to module rules, in walk order. They see every
-// file, so a group stays complete even when findings for some of its files
-// are ignored.
+// collectFile hands the file to module rules, in walk order — except files
+// ignored for that rule, which main never lets reach Validate and therefore
+// never join the group (REQ-2.5 parity; see 04-REVIEW CR-01). The Finish
+// drain's path filter below stays as-is: defense in depth for group rules,
+// and the per-file RPC_REQUEST_RESPONSE_UNIQUE findings.
 func (c *Core) collectFile(info LinkedFileInfo) error {
 	for _, rule := range c.linkedRules {
 		if moduleRule, ok := rule.(ModuleRule); ok {
+			if c.shouldIgnoreLinked(rule, info.Path) {
+				continue
+			}
 			if err := moduleRule.Collect(info); err != nil {
 				return fmt.Errorf("rule.Collect: %w", err)
 			}
