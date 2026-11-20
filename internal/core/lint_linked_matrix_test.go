@@ -2,6 +2,7 @@ package core
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"maps"
@@ -17,6 +18,7 @@ import (
 	"github.com/easyp-tech/easyp/internal/easypc/protoc"
 	"github.com/easyp-tech/easyp/internal/fs/fs"
 	"github.com/easyp-tech/easyp/internal/logger"
+	"github.com/easyp-tech/easyp/internal/sourceview"
 )
 
 // serialCollectModuleRule appends to an unsynchronized slice on every Collect:
@@ -398,6 +400,103 @@ func TestLintErrorPathFidelity(t *testing.T) {
 		require.Nil(t, got)
 		require.ErrorIs(t, err, os.ErrPermission)
 		assert.Contains(t, err.Error(), "dep.proto")
+	})
+
+	t.Run("sentinel_import_failure_falls_back", func(t *testing.T) {
+		t.Parallel()
+
+		// WR-01 gap closure: the production open funnels the resolver actually
+		// calls (SourceRoots.OpenSourceFile -> sourceview.OpenLocalSelected;
+		// FSWalker.Open -> sourceview.OpenLocal) fail not only with
+		// *os.PathError carriers (unreadable_import_falls_back) but also with
+		// PathError-free sentinel shapes — a dangling source alias, a target
+		// changed during open, a nested-repository crossing. Such a carrier
+		// must force the classifier fallback exactly like the PathError
+		// subset: the run degrades to the per-file path and the funnel cause
+		// re-surfaces as a command error — never the misleading
+		// "not found"-shaped COMPILE remark skipping every rule corpus-wide.
+		//
+		// Each carrier mirrors its production funnel shape exactly: the
+		// OpenLocal wrap of SourceRoots.OpenSourceFile over the named
+		// local.go shape, with no *os.PathError anywhere in the chain and the
+		// not-exist cause of the dangling row interpolated as text only (a
+		// wrapped fs.ErrNotExist would trigger the missing branch and prove
+		// the wrong path; errors.Join discards nil elements, so the
+		// production joins reduce to their sentinel-only shape when the
+		// Close errors are nil).
+		root := writeCorpus(t, map[string]string{
+			"a.proto": "syntax = \"proto3\";\n\npackage alpha;\n\nimport \"dep.proto\";\n\nmessage A {\n  dep.B b = 1;\n}\n",
+		})
+
+		tests := []struct {
+			name     string
+			carrier  error
+			wantIs   []error
+			wantText string
+		}{
+			{
+				// local.go:33 + local.go:176 — a dangling source alias: the
+				// OpenLocal wrap (SourceRoots.OpenSourceFile) over the
+				// Resolve wrap over the dangling-alias message wrapping
+				// ErrUnsupported; the not-exist cause rides the message as
+				// text only.
+				name: "dangling_alias_unsupported",
+				carrier: fmt.Errorf("OpenLocal: %w", errors.Join(fmt.Errorf("Resolve: %w",
+					fmt.Errorf("source alias %q is dangling: %v: %w", "dep.proto",
+						&os.PathError{Op: "lstat", Path: "dep.proto", Err: os.ErrNotExist},
+						sourceview.ErrUnsupported)))),
+				wantIs:   []error{sourceview.ErrUnsupported},
+				wantText: "dep.proto",
+			},
+			{
+				// local.go:56 — the target was replaced between resolution
+				// and opening: the OpenLocal wrap over the ErrChanged join.
+				name:    "changed_during_open",
+				carrier: fmt.Errorf("OpenLocal: %w", errors.Join(sourceview.ErrChanged)),
+				wantIs:  []error{sourceview.ErrChanged},
+			},
+			{
+				// local.go:209 — a nested-repository crossing: the OpenLocal
+				// wrap over the nested-repository message wrapping the
+				// ErrUnsupported+ErrNestedRepository join.
+				name: "nested_repository_crossing",
+				carrier: fmt.Errorf("OpenLocal: %w", fmt.Errorf(
+					"source target %q crosses nested repository %q: %w",
+					"dep.proto", "dep.repo",
+					errors.Join(sourceview.ErrUnsupported, sourceview.ErrNestedRepository))),
+				wantIs: []error{sourceview.ErrUnsupported, sourceview.ErrNestedRepository},
+			},
+		}
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				t.Parallel()
+
+				app := New(Options{
+					Logger: logger.NewNop(),
+					Rules:  []Rule{&doubleRuleAlpha{}},
+					OpenSourceFile: func(p string) (io.ReadCloser, error) {
+						if strings.HasSuffix(filepath.ToSlash(p), "/dep.proto") {
+							return nil, tt.carrier
+						}
+						return os.Open(p)
+					},
+				})
+				got, err := app.Lint(t.Context(), fs.NewFSWalker(root, "."))
+
+				// The sentinel-shaped funnel failure degrades nothing into
+				// COMPILE: the corpus falls back to the per-file path, whose
+				// openImportFile wrap chain re-surfaces the same carrier as a
+				// command error (REQ-2.4 parity semantics).
+				require.Error(t, err)
+				require.Nil(t, got)
+				for _, want := range tt.wantIs {
+					require.ErrorIs(t, err, want)
+				}
+				if tt.wantText != "" {
+					assert.Contains(t, err.Error(), tt.wantText)
+				}
+			})
+		}
 	})
 
 	t.Run("blocked_corpus_file_errors", func(t *testing.T) {
