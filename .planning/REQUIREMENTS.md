@@ -37,8 +37,8 @@ Requirements for milestone «Миграция линтера на собстве
 
 ### Compatibility
 
-- [ ] **LINT-COMPAT-01** (REQ-5.1): WHEN `easyp lint` выдаёт замечания, the system SHALL сохранять текущий формат вывода issues, пути и коды выхода CLI без изменений (включая появление новых `COMPILE` в существующем формате)
-- [ ] **LINT-COMPAT-02** (REQ-5.2): WHEN выполнены команды breaking-проверки, generate, `mod tidy` и `migrate`, the system SHALL работать как до изменения (старая модель go-protoparser для breaking сохраняется; `go-protoparser` и `protocompile` остаются в `go.mod`)
+- [x] **LINT-COMPAT-01** (REQ-5.1): WHEN `easyp lint` выдаёт замечания, the system SHALL сохранять текущий формат вывода issues, пути и коды выхода CLI без изменений (включая появление новых `COMPILE` в существующем формате)
+- [x] **LINT-COMPAT-02** (REQ-5.2): WHEN выполнены команды breaking-проверки, generate, `mod tidy` и `migrate`, the system SHALL работать как до изменения (старая модель go-protoparser для breaking сохраняется; `go-protoparser` и `protocompile` остаются в `go.mod`)
 
 ### Performance
 
@@ -112,8 +112,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | LINT-NEWRULES-02 | Phase 6 | Pending |
 | LINT-NEWRULES-03 | Phase 6 | Pending |
 | LINT-NEWRULES-04 | Phase 6 | Pending |
-| LINT-COMPAT-01 | Phase 5 | Pending |
-| LINT-COMPAT-02 | Phase 5 | Pending |
+| LINT-COMPAT-01 | Phase 5 | Complete |
+| LINT-COMPAT-02 | Phase 5 | Complete |
 | LINT-PERF-01 | Phase 7 | Pending |
 
 **Coverage:**
