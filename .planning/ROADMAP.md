@@ -122,6 +122,9 @@ Plans:
 **Wave 7** *(blocked on Wave 6)*
 - [x] 04-07-PLAN.md — Batch 6 UNARY_RPC (2) + finish: streaming rules verbatim; registry complete (41), registry-parity + exact ModuleRule-set guards, lint_helpers re-alignment, lint-exclusion comment resolution, phase closure gates
 
+**Wave 8** *(gap closure — from 04-VERIFICATION.md gaps; blocked on Wave 7)*
+- [ ] 04-08-PLAN.md — Gap closure (CR-01 + WR-01..04 + IN-01): ignore_only group membership like main in collectFile, harness threads NewLinked's ignoreOnly + suppression cells, per-occurrence file-option iteration in the seven option ports, last-wins duplicate-import reporting, SourceName in fingerprint + D-01 sort, gofmt guard test
+
 ### Phase 5: Переключение lint-пути и ворота совместимости
 **Goal**: `easyp lint` работает на компиляторе; старый lint-контур удалён; формат вывода, пути, коды выхода и все остальные подсистемы не изменились — единственная точка пользовательски видимого изменения, откат = revert
 **Mode:** mvp
