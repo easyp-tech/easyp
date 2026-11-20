@@ -16,7 +16,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 2: Линкер и маршрутизация ошибок** - линковка корпусов с трёхсторонней классификацией: COMPILE / откат при отсутствующем импорте / ошибки чтения-синтаксиса (completed 2026-11-19)
 - [x] **Phase 3: Двухпроходный движок и подавления** - параллельные окна, ModuleRule, детерминированный порядок, паритет ignore/комментариев/валидации конфига (completed 2026-11-19)
 - [x] **Phase 4: Перенос 43 правил с батч-паритетом** - все правила на protoast, семантика main побеждает лабораторию, паритет верифицируется на уровне батча (completed 2026-11-20)
-- [ ] **Phase 5: Переключение lint-пути и ворота совместимости** - easyp lint на компиляторе, старый контур удалён, формат/коды выхода и остальные подсистемы неизменны
+- [x] **Phase 5: Переключение lint-пути и ворота совместимости** - easyp lint на компиляторе, старый контур удалён, формат/коды выхода и остальные подсистемы неизменны (completed 2026-11-21)
 - [ ] **Phase 6: Новые правила и регенерация схем/MCP** - PACKAGE_NO_IMPORT_CYCLE, SYNTAX_SPECIFIED, FIELD_NOT_REQUIRED + атомарное обновление схем и MCP-описаний
 - [ ] **Phase 7: Приёмка — паритет корпусов и производительность** - идентичный main вывод на api-common и googleapis-nocompute, не медленнее main
 
@@ -134,7 +134,7 @@ Plans:
   1. `easyp lint` выдаёт замечания в неизменном формате: пути, формат issues и коды выхода CLI совпадают с main до переключения на фиксатурном корпусе, включая новые `COMPILE`-замечания в существующем формате
   2. Старый lint-контур и старые реализации правил удалены из кодовой базы; `easyp lint` обслуживается только движком на компиляторе (врезка — одно изменение в шве `buildCore`)
   3. breaking, generate, `mod tidy` и `migrate` проходят свои тестовые наборы в том же прогоне CI — поведение как до изменения; `go-protoparser` и `protocompile` остаются в `go.mod`
-**Plans**: 4/5 plans executed — 4/4 executed + 05-05 gap closure (05-REVIEW WR-01/IN-01/IN-02)
+**Plans**: 5/5 plans complete — 4/4 executed + 05-05 gap closure (05-REVIEW WR-01/IN-01/IN-02)
 Plans:
 **Wave 1**
 - [x] 05-01-PLAN.md — Golden capture (tracer): full-registry 73-finding golden incl. Message + D-01 order from the frozen old engine, linked-drive message-parity proof, CLI stdout/exit-code golden (LINT-COMPAT-01)
@@ -149,7 +149,7 @@ Plans:
 - [x] 05-04-PLAN.md — Consolidation commit: 41 port-type renames, override drops, name-function collapse, rename-map header deletion; final phase battery (LINT-COMPAT-01/02)
 
 **Wave 5** *(gap closure — from 05-REVIEW.md findings; blocked on Wave 3)*
-- [ ] 05-05-PLAN.md — Micro gap closure (TDD): WR-01 sentinel-typed broken-import discrimination + probe cell, IN-01 dead readErrs re-check removal, IN-02 stale comment refresh; goldens byte-identical, breaking files byte-frozen (LINT-COMPAT-01)
+- [x] 05-05-PLAN.md — Micro gap closure (TDD): WR-01 sentinel-typed broken-import discrimination + probe cell, IN-01 dead readErrs re-check removal, IN-02 stale comment refresh; goldens byte-identical, breaking files byte-frozen (LINT-COMPAT-01)
 
 **Design note**: решение «мост vs одно переключение» зафиксировано планированием Phase 5 — переключение одно, через консолидацию rename-map (identity flip): buildCore и lint_v1.go текстуально не меняются, биндинги меняют идентичность в одном атомарном коммите; откат = revert (LINT-ENG-01, LINT-PARITY-01)
 
@@ -188,7 +188,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 | 2. Линкер и маршрутизация ошибок | 4/4 | Complete    | 2026-11-19 |
 | 3. Двухпроходный движок и подавления | 4/4 | Complete    | 2026-11-19 |
 | 4. Перенос 43 правил с батч-паритетом | 8/8 | Complete    | 2026-11-20 |
-| 5. Переключение lint-пути и ворота совместимости | 4/5 | In Progress | - |
+| 5. Переключение lint-пути и ворота совместимости | 5/5 | Complete    | 2026-11-21 |
 | 6. Новые правила и регенерация схем/MCP | 0/TBD | Not started | - |
 | 7. Приёмка — паритет корпусов и производительность | 0/TBD | Not started | - |
 
