@@ -45,6 +45,16 @@ package rules_test
 //     parseLinkedFile-built infos without the linking step;
 //   - every cell corpus below links cleanly (a zero-rules linked-engine run
 //     produced no COMPILE issues).
+//
+// Gap-closure probe provenance (04-08, corpus per 04-REVIEW WR-02, re-proven
+// old=2/new=0 by the verifier via go test -overlay): both engines accept a
+// file declaring the same file-level option twice — no COMPILE issues on
+// either side — so duplicate options are a parity surface, not a
+// parser-rejected input. Main iterates EVERY occurrence of the compared
+// option (the first seeds the per-package value, every later occurrence —
+// same file included — compares at its own position); the ports' last-wins
+// fileOption read collapsed both files to one agreeing value and reported
+// nothing (old 2 findings vs new 0 — the RED failure of duplicate_file_option).
 
 import (
 	"os"
@@ -533,5 +543,40 @@ message P2x {}
 			require.False(t, strings.HasPrefix(is.RuleName, "PACKAGE_SAME_"),
 				"option rules must ignore packageless files, got %s at %s", is.RuleName, is.Path)
 		}
+	})
+
+	t.Run("duplicate_file_option", func(t *testing.T) {
+		t.Parallel()
+
+		// 04-REVIEW WR-02 probe cell (re-proven old=2/new=0): main iterates
+		// EVERY occurrence of the compared option — first.proto declares
+		// go_package twice ("one" then "two"): the first seeds the per-package
+		// value, the second (same file) compares and issues at its own
+		// position; second.proto's "two" then differs from the "one" seed and
+		// issues too. The last-wins fileOption read collapsed first.proto to
+		// "two", which then agreed with second.proto — old 2 findings vs new
+		// 0, the RED failure. Hand-derived old-side count: 2.
+		files := map[string]string{
+			"dupopt/first.proto": `
+syntax = "proto3";
+
+package dupopt;
+
+option go_package = "github.com/one/v1";
+option go_package = "github.com/two/v1";
+
+message First {}
+`,
+			"dupopt/second.proto": `
+syntax = "proto3";
+
+package dupopt;
+
+option go_package = "github.com/two/v1";
+
+message Second {}
+`,
+		}
+		assertBatchParity(t, cfg, files, 2)
 	})
 }
