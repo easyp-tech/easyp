@@ -28,6 +28,11 @@ const (
 	noLintEasypComment       = "./../../testdata/no_lint/no_lint_easyp_comment.proto"
 	noSyntaxProto            = `./../../testdata/no_syntax/no_syntax.proto`
 	requiredFieldProto       = `./../../testdata/required_field/required_field.proto`
+	importCycleA             = "./../../testdata/import_cycle/a.proto"
+	importCycleB             = "./../../testdata/import_cycle/b/b.proto"
+	importCycleA2            = "./../../testdata/import_cycle/a2.proto"
+	importCycleSamePkg1      = "./../../testdata/import_cycle/sp1.proto"
+	importCycleSamePkg2      = "./../../testdata/import_cycle/sp2.proto"
 )
 
 // parseLinkedFile builds a ProtoInfo for a testdata file (the linked
