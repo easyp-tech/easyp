@@ -468,17 +468,20 @@ go build -o /tmp/easyp-check ./cmd/easyp && /tmp/easyp-check lint --help   # exi
 | A4 | `BreakingProtoInfo.directiveComments` stays write-only (no behavior impact from the trim of the old lint walk) — we are NOT touching it either way | Pattern 2 | None — the field and its population path are frozen; only relevant because it pins `directiveComment`'s survival |
 | A5 | Phase-7's external corpus gate (lab.py vs main binary) does not need anything reserved in Phase 5 beyond the surviving golden corpus and fixtures | Validation Architecture | Phase 7 planning would need to re-derive corpus assets if this is wrong — cheap to check then |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **Consolidation shape ratification (A1)**
+   - **RESOLVED — 05-03 RATIFIED:** the identity consolidation is the ratified flip shape (05-03 flagged assumption "RATIFIED: the flip shape is the identity consolidation"); the buildCore seam comment lands in its Task 1 step 14; the minimal-flip fallback is documented but rejected.
    - What we know: both shapes are behaviorally identical; consolidation is what the rename-map headers promise and leaves zero stale names.
    - What's unclear: whether the planner/human wants the flip commit to literally edit buildCore (reviewability) or accepts the identity-flip.
    - Recommendation: consolidation shape; add one explanatory comment at buildCore marking the seam ("this constructor binds the lint engine; the Phase-5 flip changed the bindings, not this file").
 2. **Scope of the optional type-rename commit**
+   - **RESOLVED — 05-04:** landed in Phase 5 as the separate mechanical consolidation commit immediately after the flip (05-04 Task 1; PATTERNS decision point e).
    - What we know: 41 type renames + override drops + header deletions are behavior-neutral and gate-verifiable, but enlarge the phase's diff (~52 files touched mechanically).
    - What's unclear: land in Phase 5 (recommended — the phase owns "старые реализации правил удалены" and the rename-map promise) or defer to a Phase-6 prep step.
    - Recommendation: land in Phase 5 as a separate mechanical commit immediately after the flip commit; both commits share the gate suite.
 3. **Golden corpus home**
+   - **RESOLVED — 05-01:** re-hosted in-test; internal/rules/golden_full_registry_test.go re-hosts the Phase-4 corpus verbatim (05-01 Task 1).
    - What we know: the Phase-4 corpus lives as in-test string maps in parity_full_registry_test.go, which dies with the harness.
    - What's unclear: whether to move it to a committed `testdata/` tree or re-host it in a new in-test file.
    - Recommendation: re-host in-test (established pattern, keeps corpus+assertions adjacent); move to testdata/ only if the corpus gains non-trivial file layout needs (e.g. ignore-path semantics).
