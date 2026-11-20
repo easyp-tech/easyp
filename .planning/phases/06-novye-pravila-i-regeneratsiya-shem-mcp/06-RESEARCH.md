@@ -447,21 +447,24 @@ issues := rule.Finish()
 | A4 | Lab and easyp CLIs serialize identical JSON field sets for equal findings (no tags, same lineage) | Pattern 4 | Raw-line compare unusable → already mitigated: comparison projects to (rule,file,line,col) |
 | A5 | `toUpperSnakeCase` yields the expected three names | Pattern 2 | Wrong registry names — trivially probe-verified at plan time via `core.GetRuleName(&PackageNoImportCycle{})` |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **Corpora materialization path**
    - What we know: `bench/setup.sh` needs `$GOOGLEAPIS` + `CORPUS_ARGS` from `EasyP-Parser-Compiler-Experiment` (absent); lab remote is SSH (`git@github.com:easyp-tech/compiler-lab.git`); a googleapis checkout exists at `/home/nil/DiskD/W/yadro/googleapis` but the corpus `.args` file lists do not.
    - What's unclear: whether the user can clone/provide the experiment repo for this phase, or the corpora leg defers to Phase 7's stand spike.
    - Recommendation: `checkpoint:human-verify` in the plan; teeth corpus carries LINT-NEWRULES-03 meanwhile.
+   - RESOLVED: in 06-03 Task 2 (clone attempt, dynamic access gate on failure with PROVIDE/DEFER options, UAT-recorded outcome; teeth corpus carries the automated requirement in 06-03 Task 1 either way).
 
 2. **Where the parity compare script lives**
    - What we know: lab.py must stay untouched (Phase-7 asset); a ~30-line Python/Go script suffices for filter+project+Counter compare.
    - What's unclear: phase script in the repo vs throwaway under `/tmp`.
    - Recommendation: throwaway script committed as plan evidence (its output, not the script, is the artifact), consistent with prior phases' probe style.
+   - RESOLVED: in 06-03 Task 1 — throwaway compare script at /tmp/p6-parity/compare.mjs, not committed; its OUTPUT is the committed evidence (parity-evidence-06-03.json).
 
 3. **`docs.go` "unimplemented" wording** (minor)
    - What we know: `mcp/easypconfig/docs.go:38` says "unknown or unimplemented names are rejected"; after Phase 6 nothing is "unimplemented".
    - Recommendation: optional same-commit wording polish; lab carries the identical wording, so parity does not force it.
+   - RESOLVED: in 06-02 must_haves.prohibitions (status: resolved) — docs.go:38 wording stays AS-IS; polishing it would CREATE a lab-vs-easyp divergence for zero parity gain.
 
 ## Environment Availability
 
