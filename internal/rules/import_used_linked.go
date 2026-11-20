@@ -33,11 +33,13 @@ var _ core.LintRule = (*ImportUsedLinked)(nil)
 // leaves the import unused (pinned by the syntax_walk_only parity cell).
 //
 // Determinism note (D-01): main reported unused imports through a map
-// iteration; this port iterates info.File.Imports in source order and reports
-// each distinct unused import path once, at its first written occurrence (a
-// duplicated import statement is rejected by protoc, so first-vs-last
-// occurrence never differs on a compiling corpus). The engine's D-01 sort
-// normalizes order either way.
+// iteration; this port reports each distinct unused import path once, at its
+// LAST written occurrence — main's importInfo overwrite map keyed by
+// ImportPath. The linked engine itself accepts duplicated import statements
+// and runs rules on them (no COMPILE issues), so the selection is a parity
+// surface, not a parser-rejected input — pinned by the
+// duplicate_import_last_occurrence parity cell (04-REVIEW WR-03). The
+// engine's D-01 sort normalizes order either way.
 type ImportUsedLinked struct{}
 
 // importUsage tracks, for one file, which of its written names point into
@@ -84,10 +86,15 @@ func (i *ImportUsedLinked) Validate(info core.LinkedFileInfo) ([]core.Issue, err
 		u.pkgToImport[pkgName] = append(u.pkgToImport[pkgName], importPath)
 	}
 
-	// collects info about import in linted proto file
+	// collects info about import in linted proto file: one entry per import
+	// path, overwritten per occurrence so the LAST written statement wins —
+	// main's importInfo overwrite semantics (04-REVIEW WR-03);
+	// isImportUsed is flagged per occurrence as today.
+	importInfo := make(map[core.ImportPath]*protoast.Import, len(info.File.Imports))
 	for _, imp := range info.File.Imports {
 		importPath := core.ConvertImportPath(imp.Location)
 		u.isImportUsed[importPath] = false
+		importInfo[importPath] = imp // last written occurrence wins
 	}
 
 	// look for import used
@@ -98,14 +105,13 @@ func (i *ImportUsedLinked) Validate(info core.LinkedFileInfo) ([]core.Issue, err
 
 	// report every import with used == false, at the import keyword with the
 	// quoted location as the source (main's imp.Meta.Pos ≡ imp.Pos and
-	// imp.Location basis).
-	reported := make(map[core.ImportPath]bool, len(u.isImportUsed))
-	for _, imp := range info.File.Imports {
-		importPath := core.ConvertImportPath(imp.Location)
-		if reported[importPath] || u.isImportUsed[importPath] {
+	// imp.Location basis). Each distinct path reports exactly once — the map
+	// is keyed by path — at its LAST written occurrence; the engine's D-01
+	// sort normalizes the map iteration order.
+	for importPath, imp := range importInfo {
+		if u.isImportUsed[importPath] {
 			continue
 		}
-		reported[importPath] = true
 		res = core.AppendLinkedIssue(res, i, imp.Pos, imp.Location)
 	}
 
