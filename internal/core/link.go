@@ -8,6 +8,7 @@ import (
 	"io"
 	"log/slog"
 	"os"
+	"path/filepath"
 	"slices"
 	"strings"
 	"sync"
@@ -26,9 +27,18 @@ const CompileRuleName = "COMPILE"
 //     trees are returned for the downstream engine;
 //   - linked == nil, issues != nil: the corpus failed linking with compile
 //     errors, reported as COMPILE issues in the existing issue model;
-//   - both nil: linking could not classify the corpus (a missing import, a
-//     non-compilation failure, or no diagnostics) and the caller falls back
-//     to the existing per-file read path without COMPILE issues.
+//   - both nil: linking could not classify the corpus (a missing or broken
+//     import, a non-compilation failure, or no diagnostics) and the caller
+//     falls back to the existing per-file read path without COMPILE issues.
+//
+// IN-02 (Phase 5, kept deliberately): COMPILE diagnostics bypass the
+// suppression machinery — c.ignore filters the walk, and ignoreOnly and
+// comment directives suppress rule findings only. Compiler diagnostics are
+// not rule findings: they carry no rule name, their targets include files the
+// compiler read outside the corpus, and no suppression directive grammar
+// addresses them, so no suppression path may hide them. This matches buf and
+// the etalon; pinned by compile_bypasses_suppression and
+// ignored_broken_dependency_not_suppressed in lint_linked_matrix_test.go.
 func (c *Core) linkSources(ctx context.Context, disk FS, paths []string, sources [][]byte) (*protoc.Linked, []IssueInfo) {
 	linted := make(map[string][]byte, len(paths))
 	for i, path := range paths {
@@ -45,7 +55,7 @@ func (c *Core) linkSources(ctx context.Context, disk FS, paths []string, sources
 	if err == nil {
 		return linked, nil
 	}
-	if resolver.missing.Load() || !errors.Is(err, protoc.ErrCompilationFailed) || len(diags) == 0 {
+	if resolver.missing.Load() || resolver.broken.Load() || !errors.Is(err, protoc.ErrCompilationFailed) || len(diags) == 0 {
 		c.logger.Debug(ctx, "link failed, lint rules use the syntax only", slog.String("error", err.Error()))
 		return nil, nil
 	}
@@ -113,18 +123,39 @@ func diagCollector(mu *sync.Mutex, diags *[]protoc.Diagnostic) func(protoc.Diagn
 
 // lintResolver serves corpus files from memory and resolves imports through
 // the existing openImportFile boundary, adding no filesystem access of its
-// own. A missing import sets missing so the classifier can fall back to the
-// per-file path instead of reporting COMPILE issues.
+// own. A missing import sets missing, and an import that failed to open or
+// read for a non-notFound reason sets broken, so the classifier can fall back
+// to the per-file path instead of reporting COMPILE issues.
 type lintResolver struct {
 	core    *Core
 	disk    FS
 	linted  map[string][]byte
 	missing atomic.Bool // an import could not be found
+	broken  atomic.Bool // an import failed to open or read for a non-notFound reason — never a COMPILE remark
 }
 
 // FindFileByPath implements protoc.Resolver.
 func (r *lintResolver) FindFileByPath(ctx context.Context, path string) ([]byte, error) {
+	// IN-01: the ctx guard every sibling resolver carries
+	// (internal/easypc/protoc/resolver.go) — cancellation is honored before
+	// any file access.
+	if ctx != nil && ctx.Err() != nil {
+		return nil, ctx.Err()
+	}
 	if src, ok := r.linted[path]; ok {
+		// WR-02: the corpus branch consults the same importFileAllowed policy
+		// openDiskSource applies on disk reads. The rooted full path is built
+		// exactly as openDiskSource builds it, so the policy sees the same
+		// input shape on both funnels. On denial the file is treated as
+		// missing: the classifier falls back to the per-file path, whose
+		// readSource yields openDiskSource's exact os.ErrNotExist carrier —
+		// the linker can no longer serve a policy-excluded file from memory.
+		if rooted, ok := r.disk.(interface{ RootPath() string }); ok && r.core.importFileAllowed != nil {
+			if !r.core.importFileAllowed(filepath.Join(rooted.RootPath(), filepath.FromSlash(path))) {
+				r.missing.Store(true)
+				return nil, protoc.ErrFileNotFound
+			}
+		}
 		return src, nil
 	}
 	f, err := r.core.openImportFile(r.disk, path)
@@ -134,11 +165,25 @@ func (r *lintResolver) FindFileByPath(ctx context.Context, path string) ([]byte,
 			r.missing.Store(true)
 			return nil, protoc.ErrFileNotFound
 		}
+		// WR-01: a real open failure carries an *os.PathError — the OS cause.
+		// Set broken so the classifier falls back instead of letting the
+		// compiler mask the cause as a misleading "not found"-shaped COMPILE
+		// remark. The plain non-local rejection (openImportFile's
+		// "invalid import path") wraps no PathError and stays raw, keeping the
+		// etalon A4 COMPILE classification for non-local imports.
+		var pathErr *os.PathError
+		if errors.As(err, &pathErr) {
+			r.broken.Store(true)
+		}
 		return nil, err
 	}
 	defer r.core.close(ctx, f, path)
 	src, err := io.ReadAll(f)
 	if err != nil {
+		// WR-01: the resolver-owned read failure is a broken import too (its
+		// *fs.PathError carries the OS cause); the wrapped error is returned
+		// raw either way.
+		r.broken.Store(true)
 		return nil, fmt.Errorf("ReadAll: %w", err)
 	}
 	return src, nil
