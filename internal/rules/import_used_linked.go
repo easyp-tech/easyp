@@ -182,10 +182,10 @@ func (u *importUsage) checkInOptions(options []*protoast.Option, info core.Proto
 }
 
 // existInProto looks for key in imported proto file — the etalon named
-// it existInProto; the name is taken in this package by main's byte-frozen
-// import_used.go, so the port carries the Linked suffix (rename map). The
-// reading is main's: the extend fields, the top-level message names and the
-// top-level enum names.
+// it existInProto, and the port reclaimed the etalon name once main's
+// byte-frozen import_used.go was deleted in the 05-03 flip. The reading is
+// main's: the extend fields, the top-level message names and the top-level
+// enum names.
 func existInProto(key string, proto *protoast.File) bool {
 	// look for key in extends
 	for _, extend := range proto.Extends {

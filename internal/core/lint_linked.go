@@ -70,10 +70,16 @@ func (c *Core) Lint(ctx context.Context, fsWalker DirWalker) ([]IssueInfo, error
 			linked = &linkedFiles{linked: linkedRaw, outlines: make(map[string]*linkedOutline)}
 		} else if err := c.parseOnTheirOwn(ctx, fsWalker, paths, sources, readErrs); err != nil {
 			return nil, fmt.Errorf("fs.WalkDir: %w", err)
-		} else if len(compileIssues) > 0 && !slices.ContainsFunc(readErrs, func(err error) bool { return err != nil }) {
+		} else if len(compileIssues) > 0 {
 			// Like buf, lint rules do not run on files that do not compile;
 			// the COMPILE issues return before any suppression machinery runs
-			// (research A6).
+			// (research A6). Reaching this branch means linkSources'
+			// hasPerFileSyntaxError sweep parsed the same sources and found no
+			// syntax error, and parseOnTheirOwn above re-parses the identical
+			// slice, so readErrs is still all-nil here — the compileIssues
+			// count alone decides. hasPerFileSyntaxError owns the
+			// COMPILE-vs-parse precedence solely: the dead readErrs re-check
+			// (IN-01) is gone.
 			c.logger.Info(ctx, "lint completed", slog.Int("issues", len(compileIssues)))
 			return compileIssues, nil
 		}

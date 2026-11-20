@@ -15,8 +15,9 @@ import (
 )
 
 // breakingProtoInfoRead is the breaking-owned read-model constructor (D-06):
-// the breaking path's own twin of lintProtoInfoRead. Behaviorally identical in
-// Phase 1; only the read-model type differs.
+// formerly the twin of the lint read constructor deleted in the 05-03 flip —
+// the lint path now reads through protoInfoFromSource. Behaviorally identical
+// in Phase 1; only the read-model type differs.
 func (c *Core) breakingProtoInfoRead(ctx context.Context, fs FS, path string) (BreakingProtoInfo, error) {
 	f, err := c.openDiskSource(fs, path)
 	if err != nil {

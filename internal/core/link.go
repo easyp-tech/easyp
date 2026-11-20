@@ -16,6 +16,7 @@ import (
 
 	"github.com/easyp-tech/easyp/internal/easypc/protoc"
 	"github.com/easyp-tech/easyp/internal/protoast"
+	"github.com/easyp-tech/easyp/internal/sourceview"
 )
 
 // CompileRuleName reports compiler errors found while linking linted files.
@@ -165,14 +166,24 @@ func (r *lintResolver) FindFileByPath(ctx context.Context, path string) ([]byte,
 			r.missing.Store(true)
 			return nil, protoc.ErrFileNotFound
 		}
-		// WR-01: a real open failure carries an *os.PathError — the OS cause.
-		// Set broken so the classifier falls back instead of letting the
-		// compiler mask the cause as a misleading "not found"-shaped COMPILE
-		// remark. The plain non-local rejection (openImportFile's
-		// "invalid import path") wraps no PathError and stays raw, keeping the
-		// etalon A4 COMPILE classification for non-local imports.
+		// WR-01: real open failures arrive in two shapes. A *os.PathError
+		// carries the OS cause; the open funnels also fail with the
+		// PathError-free sentinel joins sourceview returns — a non-regular
+		// target (local.go:42), a target changed during open (:56), a
+		// dangling source alias (:176), a nested-repository crossing (:209).
+		// Either shape sets broken so the classifier falls back instead of
+		// letting the compiler mask the cause as a misleading "not
+		// found"-shaped COMPILE remark. The deliberate plain rejections —
+		// openImportFile's "invalid import path" and the missing
+		// classification above — stay raw, keeping the etalon A4 COMPILE
+		// classification for non-local imports.
 		var pathErr *os.PathError
 		if errors.As(err, &pathErr) {
+			r.broken.Store(true)
+		}
+		if errors.Is(err, sourceview.ErrUnsupported) ||
+			errors.Is(err, sourceview.ErrChanged) ||
+			errors.Is(err, sourceview.ErrNestedRepository) {
 			r.broken.Store(true)
 		}
 		return nil, err
