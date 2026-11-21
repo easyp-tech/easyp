@@ -15,15 +15,15 @@ Requirements for milestone «import-easyprotoc». Topological order: REC → DEP
 
 ### Dependency
 
-- [ ] **IMPORT-DEP-01**: WHEN резолвятся зависимости модуля, the system SHALL требовать `github.com/easyp-tech/easyprotoc` в псевдоверсии main @ `f378f3f` (идентично main #253) без `replace`/`vendor`-директив; повторный `go mod tidy` не производит дрейфа в `go.mod`/`go.sum`
+- [x] **IMPORT-DEP-01**: WHEN резолвятся зависимости модуля, the system SHALL требовать `github.com/easyp-tech/easyprotoc` в псевдоверсии main @ `f378f3f` (идентично main #253) без `replace`/`vendor`-директив; повторный `go mod tidy` не производит дрейфа в `go.mod`/`go.sum`
 
 ### Consumers
 
-- [ ] **IMPORT-CONS-01**: WHEN компилятор используется в `internal/core` (`link.go`, `link_test.go`, `lint_linked_matrix_test.go`) и `internal/protoast` (`build.go`, `outline.go`, `protoast.go`, `protoast_test.go`), the system SHALL импортировать публичные пакеты `github.com/easyp-tech/easyprotoc/protoc`, `.../protoc/syntax`, `.../parser`; пути `github.com/easyp-tech/easyp/internal/easypc/...` отсутствуют в кодовой базе (grep пуст)
+- [x] **IMPORT-CONS-01**: WHEN компилятор используется в `internal/core` (`link.go`, `link_test.go`, `lint_linked_matrix_test.go`) и `internal/protoast` (`build.go`, `outline.go`, `protoast.go`, `protoast_test.go`), the system SHALL импортировать публичные пакеты `github.com/easyp-tech/easyprotoc/protoc`, `.../protoc/syntax`, `.../parser`; пути `github.com/easyp-tech/easyp/internal/easypc/...` отсутствуют в кодовой базе (grep пуст)
 
 ### Vendor removal
 
-- [ ] **IMPORT-VENDRM-01**: WHEN репозиторий проверяется, the system SHALL не содержать дерево `internal/easypc` целиком (48+ файлов, включая `VENDORED.md`, `cmd/easyp-protoc`, `cmd/lexbench`); функция «protoc-совместимый бинарь» остаётся доступной через `go run github.com/easyp-tech/easyprotoc/cmd/easyprotoc` без локальной копии
+- [x] **IMPORT-VENDRM-01**: WHEN репозиторий проверяется, the system SHALL не содержать дерево `internal/easypc` целиком (48+ файлов, включая `VENDORED.md`, `cmd/easyp-protoc`, `cmd/lexbench`); функция «protoc-совместимый бинарь» остаётся доступной через `go run github.com/easyp-tech/easyprotoc/cmd/easyprotoc` без локальной копии
 
 ### Seal / docs
 
@@ -52,9 +52,9 @@ Deferred to future milestones:
 | Requirement | Phase | Status |
 |-------------|-------|--------|
 | IMPORT-REC-01 | Phase 1 — Merge main и примирение путей | Complete |
-| IMPORT-DEP-01 | Phase 2 — Переключение потребителей и удаление вендор-копии | Pending |
-| IMPORT-CONS-01 | Phase 2 — Переключение потребителей и удаление вендор-копии | Pending |
-| IMPORT-VENDRM-01 | Phase 2 — Переключение потребителей и удаление вендор-копии | Pending |
+| IMPORT-DEP-01 | Phase 2 — Переключение потребителей и удаление вендор-копии | Complete |
+| IMPORT-CONS-01 | Phase 2 — Переключение потребителей и удаление вендор-копии | Complete |
+| IMPORT-VENDRM-01 | Phase 2 — Переключение потребителей и удаление вендор-копии | Complete |
 | IMPORT-SEAL-01 | Phase 3 — Снятие seal-инфраструктуры и документация | Pending |
 | IMPORT-PARITY-01 | Phase 4 — Приёмка — полный паритет | Pending |
 

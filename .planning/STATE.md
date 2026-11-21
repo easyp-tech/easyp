@@ -6,16 +6,16 @@ current_phase: 2
 current_phase_name: Переключение потребителей и удаление вендор-копии
 current_plan: 4
 status: verifying
-stopped_at: Phase 1 complete, ready to verify Phase 2
-last_updated: "2026-11-21T12:06:39.516Z"
+stopped_at: Completed 02-01-PLAN.md (atomic swap commit 5342455); next 02-02
+last_updated: "2026-11-21T13:08:55.162Z"
 last_activity: 2026-11-21
 last_activity_desc: Phase 1 complete, transitioned to Phase 2
-state_head: 77c93ece1a9ad5c38386b5e038bd0cd6d1a87421
+state_head: 5342455410a50ae30f1f4f5eeb1f49f7ac20eb4f
 progress:
   total_phases: 4
   completed_phases: 1
-  total_plans: 2
-  completed_plans: 2
+  total_plans: 4
+  completed_plans: 3
   percent: 25
 ---
 
@@ -110,6 +110,7 @@ Last activity: 2026-11-21 — Phase 1 complete, transitioned to Phase 2
 | Phase 07 P04 | 34min | 2 tasks | 3 files |
 | Phase 01 P01 | 3 min | 2 tasks | 9 files |
 | Phase 01 P02 | 20min | 2 tasks | 1 files |
+| Phase 02 P01 | 4 min | 2 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -223,6 +224,9 @@ Recent decisions affecting current work:
 - [Phase 01]: IMPORT-REC-01 checkbox deferred by the shared-ID gate until plan 01-02 SUMMARY exists (both plans declare it); full -race battery and parity gates belong to 01-02
 - [Phase 01]: Evidence-only plan 01-02: both tasks are gate runs (build/vet/tidy, one full -race battery, then every D-09 gate by exact test name); the only artifact is 01-02-SUMMARY.md, so there is no per-task commit and HEAD stays the merge commit or a docs-only descendant
 - [Phase 01]: Merge tree proven behavior-preserving: 41 ok/0 FAIL/0 race blocks, acceptance A-D x2 against 1e9a596 (present, not skipped), golden 94, both D-07 position gates, core/CLI matrix all green with zero-diff expectation freeze versus 79e353a and no golden re-capture
+- [Phase 02]: 02-01: tidy proven a no-op — go.mod/go.sum byte-identical to df23d64 and easyprotoc stays the direct exact pin because breaking_profiles.go already required it; no replace/vendor
+- [Phase 02]: 02-01: easyprotoc imports grouped third-party — own group above the project imports in link.go, above testify in the three test files — mirroring main's breaking_profiles.go
+- [Phase 02]: 02-01: the two VENDORED.md comments rewritten in place (build.go pos() -> go.mod pin; protoast.go -> builder.pos + pin) to keep the seven-file diff at exactly 14 removed/14 added path lines
 
 ### Pending Todos
 
@@ -258,6 +262,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-11-21T11:40:55.337Z
-Stopped at: Phase 1 complete, ready to verify Phase 2
+Last session: 2026-11-21T13:08:55.109Z
+Stopped at: Completed 02-01-PLAN.md (atomic swap commit 5342455); next 02-02
 Resume file: None
