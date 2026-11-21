@@ -403,6 +403,56 @@ func TestBuiltinRunCancellationTerminatesWasm(t *testing.T) {
 	})
 }
 
+func TestBuiltinRunRuntimeCreationIsSerializedAcrossScopes(t *testing.T) {
+	t.Parallel()
+
+	synctest.Test(t, func(t *testing.T) {
+		const scopes = 2
+		const invocationsPerScope = 2
+		baseCtx := t.Context()
+		module := builtinEchoModule(t)
+		type invocation struct {
+			input  string
+			output []byte
+			err    error
+		}
+		results := make(chan invocation, scopes*invocationsPerScope)
+		closes := make(chan error, scopes)
+		for i := range scopes {
+			input := strings.Repeat(string(rune('a'+i)), i+1)
+			go func() {
+				// A fresh context takes the EnsureBuiltinRun owner path, so
+				// each goroutine owns an independent scope: the scope value
+				// lives in the returned derived context, never in baseCtx.
+				// The default runtimeFactory stays in effect — this pin
+				// exercises the production runtime-creation path.
+				ctx, run := EnsureBuiltinRun(baseCtx)
+				if run == nil {
+					results <- invocation{input: input, err: errors.New("EnsureBuiltinRun: fresh context must return an owner")}
+					closes <- nil
+					return
+				}
+				defer func() { closes <- run.Close(context.Background()) }()
+				for range invocationsPerScope {
+					output, err := runBuiltinModule(ctx, module, []string{"echo"}, strings.NewReader(input))
+					results <- invocation{input: input, output: output, err: err}
+				}
+			}()
+		}
+
+		synctest.Wait()
+		require.Len(t, results, scopes*invocationsPerScope)
+		for range scopes * invocationsPerScope {
+			result := <-results
+			require.NoError(t, result.err)
+			assert.Equal(t, result.input, string(result.output))
+		}
+		for range scopes {
+			require.NoError(t, <-closes)
+		}
+	})
+}
+
 func builtinEchoModule(t *testing.T) []byte {
 	t.Helper()
 	// This WASI fixture imports env.memory and echoes stdin. Both a mutable
