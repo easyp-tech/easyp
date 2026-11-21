@@ -42,8 +42,8 @@ created: "2026-11-21"
 |---------|------|------|-------------|------------|-----------------|-----------|-------------------|-------------|--------|
 | 07-02 T1 (tracer) | 02 | 1 | LINT-PARITY-01 | T-07-02 | Gates A–D: main-vs-main determinism, zero-COMPILE precondition, 4-tuple multiset identity (×2 runs), 3-rule delta accounting | gates-runner | `go test -race -count=1 ./internal/api/ -run TestAcceptanceGates` | ✅ | ⬜ pending |
 | 07-01 T1 (pin) + T2 (fix) | 01 | 1 | (SC3) | T-07-01 | wazero race fixed — plugin package green under -race | unit/race | `go test -race -count=1 ./internal/adapters/plugin/` | ✅ | ✅ green |
-| (заполняется планами) | 0X | X | (SC3) | T-07-* | Milestone gates: full -race suite + golangci + schema drift | battery | `go test -race -count=1 ./...` | ✅ | ⬜ pending |
-| (заполняется планами) | 0X | X | LINT-PARITY-01, LINT-PERF-01 | T-07-* | Corpora/perf legs — READY-TO-FIRE scripts + human-check (unblock path 06-USER-SETUP.md) | checkpoint | `checkpoint:human-verify` | ❌ W0 | ⬜ pending |
+| 07-03 T1 (tracer battery) | 03 | 2 | (SC3) | T-07-06 | Milestone gates on the final state: full -race suite (3718 tests, incl. plugin/generation, TestAcceptanceGates, golden corpus, standing-constraint cells), golangci zero issues, schema drift empty via one tmp dir; hadolint = honest manual item (Docker absent) | battery | `bin/gotestsum --format pkgname -- -coverprofile=coverage.out -race -count=1 ./... && bin/golangci-lint run ./... && tmpd=$(mktemp -d) && go run ./cmd/easyp schema-gen --out-dir "$tmpd" && diff -r schemas "$tmpd"` | ✅ | ✅ green |
+| 07-03 T2+T3 (evidence + disposal) | 03 | 2 | LINT-PARITY-01, LINT-PERF-01 | T-07-04 | Corpora/perf legs: parity-evidence-07.json (baseline 1e9a596 / 41, head / 44, Gates A-D teeth, corpora_leg pending_user_unblock with fresh clone_attempts 2026-11-21T04:15:09Z) + perf protocol committed + end-of-phase human check (unblock path 07-USER-SETUP.md) | evidence + checkpoint | `python3 -c "import json;d=json.load(open('.planning/phases/07-priemka-paritet-korpusov-i-proizvoditelnost/parity-evidence-07.json'));assert d['corpora_leg']['clone_attempts'] and d['corpora_leg']['status']=='pending_user_unblock'"` (automated disposition gate) | ✅ | ⬜ pending (MANUAL-ONLY until corpora unblock) |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
 
@@ -61,8 +61,8 @@ created: "2026-11-21"
 
 | Behavior | Requirement | Why Manual | Test Instructions |
 |----------|-------------|------------|-------------------|
-| Corpora parity (api-common 92, googleapis-nocompute 7414) | LINT-PARITY-01 | Private corpora unreachable on this machine (spike-verified) | Unblock per 06-USER-SETUP.md, fire the ready scripts, compare vs main binary |
-| Perf measurement on googleapis-nocompute | LINT-PERF-01 | Same reachability constraint | Same scripts; timing recorded per protocol |
+| Corpora parity (api-common 92, googleapis-nocompute 7414) | LINT-PARITY-01 | Private corpora unreachable on this machine (research spike 2026-11-21 + fresh attempts at 07-03 execution — gh exit 1, SSH exit 128, env vars unset; records in parity-evidence-07.json corpora_leg.clone_attempts) | Unblock per 07-USER-SETUP.md (GOOGLEAPIS must be a fresh public googleapis clone — Pitfall 7 revision-compatibility), then the executor fires /tmp/p7/run-parity.sh parity unchanged; compare vs main binary via Gates A-D |
+| Perf measurement on googleapis-nocompute (gate: median(new) <= median(main)) | LINT-PERF-01 | Same reachability constraint; protocol committed in perf-evidence-07.md before any measurement | Same unblock; perf protocol (warmup 1 + median-of-5 interleaved, no-race) fires unchanged; api-common recorded, not gated |
 
 ---
 

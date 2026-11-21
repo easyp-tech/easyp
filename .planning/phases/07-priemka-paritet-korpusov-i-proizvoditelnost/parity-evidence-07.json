@@ -41,7 +41,26 @@
       "GOOGLEAPIS/CORPUS_ARGS -> both unset (2026-11-21 research spike; still unset at 07-03 execution)",
       "local googleapis /home/nil/DiskD/W/yadro/googleapis -> revision 2024-02-12 (7d73737e0), 3889 .proto vs required ~7416 — incompatible with the args lists (Pitfall 7)"
     ],
-    "clone_attempts": [],
+    "clone_attempts": [
+      {
+        "attempted_at": "2026-11-21T04:15:09Z",
+        "command": "gh repo view easyp-tech/EasyP-Parser-Compiler-Experiment --json name",
+        "output": "GraphQL: Could not resolve to a Repository with the name 'easyp-tech/EasyP-Parser-Compiler-Experiment'. (repository)",
+        "exit_code": 1
+      },
+      {
+        "attempted_at": "2026-11-21T04:15:09Z",
+        "command": "git ls-remote git@github.com:easyp-tech/EasyP-Parser-Compiler-Experiment.git HEAD",
+        "output": "ERROR: Repository not found.\nfatal: Could not read from remote repository.\n\nPlease make sure you have the correct access rights\nand the repository exists.",
+        "exit_code": 128
+      },
+      {
+        "attempted_at": "2026-11-21T04:15:09Z",
+        "command": "env check: GOOGLEAPIS / CORPUS_ARGS",
+        "output": "GOOGLEAPIS=<unset>, CORPUS_ARGS=<unset>",
+        "exit_code": 0
+      }
+    ],
     "anti_ratification": "a corpora leg passed without corpora does not exist — the gate state stays pending_user_unblock until per-corpus results exist behind it",
     "unblock_path": ".planning/phases/07-priemka-paritet-korpusov-i-proizvoditelnost/07-USER-SETUP.md (one-command path; on unblock /tmp/p7/run-parity.sh parity + the perf protocol fire unchanged — zero plan changes needed)"
   },
