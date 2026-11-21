@@ -184,7 +184,7 @@ Plans:
   1. lint-diff стенд показывает идентичные множества замечаний с текущим main (правило, файл, строка, колонка) для всех 43 правил на корпусах `api-common` (92 файла) и `googleapis-nocompute` (7414 файлов); прогон повторён дважды для исключения недетерминизма; база main-vs-main снята
   2. `easyp lint` на `googleapis-nocompute` завершается не медленнее текущего main при флагах, эквивалентных CI; результат измерения зафиксирован
   3. Ворота milestone зелёные на финальном состоянии: `task test`, `task lint`, `task schema:check`
-**Plans**: 3/3 plans executed
+**Plans**: 4 plans (3 executed + gap-closure 07-04 pending)
 Plans:
 **Wave 1**
 - [x] 07-01-PLAN.md — wazero race fix (TDD): one-point serialization of the default runtime factory (builtin_run.go:59, both creation sites covered via the same field); RED = package -race failure machine-validated, GREEN = fix + two-scope concurrency pin; unblocks the SC3 full-suite gate (LINT-PARITY-01 enabler)
@@ -192,6 +192,9 @@ Plans:
 
 **Wave 2** *(blocked on Wave 1)*
 - [x] 07-03-PLAN.md — SC3 milestone battery on the final state (full -race ./... unblocked by 07-01, golangci, schema drift, hadolint honest manual item) + committed evidence (parity-evidence-07.json, perf-evidence-07.md, 07-USER-SETUP.md) + corpora/perf legs honest disposal with the end-of-phase human check (pending_user_unblock per the spike; scripts fire unchanged on unblock) (LINT-PARITY-01, LINT-PERF-01)
+
+**Wave 4** *(gap closure — 07-REVIEW findings WR-01/WR-02, test-only)*
+- [ ] 07-04-PLAN.md — micro gap closure: WR-01 (TestMain narrative corrected to the falsification-verified truth + peak-concurrency probe around the production constructor in the two-scope pin — restores the serialization's regression protection) + WR-02 (corpus-config comment corrected to the measured 35/44 HEAD, 32/41 baseline registry counts) (LINT-PARITY-01)
 **Research flag**: воспроизведение стенда `lab.py` (доступ к приватному compiler-lab, пересборка корпусов) — валидировать спайком до фазы или в её начале
 
 ## Progress
@@ -207,7 +210,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 | 4. Перенос 43 правил с батч-паритетом | 8/8 | Complete    | 2026-11-20 |
 | 5. Переключение lint-пути и ворота совместимости | 5/5 | Complete    | 2026-11-21 |
 | 6. Новые правила и регенерация схем/MCP | 3/3 | Complete    | 2026-11-21 |
-| 7. Приёмка — паритет корпусов и производительность | 3/3 | In Progress | - |
+| 7. Приёмка — паритет корпусов и производительность | 3/4 | In Progress | - |
 
 ---
 *Roadmap created: 2026-11-17 (milestone lint-easypc-infra, 17/17 requirements mapped)*
