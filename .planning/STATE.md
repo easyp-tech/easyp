@@ -3,16 +3,16 @@ gsd_state_version: "1.0"
 current_phase: 06
 current_phase_name: Новые правила и регенерация схем/MCP
 status: executing
-stopped_at: Completed 06-01-PLAN.md
-last_updated: "2026-11-20T23:46:55.286Z"
+stopped_at: Completed 06-02-PLAN.md
+last_updated: "2026-11-21T00:14:54.564Z"
 last_activity: 2026-11-21
 last_activity_desc: Phase 06 execution started
-state_head: 65d81bc6eeeefa6c4c7dc7d7575038b17665629d
+state_head: 6665c3facf74f3d529fdd0ecd742ca2618852d2e
 progress:
   total_phases: 7
   completed_phases: 5
   total_plans: 28
-  completed_plans: 26
+  completed_plans: 27
   percent: 71
 ---
 
@@ -41,7 +41,7 @@ See: .planning/PROJECT.md (updated 2026-11-19)
 ## Current Position
 
 Phase: 06 (Новые правила и регенерация схем/MCP) — EXECUTING
-Plan: 2 of 3
+Plan: 3 of 3
 Status: Ready to execute
 Last activity: 2026-11-21 — Phase 06 execution started
 
@@ -97,6 +97,7 @@ Progress: [███░░░░░░░] 29%
 | Phase 05 P04 | 16 min | 2 tasks | 87 files |
 | Phase 05 P05 | 10 min | 3 tasks | 5 files |
 | Phase 06 P01 | 6 min | 3 tasks | 14 files |
+| Phase 06 P02 | 20 min | 3 tasks | 14 files |
 
 ## Accumulated Context
 
@@ -187,6 +188,8 @@ Recent decisions affecting current work:
 - [Phase 06]: [Phase 06-01]: Three lab rules ported byte-verbatim via cp + empty per-file diff gates @ 08cef10 (unsuffixed filenames); fresh tests pin lab positions (FilePosition 1:1, Decl.NamePos, import-keyword Pos) — lab parity is the oracle for NEW rules, no main-wins adaptations
 - [Phase 06]: [Phase 06-01]: Cycle fixtures are a 3-file/2-package PACKAGE cycle at repo-root testdata/import_cycle/ (file DAG acyclic — the linker rejects direct file cycles); shapes reused by 06-02 golden corpus and 06-03 teeth corpus
 - [Phase 06]: [Phase 06-01]: TDD compile-gap RED documented per plan (type-referencing tests cannot be machine-validated RED before the verbatim port) — machine-validated RED deferred to 06-02 Task 1 registry guard flip; tasks land as single atomic feat commits with registry dormancy gates green (TestModuleRuleSet ten-name set, schema drift empty)
+- [Phase 06]: ONE feat commit (5be9f7e, exactly 13 files) carries registry wiring, validator deletion, six pin flips, golden extension/re-capture and regenerated schemas — ratified atomic-flip precedent (05-03); RED machine-validated but uncommitted until this commit — Golden corpus extension is mandatory (A2 false-as-stated): coverage invariant went RED once the registry hit 44; 5 fixtures + re-captured 94-finding golden landed in the same commit
+- [Phase 06]: Golden re-capture via temp engine-dump probe (deleted pre-commit): existing 73 literals proven byte-identical by multiset diff; new-rule literals engine-captured, pending 06-03 lab cross-check — Golden corpus extension is mandatory (A2 false-as-stated): coverage invariant went RED once the registry hit 44; 5 fixtures + re-captured 94-finding golden landed in the same commit
 
 ### Pending Todos
 
@@ -215,6 +218,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-11-20T23:46:53.827Z
-Stopped at: Completed 06-01-PLAN.md
+Last session: 2026-11-21T00:14:53.144Z
+Stopped at: Completed 06-02-PLAN.md
 Resume file: None

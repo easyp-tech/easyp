@@ -30,10 +30,10 @@ Requirements for milestone «Миграция линтера на собстве
 
 ### New Rules
 
-- [ ] **LINT-NEWRULES-01** (REQ-4.1): WHEN lint выполняется с группой `MINIMAL`, the system SHALL включать правило `PACKAGE_NO_IMPORT_CYCLE` (размещение как в лабораторном CLI)
-- [ ] **LINT-NEWRULES-02** (REQ-4.2): WHEN lint выполняется с группой `BASIC`, the system SHALL включать правила `SYNTAX_SPECIFIED` и `FIELD_NOT_REQUIRED`
+- [x] **LINT-NEWRULES-01** (REQ-4.1): WHEN lint выполняется с группой `MINIMAL`, the system SHALL включать правило `PACKAGE_NO_IMPORT_CYCLE` (размещение как в лабораторном CLI)
+- [x] **LINT-NEWRULES-02** (REQ-4.2): WHEN lint выполняется с группой `BASIC`, the system SHALL включать правила `SYNTAX_SPECIFIED` и `FIELD_NOT_REQUIRED`
 - [ ] **LINT-NEWRULES-03** (REQ-4.3): WHEN новые правила запущены на корпусах, the system SHALL выдавать замечания, идентичные выводу лабораторного CLI на тех же корпусах
-- [ ] **LINT-NEWRULES-04** (REQ-4.4): WHEN генерируются JSON-схемы конфигурации, the system SHALL включать имена новых правил и групп в enum значений `lint.use` и отражать обновлённый набор в MCP-описаниях `mcp/easypconfig` (`task schema:generate`)
+- [x] **LINT-NEWRULES-04** (REQ-4.4): WHEN генерируются JSON-схемы конфигурации, the system SHALL включать имена новых правил и групп в enum значений `lint.use` и отражать обновлённый набор в MCP-описаниях `mcp/easypconfig` (`task schema:generate`)
 
 ### Compatibility
 
@@ -108,10 +108,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | LINT-ENG-06 | Phase 3 | Complete |
 | LINT-PARITY-01 | Phase 7 | Pending |
 | LINT-PARITY-02 | Phase 4 | Complete |
-| LINT-NEWRULES-01 | Phase 6 | Pending |
-| LINT-NEWRULES-02 | Phase 6 | Pending |
+| LINT-NEWRULES-01 | Phase 6 | Complete |
+| LINT-NEWRULES-02 | Phase 6 | Complete |
 | LINT-NEWRULES-03 | Phase 6 | Pending |
-| LINT-NEWRULES-04 | Phase 6 | Pending |
+| LINT-NEWRULES-04 | Phase 6 | Complete |
 | LINT-COMPAT-01 | Phase 5 | Complete |
 | LINT-COMPAT-02 | Phase 5 | Complete |
 | LINT-PERF-01 | Phase 7 | Pending |
