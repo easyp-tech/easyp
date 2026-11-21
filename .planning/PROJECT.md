@@ -10,7 +10,19 @@ EasyP остаётся drop-in buf-совместимым инструменто
 
 ## Current Milestone
 
-**lint-easypc-infra** — перевод `easyp lint` с go-protoparser на собственный компилятор `easyp-protoc` (вендорится как `internal/easypc`) и модель `protoast`. Эталон — проверенная реализация в приватном `easyp-tech/compiler-lab` (ветка `easyp-cli`). Цели: производительность не хуже main (в лаборатории 20 мин → 0.08 с на `compute.proto`), buf-совместимые `COMPILE`-замечания на некомпилирующихся файлах, паритет всех 43 правил, три новых правила. Остальные подсистемы (breaking, generate, `mod tidy`, `migrate`) не затрагиваются. Требования перенесены в REQUIREMENTS.md из `.spec/features/lint-easypc-infra/requirements.md`.
+*(none — v1.0 shipped 2026-11-21; start the next with `/gsd:new-milestone`)*
+
+## Current State
+
+**v1.0 «lint-easypc-infra» SHIPPED 2026-11-21** (PR #258). `easyp lint` работает на собственном вендоренном компиляторе `easypc` + модели `protoast`: паритет замечаний с main (автоматизированное ядро — Gates A–D ×2, golden 94 findings байт-точно), COMPILE-замечания на некомпилирующихся корпусах, детерминированный порядок вывода, 44 правила (3 новых: PACKAGE_NO_IMPORT_CYCLE, SYNTAX_SPECIFIED, FIELD_NOT_REQUIRED), схемы/MCP атомарно обновлены. Полный `-race ./...` зелёный: 41 пакет, 3718 тестов, 0 FAIL; wazero-гонка устранена. Живые обязательства в backlog: corpora letters (ready-to-fire скрипты + unblock path), hadolint при появлении Docker.
+
+## Next Milestone Goals
+
+*(черновик — финализировать в `/gsd:new-milestone`)*
+- Corpora acceptance: разблокировать приватные корпуса, прогнать lint-diff паритет + perf-гейт на полном масштабе (letters v1.0)
+- Продолжение серии: перевод breaking/generate/`mod tidy`/`migrate` на `easypc` (FUTURE-COMPILER-01..03)
+- Hardening: fuzzing лексера/парсера (FUTURE-HARDENING-01), editions support (FUTURE-COMPILER-04)
+- Lab improvements deferred behind parity: resolution-based ImportUsed, cross-file RPCRequestResponseUnique, swift_prefix fix
 
 ## Business Context
 
