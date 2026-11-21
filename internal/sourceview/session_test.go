@@ -26,7 +26,11 @@ func TestSessionSharesRootsAndKeepsChecks(t *testing.T) {
 	}
 
 	session := NewSession()
-	defer session.Close()
+	t.Cleanup(func() {
+		if err := session.Close(); err != nil {
+			t.Errorf("close session: %v", err)
+		}
+	})
 	for _, name := range []string{"one.proto", "two.proto"} {
 		file, err := session.OpenLocal(t.Context(), root, "a/b/"+name)
 		if err != nil {
