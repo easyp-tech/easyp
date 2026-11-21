@@ -65,7 +65,9 @@ Decimal phases appear between their surrounding integers in numeric order.
   2. AGENTS.md: параграф «Do not» про sealed vendor copy заменён описанием потребления модуля (версия пинится в `go.mod`, фиксы/ре-синк — через bump версии, а не копирование); layout-таблицы не вводят в заблуждение
   3. `.spec` (актуальные документы, где упоминается lint-путь/архитектура) и README описывают компилятор как зависимость; ссылок на `internal/easypc/VENDORED.md` в действующих доках нет
   4. Grep по действующим конфигам/докам не находит вендор-упоминаний; исторические записи (`.planning/milestones/`, `.spec/features/lint-easypc-infra/`) сохранены как история
-**Plans**: TBD
+**Plans:** 2 plans
+- [ ] 03-01-PLAN.md — Remove the seal infrastructure and document the pinned easyprotoc module
+- [ ] 03-02-PLAN.md — Fix the pre-existing session close errcheck and prove the phase gates
 
 ### Phase 4: Приёмка — полный паритет
 **Goal**: Полный набор приёмки v1.0 проходит на модульной зависимости без единого изменения ожиданий: паритет замечаний, позиции, детерминизм и гейты качества подтверждены
@@ -88,7 +90,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 |-------|----------------|--------|-----------|
 | 1. Merge main и примирение путей | 2/2 | Complete    | 2026-11-21 |
 | 2. Переключение потребителей и удаление вендор-копии | 2/2 | Complete    | 2026-11-21 |
-| 3. Снятие seal-инфраструктуры и документация | 0/0 | Not started | - |
+| 3. Снятие seal-инфраструктуры и документация | 0/2 | Planned | - |
 | 4. Приёмка — полный паритет | 0/0 | Not started | - |
 
 ## Backlog
