@@ -6,16 +6,16 @@ current_phase: 4
 current_phase_name: Приёмка — полный паритет
 current_plan: 8
 status: executing
-stopped_at: Phase 3 complete, ready to verify Phase 4
-last_updated: "2026-11-21T15:07:42.441Z"
+stopped_at: Completed 04-01-PLAN.md (acceptance evidence); ready for phase verification
+last_updated: "2026-11-21T15:53:31.935Z"
 last_activity: 2026-11-21
 last_activity_desc: Phase 3 complete, transitioned to Phase 4
-state_head: c3c098bf0e8fe2d30e428f2ee31ed36d67774c55
+state_head: 740bce983c84aebe6a924524ec3795ab6f08ac9c
 progress:
   total_phases: 4
   completed_phases: 3
-  total_plans: 6
-  completed_plans: 6
+  total_plans: 7
+  completed_plans: 7
   percent: 75
 ---
 
@@ -114,6 +114,7 @@ Last activity: 2026-11-21 — Phase 3 complete, transitioned to Phase 4
 | Phase 02 P02 | 7 min | 2 tasks | 1 files |
 | Phase 03 P01 | 3 min | 2 tasks | 7 files |
 | Phase 03 P02 | 3 min | 2 tasks | 1 files |
+| Phase 04 P01 | 9min | 3 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -235,6 +236,11 @@ Recent decisions affecting current work:
 - [Phase 03]: The close error is handled in t.Cleanup and reported via t.Errorf instead of suppressed, so the 1 -> 0 lint transition is attributable to the source fix (D-08)
 - [Phase 03]: The evidence task ran only the D-09 scoped gates; the full -race battery, schema generation/check and acceptance remain Phase 4
 - [Phase 03]: Commit identity and scope are asserted by exact subject and non-.planning range equality, so intermediate .planning-only commits cannot mask or break the changeset claim
+- [Phase 4]: Evidence-only acceptance: zero task commits; the only authored artifact is 04-01-SUMMARY.md, and HEAD 740bce9 carries the phase-3-final code tree 6f52840 (zero non-.planning diff)
+- [Phase 4]: One full -race battery executed exactly once (34 ok / 0 FAIL / 0 race / 1 known environment skip / 3 no-test); the auto-mode tracer re-check was satisfied by that same run to honor the one-battery budget
+- [Phase 4]: All eleven named gates pass by exact top-level RUN/PASS; internal/api, internal/rules, internal/core and internal/protoast are byte-identical to 6f52840 and both oracle constants are single-occurrence
+- [Phase 4]: v1.0 delta recorded honestly: 41->34 test packages deleted by design; 3718 gotestsum events vs 3602 verbose PASS / 3603 RUN, methods not comparable; parity rests on golden, Gates A-D x2 and D-07
+- [Phase 4]: .claude/CLAUDE.md recorded as an accepted Phase-3 D-03 exclusion with its known compiler-lab mention, never claimed as a clean seal surface
 
 ### Pending Todos
 
@@ -270,6 +276,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-11-21T14:41:12.912Z
-Stopped at: Phase 3 complete, ready to verify Phase 4
+Last session: 2026-11-21T15:53:31.590Z
+Stopped at: Completed 04-01-PLAN.md (acceptance evidence); ready for phase verification
 Resume file: None

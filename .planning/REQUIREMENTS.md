@@ -31,7 +31,7 @@ Requirements for milestone «import-easyprotoc». Topological order: REC → DEP
 
 ### Parity
 
-- [ ] **IMPORT-PARITY-01**: WHEN выполняется приёмка, the system SHALL пройти полный паритет без регрессий: `go build ./...`; `go test -race -count=1 ./...` зелёный (вся батарея v1.0, включая корпусный lint-паритет Gates A–D ×2, golden 94 findings байт-точно, D-07 position-тесты `internal/protoast/position_test.go` и `internal/core/position_parity_test.go`); `task lint:go` зелёный; `task schema:check` без дрейфа
+- [x] **IMPORT-PARITY-01**: WHEN выполняется приёмка, the system SHALL пройти полный паритет без регрессий: `go build ./...`; `go test -race -count=1 ./...` зелёный (вся батарея v1.0, включая корпусный lint-паритет Gates A–D ×2, golden 94 findings байт-точно, D-07 position-тесты `internal/protoast/position_test.go` и `internal/core/position_parity_test.go`); `task lint:go` зелёный; `task schema:check` без дрейфа
 
 ## v2 Requirements
 
@@ -56,6 +56,6 @@ Deferred to future milestones:
 | IMPORT-CONS-01 | Phase 2 — Переключение потребителей и удаление вендор-копии | Complete |
 | IMPORT-VENDRM-01 | Phase 2 — Переключение потребителей и удаление вендор-копии | Complete |
 | IMPORT-SEAL-01 | Phase 3 — Снятие seal-инфраструктуры и документация | Complete |
-| IMPORT-PARITY-01 | Phase 4 — Приёмка — полный паритет | Pending |
+| IMPORT-PARITY-01 | Phase 4 — Приёмка — полный паритет | Complete |
 
 **Coverage:** 6/6 v1 requirements mapped ✓
