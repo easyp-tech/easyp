@@ -82,6 +82,7 @@ Milestone «Миграция линтера на собственный комп
 | Coexistence Option A: suffixed <Rule>Linked типы + LintRuleName() override; старый путь байт-заморожен до Phase 5 | Один контракт не может реализовать оба Validate-сигнатуры; bridge — антипаттерн | ✓ Phase 4 — 41/41 портов, реестр parity-proven, 53 parity-ячейки |
 | Переключение через identity-консолидацию (не правку шва): buildCore/lint_v1 текстуально неизменны, binding'и меняются через rename map | Откат = revert одного коммита (roadmap SC); минимальный-флип отвергнут как лишний шов | ✓ Phase 5 — flip 4238fbe атомарен, golden байт-идентичен, консолидация 263f067 |
 | Новые правила = verbatim lab-порты + один атомарный registry/schema/MCP коммит | Правила, схемы и MCP меняются согласованно (SC-3); derivation loop закрыт (registry → AllLintUseValues → enums → MCP) | ✓ Phase 6 — реестр 44, teeth-parity 2/2/1/1/1/1, corpora leg → Phase 7 |
+| Milestone acceptance = automated core (teeth Gates A-D ×2, golden 94, SC3 full -race battery) + corpora letters pending_user_unblock | Приватные корпуса недоступны (spike дважды); ready-to-fire скрипты + one-command path держат обязательство живым | ✓ Phase 7 — 12/12 (2 override), wazero race fixed (first full green -race: 41 pkgs/3718 tests) |
 
 ## Evolution
 
@@ -101,4 +102,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-11-21 after Phase 6*
+*Last updated: 2026-11-21 after Phase 7 (milestone phases complete)*
