@@ -3,16 +3,16 @@ gsd_state_version: "1.0"
 current_phase: 07
 current_phase_name: Приёмка — паритет корпусов и производительность
 status: executing
-stopped_at: Completed 07-01-PLAN.md
-last_updated: "2026-11-21T03:27:31.628Z"
+stopped_at: Completed 07-02-PLAN.md
+last_updated: "2026-11-21T03:55:29.549Z"
 last_activity: 2026-11-21
 last_activity_desc: Phase 07 execution started
-state_head: 1f82b61111bb47cfcec36054c7da942ee29f0f90
+state_head: 0669aabd178ed7c585e1982c12b9aece62869845
 progress:
   total_phases: 7
   completed_phases: 6
   total_plans: 31
-  completed_plans: 29
+  completed_plans: 30
   percent: 86
 ---
 
@@ -41,7 +41,7 @@ See: .planning/PROJECT.md (updated 2026-11-19)
 ## Current Position
 
 Phase: 07 (Приёмка — паритет корпусов и производительность) — EXECUTING
-Plan: 2 of 3
+Plan: 3 of 3
 Status: Ready to execute
 Last activity: 2026-11-21 — Phase 07 execution started
 
@@ -101,6 +101,7 @@ Progress: [███░░░░░░░] 29%
 | Phase 06 P02 | 20 min | 3 tasks | 14 files |
 | Phase 06 P03 | 3 min | 2 tasks | 3 files |
 | Phase 07 P01 | 27 min | 2 tasks | 4 files |
+| Phase 07 P02 | 19 min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -198,6 +199,8 @@ Recent decisions affecting current work:
 - [Phase 06]: Filtered-projection parity never raw-diffs full output: (RuleName, Path, Position.Line, Position.Column) multisets filtered to the three new names; deliberate main-vs-lab divergences in ported rules stay untouched; non-JSON output lines hard-fail (A4)
 - [Phase 07]: Serialize ONLY the default wazero runtimeFactory (package runtimeCreationMu + newRuntimeSerialized at the EnsureBuiltinRun default value): both creation sites (builtin_run.go:144, builtin_impl.go:143) covered through the shared field, builtin_impl.go zero-diff, frozen seam overrides byte-untouched; wazero upgrade rejected (A4 resolved-by-decision)
 - [Phase 07]: [Rule 2/3] plugin main_test.go TestMain primes wazero v1.9.0's internal/version lazy global before m.Run forks test goroutines — frozen raw seam doubles cannot be ordered by any production-side mutex (post-fix package runs red 2/2 without priming); priming gives a fork-level happens-before edge, zero production impact, seams untouched
+- [Phase 07]: A2 RATIFIED + materialized: baseline oracle = binary from git worktree at 1e9a596 (zero Go-source delta to 8f969d8, docs-only a0a0ed9/26924b1 intervene) — buildBaselineBinary sync.OnceValues in internal/api with loud commit-presence gate and cleanup-guaranteed worktree teardown
+- [Phase 07]: Gates A-D are permanent machinery: TestAcceptanceGates green under -race on the teeth corpus (x2 per binary, main 10 / HEAD 14 findings, delta exactly 2/1/1, raw-line diagnostic empty after NEW3 filter); /tmp/p7 instruments self-tested with 2 negative controls; parity mode encodes the unblock-day sequence (GNU-sed + GNU-time lab.py compat patches idempotent, setup.sh first, binaries second)
 
 ### Pending Todos
 
@@ -229,6 +232,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-11-21T03:27:30.122Z
-Stopped at: Completed 07-01-PLAN.md
+Last session: 2026-11-21T03:55:28.043Z
+Stopped at: Completed 07-02-PLAN.md
 Resume file: None
