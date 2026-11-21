@@ -17,7 +17,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 3: Двухпроходный движок и подавления** - параллельные окна, ModuleRule, детерминированный порядок, паритет ignore/комментариев/валидации конфига (completed 2026-11-19)
 - [x] **Phase 4: Перенос 43 правил с батч-паритетом** - все правила на protoast, семантика main побеждает лабораторию, паритет верифицируется на уровне батча (completed 2026-11-20)
 - [x] **Phase 5: Переключение lint-пути и ворота совместимости** - easyp lint на компиляторе, старый контур удалён, формат/коды выхода и остальные подсистемы неизменны (completed 2026-11-21)
-- [ ] **Phase 6: Новые правила и регенерация схем/MCP** - PACKAGE_NO_IMPORT_CYCLE, SYNTAX_SPECIFIED, FIELD_NOT_REQUIRED + атомарное обновление схем и MCP-описаний
+- [x] **Phase 6: Новые правила и регенерация схем/MCP** - PACKAGE_NO_IMPORT_CYCLE, SYNTAX_SPECIFIED, FIELD_NOT_REQUIRED + атомарное обновление схем и MCP-описаний (completed 2026-11-21)
 - [ ] **Phase 7: Приёмка — паритет корпусов и производительность** - идентичный main вывод на api-common и googleapis-nocompute, не медленнее main
 
 ## Phase Details
@@ -162,7 +162,7 @@ Plans:
   1. Группа `MINIMAL` включает `PACKAGE_NO_IMPORT_CYCLE` (кросс-файловое, на ModuleRule); группа `BASIC` включает `SYNTAX_SPECIFIED` и `FIELD_NOT_REQUIRED` (размещение как в лабораторном CLI); спец-отклонение `PACKAGE_NO_IMPORT_CYCLE` в валидации имён правил убрано
   2. Замечания новых правил на приёмочных корпусах идентичны выводу лабораторного CLI на тех же корпусах
   3. Сгенерированные JSON-схемы включают имена новых правил и групп в enum значений `lint.use`; `task schema:check` без дрейфа; MCP-описания `mcp/easypconfig` отражают обновлённый набор — правила, схемы и MCP-описания меняются согласованно, одним изменением
-**Plans**: 3/3 plans executed
+**Plans**: 3/3 plans complete
 Plans:
 **Wave 1**
 - [x] 06-01-PLAN.md — Verbatim ports (tracer: SYNTAX_SPECIFIED, then FIELD_NOT_REQUIRED + PACKAGE_NO_IMPORT_CYCLE): three lab rule files @ 08cef10 byte-verbatim + fresh colocated tests + repo-root testdata fixtures (package-cycle trio, no-syntax, required-field); registry surface provably untouched (LINT-NEWRULES-01/02/03)
@@ -199,7 +199,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 | 3. Двухпроходный движок и подавления | 4/4 | Complete    | 2026-11-19 |
 | 4. Перенос 43 правил с батч-паритетом | 8/8 | Complete    | 2026-11-20 |
 | 5. Переключение lint-пути и ворота совместимости | 5/5 | Complete    | 2026-11-21 |
-| 6. Новые правила и регенерация схем/MCP | 3/3 | In Progress | - |
+| 6. Новые правила и регенерация схем/MCP | 3/3 | Complete    | 2026-11-21 |
 | 7. Приёмка — паритет корпусов и производительность | 0/TBD | Not started | - |
 
 ---
