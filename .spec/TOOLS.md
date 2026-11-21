@@ -192,10 +192,10 @@ remains in the existing release workflow.
 tasks create or select a <code>multiarch</code> Docker Buildx builder and run
 <code>goreleaser release --snapshot --clean</code>; they do not publish a release.
 The pinned GoReleaser version is <code>2.18.2</code>; CI also runs its configuration check.
-This branch's release workflow accepts only explicit
-<code>v1.0.0-nightly.YYYYMMDD.N</code> tags and authenticates to GitHub Container Registry.
-It never updates GitHub Latest, the stable Homebrew formula, or the Docker
-<code>latest</code> tag. See [nightly release operations](DEPLOYMENT.md).
+The release workflow publishes explicit <code>v1.X.Y</code> tags from main as the
+stable release (GitHub Latest, Homebrew formula, Docker <code>latest</code>) and
+<code>v1.X.Y-nightly.YYYYMMDD.N</code> tags as prereleases that update none of
+those. See [release operations](DEPLOYMENT.md).
 
 ## Dependency and Vendor Tools
 
