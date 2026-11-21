@@ -1,8 +1,8 @@
 package protoast
 
 import (
-	"github.com/easyp-tech/easyp/internal/easypc/pkg/parser"
-	"github.com/easyp-tech/easyp/internal/easypc/protoc/syntax"
+	"github.com/easyp-tech/easyprotoc/parser"
+	"github.com/easyp-tech/easyprotoc/protoc/syntax"
 )
 
 // OutlineOf returns what Outline returns, read straight from the syntax tree

@@ -1,7 +1,0 @@
-syntax = "proto3";
-package feat20.case04;
-
-message MetricsTarget4 {
-  int64 sequence = 1;
-  string payload = 2;
-}

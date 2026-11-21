@@ -1,4 +1,0 @@
-syntax = "proto3";
-message Foo {
-  NonExistentType bar = 1;
-}

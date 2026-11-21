@@ -1,1 +1,0 @@
-syntax = "proto3"; package feat30b.c05; message BoundDeep1 { message BoundDeep2 { message BoundDeep3 { message BoundDeep4 { int32 leaf = 536870911; } } } }

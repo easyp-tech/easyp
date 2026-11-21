@@ -1,6 +1,0 @@
-syntax = "proto3";
-package feat24b.c04;
-
-message MapReflectEntry {
-  map<string, int64> entries = 1;
-}

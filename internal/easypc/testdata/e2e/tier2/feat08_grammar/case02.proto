@@ -1,1 +1,0 @@
-syntax = "proto3"; package feat08b.c02; message OnlyReservedRanges { reserved 1 to 10; }

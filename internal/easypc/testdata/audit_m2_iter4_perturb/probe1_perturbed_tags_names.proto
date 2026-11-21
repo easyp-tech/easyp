@@ -1,9 +1,0 @@
-syntax = "proto3";
-package audit.iter4.probe1;
-
-message PerturbedTelemetryEvent {
-    int64 timestamp_ns = 999;
-    string device_guid = 1000;
-    double calibration_factor = 50000;
-    bool is_verified = 99999;
-}

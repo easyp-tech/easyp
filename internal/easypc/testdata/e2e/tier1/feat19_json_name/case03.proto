@@ -1,7 +1,0 @@
-syntax = "proto3";
-package feat19.case03;
-
-message NumbersInField {
-  int32 field_1_value = 1;
-  string data_2d_array = 2;
-}

@@ -1,7 +1,0 @@
-syntax = "proto3";
-package feat05.case05;
-;;;
-message ExtraSemicolons {
-  int32 a = 1;;
-  string b = 2;;
-};;

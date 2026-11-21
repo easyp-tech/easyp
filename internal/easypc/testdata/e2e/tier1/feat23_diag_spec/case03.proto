@@ -1,6 +1,0 @@
-syntax = "proto3";
-package feat23.case03;
-
-message CleanMsg3 {
-  string title = 1;
-}

@@ -1,1 +1,0 @@
-syntax = "proto3"; package feat20b.c02; message MetricsBound2 { int32 id = 1; }

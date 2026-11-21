@@ -1,7 +1,0 @@
-syntax = "proto3";
-package feat17b.c03;
-
-message S3 {
-	int32	f1	=	1;
-    string  f2  =   2;
-}

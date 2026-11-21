@@ -1,7 +1,0 @@
-syntax = "proto2";
-package feat02.case01;
-
-message StringQuotes {
-  optional string double_quoted = 1 [default = "hello world"];
-  optional string single_quoted = 2 [default = 'single quoted string'];
-}

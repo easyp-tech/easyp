@@ -1,7 +1,0 @@
-syntax = "proto3";
-package tier3.combo02;
-
-message OptionalJsonMsg {
-  optional string nickname = 1 [json_name = "userNickname"];
-  optional int32 account_tier = 2 [json_name = "accountTier"];
-}

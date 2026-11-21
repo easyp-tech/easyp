@@ -1,1 +1,0 @@
-syntax = "proto3"; package feat13b.common; import "common_base.proto"; message User1 { BaseCore c = 1; }

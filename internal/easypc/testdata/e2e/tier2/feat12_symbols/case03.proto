@@ -1,1 +1,0 @@
-syntax = "proto3"; package feat12b.c03; message ShadowOuter { message ShadowOuter { int32 val = 1; } ShadowOuter inner = 1; }

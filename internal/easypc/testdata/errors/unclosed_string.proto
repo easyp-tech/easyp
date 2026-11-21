@@ -1,4 +1,0 @@
-syntax = "proto3";
-message Foo {
-  string s = 1 [default = "unclosed];
-}

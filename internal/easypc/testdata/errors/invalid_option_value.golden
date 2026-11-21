@@ -1,1 +1,0 @@
-testdata/errors/invalid_option_value.proto:4:23: Value must be identifier for boolean option "google.protobuf.MessageOptions.deprecated".

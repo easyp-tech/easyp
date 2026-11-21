@@ -1,1 +1,0 @@
-syntax = "proto3"; package feat13.diamond; import "diamond_d.proto"; message LeftWing { SharedCore core = 1; }

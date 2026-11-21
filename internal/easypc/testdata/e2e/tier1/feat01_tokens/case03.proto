@@ -1,8 +1,0 @@
-edition = "2023";
-package feat01.case03;
-
-// Test edition keyword and features
-message EditionItem {
-  int32 item_id = 1;
-  string description = 2;
-}

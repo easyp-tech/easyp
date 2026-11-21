@@ -1,9 +1,0 @@
-syntax = "proto3";
-package feat08.case05;
-
-message Ping { int64 seq = 1; }
-message Pong { int64 seq = 1; }
-
-service PingPongService {
-  rpc PingPong (Ping) returns (Pong);
-}

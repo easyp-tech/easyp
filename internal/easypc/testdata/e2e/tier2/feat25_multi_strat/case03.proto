@@ -1,1 +1,0 @@
-syntax = "proto3"; package feat25b.c03; message StratBound3 { int32 id = 1; }

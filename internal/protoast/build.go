@@ -7,8 +7,8 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"github.com/easyp-tech/easyp/internal/easypc/pkg/parser"
-	"github.com/easyp-tech/easyp/internal/easypc/protoc/syntax"
+	"github.com/easyp-tech/easyprotoc/parser"
+	"github.com/easyp-tech/easyprotoc/protoc/syntax"
 )
 
 // Read parses r as the file at path.
@@ -449,7 +449,7 @@ func (l *literal) String() string {
 // contract: 1-based lines, 1-based columns counted in runes, and a tab
 // advancing the column by exactly one. This deliberately diverges from
 // upstream protoc's byte columns with tab stops of 8; re-apply the divergence
-// on every compiler-lab re-sync (see internal/easypc/VENDORED.md).
+// whenever the github.com/easyp-tech/easyprotoc version in go.mod is bumped.
 func (b *builder) pos(off uint32) Position {
 	if off > b.ast.SrcLen {
 		off = b.ast.SrcLen

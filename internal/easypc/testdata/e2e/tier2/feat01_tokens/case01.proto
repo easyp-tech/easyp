@@ -1,1 +1,0 @@
-syntax = "proto3"; package feat01b.c01; message A { int32 a = 1; }

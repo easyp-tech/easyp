@@ -1,7 +1,0 @@
-syntax = "proto2";
-package feat30.case04;
-
-message ExtensionRanges {
-  optional int32 id = 1;
-  extensions 1000 to max;
-}

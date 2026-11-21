@@ -7,10 +7,10 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/easyp-tech/easyprotoc/protoc"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/easyp-tech/easyp/internal/easypc/protoc"
 	"github.com/easyp-tech/easyp/internal/fs/fs"
 	"github.com/easyp-tech/easyp/internal/logger"
 )
@@ -261,7 +261,7 @@ func TestLinkSources(t *testing.T) {
 				assert.Equal(t, CompileRuleName, issues[0].RuleName)
 				assert.Contains(t, issues[0].Message, "Required fields are not allowed")
 
-				// Compiler LineCol convention (internal/easypc/pkg/lexer/token.go:121-123):
+				// Compiler LineCol convention (github.com/easyp-tech/easyprotoc/lexer/token.go:121-123):
 				// 1-based line, 1-based column, tab stop 8, byte columns. The
 				// error token on line 6 follows a leading tab (col0 0 -> 8) and
 				// 28 more bytes (`/* ` + 8 two-byte Cyrillic letters + ` ` + a

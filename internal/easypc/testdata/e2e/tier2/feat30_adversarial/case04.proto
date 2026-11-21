@@ -1,1 +1,0 @@
-syntax = "proto2"; package feat30b.c04; message BoundExtensionRange { optional int32 a = 1; extensions 1000 to max; }

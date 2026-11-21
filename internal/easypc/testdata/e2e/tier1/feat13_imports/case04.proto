@@ -1,7 +1,0 @@
-syntax = "proto3";
-package feat13.case04;
-import "pub_gateway.proto";
-
-message PublicImportConsumer {
-  feat13.pub.InnerPub forwarded = 1;
-}

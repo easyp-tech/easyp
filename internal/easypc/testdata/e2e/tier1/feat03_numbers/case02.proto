@@ -1,8 +1,0 @@
-syntax = "proto2";
-package feat03.case02;
-
-message Hexadecimals {
-  optional int32 hex_lower = 1 [default = 0x1f];
-  optional int32 hex_upper = 2 [default = 0X2A];
-  optional uint64 hex_big = 3 [default = 0xdeadbeef];
-}

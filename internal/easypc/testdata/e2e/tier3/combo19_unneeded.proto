@@ -1,3 +1,0 @@
-syntax = "proto3";
-package tier3.combo19;
-message UnneededItem { int32 dummy = 1; }

@@ -1,1 +1,0 @@
-syntax = "proto3"; package feat26b.c02; message VarBound2 { int32 id = 1; }

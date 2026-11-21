@@ -3,10 +3,9 @@ package protoast
 import (
 	"testing"
 
+	"github.com/easyp-tech/easyprotoc/protoc/syntax"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-
-	"github.com/easyp-tech/easyp/internal/easypc/protoc/syntax"
 )
 
 const sample = `// File comment.

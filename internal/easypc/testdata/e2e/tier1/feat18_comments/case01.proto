@@ -1,8 +1,0 @@
-syntax = "proto3";
-package feat18.case01;
-
-// Message leading comment
-message LeadCommentMsg {
-  // Field leading comment
-  int32 id = 1;
-}

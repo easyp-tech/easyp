@@ -1,8 +1,0 @@
-edition = "2023";
-package audit.forensics.m2.editions_probe;
-
-message EditionsMessage {
-  int32 ed_id = 1;
-  string ed_name = 2;
-  repeated bytes ed_blobs = 3;
-}

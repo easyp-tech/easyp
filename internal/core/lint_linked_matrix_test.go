@@ -12,10 +12,10 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/easyp-tech/easyprotoc/protoc"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/easyp-tech/easyp/internal/easypc/protoc"
 	"github.com/easyp-tech/easyp/internal/fs/fs"
 	"github.com/easyp-tech/easyp/internal/logger"
 	"github.com/easyp-tech/easyp/internal/sourceview"
@@ -582,7 +582,7 @@ func TestLintErrorPathFidelity(t *testing.T) {
 		t.Parallel()
 
 		// IN-01: the ctx guard every sibling resolver carries
-		// (internal/easypc/protoc/resolver.go): a cancelled context returns
+		// (github.com/easyp-tech/easyprotoc/protoc/resolver.go): a cancelled context returns
 		// the context error before any file access, from the corpus branch and
 		// the disk branch alike.
 		root := writeCorpus(t, map[string]string{

@@ -1,7 +1,0 @@
-syntax = "proto3";
-package feat09.case05;
-
-message M1 { string s = 1; }
-message M2 { M1 m1 = 1; }
-message M3 { M2 m2 = 1; }
-message M4 { M3 m3 = 1; }

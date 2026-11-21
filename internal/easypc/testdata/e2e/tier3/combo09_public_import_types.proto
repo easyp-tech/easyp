@@ -1,7 +1,0 @@
-syntax = "proto3";
-package tier3.combo09;
-import "combo09_gateway.proto";
-
-message ConsumerMsg {
-  tier3.combo09.lib.LibContainer.Mode mode = 1;
-}

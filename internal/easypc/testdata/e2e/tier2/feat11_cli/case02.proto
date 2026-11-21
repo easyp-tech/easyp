@@ -1,1 +1,0 @@
-syntax = "proto3"; package feat11b.c02; message CliBoundary2 { int32 code = 1; }

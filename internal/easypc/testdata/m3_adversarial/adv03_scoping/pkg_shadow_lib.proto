@@ -1,6 +1,0 @@
-syntax = "proto3";
-package shadow.lib.tools;
-
-message Tool {
-  string tool_name = 1;
-}

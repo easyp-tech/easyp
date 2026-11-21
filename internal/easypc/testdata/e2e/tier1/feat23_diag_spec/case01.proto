@@ -1,7 +1,0 @@
-syntax = "proto3";
-package feat23.case01;
-import "unused_lib.proto";
-
-message SpecificityMsg {
-  int32 val = 1;
-}

@@ -1,7 +1,0 @@
-syntax = "proto3";
-package feat21.case02;
-
-message FormatTest2 {
-	int32 id = 1;
-	string name = 2;
-}

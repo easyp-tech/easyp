@@ -1,1 +1,0 @@
-syntax = "proto3"; package feat13b.c04; import "z_dep.proto"; import "a_dep.proto"; message OrderConsumer { feat13b.z.ZItem z = 1; feat13b.a.AItem a = 2; }

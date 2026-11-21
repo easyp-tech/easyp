@@ -1,5 +1,5 @@
 // Package protoast is the lint view of a single .proto file. It is built from
-// easyp-protoc's syntax tree (internal/easypc/protoc/syntax) without linking,
+// easyp-protoc's syntax tree (github.com/easyp-tech/easyprotoc/protoc/syntax) without linking,
 // so a file lints even when its imports cannot be resolved.
 //
 // Text fields hold the source as written with whitespace and comments removed
@@ -7,7 +7,7 @@
 // easyp output contract: 1-based lines, 1-based columns counted in runes with
 // a tab advancing the column by exactly one, and 0-based byte offsets. This
 // diverges from upstream protoc's byte columns with tab stops of 8; see
-// builder.pos in build.go and internal/easypc/VENDORED.md for the sync note.
+// builder.pos in build.go and the easyprotoc version pin in go.mod for the sync note.
 package protoast
 
 import (

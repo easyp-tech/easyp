@@ -1,6 +1,0 @@
-syntax = "proto3";
-package audit.iter2.alpha;
-
-message AlphaRecord {
-    string gamma_description = 8888;
-}

@@ -1,1 +1,0 @@
-syntax = "proto3"; package p; message M { group G = 1 {} }

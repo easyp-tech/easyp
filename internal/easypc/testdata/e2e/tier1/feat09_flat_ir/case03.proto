@@ -1,8 +1,0 @@
-syntax = "proto3";
-package feat09.case03;
-
-message MultiOneof {
-  oneof first { string a = 1; int32 b = 2; }
-  oneof second { double c = 3; bool d = 4; }
-  oneof third { bytes e = 5; int64 f = 6; }
-}

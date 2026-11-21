@@ -1,1 +1,0 @@
-syntax = "proto3"; package feat22b.c04; message EarlyBound4 { int32 x = 1; }

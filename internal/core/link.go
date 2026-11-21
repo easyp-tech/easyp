@@ -14,7 +14,8 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"github.com/easyp-tech/easyp/internal/easypc/protoc"
+	"github.com/easyp-tech/easyprotoc/protoc"
+
 	"github.com/easyp-tech/easyp/internal/protoast"
 	"github.com/easyp-tech/easyp/internal/sourceview"
 )
@@ -138,7 +139,7 @@ type lintResolver struct {
 // FindFileByPath implements protoc.Resolver.
 func (r *lintResolver) FindFileByPath(ctx context.Context, path string) ([]byte, error) {
 	// IN-01: the ctx guard every sibling resolver carries
-	// (internal/easypc/protoc/resolver.go) — cancellation is honored before
+	// (github.com/easyp-tech/easyprotoc/protoc/resolver.go) — cancellation is honored before
 	// any file access.
 	if ctx != nil && ctx.Err() != nil {
 		return nil, ctx.Err()

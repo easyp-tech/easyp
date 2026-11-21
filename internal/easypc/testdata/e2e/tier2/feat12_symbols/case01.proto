@@ -1,2 +1,0 @@
-syntax = "proto3"; package feat12b.c01; message c01 { int32 id = 1; }
-message RefPkgName { c01 ref = 1; }

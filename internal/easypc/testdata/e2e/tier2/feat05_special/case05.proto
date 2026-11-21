@@ -1,5 +1,0 @@
-syntax = "proto3";
-package feat05b.c05;;;
-message MultipleSemis {
-  int32 x = 1;;;
-};;;

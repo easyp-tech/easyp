@@ -1,6 +1,0 @@
-syntax = "proto3";
-package feat07.case02;
-
-message LongStringMsg {
-  string content = 1;
-}

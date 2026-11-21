@@ -1,9 +1,0 @@
-syntax = "proto3";
-package feat16.case04;
-import "google/protobuf/struct.proto";
-import "google/protobuf/empty.proto";
-
-message StructData {
-  google.protobuf.Struct payload = 1;
-  google.protobuf.Empty nothing = 2;
-}

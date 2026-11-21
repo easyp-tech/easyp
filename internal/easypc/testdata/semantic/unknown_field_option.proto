@@ -1,1 +1,0 @@
-syntax = "proto3"; package p; message M { bytes b = 1 [custom_opt = "x"]; }
