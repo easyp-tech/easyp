@@ -10,7 +10,7 @@ Phase 7 is the milestone's final acceptance: prove the post-flip single engine e
 
 **SPIKE VERDICT (executed live this session, 2026-11-21): the acceptance corpora are NOT reachable and NOT reconstructible on this machine.** All four unblock routes fail or are absent: `gh repo clone easyp-tech/EasyP-Parser-Compiler-Experiment` → "Could not resolve to a Repository"; SSH `git ls-remote` → "Repository not found"; `GOOGLEAPIS`/`CORPUS_ARGS` unset; the only local googleapis checkout (`/home/nil/DiskD/W/yadro/googleapis`, revision 2024-02-12) holds 3889 `.proto` files vs the corpus's required ~7416 — and the `.args` membership lists that define both corpora exist only inside the unreachable experiment repo (not in compiler-lab's git history, not on disk). The phase plan must therefore be built as **two legs**: a fully automated in-repo core that carries everything it can, plus ready-to-fire corpora scripts behind an explicit `checkpoint:human-verify` gate with the documented unblock path (06-USER-SETUP.md) — never silently passed.
 
-The compare design itself is **proven end-to-end live this session** on a mini fixture: the baseline binary builds from the pre-milestone commit `1e9a596` (last commit before the first milestone code commit `8f969d8`), both binaries run the lab.py lint shape (`--format json lint`, exit 0/1, stderr `msg="lint completed" issues=N` cross-check), JSON issue shape is field-identical (`Message/Path/Position{Column,Filename,Line,Offset}/RuleName/SourceName`), and after filtering the 3 new rule names the output is **byte-identical on shared findings** — the raw-line delta was exactly the 4 new-rule findings. The spike also demonstrated the compare's biggest trap concretely: on a non-fully-compiling corpus the linked engine bails to COMPILE-only (1 COMPILE issue, zero rules run → 19-finding false diff), so a zero-COMPILE precondition gate is mandatory.
+The compare design itself is **proven end-to-end live this session** on a mini fixture: the baseline binary builds from the pre-milestone commit `1e9a596` (verified zero Go-source delta to the first milestone code commit `8f969d8` — two docs-only commits intervene), both binaries run the lab.py lint shape (`--format json lint`, exit 0/1, stderr `msg="lint completed" issues=N` cross-check), JSON issue shape is field-identical (`Message/Path/Position{Column,Filename,Line,Offset}/RuleName/SourceName`), and after filtering the 3 new rule names the output is **byte-identical on shared findings** — the raw-line delta was exactly the 4 new-rule findings. The spike also demonstrated the compare's biggest trap concretely: on a non-fully-compiling corpus the linked engine bails to COMPILE-only (1 COMPILE issue, zero rules run → 19-finding false diff), so a zero-COMPILE precondition gate is mandatory.
 
 Two additional live findings shape the plan. First, the **wazero data race still reproduces** (package-level `-race` run of `internal/adapters/plugin` fails: `TestBuiltinRunCompilesOnceAndIsolatesInvocations`, race inside wazero v1.9.0's `internal/version.GetWazeroVersion()` package-global, triggered by concurrent `NewRuntimeWithConfig` from `builtin_run.go:144` and `builtin_impl.go:143`) — it poisons SC3's full-suite gate and needs a fix or a ratified disposition **in this phase**. Second, the compiler-lab checkout ships **tracked saved corpus outputs** (`results/lint/{api-common,googleapis-nocompute,compute}/{go-protoparser,easypc}.jsonl` + meta, Nov 2 2026, author's machine) — the lab's own engines' complete issue sets on the canonical corpora (477 and 69985 issues; main-engine 54.5 s vs easypc 14.2 s on googleapis-nocompute) — an indicative reference for expected counts and the perf ratio, but NOT an oracle (lab lineage ≠ easyp main).
 
@@ -159,7 +159,7 @@ No CONTEXT.md exists for this phase (`has_context: false` from init; `context_sc
 
 ### Pattern 1: The lint-diff compare design vs current main (question 2) — validated live
 
-**What "main" is.** The pre-flip engine was deleted at the Phase-5 flip (4238fbe, 135 files), so main's behavior exists only as a **binary built from the pre-milestone commit**. Definition: `1e9a596` ("fix(01): revise plans per checker feedback", docs-only) — the last commit before `8f969d8` (`chore(01-01): promote go-billy`, go.mod-only), the first milestone commit. [VERIFIED: git log this session; worktree build of `1e9a596` succeeded.] Procedure:
+**What "main" is.** The pre-flip engine was deleted at the Phase-5 flip (4238fbe, 135 files), so main's behavior exists only as a **binary built from the pre-milestone commit**. Definition: `1e9a596` ("fix(01): revise plans per checker feedback", docs-only) — verified zero Go-source delta to the first milestone commit `8f969d8` (`chore(01-01): promote go-billy`, go.mod-only); two docs-only commits (`a0a0ed9`, `26924b1`) intervene between them and git diff 1e9a596..8f969d8 touches only .planning/* + go.mod metadata (go-billy v5.6.2 indirect->direct at the same version). [MEASURED: git log 1e9a596..8f969d8 + git diff --stat, re-verified at revision 2026-11-21; worktree build of `1e9a596` succeeded.] Procedure:
 
 ```bash
 git worktree add /tmp/p7/main-worktree 1e9a596
@@ -394,24 +394,28 @@ Other easyp creation site: internal/adapters/plugin/builtin_impl.go:143 (run.run
 | A6 | The ~3.8x perf margin (lab meta) transfers qualitatively to this machine | Pattern 3 | Verdict still measured fresh on unblock; protocol doesn't depend on the expectation |
 | A7 | CI-equivalent flags = plain `lint`/`--format json lint` with the corpus's committed config | Pattern 3 | If the milestone means different flags, the protocol re-runs cheaply; ratio robust to format choice |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **Corpora unblock (the only true gate)**
    - What we know: spike failed on all routes 2026-11-21 (gh + SSH + env + stale local googleapis); unblock path documented in 06-USER-SETUP.md; revision-compatibility nuance added (Pitfall 7).
    - What's unclear: whether/when the user can provide the experiment repo (and which googleapis revision the args expect).
    - Recommendation: `checkpoint:human-verify` with PROVIDE/DEFER outcome recording (06-03 precedent); scripts built and mini-validated regardless.
+   - **(RESOLVED)** 07-03 Task 3's corpora disposal design + end-of-phase human check (workflow.human_verify_mode=end-of-phase): fresh access attempt each run, honest pending_user_unblock with the 07-USER-SETUP.md one-command path; scripts built and self-tested in 07-02 Task 2 regardless.
 2. **wazero fix: localize vs upgrade**
    - What we know: root cause = wazero v1.9.0's unsynchronized `GetWazeroVersion()` global hit by concurrent `NewRuntimeWithConfig` from easyp's two call sites; upstream has v1.10–v1.12.
    - What's unclear: whether upstream fixed it (needs changelog/issue-tracker check per the two-source verification rule); which fix the user prefers given REQ-5.2's compatibility surface.
    - Recommendation: default to easyp-side serialization (small, local, no dep change); upgrade only if ratified after upstream verification.
+   - **(RESOLVED)** 07-01 flagged_assumptions A4 resolved-by-decision: easyp-side serialization of the default runtime factory chosen; the wazero upgrade stays documented-but-rejected this phase (reversible — a later ratified re-sync can revisit).
 3. **Baseline commit ratification**
-   - What we know: `1e9a596` = last pre-milestone commit; `8f969d8` (first milestone commit) is go.mod-only.
+   - What we know: `1e9a596` = the baseline-oracle commit (measured: two docs-only commits intervene before the first milestone commit `8f969d8` — see RESOLVED below); `8f969d8` (first milestone commit) is go.mod-only.
    - What's unclear: none technically — this is a formality.
    - Recommendation: planner records `1e9a596` as the baseline SHA in the plan; UAT sees it in evidence provenance.
+   - **(RESOLVED)** 07-02 flagged_assumptions A2 RATIFIED: baseline = `1e9a596`, kept as oracle — verified zero Go-source delta to the first milestone commit `8f969d8` (two docs-only commits intervene — a0a0ed9, 26924b1; git diff 1e9a596..8f969d8 = .planning/* + go.mod metadata only), superseding the research-time "last pre-milestone commit" wording above.
 4. **Raw-line gate placement**
    - What we know: the requirement's letter is the 4-tuple; raw-line equality is strictly stronger and held on the spike.
    - What's unclear: whether a raw-line-only delta (e.g. Message text drift) should hard-fail or be dispositioned.
    - Recommendation: 4-tuple = gate; raw-line = reported diagnostic where every delta line must carry an explicit disposition before sign-off.
+   - **(RESOLVED)** 07-02 prohibition 1: the 4-tuple is the gate; the raw JSON-line diff is a reported diagnostic whose every delta line needs an explicit Message/Offset disposition before sign-off — never a gate, never a silent pass.
 
 ## Environment Availability
 
