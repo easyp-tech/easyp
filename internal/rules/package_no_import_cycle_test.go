@@ -25,7 +25,7 @@ func TestPackageNoImportCycle_Message(t *testing.T) {
 
 // The cycle fixtures are a PACKAGE cycle, not a file cycle: the file graph
 // a.proto -> b/b.proto -> a2.proto is a DAG, while the package graph cycles
-// a.v1 -> b.v1 -> a.v1. The easypc linker hard-rejects a direct file A<->B
+// a.v1 -> b.v1 -> a.v1. The easyprotoc linker hard-rejects a direct file A<->B
 // import cycle ("recursively imports itself", pinned 2:1 in
 // internal/core/link_test.go), so only this shape is usable as a CLI-driven
 // corpus; parseLinkedFile never links, so unit tests may drive any shape.

@@ -450,12 +450,17 @@ func (l *literal) String() string {
 // advancing the column by exactly one. This deliberately diverges from
 // upstream protoc's byte columns with tab stops of 8; re-apply the divergence
 // whenever the github.com/easyp-tech/easyprotoc version in go.mod is bumped.
+// The divergence lives in three places: this pos computation, the position
+// wording in the protoast package doc, and the tab expectations in
+// protoast_test.go. Both gates must stay green after a bump:
+// TestPositionRuneColumns (position_test.go) and
+// TestProtoastPositionsMatchLegacyContract (internal/core/position_parity_test.go).
 func (b *builder) pos(off uint32) Position {
 	if off > b.ast.SrcLen {
 		off = b.ast.SrcLen
 	}
 	// Line numbering is identical in both conventions because line starts are
-	// byte offsets, so the line still comes from the vendored LineCol; only
+	// byte offsets, so the line still comes from the pinned compiler's LineCol; only
 	// the column is recomputed as a rune count.
 	line, _ := b.syn.LineCol(off)
 	lineStart := off

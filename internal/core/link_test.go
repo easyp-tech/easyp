@@ -285,7 +285,7 @@ func TestLinkSources(t *testing.T) {
 				require.NotEmpty(t, issues)
 
 				// The driver hard-codes the recursive-import diagnostic at
-				// Line 2, Col 1 (driver.go:319-323); do not "fix" the 2:1.
+				// Line 2, Col 1 (github.com/easyp-tech/easyprotoc/internal/compiler/driver.go:319-323 at the go.mod pin); do not "fix" the 2:1.
 				var cycle *IssueInfo
 				for i := range issues {
 					if strings.Contains(issues[i].Message, "recursively imports itself") {

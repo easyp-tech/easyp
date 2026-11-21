@@ -3,10 +3,6 @@ linters:
   enable:
     - staticcheck
   exclusions:
-    # Sealed vendor tree (D-04): findings are upstream's; fixes go upstream
-    # in compiler-lab and arrive by re-sync. See internal/easypc/VENDORED.md.
-    paths:
-      - internal/easypc
     rules:
       # Exported callee labels are required by .spec/agent-rules.md.
       # Keep ST1005 for capitalized sentences; only identifier-style wrappers
