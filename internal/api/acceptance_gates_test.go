@@ -30,10 +30,13 @@ const acceptanceBaselineCommit = "1e9a596"
 
 // acceptanceCorpusConfig is the teeth corpus's whole config: exactly two keys,
 // mirroring 06-03's corpus and bench/setup.sh's materialized-project
-// convention. The MINIMAL auto-seed (policy.go:109) then enables every rule of
-// each registry: all 44 on HEAD, all 41 on the baseline. Rule counts are
-// stated from the registries everywhere (lint_model.go:28-29 flags the stale
-// "43" REQUIREMENTS figure — never propagate it).
+// convention. STANDARD expands to MINIMAL+BASIC+DEFAULT (policy.go:109) and
+// enables 35 of the 44-name HEAD registry, 32 of the 41-name baseline registry;
+// the COMMENTS (7) and UNARY_RPC (2) registry rules are never enabled by this
+// config. All three NEW3 rules are inside MINIMAL/BASIC, so Gate D is
+// unaffected. Rule counts are stated from the registries everywhere
+// (lint_model.go:28-29 flags the stale "43" REQUIREMENTS figure — never
+// propagate it).
 const acceptanceCorpusConfig = "version: v1\nlinters:\n  default: STANDARD\n"
 
 // acceptanceNewRules is the NEW3 filter: the three Phase-6 rule names the
