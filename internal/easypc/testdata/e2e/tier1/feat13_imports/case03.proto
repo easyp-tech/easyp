@@ -1,0 +1,7 @@
+syntax = "proto3";
+package feat13.case03;
+import "trans_b.proto";
+
+message TransitiveImport {
+  feat13.b.MidNode node = 1;
+}

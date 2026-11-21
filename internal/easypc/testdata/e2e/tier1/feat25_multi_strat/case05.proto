@@ -1,0 +1,7 @@
+syntax = "proto3";
+package feat25.case05;
+
+message StrategyMsg5 {
+  int64 step = 1;
+  string log = 2;
+}

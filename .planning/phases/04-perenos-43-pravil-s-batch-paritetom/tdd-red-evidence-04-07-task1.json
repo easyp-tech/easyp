@@ -1,0 +1,10 @@
+{
+  "command": "go test -race -count=1 ./internal/rules/ -run TestLinkedParityUnaryRPC",
+  "exitCode": 1,
+  "output": "--- FAIL: TestLinkedParityUnaryRPC (0.00s)\n    parity_unary_rpc_test.go:174: rules not ported to the linked registry yet: RPC_NO_CLIENT_STREAMING (invalid rule: RPC_NO_CLIENT_STREAMING); RPC_NO_SERVER_STREAMING (invalid rule: RPC_NO_SERVER_STREAMING)\nFAIL\nFAIL\tgithub.com/easyp-tech/easyp/internal/rules\t0.020s\nFAIL",
+  "targetTest": "TestLinkedParityUnaryRPC",
+  "targetFile": "internal/rules/parity_unary_rpc_test.go",
+  "expected": "RED: the batch parity suite fails on its own requirePorted guard, naming the two unported rules RPC_NO_CLIENT_STREAMING and RPC_NO_SERVER_STREAMING, while the package compiles and the test executes (no build/setup/fixture fault).",
+  "actual": "--- FAIL: TestLinkedParityUnaryRPC at parity_unary_rpc_test.go:174 with message \"rules not ported to the linked registry yet: RPC_NO_CLIENT_STREAMING (invalid rule: RPC_NO_CLIENT_STREAMING); RPC_NO_SERVER_STREAMING (invalid rule: RPC_NO_SERVER_STREAMING)\" — exit 1, exactly the two planned names in one assertion, package compiled (test ran, not a build failure).",
+  "semanticAssessment": "The target test executed and failed on the planned assertion (the requirePorted registry probe, the test body's first statement), not on a build/setup/fixture fault: the package compiled, the test ran, and the failure names both unported rules in one message (the 04-02 ratified full-list requirement). The four fixture cells behind the guard were probe-validated immediately before the RED run (temporary TestZZProbeUnaryRPC, deleted before commit): old-engine count oracle 1/1/2/4 matched per corpus under the full 41-name config, and the zero-rules linked-engine link check was clean on every corpus (no COMPILE routing), so the failure is the registry gap and nothing else. RED evidence is valid; GREEN is authorized once the two ports land."
+}

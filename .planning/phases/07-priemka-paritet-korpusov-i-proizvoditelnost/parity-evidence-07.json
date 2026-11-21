@@ -1,0 +1,81 @@
+{
+  "baseline": {
+    "ratified_sha": "1e9a596",
+    "ratification": "planner RATIFY of A2 — 1e9a596 verified zero Go-source delta to the first milestone commit 8f969d8 (two docs-only commits intervene — a0a0ed9, 26924b1; git diff 1e9a596..8f969d8 = .planning/* + go.mod metadata only, go-billy v5.6.2 indirect->direct at the same version)",
+    "build": "git worktree add <tmp> 1e9a596 && (cd <tmp> && go build -o easyp-baseline ./cmd/easyp); worktree removed immediately (no registration leak); buildBaselineBinary in internal/api replicates this with a loud git cat-file -e 1e9a596^{commit} commit-presence gate and t.Cleanup teardown",
+    "race": false,
+    "registry_count": 41
+  },
+  "head": {
+    "commit_sha": "9a37392b322fd42f378b2210a0b7ccbd5db78e00",
+    "registry_count": 44,
+    "race": false,
+    "note": "SHA the SC3 battery and the 07-02 selftest instruments measured at 07-03 execution; every later 07-03 commit is .planning docs-only — the Go source state is identical"
+  },
+  "automated_core": {
+    "golden_corpus": "TestLintGoldenFullRegistry green under -race (44 names fire, 94 findings byte-exact incl. Position.Filename/Offset; re-captured at 5be9f7e)",
+    "gates_runner": "TestAcceptanceGates green under -race, 4/4 runs (internal/api/acceptance_gates_test.go — permanent suite machinery; x2 runs per binary)",
+    "gate_a": {
+      "baseline_r1_vs_r2": "equal — main-vs-main same-binary double run: shared 10, only-main 0, only-new 0",
+      "head_r1_vs_r2": "equal — head-vs-head same-binary double run: shared 14, only-main 0, only-new 0 (evaluated with the NEW3 filter disabled — one-sided filter is wrong for same-binary compares)"
+    },
+    "gate_b": "zero RuleName==COMPILE in all runs (asserted inside the compare load path; a COMPILE issue means the linked engine ran zero rules — golden purity rationale cited in the failure message)",
+    "gate_c": {
+      "projection": "(RuleName, Path, Position.Line, Position.Column)",
+      "new3_filter": ["PACKAGE_NO_IMPORT_CYCLE", "SYNTAX_SPECIFIED", "FIELD_NOT_REQUIRED"],
+      "multiset_equal": true,
+      "shared_findings": "non-empty — 10 shared findings per main-vs-head run pair (14 on the head-vs-head self-compare)"
+    },
+    "gate_d": {
+      "per_rule_counts": { "PACKAGE_NO_IMPORT_CYCLE": 2, "SYNTAX_SPECIFIED": 1, "FIELD_NOT_REQUIRED": 1 },
+      "corpus": "teeth (tracked fixtures assembled per 06-03: easyp.yaml STANDARD + import_cycle/{a,a2}.proto + import_cycle/b/b.proto + no_syntax/no_syntax.proto + required_field/required_field.proto)",
+      "note": "reported per corpus; on the teeth corpus the 3 new rules DO fire (delta exactly the 4 NEW3 findings); zero findings for a rule on the acceptance corpora is the EXPECTED result (A1), never a failure"
+    }
+  },
+  "corpora_leg": {
+    "status": "pending_user_unblock",
+    "reason": "EasyP-Parser-Compiler-Experiment (holder of the api-common/googleapis-nocompute .args membership lists) is unreachable; GOOGLEAPIS/CORPUS_ARGS are unset; the only local googleapis checkout is incompatible (Pitfall 7)",
+    "spike": [
+      "gh repo clone easyp-tech/EasyP-Parser-Compiler-Experiment -> GraphQL: Could not resolve to a Repository (2026-11-21 research spike)",
+      "git ls-remote git@github.com:easyp-tech/EasyP-Parser-Compiler-Experiment.git HEAD -> ERROR: Repository not found. (2026-11-21 research spike)",
+      "GOOGLEAPIS/CORPUS_ARGS -> both unset (2026-11-21 research spike; still unset at 07-03 execution)",
+      "local googleapis /home/nil/DiskD/W/yadro/googleapis -> revision 2024-02-12 (7d73737e0), 3889 .proto vs required ~7416 — incompatible with the args lists (Pitfall 7)"
+    ],
+    "clone_attempts": [
+      {
+        "attempted_at": "2026-11-21T04:15:09Z",
+        "command": "gh repo view easyp-tech/EasyP-Parser-Compiler-Experiment --json name",
+        "output": "GraphQL: Could not resolve to a Repository with the name 'easyp-tech/EasyP-Parser-Compiler-Experiment'. (repository)",
+        "exit_code": 1
+      },
+      {
+        "attempted_at": "2026-11-21T04:15:09Z",
+        "command": "git ls-remote git@github.com:easyp-tech/EasyP-Parser-Compiler-Experiment.git HEAD",
+        "output": "ERROR: Repository not found.\nfatal: Could not read from remote repository.\n\nPlease make sure you have the correct access rights\nand the repository exists.",
+        "exit_code": 128
+      },
+      {
+        "attempted_at": "2026-11-21T04:15:09Z",
+        "command": "env check: GOOGLEAPIS / CORPUS_ARGS",
+        "output": "GOOGLEAPIS=<unset>, CORPUS_ARGS=<unset>",
+        "exit_code": 0
+      }
+    ],
+    "anti_ratification": "a corpora leg passed without corpora does not exist — the gate state stays pending_user_unblock until per-corpus results exist behind it",
+    "unblock_path": ".planning/phases/07-priemka-paritet-korpusov-i-proizvoditelnost/07-USER-SETUP.md (one-command path; on unblock /tmp/p7/run-parity.sh parity + the perf protocol fire unchanged — zero plan changes needed)"
+  },
+  "salvage": {
+    "source": "compiler-lab results/lint (tracked in the lab repo, author's macOS machine, Nov 2 2026) — /tmp/gsd-research/compiler-lab @ 08cef10909c0722f7042ba17b5c11951f9c6b6f6",
+    "api_common": { "issues": 477, "main_engine_s": 0.72 },
+    "googleapis_nocompute": { "issues": 69985, "main_s": 54.5, "easypc_s": 14.2 },
+    "compute": { "issues": 5872, "main_s": 1212.8, "easypc_s": 0.08 },
+    "caveat": "lab lineage != easyp main — indicative reference only [A3]; a post-unblock cross-check delta vs the saved go-protoparser.jsonl is dispositioned against the Phase-4 main-wins ledger, never assumed equal"
+  },
+  "rule_counts": {
+    "main": 41,
+    "head": 44,
+    "stale_figure_note": "REQUIREMENTS' '43' is stale (lint_model.go:28-29 flags it); counts come from the registries: 41 (main baseline registry) / 44 (HEAD registry = 41 + PACKAGE_NO_IMPORT_CYCLE, SYNTAX_SPECIFIED, FIELD_NOT_REQUIRED); the stale figure is never asserted"
+  },
+  "raw_line_diagnostic": "reported-not-gated: the raw JSON-line diff after the NEW3 filter is empty on every automated-core run pair (only-main 0, only-head 0, byte-identical shared findings); on the corpora legs every delta line would need an explicit Message/Offset disposition before sign-off (RESEARCH Open Question 4)",
+  "timestamp": "2026-11-21T07:12:00Z"
+}

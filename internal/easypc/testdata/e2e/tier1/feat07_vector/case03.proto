@@ -1,0 +1,7 @@
+syntax = "proto3";
+package feat07.case03;
+
+message WhitespaceRuns {
+                    int32       field1       =       1;
+                    string      field2       =       2;
+}

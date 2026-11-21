@@ -1,0 +1,11 @@
+syntax = "proto2";
+package feat24b.c03;
+import "google/protobuf/descriptor.proto";
+
+extend google.protobuf.FieldOptions {
+  optional string reflect_opt = 50201;
+}
+
+message ReflectCustomExt {
+  optional int32 x = 1 [(reflect_opt) = "registered"];
+}

@@ -1,13 +1,12 @@
 package rules_test
 
 import (
-	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"github.com/yoheimuta/go-protoparser/v4/parser/meta"
 
 	"github.com/easyp-tech/easyp/internal/core"
+	"github.com/easyp-tech/easyp/internal/protoast"
 	"github.com/easyp-tech/easyp/internal/rules"
 )
 
@@ -33,18 +32,22 @@ func TestPackageSameJavaMultipleFiles_Validate(t *testing.T) {
 		wantErr    error
 	}{
 		"invalid": {
+			// invalid_options/queue.proto (V1) is the exempt first value;
+			// invalid_options/session.proto (same package, V2) issues at its
+			// own java_multiple_files option keyword with the constant as written.
 			fileNames: []string{invalidAuthProto5, invalidAuthProto6},
 			wantIssues: &core.Issue{
-				Position: meta.Position{
+				Position: protoast.Position{
 					Filename: "",
-					Offset:   0,
-					Line:     0,
-					Column:   0,
+					Offset:   283,
+					Line:     11,
+					Column:   1,
 				},
-				SourceName: "",
-				Message:    "",
+				SourceName: `false`,
+				Message:    "all files in the same package must have the same java_multiple_files option",
 				RuleName:   "PACKAGE_SAME_JAVA_MULTIPLE_FILES",
 			},
+			wantErr: nil,
 		},
 		"valid": {
 			fileNames: []string{validAuthProto, validAuthProto2},
@@ -57,16 +60,21 @@ func TestPackageSameJavaMultipleFiles_Validate(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			r, protos := start(t)
+			rule := &rules.PackageSameJavaMultipleFiles{}
 
-			rule := rules.PackageSameJavaMultipleFiles{}
-			var got []error
+			var infos []core.ProtoInfo
 			for _, fileName := range tc.fileNames {
-				_, err := rule.Validate(protos[fileName])
-				got = append(got, err)
+				infos = append(infos, parseLinkedFile(t, fileName))
 			}
 
-			r.ErrorIs(errors.Join(got...), tc.wantErr)
+			issues, err := validate(rule, infos...)
+			require.ErrorIs(t, err, tc.wantErr)
+			switch {
+			case tc.wantIssues != nil:
+				require.Contains(t, issues, *tc.wantIssues)
+			case len(issues) > 0:
+				require.Empty(t, issues)
+			}
 		})
 	}
 }

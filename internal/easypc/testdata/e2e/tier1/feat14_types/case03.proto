@@ -1,0 +1,12 @@
+syntax = "proto3";
+package feat14.case03;
+
+message Alpha {
+  message Beta {
+    string key = 1;
+  }
+}
+
+message Gamma {
+  Alpha.Beta beta_ref = 1;
+}

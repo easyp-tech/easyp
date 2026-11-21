@@ -1,0 +1,12 @@
+syntax = "proto2";
+package audit.iter4.probe5;
+
+message ConfigSettings {
+    optional int32 max_retries = 1 [default = 10];
+    optional int32 min_threshold = 2 [default = -50];
+    optional uint32 hex_mask = 3 [default = 0x7f];
+    optional uint32 octal_perm = 4 [default = 0755];
+    optional float scale_factor = 5 [default = 2.5];
+    optional string greeting = 6 [default = "hello \"quoted\" world"];
+    optional bool feature_enabled = 7 [default = true];
+}

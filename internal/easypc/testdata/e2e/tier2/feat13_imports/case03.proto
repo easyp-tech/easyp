@@ -1,0 +1,1 @@
+syntax = "proto3"; package feat13b.c03; import "pub_l3.proto"; message ChainedPubConsumer { feat13b.pub.L1 item = 1; }

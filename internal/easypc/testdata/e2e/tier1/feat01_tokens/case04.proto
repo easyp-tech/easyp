@@ -1,0 +1,9 @@
+syntax = "proto3";
+package feat01.case04;
+
+// Test complex identifiers with underscores and numbers
+message Complex_Identifiers_99 {
+  int32 _field_01 = 1;
+  string Field_Name_With_Underscores = 2;
+  bytes data_chunk_v2_alpha = 3;
+}

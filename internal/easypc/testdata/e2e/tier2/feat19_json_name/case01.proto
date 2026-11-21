@@ -1,0 +1,1 @@
+syntax = "proto3"; package feat19b.c01; message J1 { string special = 1 [json_name = "@type"]; }

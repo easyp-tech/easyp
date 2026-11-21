@@ -1,0 +1,1 @@
+﻿syntax = "proto3"; package feat05b.c01; message MinimalBom { int32 a = 1; }

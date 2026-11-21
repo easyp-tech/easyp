@@ -1,0 +1,7 @@
+syntax = "proto3";
+package feat19.case04;
+
+message UnderscoresInField {
+  string _leading_field = 1;
+  string field_with__double_underscore = 2;
+}

@@ -1,0 +1,20 @@
+syntax = "proto3";
+package audit.forensics.m2.nested_probe;
+
+message OuterContainer {
+  reserved 4, 10 to 15;
+  reserved "foo", "bar";
+
+  message InnerChild {
+    string inner_key = 1;
+    enum InnerState {
+      INIT = 0;
+      RUNNING = 1;
+      COMPLETED = 2;
+    }
+    InnerState state = 2;
+  }
+
+  repeated InnerChild children = 1;
+  int32 outer_code = 2;
+}

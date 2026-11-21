@@ -1,0 +1,7 @@
+syntax = "proto3";
+package feat26.case03;
+
+message VariantMsg3 {
+  int32 index = 1;
+  string token = 2;
+}

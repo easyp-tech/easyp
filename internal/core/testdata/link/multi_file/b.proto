@@ -1,0 +1,7 @@
+syntax = "proto3";
+
+package multi;
+
+message B {
+  Ghost field = 1;
+}

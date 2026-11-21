@@ -1,0 +1,1 @@
+syntax = "proto2"; package feat03b.c03; message MaxHex { optional int32 h = 1 [default = 0x7fffffff]; optional int32 h0 = 2 [default = 0x0]; }

@@ -1,0 +1,31 @@
+syntax = "proto3";
+package social.graph.v1;
+import "google/protobuf/timestamp.proto";
+
+enum EdgeType {
+  EDGE_UNSPECIFIED = 0;
+  FOLLOWS = 1;
+  FRIENDS = 2;
+  BLOCKS = 3;
+}
+
+message SocialEdge {
+  string source_user_id = 1;
+  string target_user_id = 2;
+  EdgeType edge_type = 3;
+  google.protobuf.Timestamp created_at = 4;
+}
+
+message PostActivity {
+  string post_id = 1;
+  string author_user_id = 2;
+  string text_body = 3;
+  repeated string media_urls = 4;
+  int64 like_count = 5;
+  int64 comment_count = 6;
+  google.protobuf.Timestamp posted_at = 7;
+}
+
+service SocialFeedService {
+  rpc StreamTimeline (SocialEdge) returns (stream PostActivity);
+}

@@ -15,12 +15,12 @@ func TestBreakingTargetPathsTakePrecedenceOverImportAliases(t *testing.T) {
 	require.NoError(t, err)
 	use, err := readProtoFile(strings.NewReader("syntax = \"proto3\"; package demo; import \"item.proto\"; message Use { Item item = 1; }"))
 	require.NoError(t, err)
-	own := ProtoInfo{Path: "module/proto/item.proto", Info: item}
-	importer := ProtoInfo{Path: "module/proto/use.proto", Info: use, ProtoFilesFromImport: map[ImportPath]*unordered.Proto{"item.proto": item}}
+	own := BreakingProtoInfo{Path: "module/proto/item.proto", Info: item}
+	importer := BreakingProtoInfo{Path: "module/proto/use.proto", Info: use, ProtoFilesFromImport: map[ImportPath]*unordered.Proto{"item.proto": item}}
 	for _, tt := range []struct {
 		name  string
-		files []ProtoInfo
-	}{{"target first", []ProtoInfo{own, importer}}, {"target last", []ProtoInfo{importer, own}}} {
+		files []BreakingProtoInfo
+	}{{"target first", []BreakingProtoInfo{own, importer}}, {"target last", []BreakingProtoInfo{importer, own}}} {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 			data, err := collect(tt.files)

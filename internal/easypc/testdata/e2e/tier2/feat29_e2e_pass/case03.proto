@@ -1,0 +1,1 @@
+syntax = "proto3"; package feat29b.c03; message E2EBound3 { int32 id = 1; }

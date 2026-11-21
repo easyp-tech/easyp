@@ -1,0 +1,7 @@
+syntax = "proto3";
+package feat21.case05;
+
+message FormatTest5 {
+	int32 id = 1;
+	string name = 2;
+}

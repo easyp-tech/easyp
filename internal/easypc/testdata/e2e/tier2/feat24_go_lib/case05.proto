@@ -1,0 +1,9 @@
+syntax = "proto3";
+package feat24b.c05;
+
+message StreamReq { string req = 1; }
+message StreamResp { string resp = 1; }
+
+service ReflectService {
+  rpc BidiStream (stream StreamReq) returns (stream StreamResp);
+}

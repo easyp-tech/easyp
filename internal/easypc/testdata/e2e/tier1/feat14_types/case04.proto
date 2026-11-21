@@ -1,0 +1,7 @@
+syntax = "proto3";
+package feat14.case04;
+
+message ValueItem { int64 weight = 1; }
+message MapHolder {
+  map<string, ValueItem> items = 1;
+}

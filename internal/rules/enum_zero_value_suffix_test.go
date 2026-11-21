@@ -4,9 +4,9 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"github.com/yoheimuta/go-protoparser/v4/parser/meta"
 
 	"github.com/easyp-tech/easyp/internal/core"
+	"github.com/easyp-tech/easyp/internal/protoast"
 	"github.com/easyp-tech/easyp/internal/rules"
 )
 
@@ -34,7 +34,7 @@ func TestEnumZeroValueSuffix_Validate(t *testing.T) {
 		"invalid": {
 			fileName: invalidAuthProto,
 			wantIssues: &core.Issue{
-				Position: meta.Position{
+				Position: protoast.Position{
 					Filename: "",
 					Offset:   917,
 					Line:     51,
@@ -49,7 +49,7 @@ func TestEnumZeroValueSuffix_Validate(t *testing.T) {
 		"invalid_nested": {
 			fileName: invalidAuthProto,
 			wantIssues: &core.Issue{
-				Position: meta.Position{
+				Position: protoast.Position{
 					Filename: "",
 					Offset:   667,
 					Line:     33,
@@ -72,18 +72,17 @@ func TestEnumZeroValueSuffix_Validate(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			r, protos := start(t)
-
 			rule := rules.EnumZeroValueSuffix{
 				Suffix: "NONE",
 			}
-			issues, err := rule.Validate(protos[tc.fileName])
-			r.ErrorIs(err, tc.wantErr)
+
+			issues, err := rule.Validate(parseLinkedFile(t, tc.fileName))
+			require.ErrorIs(t, err, tc.wantErr)
 			switch {
 			case tc.wantIssues != nil:
-				r.Contains(issues, *tc.wantIssues)
+				require.Contains(t, issues, *tc.wantIssues)
 			case len(issues) > 0:
-				r.Empty(issues)
+				require.Empty(t, issues)
 			}
 		})
 	}

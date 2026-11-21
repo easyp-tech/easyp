@@ -1,0 +1,10 @@
+syntax = "proto3";
+package feat06.case04;
+
+// Checksum profile test 4
+message TokenProfile4 {
+  int32 id = 1;
+  string name = 2;
+  repeated double metrics = 3;
+  map<string, int64> metadata = 4;
+}

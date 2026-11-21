@@ -1,0 +1,7 @@
+syntax = "proto3";
+message TabStress {
+       	int32 f1 = 0;
+        	int32 f2 = 0;
+         	int32 f3 = 0;
+			int32 f4 = 0;
+}

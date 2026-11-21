@@ -1,0 +1,10 @@
+# 15_error_bad_chars.proto
+error 0 1
+error 2 1
+error 4 1
+error 6 1
+error 8 1
+error 10 1
+error 12 1
+error 14 1
+error 16 1

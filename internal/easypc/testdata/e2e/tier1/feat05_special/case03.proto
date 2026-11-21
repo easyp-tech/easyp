@@ -1,0 +1,7 @@
+syntax = "proto3";
+package feat05.case03;
+
+message CrlfMsg {
+  int32 id = 1;
+  string name = 2;
+}

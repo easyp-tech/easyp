@@ -1,0 +1,8 @@
+syntax = "proto3";
+package feat03.case05;
+
+message NumericZeroes {
+  int32 zero_field = 1;
+  uint32 uint_zero = 2;
+  double float_zero = 3;
+}

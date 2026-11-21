@@ -1,0 +1,12 @@
+syntax = "proto3";
+package audit.iter4.probe2;
+
+message ExpandedRecord {
+    int32 id = 1;
+    sint32 delta = 2;
+    fixed64 hash_key = 3;
+    bytes raw_signature = 4;
+    repeated string tags = 5;
+    float threshold = 6;
+    repeated int32 metrics = 7;
+}

@@ -59,6 +59,9 @@ func getEasypPath(log logger.Logger) (string, error) {
 	return easypPath, nil
 }
 
+// buildCore is the lint seam: the Phase 5 flip changed the bindings behind this
+// constructor (rules.New now builds the linked registry and Options.Rules
+// carries the linked rule contract), not this file's text.
 func buildCore(log logger.Logger, cfg config.Config, importRoots modules.SourceRoots) (*core.Core, error) {
 
 	lintRules, ignoreOnly, err := rules.New(cfg.Lint)

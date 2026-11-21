@@ -1,0 +1,1 @@
+testdata/errors/duplicate_field_number.proto:4:14: Field number 1 has already been used in "Foo" by field "a". Next available field number is 2.

@@ -1,0 +1,1 @@
+syntax = "proto3"; package feat30b.c02; message BoundMultipleRanges { reserved 1 to 5, 10 to 20, 30 to max; int32 valid = 6; }

@@ -1,0 +1,6 @@
+syntax = "proto3";
+package feat05.case02;
+
+message Utf8Literals {
+  string greeting = 1;
+}

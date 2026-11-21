@@ -1,0 +1,7 @@
+syntax = "proto3";
+package tier3.combo09.lib;
+
+message LibContainer {
+  enum Mode { MODE_OFF = 0; MODE_ON = 1; }
+  Mode mode = 1;
+}

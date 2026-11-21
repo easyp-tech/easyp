@@ -1,0 +1,1 @@
+testdata/errors/undefined_type.proto:3:3: "NonExistentType" is not defined.

@@ -1,0 +1,42 @@
+syntax = "proto3";
+package geo.routing.v1;
+
+message LatLng {
+  double latitude = 1;
+  double longitude = 2;
+  double altitude_meters = 3;
+}
+
+enum ManeuverType {
+  MANEUVER_UNSPECIFIED = 0;
+  DEPART = 1;
+  TURN_LEFT = 2;
+  TURN_RIGHT = 3;
+  CONTINUE = 4;
+  ARRIVE = 5;
+}
+
+message Step {
+  LatLng location = 1;
+  ManeuverType maneuver = 2;
+  string instructions = 3;
+  double distance_meters = 4;
+  int32 duration_seconds = 5;
+}
+
+message Route {
+  repeated LatLng polyline_points = 1;
+  repeated Step steps = 2;
+  double total_distance_meters = 3;
+  int32 total_duration_seconds = 4;
+}
+
+message RouteRequest {
+  LatLng origin = 1;
+  LatLng destination = 2;
+  repeated LatLng waypoints = 3;
+}
+
+service NavigationService {
+  rpc CalculateRoute (RouteRequest) returns (Route);
+}

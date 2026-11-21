@@ -1,0 +1,3 @@
+testdata/errors/cycle_a.proto:2:1: File recursively imports itself: cycle_a.proto -> cycle_b.proto -> cycle_a.proto
+testdata/errors/cycle_b.proto:2:1: Import "cycle_a.proto" was not found or had errors.
+testdata/errors/cycle_a.proto:2:1: Import "cycle_b.proto" was not found or had errors.

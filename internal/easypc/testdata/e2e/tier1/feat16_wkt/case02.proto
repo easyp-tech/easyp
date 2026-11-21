@@ -1,0 +1,7 @@
+syntax = "proto3";
+package feat16.case02;
+import "google/protobuf/any.proto";
+
+message AnyHolder {
+  google.protobuf.Any details = 1;
+}

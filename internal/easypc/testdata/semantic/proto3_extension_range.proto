@@ -1,0 +1,1 @@
+syntax = "proto3"; package p; message M { extensions 100 to 200; }

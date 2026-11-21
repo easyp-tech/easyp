@@ -1,0 +1,9 @@
+syntax = "proto3";
+package adv01.deep.l3;
+
+import "deep_l4.proto";
+
+message Level3Msg {
+  adv01.deep.l4.Level4Msg inner = 1;
+  int32 l3_depth = 2;
+}

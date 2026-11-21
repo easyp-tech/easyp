@@ -1,0 +1,1 @@
+syntax = "proto3"; package feat14b.c03; message OuterBox { message DeepSub { int32 val = 1; } } message BoxConsumer { OuterBox.DeepSub sub = 1; }

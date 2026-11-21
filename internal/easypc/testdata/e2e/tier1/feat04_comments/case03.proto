@@ -1,0 +1,7 @@
+syntax = "proto3";
+package feat04.case03;
+
+message TabAlignedComments {
+	int32 id = 1;		// Aligned with tabs
+	string name = 2;	// Second tab aligned comment
+}

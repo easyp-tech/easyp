@@ -1,0 +1,1 @@
+syntax = "proto3"; package feat19b.c05; message J5 { string trailing_ = 1; }

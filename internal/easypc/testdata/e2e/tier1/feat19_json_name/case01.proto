@@ -1,0 +1,6 @@
+syntax = "proto3";
+package feat19.case01;
+
+message ExplicitJsonName {
+  string my_custom_field = 1 [json_name = "customField"];
+}

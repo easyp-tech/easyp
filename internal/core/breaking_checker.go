@@ -367,7 +367,7 @@ func searchEnumField(source []*parser.EnumField, number string) (*parser.EnumFie
 
 func buildBreakingCheckIssue(path, message string, pos meta.Position) IssueInfo {
 	issue := Issue{
-		Position:   pos,
+		Position:   fromMetaPos(pos),
 		SourceName: "",
 		Message:    message,
 		RuleName:   breakingCheckRuleName,

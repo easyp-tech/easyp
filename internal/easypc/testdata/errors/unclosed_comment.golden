@@ -1,0 +1,2 @@
+testdata/errors/unclosed_comment.proto:4:1: End-of-file inside block comment.
+testdata/errors/unclosed_comment.proto:2:1:   Comment started here.

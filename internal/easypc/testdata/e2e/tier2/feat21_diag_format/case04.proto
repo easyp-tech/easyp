@@ -1,0 +1,4 @@
+syntax = "proto3"; package feat21b.c04;
+message DiagFormatBound4 {
+  string long_line_field = 1; // long comment // long comment // long comment // long comment // long comment // long comment // long comment // long comment // long comment // long comment // long comment // long comment // long comment // long comment // long comment // long comment // long comment // long comment // long comment // long comment 
+}

@@ -101,8 +101,8 @@ func (c *Core) CompareBreakingWithImports(ctx context.Context, current, against 
 	return checker.Check()
 }
 
-func (c *Core) readProtoFiles(ctx context.Context, fsWalker DirWalker) ([]ProtoInfo, error) {
-	protoFiles := make([]ProtoInfo, 0)
+func (c *Core) readProtoFiles(ctx context.Context, fsWalker DirWalker) ([]BreakingProtoInfo, error) {
+	protoFiles := make([]BreakingProtoInfo, 0)
 
 	err := fsWalker.WalkDir(func(path string, err error) error {
 		switch {
@@ -116,9 +116,9 @@ func (c *Core) readProtoFiles(ctx context.Context, fsWalker DirWalker) ([]ProtoI
 			return nil
 		}
 
-		protoInfo, err := c.protoInfoRead(ctx, fsWalker, path)
+		protoInfo, err := c.breakingProtoInfoRead(ctx, fsWalker, path)
 		if err != nil {
-			return fmt.Errorf("c.protoInfoRead: %w", err)
+			return fmt.Errorf("c.breakingProtoInfoRead: %w", err)
 		}
 
 		protoFiles = append(protoFiles, protoInfo)
@@ -131,7 +131,7 @@ func (c *Core) readProtoFiles(ctx context.Context, fsWalker DirWalker) ([]ProtoI
 	return protoFiles, nil
 }
 
-func collect(protoInfos []ProtoInfo) (ProtoData, error) {
+func collect(protoInfos []BreakingProtoInfo) (ProtoData, error) {
 	protoData := make(ProtoData)
 	collectedImports := make(map[string]bool)
 	// Dependencies establish the imported context first. Explicit target paths

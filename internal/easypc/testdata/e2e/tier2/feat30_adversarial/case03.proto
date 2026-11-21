@@ -1,0 +1,1 @@
+syntax = "proto3"; package feat30b.c03; message BoundReservedKeywords { reserved "syntax", "package", "message", "enum"; string field = 1; }

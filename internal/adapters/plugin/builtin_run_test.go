@@ -12,6 +12,7 @@ import (
 	"sync/atomic"
 	"testing"
 	"testing/synctest"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -400,6 +401,158 @@ func TestBuiltinRunCancellationTerminatesWasm(t *testing.T) {
 		<-started
 		cancel()
 		require.ErrorIs(t, <-results, context.Canceled)
+	})
+}
+
+func TestBuiltinRunRuntimeCreationIsSerializedAcrossScopes(t *testing.T) {
+	t.Parallel()
+
+	module := builtinEchoModule(t)
+	const scopes = 2
+	const invocationsPerScope = 2
+	type invocation struct {
+		input  string
+		output []byte
+		err    error
+	}
+	results := make(chan invocation, scopes*invocationsPerScope)
+	closes := make(chan error, scopes)
+	var inFlight, peak atomic.Int64
+
+	// Deterministic serialization probe (phase 1): the probe goroutine holds
+	// the production creation mutex while exactly one scope attempts its
+	// construction. With the Lock/Unlock pair in newRuntimeSerialized
+	// intact, the mutex itself guarantees that construction cannot complete
+	// before the release — the green outcome is structural, never
+	// timing-dependent. A construction that completes while the mutex is
+	// held means the pair is gone (the WR-01 regression), and no amount of
+	// TestMain priming can mask it. The time.After dwell only bounds how
+	// long the violation is given to surface; it can never turn a serialized
+	// construction into a pass. The probe runs outside a synctest bubble on
+	// purpose: a goroutine blocked on a mutex is not durably blocked, so a
+	// synctest.Wait while the mutex is held would deadlock.
+	holderLocked := make(chan struct{})
+	releaseHolder := make(chan struct{})
+	bodyDone := make(chan struct{})
+	defer close(bodyDone)
+	proceedConstruction := make(chan struct{})
+	// Buffered: one invocation constructs twice (the lazy compiler runtime
+	// at builtin_run.go:159 AND the per-invocation runtime at
+	// builtin_impl.go:143), and completions must never park waiting for a
+	// receiver — the dwell below only observes them.
+	constructed := make(chan struct{}, 8)
+	go func() {
+		runtimeCreationMu.Lock()
+		close(holderLocked)
+		select {
+		case <-releaseHolder:
+		case <-bodyDone:
+		}
+		runtimeCreationMu.Unlock()
+	}()
+	<-holderLocked
+
+	probeCtx, probeRun := EnsureBuiltinRun(t.Context())
+	require.NotNil(t, probeRun)
+	probeRun.runtimeFactory = func(ctx context.Context, cfg wazero.RuntimeConfig) wazero.Runtime {
+		<-proceedConstruction
+		n := inFlight.Add(1)
+		for {
+			p := peak.Load()
+			if n <= p || peak.CompareAndSwap(p, n) {
+				break
+			}
+		}
+		defer inFlight.Add(-1)
+		rt := newRuntimeSerialized(ctx, cfg)
+		constructed <- struct{}{}
+		return rt
+	}
+	probeErr := make(chan error, 1)
+	go func() {
+		_, err := runBuiltinModule(probeCtx, module, []string{"echo"}, strings.NewReader("a"))
+		probeErr <- err
+	}()
+
+	// Releasing the park puts the construction attempt in flight while the
+	// probe still owns runtimeCreationMu.
+	close(proceedConstruction)
+	completedWhileHeld := false
+	select {
+	case <-constructed:
+		completedWhileHeld = true
+	case <-time.After(100 * time.Millisecond):
+	}
+	close(releaseHolder)
+	assert.False(t, completedWhileHeld, "runtime construction must never overlap across scopes: a construction completed while the probe held runtimeCreationMu")
+	if !completedWhileHeld {
+		<-constructed // the construction completes only after the release
+	}
+	require.NoError(t, <-probeErr)
+	require.NoError(t, probeRun.Close(context.Background()))
+
+	// Phase 2 — two-scope echo coverage: constructions are deterministically
+	// ordered (scope B parks until scope A's construction window has closed)
+	// so the wrapper windows never overlap and the peak counter stays at 1;
+	// the peak==1 assertion pins the gate-staggered ordering that keeps this
+	// phase deterministic — the production-serialization pin is the held-mutex
+	// ordering probe above.
+	synctest.Test(t, func(t *testing.T) {
+		baseCtx := t.Context()
+		gate := make(chan struct{})
+		runScope := func(input string, waitGate, openGate bool) {
+			go func() {
+				// A fresh context takes the EnsureBuiltinRun owner path, so
+				// each goroutine owns an independent scope: the scope value
+				// lives in the returned derived context, never in baseCtx.
+				// The runtimeFactory wrapper delegates to the production
+				// constructor (newRuntimeSerialized), so the construction
+				// path is still exercised.
+				ctx, run := EnsureBuiltinRun(baseCtx)
+				require.NotNil(t, run, "EnsureBuiltinRun: fresh context must return an owner")
+				run.runtimeFactory = func(ctx context.Context, cfg wazero.RuntimeConfig) wazero.Runtime {
+					if waitGate {
+						<-gate
+					}
+					n := inFlight.Add(1)
+					for {
+						p := peak.Load()
+						if n <= p || peak.CompareAndSwap(p, n) {
+							break
+						}
+					}
+					defer inFlight.Add(-1)
+					return newRuntimeSerialized(ctx, cfg)
+				}
+				defer func() { closes <- run.Close(context.Background()) }()
+				for range invocationsPerScope {
+					output, err := runBuiltinModule(ctx, module, []string{"echo"}, strings.NewReader(input))
+					results <- invocation{input: input, output: output, err: err}
+				}
+				if openGate {
+					// Opened only after this scope's last construction: one
+					// invocation constructs twice (compiler + per-invocation
+					// runtime), so the gate must wait for the whole loop —
+					// then scope B's construction windows can never overlap
+					// scope A's.
+					close(gate)
+				}
+			}()
+		}
+		runScope("a", false, true)
+		runScope("bb", true, false)
+
+		synctest.Wait()
+		require.Len(t, results, scopes*invocationsPerScope)
+		for range scopes * invocationsPerScope {
+			result := <-results
+			require.NoError(t, result.err)
+			assert.Equal(t, result.input, string(result.output))
+		}
+		for range scopes {
+			require.NoError(t, <-closes)
+		}
+		require.EqualValues(t, 1, peak.Load(), "runtime construction must never overlap across scopes")
 	})
 }
 

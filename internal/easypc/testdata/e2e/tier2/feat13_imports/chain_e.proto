@@ -1,0 +1,1 @@
+syntax = "proto3"; package feat13b.chain; message E { int32 val = 1; }

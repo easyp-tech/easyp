@@ -1,0 +1,8 @@
+syntax = "proto3";
+package tier3.combo04.dep;
+
+message RemoteNode {
+  message DeepLeaf {
+    string token = 1;
+  }
+}

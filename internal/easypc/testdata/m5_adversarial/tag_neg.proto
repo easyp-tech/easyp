@@ -1,0 +1,4 @@
+syntax = "proto2";
+message TagNeg {
+  optional int32 f = -1;
+}

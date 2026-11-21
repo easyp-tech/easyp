@@ -14,12 +14,12 @@ import (
 	"github.com/bufbuild/protocompile/linker"
 	"github.com/bufbuild/protocompile/protoutil"
 	"github.com/bufbuild/protocompile/wellknownimports"
-	"github.com/yoheimuta/go-protoparser/v4/parser/meta"
 	"google.golang.org/protobuf/reflect/protoreflect"
 	"google.golang.org/protobuf/types/descriptorpb"
 
 	"github.com/easyp-tech/easyp/internal/config"
 	"github.com/easyp-tech/easyp/internal/core/path_helpers"
+	"github.com/easyp-tech/easyp/internal/protoast"
 	"github.com/easyp-tech/easyp/internal/sourceview"
 )
 
@@ -297,7 +297,7 @@ func compareBreakingGraphs(against, current *breakingGraph, profile breakingProf
 		}
 		issues = append(issues, IssueInfo{
 			Path: path,
-			Issue: Issue{RuleName: rule, Message: message, Position: meta.Position{
+			Issue: Issue{RuleName: rule, Message: message, Position: protoast.Position{
 				Filename: path, Line: location.StartLine + 1, Column: location.StartColumn + 1,
 			}},
 		})

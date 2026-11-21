@@ -4,11 +4,11 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"github.com/yoheimuta/go-protoparser/v4/parser/meta"
 
 	"github.com/easyp-tech/easyp/internal/rules"
 
 	"github.com/easyp-tech/easyp/internal/core"
+	"github.com/easyp-tech/easyp/internal/protoast"
 )
 
 func TestCommentOneof_Message(t *testing.T) {
@@ -35,7 +35,7 @@ func TestCommentOneOf_Validate(t *testing.T) {
 		"invalid": {
 			fileName: invalidAuthProto,
 			wantIssues: &core.Issue{
-				Position: meta.Position{
+				Position: protoast.Position{
 					Filename: "",
 					Offset:   748,
 					Line:     39,
@@ -58,16 +58,15 @@ func TestCommentOneOf_Validate(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			r, protos := start(t)
-
 			rule := rules.CommentOneof{}
-			issues, err := rule.Validate(protos[tc.fileName])
-			r.ErrorIs(err, tc.wantErr)
+
+			issues, err := rule.Validate(parseLinkedFile(t, tc.fileName))
+			require.ErrorIs(t, err, tc.wantErr)
 			switch {
 			case tc.wantIssues != nil:
-				r.Contains(issues, *tc.wantIssues)
+				require.Contains(t, issues, *tc.wantIssues)
 			case len(issues) > 0:
-				r.Empty(issues)
+				require.Empty(t, issues)
 			}
 		})
 	}

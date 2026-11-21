@@ -2,24 +2,23 @@ package core
 
 import (
 	"fmt"
-	"reflect"
 	"strings"
 	"unicode"
 
 	"github.com/yoheimuta/go-protoparser/v4/interpret/unordered"
 	"github.com/yoheimuta/go-protoparser/v4/parser"
 	"github.com/yoheimuta/go-protoparser/v4/parser/meta"
+
+	"github.com/easyp-tech/easyp/internal/protoast"
 )
 
-type (
-	// Rule is an interface for a rule checking.
-	Rule interface {
-		// Message returns the message of the rule.
-		Message() string
-		// Validate validates the proto rule.
-		Validate(ProtoInfo) ([]Issue, error)
-	}
+// Position is a source position carried by issues. It is an alias of
+// protoast.Position so lint findings already speak the type the future engine
+// emits; go-protoparser values are converted at the AppendIssue boundary via
+// fromMetaPos.
+type Position = protoast.Position
 
+type (
 	// CurrentProjectGitWalker is provider for fs walking for current project
 	CurrentProjectGitWalker interface {
 		GetDirWalker(workingDir, gitRef, path string) (DirWalker, error)
@@ -33,7 +32,7 @@ type (
 
 	// Issue contains the information of an issue.
 	Issue struct {
-		Position   meta.Position
+		Position   Position
 		SourceName string
 		Message    string
 		RuleName   string
@@ -44,16 +43,6 @@ type (
 
 	// PackageName type alias for package name `package` section in protofile.
 	PackageName string
-
-	// ProtoInfo is the information of a proto file.
-	ProtoInfo struct {
-		directiveComments []directiveComment
-		Path              string
-		// ImportPath is relative to a declared source root, independently of the scan root.
-		ImportPath           string
-		Info                 *unordered.Proto
-		ProtoFilesFromImport map[ImportPath]*unordered.Proto
-	}
 
 	Import struct {
 		ProtoFilePath string
@@ -114,18 +103,6 @@ func GetPackageName(protoFile *unordered.Proto) PackageName {
 	return PackageName(protoFile.ProtoBody.Packages[0].Name)
 }
 
-// AppendIssue records a rule finding. The lint engine applies per-file suppressions.
-func AppendIssue(
-	issues []Issue, lintRule Rule, pos meta.Position, sourceName string, comments []*parser.Comment,
-) []Issue {
-	return append(issues, buildError(lintRule, pos, sourceName))
-}
-
-// GetRuleName returns rule name
-func GetRuleName(rule Rule) string {
-	return toUpperSnakeCase(reflect.TypeOf(rule).Elem().Name())
-}
-
 // toUpperSnakeCase converts a string from PascalCase or camelCase to UPPER_SNEAK_CASE.
 func toUpperSnakeCase(s string) string {
 	var result []rune
@@ -145,13 +122,15 @@ func toUpperSnakeCase(s string) string {
 	return string(result)
 }
 
-// buildError creates an Issue.
-func buildError(lintRule Rule, pos meta.Position, sourceName string) Issue {
-	return Issue{
-		Position:   pos,
-		SourceName: sourceName,
-		Message:    lintRule.Message(),
-		RuleName:   GetRuleName(lintRule),
+// fromMetaPos converts a go-protoparser source position to the issue position
+// type. The field sets are identical in name, type, and order, so the
+// conversion copies every field and changes no value.
+func fromMetaPos(p meta.Position) Position {
+	return Position{
+		Filename: p.Filename,
+		Offset:   p.Offset,
+		Line:     p.Line,
+		Column:   p.Column,
 	}
 }
 

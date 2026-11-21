@@ -4,9 +4,9 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"github.com/yoheimuta/go-protoparser/v4/parser/meta"
 
 	"github.com/easyp-tech/easyp/internal/core"
+	"github.com/easyp-tech/easyp/internal/protoast"
 	"github.com/easyp-tech/easyp/internal/rules"
 )
 
@@ -23,6 +23,7 @@ func TestDirectorySamePackage_Message(t *testing.T) {
 	assert.Equal(expMessage, message)
 
 }
+
 func TestDirectorySamePackage_Validate(t *testing.T) {
 	t.Parallel()
 
@@ -34,7 +35,7 @@ func TestDirectorySamePackage_Validate(t *testing.T) {
 		"invalid": {
 			fileNames: []string{invalidAuthProto, invalidAuthProto2},
 			wantIssues: &core.Issue{
-				Position: meta.Position{
+				Position: protoast.Position{
 					Filename: "",
 					Offset:   20,
 					Line:     3,
@@ -57,17 +58,20 @@ func TestDirectorySamePackage_Validate(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			r, protos := start(t)
+			rule := &rules.DirectorySamePackage{}
 
-			rule := rules.DirectorySamePackage{}
-			var res []core.Issue
+			var infos []core.ProtoInfo
 			for _, fileName := range tc.fileNames {
-				issues, err := rule.Validate(protos[fileName])
-				r.ErrorIs(err, tc.wantErr)
-				res = append(res, issues...)
+				infos = append(infos, parseLinkedFile(t, fileName))
 			}
-			if len(res) > 0 {
-				r.Contains(res, *tc.wantIssues)
+
+			issues, err := validate(rule, infos...)
+			require.ErrorIs(t, err, tc.wantErr)
+			switch {
+			case tc.wantIssues != nil:
+				require.Contains(t, issues, *tc.wantIssues)
+			case len(issues) > 0:
+				require.Empty(t, issues)
 			}
 		})
 	}

@@ -1,0 +1,4 @@
+# 14_null_in_comment.proto
+line_comment 0 29
+block_comment 30 38
+ident 69 5

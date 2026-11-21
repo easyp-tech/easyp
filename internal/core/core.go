@@ -6,10 +6,12 @@ import (
 	"io"
 	"maps"
 	"slices"
+	"sync"
 
 	"github.com/easyp-tech/easyp/internal/adapters/console"
 	"github.com/easyp-tech/easyp/internal/adapters/plugin"
 	"github.com/easyp-tech/easyp/internal/logger"
+	"github.com/easyp-tech/easyp/internal/protoast"
 )
 
 // Core provide to business logic of EasyP.
@@ -39,6 +41,17 @@ type Core struct {
 	remoteExecutor  plugin.Executor
 	builtinExecutor plugin.Executor
 	commandExecutor plugin.Executor
+
+	// importCache holds parsed import outlines for lint; files are parsed in
+	// parallel, so it is shared and locked.
+	importCache *parsedImports
+}
+
+// parsedImports holds parsed import outlines for lint; files are parsed in
+// parallel, so it is shared and locked.
+type parsedImports struct {
+	mu    sync.Mutex
+	files map[string]*protoast.File
 }
 
 var (

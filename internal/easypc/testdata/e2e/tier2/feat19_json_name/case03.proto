@@ -1,0 +1,1 @@
+syntax = "proto3"; package feat19b.c03; message J3 { string foo___bar = 1; }

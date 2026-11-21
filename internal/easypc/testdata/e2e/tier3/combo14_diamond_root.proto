@@ -1,0 +1,9 @@
+syntax = "proto3";
+package tier3.combo14;
+import "combo14_branch_a.proto";
+import "combo14_branch_b.proto";
+
+message DiamondRoot {
+  BranchA a = 1;
+  BranchB b = 2;
+}

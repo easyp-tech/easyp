@@ -1,0 +1,29 @@
+syntax = "proto3";
+package m4.adversarial.tabs_utf8;
+
+// Тестовый комментарий на русском языке с UTF-8: привет мир 🚀
+// 这是一个中文注释，测试多字节 UTF-8 字符的列计算 🇨🇳
+// 日本語のコメント：こんにちは世界 🌸
+
+message TabStopTest {
+	// Tab at col 0 (indent = 8)
+	string f1 = 1;
+
+ 	// 1 space then tab: col should be 8
+ 	string f2 = 2;
+
+       	// 7 spaces then tab: col should be 8
+       	string f3 = 3;
+
+        	// 8 spaces then tab: col should be 16
+        	string f4 = 4;
+
+	// Tabs inside statement:
+	int32	f5	=	5;	// Trailing comment with UTF-8: café & naïve
+
+	/* Multi-byte block comment:
+	 * Русский текст с табуляцией:	значение
+	 * Emojis: ⭐️ ⚡️ 💥
+	 */
+	int64 f6 = 6;
+}

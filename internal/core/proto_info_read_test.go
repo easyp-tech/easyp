@@ -142,6 +142,42 @@ func TestReadFileFromImportPreservesErrors(t *testing.T) {
 	}
 }
 
+func TestBreakingProtoInfoReadErrorLabels(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name      string
+		content   string
+		wantLabel string
+	}{
+		{name: "open_failure", wantLabel: "Open:"},
+		{name: "parse_failure", content: "invalid proto", wantLabel: "readProtoFileWithDirectives:"},
+		{
+			name:      "import_failure",
+			content:   "syntax = \"proto3\";\n\nimport \"missing.proto\";\n\npackage twins;\n",
+			wantLabel: "readFilesFromImport:",
+		},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			root := t.TempDir()
+			if tt.content != "" {
+				writeImportSource(t, root, "item.proto", tt.content)
+			}
+			engine := &Core{logger: logger.NewNop(), importRoots: []string{root}}
+
+			_, err := engine.breakingProtoInfoRead(t.Context(), fs.NewFSWalker(root, "."), "item.proto")
+
+			require.Error(t, err)
+			assert.ErrorContains(t, err, tt.wantLabel)
+		})
+	}
+}
+
 func writeImportSource(t *testing.T, root, name, content string) string {
 	t.Helper()
 

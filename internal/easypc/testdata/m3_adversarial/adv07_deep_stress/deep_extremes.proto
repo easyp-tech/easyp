@@ -1,0 +1,31 @@
+syntax = "proto2";
+package adv07.deep;
+import "deep_def.proto";
+
+message TestExtremeScalarsMsg {
+  option (extreme_msg_opt) = {
+    u32_min: 0
+    u32_max: 4294967295
+    i32_min: -2147483648
+    i32_max: 2147483647
+    i32_neg1: -1
+    i32_zero: 0
+    u64_min: 0
+    u64_max: 18446744073709551615
+    i64_min: -9223372036854775808
+    i64_max: 9223372036854775807
+    i64_neg1: -1
+    i64_zero: 0
+
+    s_int32_min: -2147483648
+    s_int32_max: 2147483647
+    s_int64_min: -9223372036854775808
+    s_int64_max: 9223372036854775807
+    s_sint32_min: -2147483648
+    s_sint32_max: 2147483647
+    s_sint64_min: -9223372036854775808
+    s_sint64_max: 9223372036854775807
+    s_uint32_max: 4294967295
+    s_uint64_max: 18446744073709551615
+  };
+}

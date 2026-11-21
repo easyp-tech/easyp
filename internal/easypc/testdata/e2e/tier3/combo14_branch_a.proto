@@ -1,0 +1,4 @@
+syntax = "proto3";
+package tier3.combo14;
+import "combo14_core.proto";
+message BranchA { CoreEntity e = 1; }

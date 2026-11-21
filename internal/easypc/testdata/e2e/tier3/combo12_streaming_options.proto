@@ -1,0 +1,16 @@
+syntax = "proto2";
+package tier3.combo12;
+import "google/protobuf/descriptor.proto";
+
+extend google.protobuf.MethodOptions {
+  optional int32 timeout_ms = 50312;
+}
+
+message ReqChunk { optional bytes chunk = 1; }
+message RespSummary { optional int64 total_bytes = 1; }
+
+service IngestionService {
+  rpc Upload (stream ReqChunk) returns (RespSummary) {
+    option (timeout_ms) = 5000;
+  }
+}

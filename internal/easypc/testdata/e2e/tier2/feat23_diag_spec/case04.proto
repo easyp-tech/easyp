@@ -1,0 +1,1 @@
+syntax = "proto3"; package feat23b.c04; import "unused_helper_4.proto"; message DiagSpecBound4 { int32 id = 1; }

@@ -5,9 +5,9 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"github.com/yoheimuta/go-protoparser/v4/parser/meta"
 
 	"github.com/easyp-tech/easyp/internal/fs/fs"
+	"github.com/easyp-tech/easyp/internal/protoast"
 )
 
 const (
@@ -36,7 +36,7 @@ func TestCore_BreakingCheck(t *testing.T) {
 			wantIssues: []IssueInfo{
 				{
 					Issue: Issue{
-						Position: meta.Position{
+						Position: protoast.Position{
 							Filename: "",
 							Offset:   39,
 							Line:     5,
@@ -50,7 +50,7 @@ func TestCore_BreakingCheck(t *testing.T) {
 				},
 				{
 					Issue: Issue{
-						Position: meta.Position{
+						Position: protoast.Position{
 							Filename: "",
 							Offset:   39,
 							Line:     5,
@@ -64,7 +64,7 @@ func TestCore_BreakingCheck(t *testing.T) {
 				},
 				{
 					Issue: Issue{
-						Position: meta.Position{
+						Position: protoast.Position{
 							Filename: "",
 							Offset:   65,
 							Line:     7,
@@ -78,7 +78,7 @@ func TestCore_BreakingCheck(t *testing.T) {
 				},
 				{
 					Issue: Issue{
-						Position: meta.Position{
+						Position: protoast.Position{
 							Filename: "",
 							Offset:   649,
 							Line:     45,
@@ -92,7 +92,7 @@ func TestCore_BreakingCheck(t *testing.T) {
 				},
 				{
 					Issue: Issue{
-						Position: meta.Position{
+						Position: protoast.Position{
 							Filename: "",
 							Offset:   498,
 							Line:     35,
@@ -106,7 +106,7 @@ func TestCore_BreakingCheck(t *testing.T) {
 				},
 				{
 					Issue: Issue{
-						Position: meta.Position{
+						Position: protoast.Position{
 							Filename: "",
 							Offset:   283,
 							Line:     22,
@@ -120,7 +120,7 @@ func TestCore_BreakingCheck(t *testing.T) {
 				},
 				{
 					Issue: Issue{
-						Position: meta.Position{
+						Position: protoast.Position{
 							Filename: "",
 							Offset:   463,
 							Line:     31,

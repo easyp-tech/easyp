@@ -1,0 +1,29 @@
+syntax = "proto3";
+package logistics.warehouse.v1;
+import "google/protobuf/timestamp.proto";
+
+message PalletItem {
+  string sku = 1;
+  string batch_number = 2;
+  int32 quantity = 3;
+  double weight_kg = 4;
+}
+
+message Pallet {
+  string rfid_tag = 1;
+  string bin_location = 2;
+  repeated PalletItem items = 3;
+  google.protobuf.Timestamp last_scanned = 4;
+}
+
+message ShipmentManifest {
+  string manifest_id = 1;
+  string carrier_code = 2;
+  string destination_hub = 3;
+  repeated Pallet pallets = 4;
+  google.protobuf.Timestamp scheduled_departure = 5;
+}
+
+service WarehouseService {
+  rpc RegisterManifest (ShipmentManifest) returns (ShipmentManifest);
+}

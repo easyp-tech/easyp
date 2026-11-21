@@ -1,0 +1,7 @@
+syntax = "proto3";
+package adv01.deep.l5;
+
+message Level5Msg {
+  int64 id = 1;
+  string token = 2;
+}

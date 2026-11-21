@@ -1,0 +1,5 @@
+syntax = "proto3";
+package feat16.case01;
+import "google/protobuf/descriptor.proto";
+
+message DescrRef { string info = 1; }

@@ -1,0 +1,47 @@
+{
+  "lab": {
+    "checkout_sha": "08cef10909c0722f7042ba17b5c11951f9c6b6f6",
+    "binary_path": "/tmp/p6-parity/bin/easyp-lab",
+    "exit_code": 1,
+    "finding_count_total": 9
+  },
+  "new": {
+    "commit_sha": "d0525b4f9e6882ef8670ce9ea49c34448ecc9cab",
+    "binary_path": "/tmp/p6-parity/bin/easyp-new",
+    "exit_code": 1,
+    "finding_count_total": 14
+  },
+  "corpus": [
+    "easyp.yaml",
+    "import_cycle/a.proto",
+    "import_cycle/a2.proto",
+    "import_cycle/b/b.proto",
+    "no_syntax/no_syntax.proto",
+    "required_field/required_field.proto"
+  ],
+  "config": "version v1 / linters default STANDARD",
+  "projection": "(RuleName, Path, Position.Line, Position.Column)",
+  "per_rule_counts": {
+    "PACKAGE_NO_IMPORT_CYCLE": { "lab": 2, "new": 2 },
+    "SYNTAX_SPECIFIED": { "lab": 1, "new": 1 },
+    "FIELD_NOT_REQUIRED": { "lab": 1, "new": 1 }
+  },
+  "multiset_equal": true,
+  "teeth_anti_vacuity": ">=1 per rule both sides",
+  "corpora_leg": {
+    "status": "deferred",
+    "reason": "EasyP-Parser-Compiler-Experiment (the corpora source holding the api-common/googleapis-nocompute .args file lists) is not accessible: not on disk, gh repo clone could not resolve the repository under an authenticated token with repo scope, and the SSH remote was refused",
+    "clone_attempts": [
+      "gh repo clone easyp-tech/EasyP-Parser-Compiler-Experiment /tmp/gsd-research/EasyP-Parser-Compiler-Experiment -> GraphQL: Could not resolve to a Repository (authenticated as onokonem, scopes repo/read:org/workflow/gist)",
+      "git clone git@github.com:easyp-tech/EasyP-Parser-Compiler-Experiment.git -> fatal: Could not read from remote repository"
+    ],
+    "options_presented": [
+      "PROVIDE: user clones EasyP-Parser-Compiler-Experiment themselves or names an existing checkout",
+      "PROVIDE: point GOOGLEAPIS/CORPUS_ARGS at local checkouts and rerun the corpora leg",
+      "DEFER: corpora leg rides Phase 7's lab.py stand spike (same private-repo access, STATE.md blocker)"
+    ],
+    "choice": "deferred (access gate unresolvable unattended; recorded for the end-of-phase human check)",
+    "carries_requirement": "teeth-corpus parity in this file stands as the automated LINT-NEWRULES-03 record; the corpora leg remains the manual-only row in 06-VALIDATION.md"
+  },
+  "timestamp": "2026-11-21T00:20:38Z"
+}

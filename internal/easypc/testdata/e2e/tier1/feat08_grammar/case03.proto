@@ -1,0 +1,7 @@
+edition = "2023";
+package feat08.case03;
+
+message EditionGrammar {
+  int32 id = 1;
+  string title = 2;
+}

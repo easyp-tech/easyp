@@ -1,0 +1,18 @@
+syntax = "proto3";
+package feat09.case01;
+
+message L1 {
+  message L2 {
+    message L3 {
+      message L4 {
+        message L5 {
+          string leaf = 1;
+        }
+        L5 l5 = 1;
+      }
+      L4 l4 = 1;
+    }
+    L3 l3 = 1;
+  }
+  L2 l2 = 1;
+}

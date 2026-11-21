@@ -1,0 +1,26 @@
+syntax = "proto2";
+package adv08.stress.floats;
+
+message FloatDefaults {
+  // Test negative zero float/double defaults
+  optional float f_neg_zero = 1 [default = -0.0];
+  optional double d_neg_zero = 2 [default = -0.0];
+
+  // Test scientific notation float/double defaults
+  optional float f_small_sci = 3 [default = 1.5e-10];
+  optional float f_neg_small_sci = 4 [default = -1.5e-10];
+  optional double d_small_sci = 5 [default = 1.2345e-50];
+  optional double d_neg_small_sci = 6 [default = -1.2345e-50];
+
+  // Test infinity float/double defaults
+  optional float f_pos_inf = 7 [default = inf];
+  optional float f_neg_inf = 8 [default = -inf];
+  optional double d_pos_inf = 9 [default = inf];
+  optional double d_neg_inf = 10 [default = -inf];
+
+  // Test standard float/double defaults
+  optional float f_one = 11 [default = 1.0];
+  optional double d_one = 12 [default = 1.0];
+  optional float f_neg_one = 13 [default = -1.0];
+  optional double d_neg_one = 14 [default = -1.0];
+}

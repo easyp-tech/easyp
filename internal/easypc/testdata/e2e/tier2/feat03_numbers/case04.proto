@@ -1,0 +1,1 @@
+syntax = "proto2"; package feat03b.c04; message ExtremeFloats { optional double big = 1 [default = 1e300]; optional double tiny = 2 [default = 1e-300]; optional float pt_zero = 3 [default = .0]; optional float zero_pt = 4 [default = 0.]; }

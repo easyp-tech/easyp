@@ -1,0 +1,8 @@
+syntax = "proto3";
+package tier3.combo17;
+
+message SimdStressTest {
+  string field_with_extremely_long_name_designed_to_span_multiple_simd_vector_registers_a = 1;
+  string field_with_extremely_long_name_designed_to_span_multiple_simd_vector_registers_b = 2;
+  string field_with_extremely_long_name_designed_to_span_multiple_simd_vector_registers_c = 3;
+}
