@@ -8,9 +8,15 @@ EasyP — CLI-тулкит для Protocol Buffers на Go: линтинг (buf-
 
 EasyP остаётся drop-in buf-совместимым инструментом: формат вывода, коды выхода и конфигурация не ломаются между версиями — миграции внутренностей не должны быть заметны пользователю.
 
-## Current Milestone
+## Current Milestone: v1.1 import-easyprotoc
 
-*(none — v1.0 shipped 2026-11-21; start the next with `/gsd:new-milestone`)*
+**Goal:** lint-путь EasyP потребляет публичный модуль `github.com/easyp-tech/easyprotoc` вместо вендор-копии `internal/easypc`; вендор-дерево и seal-инфраструктура удаляются.
+
+**Target features:**
+- `go.mod`: `require github.com/easyp-tech/easyprotoc` (псевдоверсия main @ `f378f3f` — та же, что breaking-путь на main с #253)
+- Переписывание импортов потребителей (`internal/core/link.go`, `internal/protoast`) на публичные пакеты модуля: `protoc`, `protoc/syntax`, `parser`
+- Удаление `internal/easypc` (включая `VENDORED.md`, `cmd/easyp-protoc`, `cmd/lexbench`), снятие `.golangci.yml`-исключения и seal-параграфа AGENTS.md
+- Полный паритет: сборка, корпус lint (Gates A–D), D-07 позиции, `-race ./...`; `.spec` отражает импорт вместо вендоринга
 
 ## Current State
 
@@ -19,8 +25,9 @@ EasyP остаётся drop-in buf-совместимым инструменто
 ## Next Milestone Goals
 
 *(черновик — финализировать в `/gsd:new-milestone`)*
+- Продолжение серии: перевод generate/`mod tidy`/`migrate` на модуль `easyprotoc` (FUTURE-COMPILER-01..03; breaking уже на easyprotoc с main #253)
+- Bump псевдоверсии easyprotoc при появлении тегов у upstream / мержа ветки `feat/easyp-integration` (generation sources + descriptor metadata fix — нужен для codegen-серии, меняет семантику ошибок `Link`)
 - Corpora acceptance: разблокировать приватные корпуса, прогнать lint-diff паритет + perf-гейт на полном масштабе (letters v1.0)
-- Продолжение серии: перевод breaking/generate/`mod tidy`/`migrate` на `easypc` (FUTURE-COMPILER-01..03)
 - Hardening: fuzzing лексера/парсера (FUTURE-HARDENING-01), editions support (FUTURE-COMPILER-04)
 - Lab improvements deferred behind parity: resolution-based ImportUsed, cross-file RPCRequestResponseUnique, swift_prefix fix
 
@@ -44,19 +51,22 @@ EasyP остаётся drop-in buf-совместимым инструменто
 - ✓ v1-конфигурация: `easyp.yaml`, `easyp.gen.yaml`, JSON-схемы (`task schema:generate`), MCP-сервер конфигурации — existing
 - ✓ Миграция legacy → v1 (`easyp migrate`, интерактивный мастер) — existing
 - ✓ Вендоринг компилятора `easypc` и модели `protoast` из compiler-lab — Phase 1 (байт-verbatim, ноль новых зависимостей, пустой дифф поведения)
+- ✓ Lint на слинкованных деревьях `easypc` + `protoast`: два прохода, центральные подавления, детерминированный вывод — v1.0 (PR #258)
+- ✓ Паритет 43 правил + 3 новых правила, схемы/MCP согласованно обновлены, Gates A–D ×2, golden 94 findings байт-точно — v1.0
+- ✓ Полный `-race ./...` зелёный (41 пакет, 3718 тестов), wazero-гонка устранена — v1.0 Phase 7
 
 ### Active
 
-Milestone «Миграция линтера на собственный компилятор» — полный список в REQUIREMENTS.md (LINT-*):
+Milestone v1.1 «import-easyprotoc» — полный список в REQUIREMENTS.md (IMPORT-*):
 
-- [ ] Новый lint-движок на слинкованных деревьях `easypc` с сохранением подавлений/`ignore`/валидации конфига
-- [ ] Паритет всех 43 текущих правил на корпусах `api-common` и `googleapis-nocompute`
-- [ ] Новые правила `PACKAGE_NO_IMPORT_CYCLE`, `SYNTAX_SPECIFIED`, `FIELD_NOT_REQUIRED` + обновление схем и MCP-описаний
-- [ ] Совместимость вывода/кодов выхода и неизменность breaking/generate/mod tidy/migrate
-- [ ] Производительность lint не хуже main на `googleapis-nocompute`
+- [ ] `go.mod` требует публичный модуль `github.com/easyp-tech/easyprotoc` (псевдоверсия main @ `f378f3f`)
+- [ ] Потребители (`internal/core`, `internal/protoast`) импортируют публичные пакеты `protoc`/`protoc/syntax`/`parser` — вендор-пути исчезли
+- [ ] Дерево `internal/easypc` удалено с `VENDORED.md` и cmd-бинарниками; seal-инфраструктура снята (`.golangci.yml`-исключение, параграф AGENTS.md)
+- [ ] Полный паритет без регрессий: сборка, корпус lint (Gates A–D), D-07 position-тесты, `-race ./...`
 
 ### Out of Scope
 
+- Взятие upstream-ветки `feat/easyp-integration` (generation sources/descriptor metadata fix) — unmerged, меняет семантику ошибок `Link`, нужен только codegen-серии; v1.1 пинится на main @ `f378f3f`
 - Перевод breaking/generate/`mod tidy`/migrate на компилятор `easypc` — отдельные будущие фичи (серия продолжится после стабилизации lint-пути)
 - Удаление `go-protoparser`/`protocompile` из `go.mod` — они нужны остальным подсистемам (REQ-5.2)
 - Оптимизация скорости сверх «не медленнее main» — выигрыш лаборатории (20 мин → 0.08 с) — ориентир, не требование
@@ -73,7 +83,7 @@ Milestone «Миграция линтера на собственный комп
 
 ## Constraints
 
-- **Tech stack**: Go 1.26.6, urfave/cli v2, testify; новые зависимости для компилятора запрещены (REQ-1.2) — вендоринг в `internal/`
+- **Tech stack**: Go 1.26.6, urfave/cli v2, testify; компилятор потребляется как внешний модуль `github.com/easyp-tech/easyprotoc` (v1.1; запрет новых зависимостей REQ-1.2 действовал только на вендоринг v1.0 и отменён — репозиторий компилятора публичен)
 - **Compatibility**: формат вывода issues, пути и коды выхода CLI неизменны; buf-совместимое поведение — контракт
 - **Scope**: breaking/generate/`mod tidy`/`migrate` не меняются в этом milestone (REQ-5.2)
 - **Verification**: `task test` / `task lint` / `task schema:check`; паритет корпусов через `compiler-lab/bench/lab.py` — требует доступа к приватному репозиторию compiler-lab
@@ -114,4 +124,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-11-21 after Phase 7 (milestone phases complete)*
+*Last updated: 2026-11-21 — milestone v1.1 import-easyprotoc started*
