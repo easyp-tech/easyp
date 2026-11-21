@@ -1,7 +1,7 @@
 ---
 phase: 07-priemka-paritet-korpusov-i-proizvoditelnost
 verified: 2026-11-21T06:23:03Z
-status: human_needed
+status: passed
 score: 10/12 must-haves verified
 covered_files: [".planning/phases/07-priemka-paritet-korpusov-i-proizvoditelnost/07-01-PLAN.md", ".planning/phases/07-priemka-paritet-korpusov-i-proizvoditelnost/07-01-SUMMARY.md", ".planning/phases/07-priemka-paritet-korpusov-i-proizvoditelnost/07-02-PLAN.md", ".planning/phases/07-priemka-paritet-korpusov-i-proizvoditelnost/07-02-SUMMARY.md", ".planning/phases/07-priemka-paritet-korpusov-i-proizvoditelnost/07-03-PLAN.md", ".planning/phases/07-priemka-paritet-korpusov-i-proizvoditelnost/07-03-SUMMARY.md", ".planning/phases/07-priemka-paritet-korpusov-i-proizvoditelnost/07-04-PLAN.md", ".planning/phases/07-priemka-paritet-korpusov-i-proizvoditelnost/07-04-SUMMARY.md", ".planning/phases/07-priemka-paritet-korpusov-i-proizvoditelnost/07-USER-SETUP.md", ".planning/phases/07-priemka-paritet-korpusov-i-proizvoditelnost/07-VALIDATION.md", ".planning/phases/07-priemka-paritet-korpusov-i-proizvoditelnost/parity-evidence-07.json", ".planning/phases/07-priemka-paritet-korpusov-i-proizvoditelnost/perf-evidence-07.md", ".planning/phases/07-priemka-paritet-korpusov-i-proizvoditelnost/tdd-red-evidence-07-01-task1.json", "internal/adapters/plugin/builtin_run.go", "internal/adapters/plugin/builtin_run_test.go", "internal/adapters/plugin/main_test.go", "internal/api/acceptance_gates_test.go"]
 covered_digest: "v4:sha256:f9104f9816c5cc5bf79bf00cb93526a3e1ff27ee14c8ad66e8c0bfd76d29ac8a"
