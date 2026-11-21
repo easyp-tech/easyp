@@ -12,6 +12,7 @@ import (
 	"github.com/easyp-tech/easyp/internal/adapters/plugin"
 	"github.com/easyp-tech/easyp/internal/logger"
 	"github.com/easyp-tech/easyp/internal/protoast"
+	"github.com/easyp-tech/easyp/internal/sourceview"
 )
 
 // Core provide to business logic of EasyP.
@@ -28,6 +29,7 @@ type Core struct {
 	importRoots           []string
 	importFileAllowed     func(string) bool
 	sourceFileOpen        func(string) (io.ReadCloser, error)
+	sourceSession         *sourceview.Session
 	sourceFilesWalk       func(string, func(string) error) (bool, error)
 	sourceBoundary        string
 	fileModules           map[string]string
@@ -77,6 +79,9 @@ type Options struct {
 	ImportFileAllowed func(string) bool
 	// OpenSourceFile opens logical sources within their owning bounded roots.
 	OpenSourceFile func(string) (io.ReadCloser, error)
+	// SourceSession, if set, is used for local opens that bypass
+	// OpenSourceFile, so they share the command's open roots.
+	SourceSession *sourceview.Session
 	// WalkSourceFiles optionally visits verified immutable proto inputs under an
 	// absolute import root. Paths passed to the visitor are absolute. Returning
 	// false selects the normal local filesystem walk instead.
@@ -106,6 +111,7 @@ func New(options Options) *Core {
 		importRoots:             slices.Clone(options.ImportRoots),
 		importFileAllowed:       options.ImportFileAllowed,
 		sourceFileOpen:          options.OpenSourceFile,
+		sourceSession:           options.SourceSession,
 		sourceFilesWalk:         options.WalkSourceFiles,
 		fileModules:             maps.Clone(options.FileModules),
 		currentProjectGitWalker: options.CurrentProjectGitWalker,
