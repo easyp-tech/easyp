@@ -168,7 +168,9 @@ func TestMergeLinterSectionBaseGroupDisableExpandsEveryRule(t *testing.T) {
 	merged = MergeLinterSection(base, LinterPolicy{Enable: []string{"FIELD_LOWER_SNAKE_CASE"}}, local, true)
 	assert.Contains(t, merged.Enable, "FIELD_LOWER_SNAKE_CASE")
 	assert.NotContains(t, merged.Disable, "FIELD_LOWER_SNAKE_CASE")
-	assert.Len(t, merged.Disable, 19)
+	// BASIC expanded to 22 rules in Phase 6 (SyntaxSpecified, FieldNotRequired);
+	// the locally enabled member is subtracted from the expansion.
+	assert.Len(t, merged.Disable, 21)
 }
 
 func TestMergeLinterSectionDedupsRepeatedSelections(t *testing.T) {
@@ -177,7 +179,9 @@ func TestMergeLinterSectionDedupsRepeatedSelections(t *testing.T) {
 	base := BaseLinterSection(LinterPolicy{Enable: []string{"FIELD_LOWER_SNAKE_CASE", "FIELD_LOWER_SNAKE_CASE"}}, presenceOf(t, "linters:\n  enable: [FIELD_LOWER_SNAKE_CASE, FIELD_LOWER_SNAKE_CASE]\n"))
 	local := presenceOf(t, "linters:\n  extends: ./base.yaml\n  enable: [FIELD_LOWER_SNAKE_CASE, BASIC]\n")
 	merged := MergeLinterSection(base, LinterPolicy{Enable: []string{"FIELD_LOWER_SNAKE_CASE", "BASIC"}}, local, true)
-	assert.Len(t, merged.Enable, 20)
+	// BASIC expanded to 22 rules in Phase 6; the duplicate FIELD_LOWER_SNAKE_CASE
+	// selection dedups into the group expansion.
+	assert.Len(t, merged.Enable, 22)
 	assert.Contains(t, merged.Enable, "FIELD_LOWER_SNAKE_CASE")
 }
 
