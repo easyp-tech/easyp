@@ -41,7 +41,7 @@ created: "2026-11-21"
 | Task ID | Plan | Wave | Requirement | Threat Ref | Secure Behavior | Test Type | Automated Command | File Exists | Status |
 |---------|------|------|-------------|------------|-----------------|-----------|-------------------|-------------|--------|
 | (заполняется планами) | 0X | X | LINT-PARITY-01 | T-07-* | Gates A–D: main-vs-main determinism, zero-COMPILE precondition, 4-tuple multiset identity (×2 runs), 3-rule delta accounting | gates-runner | `go test -race -count=1 ./internal/core/ -run 'TestAcceptanceGates'` | ❌ W0 | ⬜ pending |
-| (заполняется планами) | 0X | X | (SC3) | T-07-* | wazero race fixed — plugin package green under -race | unit/race | `go test -race -count=1 ./internal/adapters/plugin/` | ✅ | ⬜ pending |
+| 07-01 T1 (pin) + T2 (fix) | 01 | 1 | (SC3) | T-07-01 | wazero race fixed — plugin package green under -race | unit/race | `go test -race -count=1 ./internal/adapters/plugin/` | ✅ | ✅ green |
 | (заполняется планами) | 0X | X | (SC3) | T-07-* | Milestone gates: full -race suite + golangci + schema drift | battery | `go test -race -count=1 ./...` | ✅ | ⬜ pending |
 | (заполняется планами) | 0X | X | LINT-PARITY-01, LINT-PERF-01 | T-07-* | Corpora/perf legs — READY-TO-FIRE scripts + human-check (unblock path 06-USER-SETUP.md) | checkpoint | `checkpoint:human-verify` | ❌ W0 | ⬜ pending |
 

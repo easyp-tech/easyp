@@ -184,10 +184,10 @@ Plans:
   1. lint-diff стенд показывает идентичные множества замечаний с текущим main (правило, файл, строка, колонка) для всех 43 правил на корпусах `api-common` (92 файла) и `googleapis-nocompute` (7414 файлов); прогон повторён дважды для исключения недетерминизма; база main-vs-main снята
   2. `easyp lint` на `googleapis-nocompute` завершается не медленнее текущего main при флагах, эквивалентных CI; результат измерения зафиксирован
   3. Ворота milestone зелёные на финальном состоянии: `task test`, `task lint`, `task schema:check`
-**Plans**: 3 plans
+**Plans**: 1/3 plans executed
 Plans:
 **Wave 1**
-- [ ] 07-01-PLAN.md — wazero race fix (TDD): one-point serialization of the default runtime factory (builtin_run.go:59, both creation sites covered via the same field); RED = package -race failure machine-validated, GREEN = fix + two-scope concurrency pin; unblocks the SC3 full-suite gate (LINT-PARITY-01 enabler)
+- [x] 07-01-PLAN.md — wazero race fix (TDD): one-point serialization of the default runtime factory (builtin_run.go:59, both creation sites covered via the same field); RED = package -race failure machine-validated, GREEN = fix + two-scope concurrency pin; unblocks the SC3 full-suite gate (LINT-PARITY-01 enabler)
 - [ ] 07-02-PLAN.md — Acceptance gates tracer (tracer): baseline oracle built from the RATIFIED pre-milestone commit 1e9a596 + TestAcceptanceGates (Gates A-D on the teeth corpus, x2 determinism, zero-COMPILE precondition, NEW3-filtered 4-tuple identity, delta 2/1/1; counts stated 41/44) + ready-to-fire corpora/perf instruments (/tmp/p7) self-tested with negative controls (LINT-PARITY-01, LINT-PERF-01)
 
 **Wave 2** *(blocked on Wave 1)*
@@ -207,7 +207,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 | 4. Перенос 43 правил с батч-паритетом | 8/8 | Complete    | 2026-11-20 |
 | 5. Переключение lint-пути и ворота совместимости | 5/5 | Complete    | 2026-11-21 |
 | 6. Новые правила и регенерация схем/MCP | 3/3 | Complete    | 2026-11-21 |
-| 7. Приёмка — паритет корпусов и производительность | 0/3 | Not started | - |
+| 7. Приёмка — паритет корпусов и производительность | 1/3 | In Progress | - |
 
 ---
 *Roadmap created: 2026-11-17 (milestone lint-easypc-infra, 17/17 requirements mapped)*

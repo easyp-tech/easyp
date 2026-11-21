@@ -3,16 +3,16 @@ gsd_state_version: "1.0"
 current_phase: 07
 current_phase_name: Приёмка — паритет корпусов и производительность
 status: executing
-stopped_at: Phase 06 complete, ready to plan Phase 7
-last_updated: "2026-11-21T02:52:17.859Z"
+stopped_at: Completed 07-01-PLAN.md
+last_updated: "2026-11-21T03:27:31.628Z"
 last_activity: 2026-11-21
-last_activity_desc: Phase 06 complete, transitioned to Phase 7
-state_head: 9157f1504ac8ed59d37ed442aa80c0ebfd7e6457
+last_activity_desc: Phase 07 execution started
+state_head: 1f82b61111bb47cfcec36054c7da942ee29f0f90
 progress:
   total_phases: 7
   completed_phases: 6
   total_plans: 31
-  completed_plans: 28
+  completed_plans: 29
   percent: 86
 ---
 
@@ -36,14 +36,14 @@ progress:[█████████░] 86%
 See: .planning/PROJECT.md (updated 2026-11-19)
 
 **Core value:** EasyP остаётся drop-in buf-совместимым инструментом: формат вывода, коды выхода и конфигурация не ломаются между версиями — миграции внутренностей незаметны пользователю.
-**Current focus:** Phase 06 — Новые правила и регенерация схем/MCP
+**Current focus:** Phase 07 — Приёмка — паритет корпусов и производительность
 
 ## Current Position
 
-Phase: 07 (Приёмка — паритет корпусов и производительность) — READY TO EXECUTE
-Plan: Not started
+Phase: 07 (Приёмка — паритет корпусов и производительность) — EXECUTING
+Plan: 2 of 3
 Status: Ready to execute
-Last activity: 2026-11-21 — Phase 06 complete, transitioned to Phase 7
+Last activity: 2026-11-21 — Phase 07 execution started
 
 Progress: [███░░░░░░░] 29%
 
@@ -100,6 +100,7 @@ Progress: [███░░░░░░░] 29%
 | Phase 06 P01 | 6 min | 3 tasks | 14 files |
 | Phase 06 P02 | 20 min | 3 tasks | 14 files |
 | Phase 06 P03 | 3 min | 2 tasks | 3 files |
+| Phase 07 P01 | 27 min | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -195,6 +196,8 @@ Recent decisions affecting current work:
 - [Phase 06]: Corpora leg DEFERRED per the pre-resolved 06-03 outcome path: EasyP-Parser-Compiler-Experiment inaccessible (gh clone under authenticated repo-scope token: repository not resolvable; SSH remote refused); teeth parity stands as the automated LINT-NEWRULES-03 record; the leg remains the 06-VALIDATION.md manual-only row and rides Phase 7's lab.py stand spike — 06-03 corpora deferral documented for the end-of-phase human check with the full gate outcome in parity-evidence-06-03.json (clone attempts, PROVIDE/DEFER options) and 06-USER-SETUP.md (GOOGLEAPIS/CORPUS_ARGS unblock path)
 - [Phase 06]: Teeth corpus assembled from the 06-01 tracked fixtures preserving subdirectory layout (corpus-root-relative imports resolve); no config surgery — MINIMAL auto-seed (policy.go:109) enables all three rules on BOTH binaries with the committed STANDARD config
 - [Phase 06]: Filtered-projection parity never raw-diffs full output: (RuleName, Path, Position.Line, Position.Column) multisets filtered to the three new names; deliberate main-vs-lab divergences in ported rules stay untouched; non-JSON output lines hard-fail (A4)
+- [Phase 07]: Serialize ONLY the default wazero runtimeFactory (package runtimeCreationMu + newRuntimeSerialized at the EnsureBuiltinRun default value): both creation sites (builtin_run.go:144, builtin_impl.go:143) covered through the shared field, builtin_impl.go zero-diff, frozen seam overrides byte-untouched; wazero upgrade rejected (A4 resolved-by-decision)
+- [Phase 07]: [Rule 2/3] plugin main_test.go TestMain primes wazero v1.9.0's internal/version lazy global before m.Run forks test goroutines — frozen raw seam doubles cannot be ordered by any production-side mutex (post-fix package runs red 2/2 without priming); priming gives a fork-level happens-before edge, zero production impact, seams untouched
 
 ### Pending Todos
 
@@ -226,6 +229,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-11-21T00:23:40.426Z
-Stopped at: Phase 06 complete, ready to plan Phase 7
+Last session: 2026-11-21T03:27:30.122Z
+Stopped at: Completed 07-01-PLAN.md
 Resume file: None
