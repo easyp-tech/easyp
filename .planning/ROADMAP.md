@@ -79,7 +79,10 @@ Decimal phases appear between their surrounding integers in numeric order.
   2. D-07 позиции: `internal/protoast/position_test.go` и `internal/core/position_parity_test.go` зелёные; multibyte-UTF-8 фиксатура воспроизводит контракт main (1-based строка, 1-based колонка в рунах)
   3. `task lint:go`, `task schema:check` и `task build` зелёные; `schemas/` без дрейфа
   4. Итоговый diff приёмки не содержит изменений поведения: `easyp lint` на эталонном корпусе даёт byte-identical вывод против зафиксированного golden
-**Plans**: TBD
+**Plans:** 1 plan
+- [ ] 04-01-PLAN.md — Acceptance evidence: one full -race battery, all named parity gates, lint/schema/tidy predicates, and the honest v1.0 delta
+
+**Acceptance note (v1.1, CONTEXT D-06):** после удаления вендорного дерева батарея — 34 тест-пакета вместо 41; 7 пакетов удалены вместе с вендорными тестами (дизайн, не регрессия). Поведенческий паритет доказывают golden 94 findings, Gates A–D ×2 и оба D-07 position-гейта, а не число тестов.
 
 ## Progress
 
@@ -91,7 +94,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 | 1. Merge main и примирение путей | 2/2 | Complete    | 2026-11-21 |
 | 2. Переключение потребителей и удаление вендор-копии | 2/2 | Complete    | 2026-11-21 |
 | 3. Снятие seal-инфраструктуры и документация | 2/2 | Complete    | 2026-11-21 |
-| 4. Приёмка — полный паритет | 0/0 | Not started | - |
+| 4. Приёмка — полный паритет | 0/1 | Planned     | - |
 
 ## Backlog
 
