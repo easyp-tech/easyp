@@ -4,8 +4,8 @@ milestone: v1.1
 milestone_name: import-easyprotoc
 current_phase: 4
 current_phase_name: Приёмка — полный паритет
-current_plan: 8
-status: executing
+current_plan: 1
+status: ready_for_verification
 stopped_at: Completed 04-01-PLAN.md (acceptance evidence); ready for phase verification
 last_updated: "2026-11-21T15:53:31.935Z"
 last_activity: 2026-11-21
@@ -39,16 +39,16 @@ progress:[████████░░] 75%
 See: .planning/PROJECT.md (updated 2026-11-21)
 
 **Core value:** EasyP остаётся drop-in buf-совместимым инструментом: формат вывода, коды выхода и конфигурация не ломаются между версиями — миграции внутренностей незаметны пользователю.
-**Current focus:** Milestone v1.1 import-easyprotoc — Phase 2 (Переключение потребителей и удаление вендор-копии)
+**Current focus:** Milestone v1.1 import-easyprotoc — Phase 4 (Приёмка — полный паритет)
 
 ## Current Position
 
 Phase: 4 — Приёмка — полный паритет
-Current Plan: 8
-Total Plans in Phase: 2
-Plan: 03-01 complete (seven-file docs commit 9320361); next is 03-02 (errcheck fix and phase gates)
-Status: In progress — plan 03-02 pending
-Last activity: 2026-11-21 — Phase 3 complete, transitioned to Phase 4
+Current Plan: 1
+Total Plans in Phase: 1
+Plan: 04-01 complete (acceptance evidence d0ba6cb); phase ready for verification
+Status: Phase complete — ready for verification
+Last activity: 2026-11-21 — Phase 4 plan 04-01 executed
 
 ## Performance Metrics
 
