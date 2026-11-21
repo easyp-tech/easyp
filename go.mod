@@ -7,7 +7,7 @@ require (
 	github.com/a8m/envsubst v1.4.3
 	github.com/bufbuild/protocompile v0.14.1
 	github.com/charmbracelet/x/term v0.2.1
-	github.com/easyp-tech/easyprotoc v0.0.0-20261104120806-f378f3f3a05f
+	github.com/easyp-tech/easyprotoc v0.0.0-20261121194146-14f27ad9ce15
 	github.com/easyp-tech/service/api v1.0.0
 	github.com/go-git/go-billy/v5 v5.6.2
 	github.com/go-git/go-git/v5 v5.16.3
