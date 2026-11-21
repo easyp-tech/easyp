@@ -1,10 +1,10 @@
 ---
 schema_version: 1
-open_count: 16
+open_count: 17
 waived_count: 0
 fixed_count: 0
-total_count: 16
-last_updated: 2026-11-20T20:59:41.829Z
+total_count: 17
+last_updated: 2026-11-21T05:32:04.987Z
 ---
 
 # Broken Windows Ledger
@@ -31,6 +31,7 @@ last_updated: 2026-11-20T20:59:41.829Z
 | 14 | 05 | deviation | internal/core/proto_info_read_test.go |  | 05-03: plan surface addition (Rule 3, blocking compile): internal/core/proto_info_read_test.go and link_test.go call the deleted lintProtoInfoRead directly but are absent from the plan's files_modified list; TestProtoInfoReadTwinsMirroring + TestLintProtoInfoReadErrorLabels died with their oracle, the two link_test.go fallback cells re-pointed to protoInfoFromSource (same openImportFile funnel, same typed OpenImportFileError carrier) — assertions preserved verbatim in intent | open |  | 2026-11-20T20:29:31.985Z |  |
 | 15 | 05 | deviation | internal/core/lint_linked.go |  | 05-03: acceptance-criterion baselines reconciled against the plan's own prohibitions (Rule 3): (a) grep lintProtoInfoRead lands at 8 lines, not the criterion's EXPECT==1 — the byte-identical parity-pin comment+literal (2), the frozen proto_info_read.go comment 'twin of lintProtoInfoRead' (1), and the five exact-string proof cells asserting the pin text (5) are all mandated by the plan's canonical-six C1 prohibition and Phase-3 main-wins proof; the achieved invariant is zero LIVE references (callable call sites) to the deleted function; (b) the api runtime.go removed-lines gate's raw grep -c '^- ' counts the diff header, so the corrected plumbing is grep -c '^-[^-]' = 0 (comment-only addition preserved); (c) the zero-ref grep HEAD baseline was 399 at execution time vs the plan's recorded 384 (05-02's cells postdate the plan); EXPECT==0 achieved | open |  | 2026-11-20T20:29:32.513Z |  |
 | 16 | 05 | deviation | internal/core/lint_linked_read.go | 139 | 05-04 Rule 3: protoInfoFromLinked renamed to protoInfoFromLink (plan action listed only the 41 port types; the zero-reference criterion 'LintRuleName or word-Linked' == 0 forced the rename, 4 occurrences: def + 2 comments + engine call) plus comment-only factual refreshes forced by the same criterion (41 port headers de-self-referentialized after the sweep, builder_linked.go registry doc, package_directory_match registry-name prose, GetRuleName doc comment) | open |  | 2026-11-20T20:59:41.829Z |  |
+| 17 | 07 | deviation | internal/adapters/plugin/builtin_run_test.go |  | 07-04 Rule 1 deviation: REVIEW WR-01 window-probe snippet replaced by held-mutex ordering probe (false-positive under -race with correct mutex measured; mutex-block not synctest-durable) | open |  | 2026-11-21T05:32:04.987Z |  |
 
 ````json
 [
@@ -239,6 +240,19 @@ last_updated: 2026-11-20T20:59:41.829Z
     "status": "open",
     "reason": "",
     "recorded_at": "2026-11-20T20:59:41.829Z",
+    "resolved_at": null,
+    "milestone": null
+  },
+  {
+    "id": 17,
+    "kind": "deviation",
+    "phase": "07",
+    "file": "internal/adapters/plugin/builtin_run_test.go",
+    "line": null,
+    "description": "07-04 Rule 1 deviation: REVIEW WR-01 window-probe snippet replaced by held-mutex ordering probe (false-positive under -race with correct mutex measured; mutex-block not synctest-durable)",
+    "status": "open",
+    "reason": "",
+    "recorded_at": "2026-11-21T05:32:04.987Z",
     "resolved_at": null,
     "milestone": null
   }

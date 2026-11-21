@@ -3,16 +3,16 @@ gsd_state_version: "1.0"
 current_phase: 07
 current_phase_name: Приёмка — паритет корпусов и производительность
 status: verifying
-stopped_at: Completed 07-03-PLAN.md
-last_updated: "2026-11-21T04:20:27.609Z"
+stopped_at: Completed 07-04-PLAN.md
+last_updated: "2026-11-21T05:32:42.215Z"
 last_activity: 2026-11-21
 last_activity_desc: Phase 07 execution started
-state_head: 0cc549cec451267d786c1822ca2ff40387de9078
+state_head: 40b14c986b091c5a5b21b6f786959bac06e4a36e
 progress:
   total_phases: 7
   completed_phases: 6
-  total_plans: 31
-  completed_plans: 31
+  total_plans: 32
+  completed_plans: 32
   percent: 86
 ---
 
@@ -103,6 +103,7 @@ Progress: [███░░░░░░░] 29%
 | Phase 07 P01 | 27 min | 2 tasks | 4 files |
 | Phase 07 P02 | 19 min | 2 tasks | 2 files |
 | Phase 07 P03 | 16 min | 3 tasks | 5 files |
+| Phase 07 P04 | 34min | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -205,6 +206,8 @@ Recent decisions affecting current work:
 - [Phase 07]: SC3 battery green via direct equivalents (gotestsum v1.13.0 full -race suite 3718 tests, golangci 0 issues, schema drift one-tmp-dir empty); hadolint honest manual item (Docker absent)
 - [Phase 07]: Evidence committed auditable: parity-evidence-07.json baseline RATIFIED 1e9a596/41 + head 9a37392/44 + teeth Gates A-D (C multiset-equal, D 2/1/1); perf protocol in perf-evidence-07.md committed before any measurement (median-of-5 interleaved, no-race, {bin, wall_s, rss_mb, issues, rc} fields)
 - [Phase 07]: Corpora legs disposed honest: fresh attempts (gh exit 1, SSH exit 128, env unset) recorded in clone_attempts 2026-11-21T04:15:09Z; status pending_user_unblock; LINT-PARITY-01/LINT-PERF-01 letters MANUAL-ONLY rows with the 07-USER-SETUP.md one-command path (Pitfall 7 revision-compatibility nuance included)
+- [Phase 07]: [Phase 07] 07-04 [Rule 1]: REVIEW WR-01's wrapper-window peak probe replaced by a held-mutex ordering probe — the window conflates mutex-wait with construction overlap (measured false RED under -race with the CORRECT mutex, int64(2); false-green-prone without it, 1 of 2) and a sync.Mutex block is not synctest-durable (Wait deadlocks), so the probe runs in real time: hold runtimeCreationMu, park a construction request, prove non-completion while held via a buffered channel + one-sided 100ms dwell — green structural, RED deterministic
+- [Phase 07]: [Phase 07] 07-04: the pin covers BOTH production creation sites — runBuiltinModule constructs a per-invocation runtime at builtin_impl.go:143 in addition to the lazy compiler at builtin_run.go:159 (one invocation constructs twice); phase-2 constructions gate-staggered so the retained peak==1 assertion is deterministic; mutation matrix: pair-only removal = behavioral RED 3/3 with the planned message, var+pair removal = compile RED
 
 ### Pending Todos
 
@@ -236,6 +239,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-11-21T04:20:02.945Z
-Stopped at: Completed 07-03-PLAN.md
+Last session: 2026-11-21T05:32:41.265Z
+Stopped at: Completed 07-04-PLAN.md
 Resume file: None

@@ -181,3 +181,10 @@ None - no external service configuration required.
 ---
 *Phase: 07-priemka-paritet-korpusov-i-proizvoditelnost*
 *Completed: 2026-11-21*
+
+## Self-Check: PASSED
+
+- Files created/modified verified on disk: `main_test.go`, `builtin_run_test.go`, `acceptance_gates_test.go`, `07-04-SUMMARY.md` — all FOUND
+- Commits verified in HEAD ancestry: `bc3f853` (Task 1), `f1baa65` (Task 2), `40b14c9` (docs) — all FOUND
+- Measured from ledger `gsd-plan-head-before-07-04` (`9e8ce79`): 2 production commits, diff +138/−21 across 3 files (9542 chars → 2385 tokens at chars/4)
+- Plan-level verification re-verified at SUMMARY time: both packages green under -race, lint 0 issues, production byte-identical
