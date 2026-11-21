@@ -188,3 +188,15 @@ None - no external service configuration required.
 - Commits verified in HEAD ancestry: `bc3f853` (Task 1), `f1baa65` (Task 2), `40b14c9` (docs) — all FOUND
 - Measured from ledger `gsd-plan-head-before-07-04` (`9e8ce79`): 2 production commits, diff +138/−21 across 3 files (9542 chars → 2385 tokens at chars/4)
 - Plan-level verification re-verified at SUMMARY time: both packages green under -race, lint 0 issues, production byte-identical
+
+## Review Fixes (07-04-REVIEW.md followup, 2026-11-21)
+
+The deep review of the gap-closure diff (`9e8ce79..HEAD`, reviewed 2026-11-21T05:57:12Z) returned 0 Critical, 1 Warning, 2 Info. All three mechanical fixes are test-code-only and applied atomically in commit `3da252a`; production code remains byte-identical. The three findings span two files — WR-01 and IN-01 both live in `builtin_run_test.go`, IN-02 in `main_test.go`.
+
+| Finding | File | Disposition | Fix applied |
+|---------|------|-------------|-------------|
+| WR-01 (warning, necessity) — phase-2 `run == nil` branch is unreachable (EnsureBuiltinRun's fresh-context miss path always returns a non-nil owner, builtin_run.go:61-78) and non-protective: on the gate-opening scope its early return would skip `close(gate)` and deadlock-panic the synctest bubble | `internal/adapters/plugin/builtin_run_test.go` | **fixed** | Branch replaced with the idiomatic fatal form mirroring phase 1: `require.NotNil(t, run, "EnsureBuiltinRun: fresh context must return an owner")` |
+| IN-01 (info) — the phase-2 comment's "secondary overlap detector" label overstates the peak counter's evidentiary role (its failure condition is unreachable under the gate-staggered structure) | `internal/adapters/plugin/builtin_run_test.go` | **fixed** | Comment-only reword to the counter's actual role: the peak==1 assertion pins the gate-staggered ordering that keeps phase 2 deterministic — the production-serialization pin is the held-mutex ordering probe above |
+| IN-02 (info) — garbled sentence in the corrected TestMain narrative ("the frozen runtimeFactory seam doubles ... call the raw wazero constructor directly" has a subject/verb mismatch) | `internal/adapters/plugin/main_test.go` | **fixed** | Comment-only rewrite to the directed sentence: the frozen runtimeFactory seam doubles in builtin_run_test.go invoke the raw wazero constructor directly (bypassing the production mutex); TestMain primes the lazy wazero version global before the race detector forks test goroutines, so the detector's signal comes exclusively from the production paths the mutex protects |
+
+**Verification after fixes:** `TestBuiltinRunRuntimeCreationIsSerializedAcrossScopes` green under `-race` (isolated run, 1.2s); battery `go test -race -count=1 ./internal/adapters/plugin/ ./internal/api/ -run 'TestBuiltinRunRuntimeCreationIsSerializedAcrossScopes|TestAcceptanceGates'` — both packages ok; `bin/golangci-lint run` on both packages — 0 issues. Diff +8/−9 across the two test files.
