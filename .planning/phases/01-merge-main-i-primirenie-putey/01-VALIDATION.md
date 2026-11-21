@@ -2,10 +2,10 @@
 phase: "01"
 slug: "merge-main-i-primirenie-putey"
 # status lifecycle: draft (seeded by plan-phase) → validated (set by validate-phase §6)
-# audit-milestone §5.5 distinguishes NOT-VALIDATED (draft) from PARTIAL (validated + nyquist_compliant: false) (#2117)
-status: draft
-nyquist_compliant: false
-wave_0_complete: false
+# audit-milestone §5.5 distinguishes NOT-VALIDATED (draft) from PARTIAL (validated + nyquist_compliant: true) (#2117)
+status: validated
+nyquist_compliant: true
+wave_0_complete: true
 created: "2026-11-21"
 ---
 
@@ -40,10 +40,10 @@ created: "2026-11-21"
 
 | Task ID | Plan | Wave | Requirement | Threat Ref | Secure Behavior | Test Type | Automated Command | File Exists | Status |
 |---------|------|------|-------------|------------|-----------------|-----------|-------------------|-------------|--------|
-| 01-01-01 | 01 | 1 | IMPORT-REC-01 | T-01-01 / T-01-04 | Merge commit resolves conflicts deterministically (blob gates), no silent `--ours` drift | integration (shell) | `git merge-base --is-ancestor origin/main HEAD && test "$(git rev-list --count HEAD..origin/main)" -eq 0`; blob gates in plan verify | ✅ | ⬜ pending |
-| 01-01-02 | 01 | 1 | IMPORT-REC-01 | T-01-02 | Breaking path uses `easyprotoc/protoc`, pins present, no `replace` | unit (module) | `go list -m github.com/easyp-tech/easyprotoc google.golang.org/protobuf`; `grep -q easyprotoc/protoc internal/core/breaking_profiles.go`; `go mod tidy -diff` | ✅ | ⬜ pending |
-| 01-01-03 | 01 | 1 | IMPORT-REC-01 | T-01-03 | Lint contour byte-identical; parity not shifted | e2e/unit | `git diff --stat $PRE_MERGE_BASE HEAD -- internal/rules internal/easypc internal/protoast internal/core/lint_* internal/core/link.go internal/core/proto_info_read.go internal/core/dom.go` (empty); `go test -race -count=1 ./internal/api -run '^TestAcceptanceGates$'`; `go test -race -count=1 ./internal/rules -run '^TestLintGoldenFullRegistry$'` | ✅ | ⬜ pending |
-| 01-01-04 | 01 | 2 | IMPORT-REC-01 | T-01-05 | Full battery green on committed merge | integration | `go build ./... && go test -race -count=1 ./...`; D-07 position tests | ✅ | ⬜ pending |
+| 01-01-01 | 01 | 1 | IMPORT-REC-01 | T-01-01 / T-01-04 | Merge commit resolves conflicts deterministically (blob gates), no silent `--ours` drift | integration (shell) | `git merge-base --is-ancestor origin/main HEAD && test "$(git rev-list --count HEAD..origin/main)" -eq 0`; blob gates in plan verify | ✅ | ✅ green |
+| 01-01-02 | 01 | 1 | IMPORT-REC-01 | T-01-02 | Breaking path uses `easyprotoc/protoc`, pins present, no `replace` | unit (module) | `go list -m github.com/easyp-tech/easyprotoc google.golang.org/protobuf`; `grep -q easyprotoc/protoc internal/core/breaking_profiles.go`; `go mod tidy -diff` | ✅ | ✅ green |
+| 01-01-03 | 01 | 1 | IMPORT-REC-01 | T-01-03 | Lint contour byte-identical; parity not shifted | e2e/unit | `git diff --stat $PRE_MERGE_BASE HEAD -- internal/rules internal/easypc internal/protoast internal/core/lint_* internal/core/link.go internal/core/proto_info_read.go internal/core/dom.go` (empty); `go test -race -count=1 ./internal/api -run '^TestAcceptanceGates$'`; `go test -race -count=1 ./internal/rules -run '^TestLintGoldenFullRegistry$'` | ✅ | ✅ green |
+| 01-01-04 | 01 | 2 | IMPORT-REC-01 | T-01-05 | Full battery green on committed merge | integration | `go build ./... && go test -race -count=1 ./...`; D-07 position tests | ✅ | ✅ green |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
 
@@ -67,11 +67,19 @@ Existing infrastructure covers all phase requirements — no new Go tests are ne
 
 ## Validation Sign-Off
 
-- [ ] All tasks have `<automated>` verify or Wave 0 dependencies
-- [ ] Sampling continuity: no 3 consecutive tasks without automated verify
-- [ ] Wave 0 covers all MISSING references
-- [ ] No watch-mode flags
-- [ ] Feedback latency < 420s
-- [ ] `nyquist_compliant: true` set in frontmatter
+- [x] All tasks have `<automated>` verify or Wave 0 dependencies
+- [x] Sampling continuity: no 3 consecutive tasks without automated verify
+- [x] Wave 0 covers all MISSING references
+- [x] No watch-mode flags
+- [x] Feedback latency < 420s
+- [x] `nyquist_compliant: true` set in frontmatter
 
-**Approval:** pending
+**Approval:** approved 2026-11-21
+
+## Validation Audit 2026-11-21
+
+| Metric | Count |
+|---|---|
+| Gaps found | 0 |
+| Resolved | 0 |
+| Escalated | 0 |
