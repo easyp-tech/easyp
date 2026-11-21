@@ -2,9 +2,14 @@
 gsd_state_version: "1.0"
 milestone: v1.1
 milestone_name: import-easyprotoc
+current_phase: 1
+current_phase_name: Merge main и примирение путей
 status: planning
-last_updated: "2026-11-21T10:01:19.487Z"
+stopped_at: Phase 1 context gathered
+last_updated: "2026-11-21T10:12:32.547Z"
 last_activity: 2026-11-21
+last_activity_desc: Milestone v1.1 roadmap created (4 phases)
+state_head: 96b8c6a803e4945237a7ff4cb32114282f582551
 progress:
   total_phases: 4
   completed_phases: 0
@@ -17,7 +22,7 @@ progress:
 ---
 gsd_state_version: '1.0'  # placeholder; syncStateFrontmatter overwrites on first state.* call
 status: All phases complete
-progress:[██████████] 100%
+progress:[░░░░░░░░░░] 0%
   total_phases: 7
   completed_phases: 0
   total_plans: 0
@@ -243,6 +248,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-11-21T10:15:00.000Z
-Stopped at: Milestone v1.1 roadmap created — Phase 1 ready to plan
-Resume file: None
+Last session: 2026-11-21T10:12:32.449Z
+Stopped at: Phase 1 context gathered
+Resume file: .planning/phases/01-merge-main-i-primirenie-putey/01-CONTEXT.md
