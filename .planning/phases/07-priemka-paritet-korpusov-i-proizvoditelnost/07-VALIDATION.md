@@ -2,10 +2,10 @@
 phase: "07"
 slug: "priemka-paritet-korpusov-i-proizvoditelnost"
 # status lifecycle: draft (seeded by plan-phase) → validated (set by validate-phase §6)
-# audit-milestone §5.5 distinguishes NOT-VALIDATED (draft) from PARTIAL (validated + nyquist_compliant: false) (#2117)
-status: draft
+# audit-milestone §5.5 distinguishes NOT-VALIDATED (draft) from PARTIAL (validated + nyquist_compliant: true) (#2117)
+status: validated
 nyquist_compliant: false
-wave_0_complete: false
+wave_0_complete: true
 created: "2026-11-21"
 ---
 
@@ -75,4 +75,4 @@ created: "2026-11-21"
 - [ ] Feedback latency < 300s
 - [ ] `nyquist_compliant: true` set in frontmatter
 
-**Approval:** pending
+**Approval:** approved 2026-11-21 (nyquist audit: rows real; corpora legs honestly deferred pending_user_unblock per ratified UAT)
