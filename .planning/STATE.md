@@ -6,16 +6,16 @@ current_phase: 1
 current_phase_name: Merge main и примирение путей
 current_plan: 2
 status: planning
-stopped_at: Completed 01-01-PLAN.md
-last_updated: "2026-11-21T11:26:55.036Z"
+stopped_at: Completed 01-02-PLAN.md
+last_updated: "2026-11-21T11:40:55.384Z"
 last_activity: 2026-11-21
 last_activity_desc: Milestone v1.1 roadmap created (4 phases)
-state_head: 994c503968a20ecdc1b4c1ebb2a9f06f23973386
+state_head: c9308f6a856a323927d271a8d69d92b5773b788a
 progress:
   total_phases: 4
   completed_phases: 0
   total_plans: 2
-  completed_plans: 1
+  completed_plans: 2
   percent: 0
 ---
 
@@ -109,6 +109,7 @@ Last activity: 2026-11-21 — plan 01-01 executed: merged origin/main #253 with 
 | Phase 07 P03 | 16 min | 3 tasks | 5 files |
 | Phase 07 P04 | 34min | 2 tasks | 3 files |
 | Phase 01 P01 | 3 min | 2 tasks | 9 files |
+| Phase 01 P02 | 20min | 2 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -220,6 +221,8 @@ Recent decisions affecting current work:
 - [Phase 01]: Merge 994c503 joins origin/main #253: breaking_profiles=main blob 6e45a05, dom.go=branch blob 52bfbd7, core.go=union blob 34987d1; lint contour zero-diff and main-side sourceview/API byte-identical
 - [Phase 01]: core.go resolution hand-edited only the import block and was then proven byte-equal to the rehearsed union blob; struct fields, Options and New auto-merged (no other hand edits)
 - [Phase 01]: IMPORT-REC-01 checkbox deferred by the shared-ID gate until plan 01-02 SUMMARY exists (both plans declare it); full -race battery and parity gates belong to 01-02
+- [Phase 01]: Evidence-only plan 01-02: both tasks are gate runs (build/vet/tidy, one full -race battery, then every D-09 gate by exact test name); the only artifact is 01-02-SUMMARY.md, so there is no per-task commit and HEAD stays the merge commit or a docs-only descendant
+- [Phase 01]: Merge tree proven behavior-preserving: 41 ok/0 FAIL/0 race blocks, acceptance A-D x2 against 1e9a596 (present, not skipped), golden 94, both D-07 position gates, core/CLI matrix all green with zero-diff expectation freeze versus 79e353a and no golden re-capture
 
 ### Pending Todos
 
@@ -255,6 +258,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-11-21T11:26:54.881Z
-Stopped at: Completed 01-01-PLAN.md
+Last session: 2026-11-21T11:40:55.337Z
+Stopped at: Completed 01-02-PLAN.md
 Resume file: None

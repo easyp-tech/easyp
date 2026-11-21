@@ -11,7 +11,7 @@ Requirements for milestone «import-easyprotoc». Topological order: REC → DEP
 
 ### Reconciliation
 
-- [ ] **IMPORT-REC-01**: WHEN ветка v1.1 готова к переключению импортов, the system SHALL содержать merge `origin/main` (#253 «Use compiler for breaking check») с семантически разрешёнными конфликтами `internal/core` (breaking-путь на `easyprotoc/protoc`, protobuf `v1.37.0-rc.1`); после слияния ветка не отстаёт от `origin/main` и полная батарея тестов зелёная
+- [x] **IMPORT-REC-01**: WHEN ветка v1.1 готова к переключению импортов, the system SHALL содержать merge `origin/main` (#253 «Use compiler for breaking check») с семантически разрешёнными конфликтами `internal/core` (breaking-путь на `easyprotoc/protoc`, protobuf `v1.37.0-rc.1`); после слияния ветка не отстаёт от `origin/main` и полная батарея тестов зелёная
 
 ### Dependency
 
@@ -51,7 +51,7 @@ Deferred to future milestones:
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| IMPORT-REC-01 | Phase 1 — Merge main и примирение путей | Pending |
+| IMPORT-REC-01 | Phase 1 — Merge main и примирение путей | Complete |
 | IMPORT-DEP-01 | Phase 2 — Переключение потребителей и удаление вендор-копии | Pending |
 | IMPORT-CONS-01 | Phase 2 — Переключение потребителей и удаление вендор-копии | Pending |
 | IMPORT-VENDRM-01 | Phase 2 — Переключение потребителей и удаление вендор-копии | Pending |

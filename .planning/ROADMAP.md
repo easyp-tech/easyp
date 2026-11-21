@@ -37,9 +37,9 @@ Decimal phases appear between their surrounding integers in numeric order.
   2. `go.mod` содержит `github.com/easyp-tech/easyprotoc v0.0.0-20261104120806-f378f3f3a05f` и `google.golang.org/protobuf v1.37.0-rc.1` (как на main #253); `internal/core/breaking_profiles.go` использует `easyprotoc/protoc`
   3. Полная батарея после слияния зелёная: `go build ./...`, `go test -race -count=1 ./...`
   4. Паритет lint-пути после слияния не сдвинулся: корпусные parity-тесты и golden 94 findings проходят байт-точно без правки ожиданий
-**Plans:** 1/2 plans executed
+**Plans:** 2/2 plans executed
 - [x] 01-01-PLAN.md — Merge origin/main (#253) with semantic internal/core resolution
-- [ ] 01-02-PLAN.md — Post-merge full battery and parity-gate evidence
+- [x] 01-02-PLAN.md — Post-merge full battery and parity-gate evidence
 
 ### Phase 2: Переключение потребителей и удаление вендор-копии
 **Goal**: Все потребители компилятора импортируют публичные пакеты `github.com/easyp-tech/easyprotoc`, вендор-дерево `internal/easypc` удалено, сборка и полная тестовая батарея зелёные при идемпотентном `go mod tidy`
@@ -84,7 +84,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Merge main и примирение путей | 1/2 | In Progress | - |
+| 1. Merge main и примирение путей | 2/2 | In Progress | - |
 | 2. Переключение потребителей и удаление вендор-копии | 0/0 | Not started | - |
 | 3. Снятие seal-инфраструктуры и документация | 0/0 | Not started | - |
 | 4. Приёмка — полный паритет | 0/0 | Not started | - |
