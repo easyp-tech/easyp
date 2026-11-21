@@ -480,27 +480,31 @@ git reset --hard "$PRE_MERGE_BASE"      # discards the merge commit
 | A4 | The phase does not push to `origin/feat/lint-easypc-infra` | Open Questions | If push is expected, add a final `git push` task; the merge itself is local |
 | A5 | `go mod tidy` need not run in Phase 1 | Standard Stack | Evidence shows `tidy -diff` is already empty; if a later change makes it drift, tidy belongs to Phase 2/4 per IMPORT-DEP-01 |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **Fix main's pre-existing errcheck finding in Phase 1?**
    - What we know: `origin/main` fails `golangci-lint run ./...` with exactly one issue at `internal/sourceview/session_test.go:29`; the merge adds none; Phase 1 gates (D-09) do not include lint.
    - What's unclear: whether PR #258's CI must be green for this phase or whether a red upstream finding is acceptable to carry.
    - Recommendation: keep the merge pure; add an optional follow-up commit `test(sourceview): check session.Close error` **after** the merge commit (or defer to Phase 3, which owns seal/lint config). Do not touch it inside the merge commit.
+   - **RESOLVED:** deferred to Phase 3 (seal/lint-config ownership); the merge commit stays byte-faithful to origin/main. Disposition recorded in 01-01/01-02 `flagged_assumptions`.
 
 2. **Push the merge commit to `origin/feat/lint-easypc-infra`?**
    - What we know: the local branch is 5 commits ahead of its remote; the phase produces a 6th (the merge). CONTEXT/Roadmap do not mention push.
    - What's unclear: whether publishing the merge is part of "ветка не отстаёт от origin/main" for review purposes.
    - Recommendation: treat push as out of scope unless the user asks; the local ancestry/aliveness gates are the phase contract.
+   - **RESOLVED:** push is out of scope for Phase 1 (orchestrator decision 2; milestone closes with the push).
 
 3. **Commit or stash the pending planning-artifact move?**
    - What we know: merge refuses with a dirty index; the artifacts are legitimate GSD archive work.
    - What's unclear: whether the user wants those renames committed now.
    - Recommendation: commit with a `docs:` prefix (A2); fallback is `git stash push` + `git stash pop` after the merge.
+   - **RESOLVED:** committed as `9408042 docs: archive v1.0 phase artifacts; sync v1.1 state` (already an ancestor; tracked tree clean).
 
 4. **What if `origin/main` moved past `5d36266`?**
    - What we know: remote currently equals local tracking `5d36266`; the recipe is proven against it.
    - What's unclear: future upstream commits.
    - Recommendation: abort and re-research if the SHA differs; do not improvise resolutions against a new conflict set.
+   - **RESOLVED:** assert `git rev-parse origin/main = 5d36266…`; abort and re-research on mismatch (01-01 pre-flight; orchestrator decision 4).
 
 ## Environment Availability
 
