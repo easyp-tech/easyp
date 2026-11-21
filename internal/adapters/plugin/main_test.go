@@ -18,9 +18,17 @@ import (
 // no easyp-side mutex can order those calls against each other or against the
 // serialized default. Constructing one throwaway runtime here — on the
 // TestMain goroutine, before m.Run forks the test goroutines — performs the
-// single lazy write with a happens-before edge to every test body: all later
-// constructions observe a fully initialized global, and the -race detector
-// then proves the production serialization for everything easyp constructs.
+// single lazy write with a happens-before edge to every test body. That
+// priming write removes the race signal for the rest of the process:
+// GetWazeroVersion writes the global once, so every later call takes the
+// initialized early return and never writes again — the -race suite cannot
+// detect loss of runtimeCreationMu. Production runtime construction (which
+// has no priming) is protected by the mutex, and its regression protection
+// is pinned structurally by the construction probe in
+// TestBuiltinRunRuntimeCreationIsSerializedAcrossScopes — a held-mutex
+// ordering check (a construction requested while runtimeCreationMu is held
+// must not complete until release) with the peak-concurrency overlap counter
+// as a secondary detector.
 func TestMain(m *testing.M) {
 	ctx := context.Background()
 	rt := newRuntimeSerialized(ctx, wazero.NewRuntimeConfig())
