@@ -22,7 +22,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Merge main и примирение путей** - ветка содержит #253: breaking и lint оба на `easyprotoc`, конфликты `internal/core` разрешены, полная батарея зелёная (completed 2026-11-21)
 - [x] **Phase 2: Переключение потребителей и удаление вендор-копии** - импорты на публичные пакеты модуля, `internal/easypc` удалён целиком, сборка и тесты зелёные (completed 2026-11-21)
-- [ ] **Phase 3: Снятие seal-инфраструктуры и документация** - `.golangci.yml`-исключение и seal-параграф AGENTS.md упразднены, `.spec` описывает импорт модуля
+- [x] **Phase 3: Снятие seal-инфраструктуры и документация** - `.golangci.yml`-исключение и seal-параграф AGENTS.md упразднены, `.spec` описывает импорт модуля (completed 2026-11-21)
 - [ ] **Phase 4: Приёмка — полный паритет** - полная `-race`-батарея, Gates A–D ×2, golden 94 байт-точно, D-07 позиции, lint/schema-гейты зелёные
 
 ## Phase Details
@@ -65,7 +65,7 @@ Decimal phases appear between their surrounding integers in numeric order.
   2. AGENTS.md: параграф «Do not» про sealed vendor copy заменён описанием потребления модуля (версия пинится в `go.mod`, фиксы/ре-синк — через bump версии, а не копирование); layout-таблицы не вводят в заблуждение
   3. `.spec` (актуальные документы, где упоминается lint-путь/архитектура) и README описывают компилятор как зависимость; ссылок на `internal/easypc/VENDORED.md` в действующих доках нет
   4. Grep по действующим конфигам/докам не находит вендор-упоминаний; исторические записи (`.planning/milestones/`, `.spec/features/lint-easypc-infra/`) сохранены как история
-**Plans:** 2/2 plans executed
+**Plans:** 2/2 plans complete
 - [x] 03-01-PLAN.md — Remove the seal infrastructure and document the pinned easyprotoc module
 - [x] 03-02-PLAN.md — Fix the pre-existing session close errcheck and prove the phase gates
 
@@ -90,7 +90,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 |-------|----------------|--------|-----------|
 | 1. Merge main и примирение путей | 2/2 | Complete    | 2026-11-21 |
 | 2. Переключение потребителей и удаление вендор-копии | 2/2 | Complete    | 2026-11-21 |
-| 3. Снятие seal-инфраструктуры и документация | 2/2 | In Progress | - |
+| 3. Снятие seal-инфраструктуры и документация | 2/2 | Complete    | 2026-11-21 |
 | 4. Приёмка — полный паритет | 0/0 | Not started | - |
 
 ## Backlog
