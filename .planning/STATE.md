@@ -6,7 +6,7 @@ status: planning
 last_updated: "2026-11-21T10:01:19.487Z"
 last_activity: 2026-11-21
 progress:
-  total_phases: 0
+  total_phases: 4
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -30,17 +30,17 @@ progress:[██████████] 100%
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-11-19)
+See: .planning/PROJECT.md (updated 2026-11-21)
 
 **Core value:** EasyP остаётся drop-in buf-совместимым инструментом: формат вывода, коды выхода и конфигурация не ломаются между версиями — миграции внутренностей незаметны пользователю.
-**Current focus:** Phase 07 — Приёмка — паритет корпусов и производительность
+**Current focus:** Milestone v1.1 import-easyprotoc — Phase 1 (Merge main и примирение путей)
 
 ## Current Position
 
-Phase: Not started (defining requirements)
+Phase: 1 — Merge main и примирение путей
 Plan: —
-Status: Defining requirements
-Last activity: 2026-11-21 — Milestone v1.1 started
+Status: Roadmap created — ready to discuss/plan
+Last activity: 2026-11-21 — Milestone v1.1 roadmap created (4 phases)
 
 ## Performance Metrics
 
@@ -108,6 +108,10 @@ Last activity: 2026-11-21 — Milestone v1.1 started
 Decisions are logged in PROJECT.md Key Decisions table.
 Recent decisions affecting current work:
 
+- Roadmap v1.1: порядок фаз — merge `main` (#253) → swap потребителей + удаление вендор-копии → seal/docs → приёмка; merge-first выравнивает `go.mod` (easyprotoc-пин + protobuf rc.1) до переключения импортов и разрешает конфликты `internal/core` в фазе, где живёт переработанный core
+- Roadmap v1.1: пин `github.com/easyp-tech/easyprotoc` = псевдоверсия main @ `f378f3f` (у upstream нет тегов) — идентичен пину breaking-пути на main #253; bump — при появлении тегов или мерже `feat/easyp-integration`
+- Roadmap v1.1: ветка upstream `feat/easyp-integration` (generation sources/descriptor metadata fix) сознательно не берётся — unmerged, меняет семантику ошибок `Link`, нужна codegen-серии (FUTURE-COMPILER)
+- Roadmap v1.1: `internal/protoast` остаётся локальным швом (дивергенция rune-колонок D-07) — в модуль не мигрирует, меняются только импорты `parser`/`syntax`
 - Roadmap: порядок фаз следует build order из research (vendor → linker → engine → rules → flip → new rules → acceptance); COMPAT-ворота стоят на переключении lint-пути (Phase 5), полный корпусный паритет и PERF — на приёмке (Phase 7)
 - Roadmap: 43 правила переносятся в одной фазе (Phase 4) с батч-уровневой верификацией паритета как инвариантом; батчи — планы внутри фазы, не отдельные фазы
 - [Phase 01]: Issue.Position is protoast.Position behind one fromMetaPos boundary; lint/breaking read models split (D-06) into lintProtoInfoRead/ProtoInfo and breakingProtoInfoRead/BreakingProtoInfo with twin-mirror parity tests; behavior diff empty
@@ -211,6 +215,8 @@ None yet.
 
 ### Blockers/Concerns
 
+- [v1.1] Работа ведётся в ветке `feat/lint-easypc-infra` (PR #258, ещё не вмержён): v1.1-коммиты расширяют PR; мерж в `main` — после, конфликты с main разрешаются в Phase 1 (merge-first). Ветка не содержит main-коммит #253 до Phase 1
+- [v1.1] У upstream `easyprotoc` нет тегов → пин псевдоверсией `v0.0.0-20261104120806-f378f3f3a05f`; при появлении тегов или мерже `feat/easyp-integration` — плановый bump (v2 requirements)
 - [Roadmap] Стенд `lab.py` (паритет корпусов, Phase 7) требует доступа к приватному compiler-lab и пересборки корпусов — валидировать спайком до фазы приёмки
 - [Roadmap] Открытые design-вопросы из REQUIREMENTS.md маршрутизированы по фазам (Design note в ROADMAP.md), решаются в /gsd-discuss-phase, не в roadmap
 - Phase 1 complete (4/4). Phase-4 note: remove the lint_helpers.go paths exclusion when helpers gain callers; re-check QF1001 casing rule at next compiler-lab re-sync
@@ -237,6 +243,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-11-21T05:32:41.265Z
-Stopped at: Phase 07 complete — all phases complete
+Last session: 2026-11-21T10:15:00.000Z
+Stopped at: Milestone v1.1 roadmap created — Phase 1 ready to plan
 Resume file: None

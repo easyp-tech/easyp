@@ -49,4 +49,13 @@ Deferred to future milestones:
 
 ## Traceability
 
-*Filled by roadmap — requirement → phase mapping.*
+| Requirement | Phase | Status |
+|-------------|-------|--------|
+| IMPORT-REC-01 | Phase 1 — Merge main и примирение путей | Pending |
+| IMPORT-DEP-01 | Phase 2 — Переключение потребителей и удаление вендор-копии | Pending |
+| IMPORT-CONS-01 | Phase 2 — Переключение потребителей и удаление вендор-копии | Pending |
+| IMPORT-VENDRM-01 | Phase 2 — Переключение потребителей и удаление вендор-копии | Pending |
+| IMPORT-SEAL-01 | Phase 3 — Снятие seal-инфраструктуры и документация | Pending |
+| IMPORT-PARITY-01 | Phase 4 — Приёмка — полный паритет | Pending |
+
+**Coverage:** 6/6 v1 requirements mapped ✓
