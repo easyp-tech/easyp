@@ -4,17 +4,18 @@ milestone: v1.1
 milestone_name: import-easyprotoc
 current_phase: 1
 current_phase_name: Merge main и примирение путей
+current_plan: 2
 status: planning
-stopped_at: Phase 1 context gathered
-last_updated: "2026-11-21T10:12:32.547Z"
+stopped_at: Completed 01-01-PLAN.md
+last_updated: "2026-11-21T11:26:55.036Z"
 last_activity: 2026-11-21
 last_activity_desc: Milestone v1.1 roadmap created (4 phases)
-state_head: 96b8c6a803e4945237a7ff4cb32114282f582551
+state_head: 994c503968a20ecdc1b4c1ebb2a9f06f23973386
 progress:
   total_phases: 4
   completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
+  total_plans: 2
+  completed_plans: 1
   percent: 0
 ---
 
@@ -43,9 +44,11 @@ See: .planning/PROJECT.md (updated 2026-11-21)
 ## Current Position
 
 Phase: 1 — Merge main и примирение путей
-Plan: —
-Status: Roadmap created — ready to discuss/plan
-Last activity: 2026-11-21 — Milestone v1.1 roadmap created (4 phases)
+Current Plan: 2
+Total Plans in Phase: 2
+Plan: 01-01 complete (merge commit 994c503); next 01-02
+Status: Executing — plan 01-01 complete, plan 01-02 pending
+Last activity: 2026-11-21 — plan 01-01 executed: merged origin/main #253 with blob-exact internal/core resolution
 
 ## Performance Metrics
 
@@ -105,6 +108,7 @@ Last activity: 2026-11-21 — Milestone v1.1 roadmap created (4 phases)
 | Phase 07 P02 | 19 min | 2 tasks | 2 files |
 | Phase 07 P03 | 16 min | 3 tasks | 5 files |
 | Phase 07 P04 | 34min | 2 tasks | 3 files |
+| Phase 01 P01 | 3 min | 2 tasks | 9 files |
 
 ## Accumulated Context
 
@@ -213,6 +217,9 @@ Recent decisions affecting current work:
 - [Phase 07]: Corpora legs disposed honest: fresh attempts (gh exit 1, SSH exit 128, env unset) recorded in clone_attempts 2026-11-21T04:15:09Z; status pending_user_unblock; LINT-PARITY-01/LINT-PERF-01 letters MANUAL-ONLY rows with the 07-USER-SETUP.md one-command path (Pitfall 7 revision-compatibility nuance included)
 - [Phase 07]: [Phase 07] 07-04 [Rule 1]: REVIEW WR-01's wrapper-window peak probe replaced by a held-mutex ordering probe — the window conflates mutex-wait with construction overlap (measured false RED under -race with the CORRECT mutex, int64(2); false-green-prone without it, 1 of 2) and a sync.Mutex block is not synctest-durable (Wait deadlocks), so the probe runs in real time: hold runtimeCreationMu, park a construction request, prove non-completion while held via a buffered channel + one-sided 100ms dwell — green structural, RED deterministic
 - [Phase 07]: [Phase 07] 07-04: the pin covers BOTH production creation sites — runBuiltinModule constructs a per-invocation runtime at builtin_impl.go:143 in addition to the lazy compiler at builtin_run.go:159 (one invocation constructs twice); phase-2 constructions gate-staggered so the retained peak==1 assertion is deterministic; mutation matrix: pair-only removal = behavioral RED 3/3 with the planned message, var+pair removal = compile RED
+- [Phase 01]: Merge 994c503 joins origin/main #253: breaking_profiles=main blob 6e45a05, dom.go=branch blob 52bfbd7, core.go=union blob 34987d1; lint contour zero-diff and main-side sourceview/API byte-identical
+- [Phase 01]: core.go resolution hand-edited only the import block and was then proven byte-equal to the rehearsed union blob; struct fields, Options and New auto-merged (no other hand edits)
+- [Phase 01]: IMPORT-REC-01 checkbox deferred by the shared-ID gate until plan 01-02 SUMMARY exists (both plans declare it); full -race battery and parity gates belong to 01-02
 
 ### Pending Todos
 
@@ -248,6 +255,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-11-21T10:12:32.449Z
-Stopped at: Phase 1 context gathered
-Resume file: .planning/phases/01-merge-main-i-primirenie-putey/01-CONTEXT.md
+Last session: 2026-11-21T11:26:54.881Z
+Stopped at: Completed 01-01-PLAN.md
+Resume file: None
