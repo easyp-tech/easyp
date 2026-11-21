@@ -27,7 +27,7 @@ Requirements for milestone «import-easyprotoc». Topological order: REC → DEP
 
 ### Seal / docs
 
-- [ ] **IMPORT-SEAL-01**: WHEN действующие конфиги и документация читаются, the system SHALL не содержать seal-инфраструктуры: `.golangci.yml`-исключение `internal/easypc` снято, параграф «Do not» в AGENTS.md заменён на описание потребления модуля, `.spec` (ARCHITECTURE/PACKAGES/CODE_STYLE/README и связанные) описывают импорт вместо вендоринга; исторические записи v1.0 в `.planning/milestones/` и `.spec/features/lint-easypc-infra/` сохраняются как история
+- [x] **IMPORT-SEAL-01**: WHEN действующие конфиги и документация читаются, the system SHALL не содержать seal-инфраструктуры: `.golangci.yml`-исключение `internal/easypc` снято, параграф «Do not» в AGENTS.md заменён на описание потребления модуля, `.spec` (ARCHITECTURE/PACKAGES/CODE_STYLE/README и связанные) описывают импорт вместо вендоринга; исторические записи v1.0 в `.planning/milestones/` и `.spec/features/lint-easypc-infra/` сохраняются как история
 
 ### Parity
 
@@ -55,7 +55,7 @@ Deferred to future milestones:
 | IMPORT-DEP-01 | Phase 2 — Переключение потребителей и удаление вендор-копии | Complete |
 | IMPORT-CONS-01 | Phase 2 — Переключение потребителей и удаление вендор-копии | Complete |
 | IMPORT-VENDRM-01 | Phase 2 — Переключение потребителей и удаление вендор-копии | Complete |
-| IMPORT-SEAL-01 | Phase 3 — Снятие seal-инфраструктуры и документация | Pending |
+| IMPORT-SEAL-01 | Phase 3 — Снятие seal-инфраструктуры и документация | Complete |
 | IMPORT-PARITY-01 | Phase 4 — Приёмка — полный паритет | Pending |
 
 **Coverage:** 6/6 v1 requirements mapped ✓

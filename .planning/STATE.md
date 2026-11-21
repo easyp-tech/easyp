@@ -6,16 +6,16 @@ current_phase: 3
 current_phase_name: Снятие seal-инфраструктуры и документация
 current_plan: 2
 status: executing
-stopped_at: Completed 03-01-PLAN.md; plan 03-02 pending
-last_updated: "2026-11-21T14:34:41.543Z"
+stopped_at: Completed 03-02-PLAN.md
+last_updated: "2026-11-21T14:41:13.355Z"
 last_activity: 2026-11-21
 last_activity_desc: Plan 03-01 complete (docs commit 9320361); plan 03-02 pending
-state_head: 93203614f44da92eaac47ac76e2002e0710f8753
+state_head: 6f52840c5a90a7b88633d6296154a73a8dcd44ed
 progress:
   total_phases: 4
   completed_phases: 2
   total_plans: 6
-  completed_plans: 5
+  completed_plans: 6
   percent: 50
 ---
 
@@ -113,6 +113,7 @@ Last activity: 2026-11-21 — Plan 03-01 complete
 | Phase 02 P01 | 4 min | 2 tasks | 7 files |
 | Phase 02 P02 | 7 min | 2 tasks | 1 files |
 | Phase 03 P01 | 3 min | 2 tasks | 7 files |
+| Phase 03 P02 | 3 min | 2 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -231,6 +232,9 @@ Recent decisions affecting current work:
 - [Phase 02]: 02-01: the two VENDORED.md comments rewritten in place (build.go pos() -> go.mod pin; protoast.go -> builder.pos + pin) to keep the seven-file diff at exactly 14 removed/14 added path lines
 - [Phase 02]: 02-02: evidence-only plan — one full -race battery (34 ok / 0 FAIL / 0 race / one known protoc-gen-go skip / 3 no-test packages) plus every D-09 gate green by exact RUN/PASS (acceptance A-D x2 @1e9a596, golden 94, D-07 19+11, core 43, CLI 16); no source or expectation file touched
 - [Phase 02]: 02-02: the freeze proves the swap modified set is exactly the seven D-02 files with internal/rules and internal/api byte-identical to df23d64; phase predicates re-proven (grep/ls-files empty, tidy idempotent, exact pins, zero replace/vendor, upstream cmd/easyprotoc = main)
+- [Phase 03]: The close error is handled in t.Cleanup and reported via t.Errorf instead of suppressed, so the 1 -> 0 lint transition is attributable to the source fix (D-08)
+- [Phase 03]: The evidence task ran only the D-09 scoped gates; the full -race battery, schema generation/check and acceptance remain Phase 4
+- [Phase 03]: Commit identity and scope are asserted by exact subject and non-.planning range equality, so intermediate .planning-only commits cannot mask or break the changeset claim
 
 ### Pending Todos
 
@@ -266,6 +270,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-11-21T14:34:41.194Z
-Stopped at: Completed 03-01-PLAN.md; plan 03-02 pending
+Last session: 2026-11-21T14:41:12.912Z
+Stopped at: Completed 03-02-PLAN.md
 Resume file: None
