@@ -51,7 +51,9 @@ Decimal phases appear between their surrounding integers in numeric order.
   2. Дерево `internal/easypc` отсутствует целиком: `git ls-files internal/easypc` пуст (включая `VENDORED.md`, `cmd/easyp-protoc`, `cmd/lexbench`)
   3. `go build ./...` и `go test -race -count=1 ./...` зелёные; повторный `go mod tidy` не меняет `go.mod`/`go.sum`; `replace`/`vendor`-директив нет
   4. Дивергенция protoast сохранена без правок шва: `internal/protoast/position_test.go` (D-07a) и `internal/core/position_parity_test.go` (D-07b) зелёные
-**Plans**: TBD
+**Plans:** 2 plans
+- [ ] 02-01-PLAN.md — Atomic consumer swap to public easyprotoc imports plus full `internal/easypc` deletion
+- [ ] 02-02-PLAN.md — Full `-race` battery and named parity-gate evidence on the committed swap tree
 
 ### Phase 3: Снятие seal-инфраструктуры и документация
 **Goal**: Действующие конфиги и документация больше не описывают вендоринг: исключение линтера и seal-параграф сняты, `.spec` фиксирует потребление публичного модуля и порядок обновления версии
