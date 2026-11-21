@@ -7,6 +7,7 @@ import (
 	"io"
 	"io/fs"
 	"os"
+	"path"
 	"path/filepath"
 )
 
@@ -28,42 +29,51 @@ func OpenLocalSelected(ctx context.Context, rootPath, logical string, selected f
 	if err != nil {
 		return nil, fmt.Errorf("localView: %w", err)
 	}
-	resolved, err := view.Resolve(ctx, filepath.ToSlash(logical))
+	file, err := openSelected(ctx, root, view, logical, selected, nestedAllowed...)
 	if err != nil {
-		return nil, errors.Join(fmt.Errorf("Resolve: %w", localResolutionError(logical, resolved, err)), root.Close())
-	}
-	if err := CheckLocalResolution(root, resolved); err != nil {
-		permitted := errors.Is(err, ErrNestedRepository) && len(nestedAllowed) > 0 && nestedAllowed[0] != nil && nestedAllowed[0](resolved)
-		if !permitted {
-			return nil, errors.Join(err, root.Close())
-		}
-	}
-	if !resolved.Info.Mode().IsRegular() {
-		return nil, errors.Join(ErrUnsupported, root.Close())
-	}
-	if selected != nil && !selected(resolved) {
-		return nil, errors.Join(&fs.PathError{Op: "open", Path: logical, Err: fs.ErrNotExist}, root.Close())
-	}
-	file, err := root.Open(filepath.FromSlash(resolved.Path))
-	if err != nil {
-		return nil, errors.Join(fmt.Errorf("Open: %w", err), root.Close())
-	}
-	opened, err := file.Stat()
-	if err != nil {
-		return nil, errors.Join(fmt.Errorf("Stat: %w", err), file.Close(), root.Close())
-	}
-	if !os.SameFile(resolved.Info, opened) || resolved.Info.Mode() != opened.Mode() || resolved.Info.Size() != opened.Size() || !resolved.Info.ModTime().Equal(opened.ModTime()) {
-		return nil, errors.Join(ErrChanged, file.Close(), root.Close())
-	}
-	if err := ctx.Err(); err != nil {
-		return nil, errors.Join(err, file.Close(), root.Close())
+		return nil, errors.Join(err, root.Close())
 	}
 	return &localFile{File: file, root: root}, nil
 }
 
+// openSelected resolves and opens logical below root. The caller owns root.
+func openSelected(ctx context.Context, root *rootTree, view *View, logical string, selected func(Resolution) bool, nestedAllowed ...func(Resolution) bool) (fs.File, error) {
+	resolved, err := view.Resolve(ctx, filepath.ToSlash(logical))
+	if err != nil {
+		return nil, fmt.Errorf("Resolve: %w", localResolutionError(logical, resolved, err))
+	}
+	if err := checkLocalResolution(root.Lstat, resolved); err != nil {
+		permitted := errors.Is(err, ErrNestedRepository) && len(nestedAllowed) > 0 && nestedAllowed[0] != nil && nestedAllowed[0](resolved)
+		if !permitted {
+			return nil, err
+		}
+	}
+	if !resolved.Info.Mode().IsRegular() {
+		return nil, ErrUnsupported
+	}
+	if selected != nil && !selected(resolved) {
+		return nil, &fs.PathError{Op: "open", Path: logical, Err: fs.ErrNotExist}
+	}
+	file, err := root.Open(resolved.Path)
+	if err != nil {
+		return nil, fmt.Errorf("Open: %w", err)
+	}
+	opened, err := file.Stat()
+	if err != nil {
+		return nil, errors.Join(fmt.Errorf("Stat: %w", err), file.Close())
+	}
+	if !os.SameFile(resolved.Info, opened) || resolved.Info.Mode() != opened.Mode() || resolved.Info.Size() != opened.Size() || !resolved.Info.ModTime().Equal(opened.ModTime()) {
+		return nil, errors.Join(ErrChanged, file.Close())
+	}
+	if err := ctx.Err(); err != nil {
+		return nil, errors.Join(err, file.Close())
+	}
+	return file, nil
+}
+
 type localFile struct {
 	fs.File
-	root *os.Root
+	root *rootTree
 }
 
 func (file *localFile) Close() error { return errors.Join(file.File.Close(), file.root.Close()) }
@@ -98,7 +108,7 @@ func WalkLocal(ctx context.Context, rootPath, logical string, visit WalkFunc) (r
 	defer func() { resultErr = errors.Join(resultErr, root.Close()) }()
 	return view.Walk(ctx, filepath.ToSlash(logical), func(name string, resolved Resolution, err error) error {
 		if err == nil {
-			err = CheckLocalResolution(root, resolved)
+			err = checkLocalResolution(root.Lstat, resolved)
 		}
 		return visit(name, resolved, err)
 	})
@@ -113,7 +123,7 @@ func ResolveLocal(ctx context.Context, rootPath, logical string) (_ Resolution, 
 	defer func() { resultErr = errors.Join(resultErr, root.Close()) }()
 	resolved, err := view.Resolve(ctx, filepath.ToSlash(logical))
 	if err == nil {
-		err = CheckLocalResolution(root, resolved)
+		err = checkLocalResolution(root.Lstat, resolved)
 	}
 	return resolved, localResolutionError(logical, resolved, err)
 }
@@ -128,7 +138,7 @@ func ResolveLocalOptional(ctx context.Context, rootPath, logical string) (_ Reso
 	defer func() { resultErr = errors.Join(resultErr, root.Close()) }()
 	resolved, err := view.ResolveOptional(ctx, filepath.ToSlash(logical))
 	if err == nil || errors.Is(err, fs.ErrNotExist) {
-		checkErr := CheckLocalResolution(root, resolved)
+		checkErr := checkLocalResolution(root.Lstat, resolved)
 		if checkErr != nil {
 			return resolved, checkErr
 		}
@@ -136,7 +146,9 @@ func ResolveLocalOptional(ctx context.Context, rootPath, logical string) (_ Reso
 	return resolved, err
 }
 
-func localView(rootPath string) (*os.Root, *View, error) {
+// localView opens rootPath as a bounded tree. Closing the tree closes the root
+// and every directory handle opened through it.
+func localView(rootPath string) (*rootTree, *View, error) {
 	canonical, err := filepath.EvalSymlinks(rootPath)
 	if err != nil {
 		return nil, nil, fmt.Errorf("EvalSymlinks: %w", err)
@@ -164,11 +176,12 @@ func localView(rootPath string) (*os.Root, *View, error) {
 	if !os.SameFile(original, opened) {
 		return nil, nil, errors.Join(ErrChanged, root.Close())
 	}
-	view, err := NewLocal(root.FS(), canonical, requested)
+	tree := newRootTree(root)
+	view, err := NewLocal(tree, canonical, requested)
 	if err != nil {
-		return nil, nil, errors.Join(fmt.Errorf("NewLocal: %w", err), root.Close())
+		return nil, nil, errors.Join(fmt.Errorf("NewLocal: %w", err), tree.Close())
 	}
-	return root, view, nil
+	return tree, view, nil
 }
 
 func localResolutionError(logical string, resolved Resolution, err error) error {
@@ -182,24 +195,29 @@ func localResolutionError(logical string, resolved Resolution, err error) error 
 // The boundary root's own Git marker is allowed. Graph readers may authorize a
 // target through a separately declared source boundary using OpenLocalSelected.
 func CheckLocalResolution(root *os.Root, resolved Resolution) error {
+	return checkLocalResolution(func(name string) (fs.FileInfo, error) { return root.Lstat(filepath.FromSlash(name)) }, resolved)
+}
+
+// checkLocalResolution takes slash-separated names relative to the root.
+func checkLocalResolution(lstat func(string) (fs.FileInfo, error), resolved Resolution) error {
 	if len(resolved.Links) == 0 {
 		return nil
 	}
-	directories := []string{filepath.Dir(filepath.FromSlash(resolved.Path))}
+	directories := []string{path.Dir(resolved.Path)}
 	if resolved.Info != nil && resolved.Info.IsDir() {
-		directories[0] = filepath.FromSlash(resolved.Path)
+		directories[0] = resolved.Path
 	}
 	for _, link := range resolved.Links {
-		directories = append(directories, filepath.Dir(filepath.FromSlash(link.Path)))
+		directories = append(directories, path.Dir(link.Path))
 	}
 	seen := make(map[string]bool)
 	for _, directory := range directories {
-		for current := directory; current != "."; current = filepath.Dir(current) {
+		for current := directory; current != "."; current = path.Dir(current) {
 			if seen[current] {
 				break
 			}
 			seen[current] = true
-			_, err := root.Lstat(filepath.Join(current, ".git"))
+			_, err := lstat(path.Join(current, ".git"))
 			if errors.Is(err, os.ErrNotExist) {
 				continue
 			}

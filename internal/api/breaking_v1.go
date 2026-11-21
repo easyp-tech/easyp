@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io/fs"
+	"log/slog"
 	"maps"
 	"os"
 	"path/filepath"
@@ -20,6 +21,7 @@ import (
 	"github.com/easyp-tech/easyp/internal/logger"
 	"github.com/easyp-tech/easyp/internal/modules"
 	policyresolver "github.com/easyp-tech/easyp/internal/policy"
+	"github.com/easyp-tech/easyp/internal/sourceview"
 	"github.com/easyp-tech/easyp/internal/workspace"
 )
 
@@ -67,6 +69,13 @@ func (b BreakingCheck) checkV1Policies(ctx *cli.Context, log logger.Logger, conf
 	defer func() {
 		for _, snapshot := range snapshots {
 			_ = snapshot.Close()
+		}
+	}()
+	session := sourceview.NewSession()
+	defer func() {
+		err := session.Close()
+		if err != nil {
+			log.Error(ctx.Context, "Close", slog.Any("error", err))
 		}
 	}()
 	var issues []core.IssueInfo
@@ -143,7 +152,7 @@ func (b BreakingCheck) checkV1Policies(ctx *cli.Context, log logger.Logger, conf
 			if err != nil {
 				return nil, fmt.Errorf("baseline %s module %s: %w", cfg.AgainstGitRef, module, err)
 			}
-			app := core.New(core.Options{Logger: log, ImportRoots: currentImports.Paths(), ImportFileAllowed: currentImports.FileAllowed(), OpenSourceFile: currentImports.OpenSourceFile, BreakingCheckConfig: core.BreakingCheckConfig{
+			app := core.New(core.Options{Logger: log, ImportRoots: currentImports.Paths(), ImportFileAllowed: currentImports.FileAllowed(), OpenSourceFile: currentImports.OpenSourceFile, SourceSession: session, BreakingCheckConfig: core.BreakingCheckConfig{
 				IgnoreDirs: append(append([]string(nil), ignorePaths...), defaultVendorDir), AgainstGitRef: cfg.AgainstGitRef,
 				FilesCheck:     slices.Contains(cfg.Use, core.BreakingCheckFilesCheck),
 				Categories:     cfg.Categories,
@@ -294,6 +303,13 @@ func (b BreakingCheck) checkV1ExtendedBreakingSource(
 	policy v1.Policy, cache modules.Cache,
 	snapshots map[string]*gitadapter.Snapshot, seen map[breakingIssueKey]bool,
 ) ([]core.IssueInfo, error) {
+	session := sourceview.NewSession()
+	defer func() {
+		err := session.Close()
+		if err != nil {
+			log.Error(ctx.Context, "Close", slog.Any("error", err))
+		}
+	}()
 	repositoryRoot, err := gitadapter.RepositoryRoot(scanRoot)
 	if err != nil {
 		return nil, fmt.Errorf("RepositoryRoot: %w", err)
@@ -460,7 +476,7 @@ func (b BreakingCheck) checkV1ExtendedBreakingSource(
 		if err != nil {
 			return nil, fmt.Errorf("baseline %s module %s: %w", cfg.AgainstGitRef, module, err)
 		}
-		app := core.New(core.Options{Logger: log, ImportRoots: currentImports.Paths(), ImportFileAllowed: currentImports.FileAllowed(), OpenSourceFile: currentImports.OpenSourceFile, BreakingCheckConfig: core.BreakingCheckConfig{
+		app := core.New(core.Options{Logger: log, ImportRoots: currentImports.Paths(), ImportFileAllowed: currentImports.FileAllowed(), OpenSourceFile: currentImports.OpenSourceFile, SourceSession: session, BreakingCheckConfig: core.BreakingCheckConfig{
 			IgnoreDirs: append(append([]string(nil), ignorePaths...), defaultVendorDir), AgainstGitRef: cfg.AgainstGitRef,
 			FilesCheck: slices.Contains(cfg.Use, core.BreakingCheckFilesCheck), Categories: cfg.Categories, IgnoreUnstable: cfg.IgnoreUnstable,
 		}})
