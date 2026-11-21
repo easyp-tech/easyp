@@ -6,16 +6,16 @@ current_phase: 2
 current_phase_name: Переключение потребителей и удаление вендор-копии
 current_plan: 4
 status: verifying
-stopped_at: Completed 02-01-PLAN.md (atomic swap commit 5342455); next 02-02
-last_updated: "2026-11-21T13:08:55.162Z"
+stopped_at: Completed 02-02-PLAN.md (full -race battery and D-09 parity evidence)
+last_updated: "2026-11-21T13:20:13.805Z"
 last_activity: 2026-11-21
-last_activity_desc: Phase 1 complete, transitioned to Phase 2
-state_head: 5342455410a50ae30f1f4f5eeb1f49f7ac20eb4f
+last_activity_desc: Plan 02-02 complete — full battery and D-09 parity evidence green on swap commit 5342455
+state_head: 7e46374d30282de5b793321bb58c921be93826a5
 progress:
   total_phases: 4
   completed_phases: 1
   total_plans: 4
-  completed_plans: 3
+  completed_plans: 4
   percent: 25
 ---
 
@@ -46,9 +46,9 @@ See: .planning/PROJECT.md (updated 2026-11-21)
 Phase: 2 — Переключение потребителей и удаление вендор-копии
 Current Plan: 4
 Total Plans in Phase: 2
-Plan: 02-01 complete (feat 5342455); next 02-02
-Status: Executing — plan 02-01 complete, plan 02-02 pending
-Last activity: 2026-11-21 — plan 02-01 landed the easyprotoc consumer swap and the vendor-tree deletion
+Plan: 02-02 complete (evidence: 34-ok battery, all D-09 gates green); phase has no pending plans
+Status: Ready for phase verification — plans 02-01 and 02-02 complete
+Last activity: 2026-11-21 — plan 02-02 proved the public-module swap behavior-preserving on the committed tree
 
 ## Performance Metrics
 
@@ -111,6 +111,7 @@ Last activity: 2026-11-21 — plan 02-01 landed the easyprotoc consumer swap and
 | Phase 01 P01 | 3 min | 2 tasks | 9 files |
 | Phase 01 P02 | 20min | 2 tasks | 1 files |
 | Phase 02 P01 | 4 min | 2 tasks | 7 files |
+| Phase 02 P02 | 7 min | 2 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -227,6 +228,8 @@ Recent decisions affecting current work:
 - [Phase 02]: 02-01: tidy proven a no-op — go.mod/go.sum byte-identical to df23d64 and easyprotoc stays the direct exact pin because breaking_profiles.go already required it; no replace/vendor
 - [Phase 02]: 02-01: easyprotoc imports grouped third-party — own group above the project imports in link.go, above testify in the three test files — mirroring main's breaking_profiles.go
 - [Phase 02]: 02-01: the two VENDORED.md comments rewritten in place (build.go pos() -> go.mod pin; protoast.go -> builder.pos + pin) to keep the seven-file diff at exactly 14 removed/14 added path lines
+- [Phase 02]: 02-02: evidence-only plan — one full -race battery (34 ok / 0 FAIL / 0 race / one known protoc-gen-go skip / 3 no-test packages) plus every D-09 gate green by exact RUN/PASS (acceptance A-D x2 @1e9a596, golden 94, D-07 19+11, core 43, CLI 16); no source or expectation file touched
+- [Phase 02]: 02-02: the freeze proves the swap modified set is exactly the seven D-02 files with internal/rules and internal/api byte-identical to df23d64; phase predicates re-proven (grep/ls-files empty, tidy idempotent, exact pins, zero replace/vendor, upstream cmd/easyprotoc = main)
 
 ### Pending Todos
 
@@ -262,6 +265,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-11-21T13:08:55.109Z
-Stopped at: Completed 02-01-PLAN.md (atomic swap commit 5342455); next 02-02
+Last session: 2026-11-21T13:20:13.743Z
+Stopped at: Completed 02-02-PLAN.md (full -race battery and D-09 parity evidence)
 Resume file: None
