@@ -494,7 +494,8 @@ func TestBuiltinRunRuntimeCreationIsSerializedAcrossScopes(t *testing.T) {
 	// Phase 2 — two-scope echo coverage: constructions are deterministically
 	// ordered (scope B parks until scope A's construction window has closed)
 	// so the wrapper windows never overlap and the peak counter stays at 1;
-	// the peak probe is the secondary overlap detector behind the held-mutex
+	// the peak==1 assertion pins the gate-staggered ordering that keeps this
+	// phase deterministic — the production-serialization pin is the held-mutex
 	// ordering probe above.
 	synctest.Test(t, func(t *testing.T) {
 		baseCtx := t.Context()
@@ -508,11 +509,7 @@ func TestBuiltinRunRuntimeCreationIsSerializedAcrossScopes(t *testing.T) {
 				// constructor (newRuntimeSerialized), so the construction
 				// path is still exercised.
 				ctx, run := EnsureBuiltinRun(baseCtx)
-				if run == nil {
-					results <- invocation{input: input, err: errors.New("EnsureBuiltinRun: fresh context must return an owner")}
-					closes <- nil
-					return
-				}
+				require.NotNil(t, run, "EnsureBuiltinRun: fresh context must return an owner")
 				run.runtimeFactory = func(ctx context.Context, cfg wazero.RuntimeConfig) wazero.Runtime {
 					if waitGate {
 						<-gate
