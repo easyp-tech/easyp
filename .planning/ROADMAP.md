@@ -21,7 +21,7 @@
 Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Merge main и примирение путей** - ветка содержит #253: breaking и lint оба на `easyprotoc`, конфликты `internal/core` разрешены, полная батарея зелёная (completed 2026-11-21)
-- [ ] **Phase 2: Переключение потребителей и удаление вендор-копии** - импорты на публичные пакеты модуля, `internal/easypc` удалён целиком, сборка и тесты зелёные
+- [x] **Phase 2: Переключение потребителей и удаление вендор-копии** - импорты на публичные пакеты модуля, `internal/easypc` удалён целиком, сборка и тесты зелёные (completed 2026-11-21)
 - [ ] **Phase 3: Снятие seal-инфраструктуры и документация** - `.golangci.yml`-исключение и seal-параграф AGENTS.md упразднены, `.spec` описывает импорт модуля
 - [ ] **Phase 4: Приёмка — полный паритет** - полная `-race`-батарея, Gates A–D ×2, golden 94 байт-точно, D-07 позиции, lint/schema-гейты зелёные
 
@@ -51,7 +51,7 @@ Decimal phases appear between their surrounding integers in numeric order.
   2. Дерево `internal/easypc` отсутствует целиком: `git ls-files internal/easypc` пуст (включая `VENDORED.md`, `cmd/easyp-protoc`, `cmd/lexbench`)
   3. `go build ./...` и `go test -race -count=1 ./...` зелёные; повторный `go mod tidy` не меняет `go.mod`/`go.sum`; `replace`/`vendor`-директив нет
   4. Дивергенция protoast сохранена без правок шва: `internal/protoast/position_test.go` (D-07a) и `internal/core/position_parity_test.go` (D-07b) зелёные
-**Plans:** 2/2 plans executed
+**Plans:** 2/2 plans complete
 - [x] 02-01-PLAN.md — Atomic consumer swap to public easyprotoc imports plus full `internal/easypc` deletion
 - [x] 02-02-PLAN.md — Full `-race` battery and named parity-gate evidence on the committed swap tree
 
@@ -87,7 +87,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Merge main и примирение путей | 2/2 | Complete    | 2026-11-21 |
-| 2. Переключение потребителей и удаление вендор-копии | 2/2 | In Progress | - |
+| 2. Переключение потребителей и удаление вендор-копии | 2/2 | Complete    | 2026-11-21 |
 | 3. Снятие seal-инфраструктуры и документация | 0/0 | Not started | - |
 | 4. Приёмка — полный паритет | 0/0 | Not started | - |
 
