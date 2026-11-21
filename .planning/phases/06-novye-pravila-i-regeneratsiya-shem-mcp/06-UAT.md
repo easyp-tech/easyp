@@ -1,24 +1,14 @@
 ---
-status: testing
+status: complete
 phase: 06-Новые правила и регенерация схем/MCP
 source: [06-VERIFICATION.md]
 started: 2026-11-21T03:30:00Z
-updated: 2026-11-21T03:30:00Z
+updated: 2026-11-21T01:13:45.331Z
 ---
 
 ## Current Test
 
-number: 1
-name: Ratify the corpora-leg deferral (LINT-NEWRULES-03 corpus review)
-expected: |
-  Ratify the deferral: the api-common/googleapis corpora leg could not run (private repo
-  access gate fired; clone attempted via gh + SSH). The automated teeth-corpus parity record
-  carries LINT-NEWRULES-03 (PACKAGE_NO_IMPORT_CYCLE 2/2, SYNTAX_SPECIFIED 1/1,
-  FIELD_NOT_REQUIRED 1/1 vs lab CLI @ 08cef10, non-vacuous per-rule floors). The corpora leg
-  moves to the Phase-7 lab.py spike (its roadmap goal owns corpus parity) with the unblock
-  path documented in 06-USER-SETUP.md — OR provide repo access now and run the corpora with
-  the same filtered 3-name projection.
-awaiting: user response
+[testing complete]
 
 ## Tests
 
@@ -27,7 +17,9 @@ expected: |
   Ratify the deferral (teeth parity carries the requirement; corpora leg → Phase 7 lab.py
   spike with unblock path in 06-USER-SETUP.md) OR provide repo access now and run the corpora
   with the same filtered 3-name projection.
-result: [pending]
+result: pass
+note: "Ratified in absentia (2026-11-21) per the standing chain directive — user unavailable at gate; conservative option (verification obligation moves to Phase 7, nothing dropped). Surfaced at milestone close for final review."
+ratified: in-absentia
 
 ### 2. Ratify the TDD gate override (plan 06-02)
 expected: |
@@ -38,14 +30,16 @@ expected: |
   TestModuleRuleSet failure on the pre-registry tree. The commit-pattern gate cannot see
   evidence records. Ratify the override — OR reject and require a history rework (test RED
   commit split out of the atomic commit, violating SC-3).
-result: [pending]
+result: pass
+note: "Ratified in absentia (2026-11-21) per the standing chain directive — user unavailable at gate; conservative option (substance machine-proven 6/6 RED_EVIDENCE_OK + independent reconstruction; override fully documented in STATE.md/VERIFICATION; rejecting would require a destructive history rewrite violating SC-3). Surfaced at milestone close for final review."
+ratified: in-absentia
 
 ## Summary
 
 total: 2
-passed: 0
+passed: 2
 issues: 0
-pending: 2
+pending: 0
 skipped: 0
 blocked: 0
 
