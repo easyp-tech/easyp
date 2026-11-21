@@ -25,7 +25,7 @@ Requirements for milestone «Миграция линтера на собстве
 
 ### Parity
 
-- [ ] **LINT-PARITY-01** (REQ-3.1): WHEN `easyp lint` (новая реализация) и текущий main запущены на корпусе `api-common` и `googleapis-nocompute` (все файлы компилируются), the system SHALL выдать идентичное множество замечаний для всех 43 текущих правил (правило, файл, строка, колонка)
+- [x] **LINT-PARITY-01** (REQ-3.1): WHEN `easyp lint` (новая реализация) и текущий main запущены на корпусе `api-common` и `googleapis-nocompute` (все файлы компилируются), the system SHALL выдать идентичное множество замечаний для всех 43 текущих правил (правило, файл, строка, колонка)
 - [x] **LINT-PARITY-02** (REQ-3.2): WHEN правило текущего main имеет поведение, изменённое в main после снятия лабораторной копии (например, подавления через комментарии), the system SHALL сохранить семантику текущего main, а не лабораторной копии
 
 ### New Rules
@@ -42,7 +42,7 @@ Requirements for milestone «Миграция линтера на собстве
 
 ### Performance
 
-- [ ] **LINT-PERF-01** (REQ-6.1): WHEN `easyp lint` запущен на корпусе `googleapis-nocompute`, the system SHALL завершаться не медленнее текущего main (потенциальный выигрыш — как в лаборатории — не является требованием, только ориентиром)
+- [x] **LINT-PERF-01** (REQ-6.1): WHEN `easyp lint` запущен на корпусе `googleapis-nocompute`, the system SHALL завершаться не медленнее текущего main (потенциальный выигрыш — как в лаборатории — не является требованием, только ориентиром)
 
 ## v2 Requirements
 
@@ -106,7 +106,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | LINT-ENG-04 | Phase 2 | Complete |
 | LINT-ENG-05 | Phase 3 | Complete |
 | LINT-ENG-06 | Phase 3 | Complete |
-| LINT-PARITY-01 | Phase 7 | Pending |
+| LINT-PARITY-01 | Phase 7 | Complete |
 | LINT-PARITY-02 | Phase 4 | Complete |
 | LINT-NEWRULES-01 | Phase 6 | Complete |
 | LINT-NEWRULES-02 | Phase 6 | Complete |
@@ -114,7 +114,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | LINT-NEWRULES-04 | Phase 6 | Complete |
 | LINT-COMPAT-01 | Phase 5 | Complete |
 | LINT-COMPAT-02 | Phase 5 | Complete |
-| LINT-PERF-01 | Phase 7 | Pending |
+| LINT-PERF-01 | Phase 7 | Complete |
 
 **Coverage:**
 - v1 requirements: 17 total

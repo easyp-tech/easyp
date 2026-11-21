@@ -20,12 +20,12 @@ affects: [milestone close (verify-work/UAT reviews the evidence + corpora dispos
 
 # Actuals (#2632)
 actuals:
-  tokens: 5900    # chars/4 over the realized diff (three evidence docs + VALIDATION rows + SUMMARY; no production code)
+  tokens: 10886   # chars/4 over the realized diff (43543 chars: three evidence docs + VALIDATION rows + SUMMARY; no production code)
   tasks: 3
   commits: 2      # MEASURED: git rev-list --count gsd-plan-head-before-07-03..HEAD at SUMMARY write (Task 1 battery = no repo commit by design; docs commits carry the evidence)
 
 plan_head_before: 9a37392b322fd42f378b2210a0b7ccbd5db78e00
-plan_head_after: TBD_FINAL
+plan_head_after: 0cc549c
 
 # Tech tracking
 tech-stack:
@@ -106,7 +106,7 @@ coverage:
     rationale: "The corpora legs cannot fire without user action (private repo unreachable — gh/SSH/env all fail, re-verified at execution); the end-of-phase human check reviews the disposal honesty and, on unblock, the same scripts fire unchanged (07-USER-SETUP.md path)"
 
 # Metrics
-duration: 22min
+duration: 16min
 completed: 2026-11-21
 status: complete
 ---
@@ -117,9 +117,9 @@ status: complete
 
 ## Performance
 
-- **Duration:** 22 min
+- **Duration:** 16 min
 - **Started:** 2026-11-21T04:04:14Z
-- **Completed:** 2026-11-21T04:26:00Z
+- **Completed:** 2026-11-21T04:19:38Z
 - **Tasks:** 3
 - **Files modified:** 5 (4 created evidence/SUMMARY docs, 1 VALIDATION.md row update) — zero production code by design
 
@@ -216,3 +216,11 @@ Review in one batch:
 ---
 *Phase: 07-priemka-paritet-korpusov-i-proizvoditelnost*
 *Completed: 2026-11-21*
+
+## Self-Check: PASSED
+
+- Files created/modified verified on disk: `parity-evidence-07.json`, `perf-evidence-07.md`, `07-USER-SETUP.md`, `07-03-SUMMARY.md`, `07-VALIDATION.md` (rows) — all FOUND
+- Commits verified in HEAD ancestry: `0f3efec` (Task 2 evidence), `0cc549c` (Task 3 disposal + SUMMARY) — all FOUND
+- Measured from ledger `gsd-plan-head-before-07-03` (`9a37392`): 2 docs commits, diff 43543 chars (+407/−4 across 5 files); Task 1 carries no repo commit by design (battery run; gotestsum helper + coverage.out gitignored)
+- Task gates re-run green: Task 2's JSON/doc grep gates (ratified_sha, 41/44, gate_d 2/1/1, gate_c multiset_equal, no stale-figure patterns) and Task 3's automated disposition gate (clone_attempts non-empty + MANUAL-ONLY rows in SUMMARY)
+- Plan-level verification re-run green: composite SC3 chain exit 0 (3718 tests -race, golangci 0 issues, schema drift empty), hygiene clean, `internal/easypc` zero-diff
