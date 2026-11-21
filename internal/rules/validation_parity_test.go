@@ -27,10 +27,11 @@ func (parityLintRule) Validate(_ core.ProtoInfo) ([]core.Issue, error) {
 // group name in lint.use fails with main's exact validation error through the
 // untouched rules.New chain (ValidateNames -> validateConfigRuleNames ->
 // core.ErrInvalidRule, wrapped per selection as "validateConfigRuleNames:
-// use:/except:/ignore_only: "), the PACKAGE_NO_IMPORT_CYCLE special case stays
-// main's deliberate exception until Phase 6 removes it, and a valid config
-// constructs the old engine output and the linked engine with no second name
-// validation anywhere — rules.New is THE validator.
+// use:/except:/ignore_only: "), PACKAGE_NO_IMPORT_CYCLE validates through the
+// same generic surface as every other name (the Phase 6 special case is
+// removed — one validator surface, no engine-side validation), and a valid
+// config constructs the old engine output and the linked engine with no
+// second name validation anywhere — rules.New is THE validator.
 func TestLintUseValidationParity(t *testing.T) {
 	t.Parallel()
 
@@ -67,15 +68,6 @@ func TestLintUseValidationParity(t *testing.T) {
 			wantPrefix: "validateConfigRuleNames: ignore_only: ",
 			wantName:   "NOT_A_RULE",
 		},
-		{
-			// Main's deliberate special case (ErrInvalidRule + "is not
-			// implemented"); removed only in Phase 6 — the guard pins it so
-			// nothing drifts before then.
-			name:       "package_no_import_cycle_special_case",
-			cfg:        config.LintConfig{Use: []string{"PACKAGE_NO_IMPORT_CYCLE"}},
-			wantPrefix: "validateConfigRuleNames: use: ",
-			wantName:   "PACKAGE_NO_IMPORT_CYCLE is not implemented",
-		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -107,6 +99,28 @@ func TestLintUseValidationParity(t *testing.T) {
 		// validation via KnownLintRules, and future schemas).
 		linked := core.New(core.Options{Rules: []core.Rule{parityLintRule{}}})
 		assert.NotNil(t, linked)
+	})
+
+	t.Run("package_no_import_cycle_constructs", func(t *testing.T) {
+		t.Parallel()
+
+		// The Phase 6 registry flip removed the special case: the name
+		// validates through the same generic Contains surface as every other
+		// name, in use, except, and ignore_only, and constructs.
+		selected, ignoreOnly, err := New(config.LintConfig{Use: []string{"PACKAGE_NO_IMPORT_CYCLE"}})
+		require.NoError(t, err)
+		assert.NotNil(t, ignoreOnly)
+		var names []string
+		for _, r := range selected {
+			names = append(names, core.GetRuleName(r))
+		}
+		assert.Contains(t, names, "PACKAGE_NO_IMPORT_CYCLE")
+
+		_, _, err = New(config.LintConfig{Use: []string{"MINIMAL"}, Except: []string{"PACKAGE_NO_IMPORT_CYCLE"}})
+		assert.NoError(t, err)
+
+		_, _, err = New(config.LintConfig{IgnoreOnly: map[string][]string{"PACKAGE_NO_IMPORT_CYCLE": {"generated"}}})
+		assert.NoError(t, err)
 	})
 
 	t.Run("registry_covers_all_names", func(t *testing.T) {

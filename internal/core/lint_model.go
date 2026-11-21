@@ -25,13 +25,14 @@ type (
 	// the drain's path filter still gate the findings by path.
 	//
 	// The rules that implement it after the Phase 4 port (D-03; the registry
-	// source of truth is internal/rules/builder.go, which constructs 41 rules
+	// source of truth is internal/rules/builder.go, which constructs 44 rules
 	// — REQUIREMENTS.md says 43, research Pitfall 7):
-	// DirectorySamePackage, PackageSameDirectory, PackageSameCsharpNamespace,
-	// PackageSameGoPackage, PackageSameJavaMultipleFiles,
-	// PackageSameJavaPackage, PackageSamePHPNamespace, PackageSameRubyPackage,
+	// DirectorySamePackage, PackageNoImportCycle, PackageSameDirectory,
+	// PackageSameCsharpNamespace, PackageSameGoPackage,
+	// PackageSameJavaMultipleFiles, PackageSameJavaPackage,
+	// PackageSamePHPNamespace, PackageSameRubyPackage,
 	// PackageSameSwiftPrefix, RPCRequestResponseUnique. PackageNoImportCycle
-	// arrives with Phase 6.
+	// arrived with Phase 6.
 	ModuleRule interface {
 		Rule
 		// Collect hands one file to the rule, in walk order.

@@ -12,7 +12,7 @@ package rules_test
 // and Position (Filename/Offset), in the engine's own D-01 order.
 //
 // Anti-vacuity and purity guards on the drive:
-//   - the pinned 73-finding count is asserted BEFORE the golden compare
+//   - the pinned 94-finding count is asserted BEFORE the golden compare
 //     (T-04-02 pattern);
 //   - zero findings named COMPILE — the corpus must keep compiling under the
 //     engine's full type resolution; an uncompiling fixture routes the run to
@@ -28,6 +28,14 @@ package rules_test
 // with its oracle in the flip commit, and the corpus — with its declared rpc
 // payload types and directive placements — lives on here unchanged. Do not
 // "improve" any fixture.
+//
+// Phase 6 extension (06-02): five entries appended so the three newly
+// registered rules (PACKAGE_NO_IMPORT_CYCLE, SYNTAX_SPECIFIED,
+// FIELD_NOT_REQUIRED) fire — requireGoldenPurity's coverage invariant demands
+// every registry name fire at least once. The file graph stays a DAG
+// (a.proto -> b.proto -> a2.proto) while the package graph cycles
+// (a.v1 -> b.v1 -> a.v1); package-matching keys keep PACKAGE_DIRECTORY_MATCH
+// clean on the new files.
 import (
 	"os"
 	"path/filepath"
@@ -47,14 +55,78 @@ import (
 var goldenCorpusUse = rules.AllRuleNames()
 
 // goldenFindingCount pins the captured finding total, asserted before the
-// golden compare on both drives (T-04-02 anti-vacuity).
-const goldenFindingCount = 73
+// golden compare on both drives (T-04-02 anti-vacuity). The Phase-6 corpus
+// extension (06-02) grew the captured total from 73 to 94.
+const goldenFindingCount = 94
 
-// goldenCorpusFiles is the broad compiling corpus: 13 files, 9 packages,
-// every batch's edge classes represented. Identifier names are chosen so the
-// intended rule fires; unintended co-firings are fine — the old side is the
-// oracle and the count pins the total.
+// goldenCorpusFiles is the broad compiling corpus: 13 Phase-4 files plus the
+// five Phase-6 extension entries (18 files, 13 packages), every batch's edge
+// classes represented. Identifier names are chosen so the intended rule
+// fires; unintended co-firings are fine — the old side is the oracle for the
+// Phase-4 corpus and the count pins the total.
 var goldenCorpusFiles = map[string]string{
+	// Phase-6 extension: the package cycle (a.v1 -> b.v1 -> a.v1) over an
+	// acyclic file DAG. PACKAGE_NO_IMPORT_CYCLE reports every cycle edge at
+	// the import keyword; the matching a/v1 and b/v1 directory keys keep
+	// PACKAGE_DIRECTORY_MATCH clean.
+	"a/v1/a.proto": `
+syntax = "proto3";
+
+package a.v1;
+
+import "b/v1/b.proto";
+
+message A {
+  b.v1.B b = 1;
+}
+`,
+
+	"a/v1/a2.proto": `
+syntax = "proto3";
+
+package a.v1;
+
+message A2 {
+  int32 id = 1;
+}
+`,
+
+	"b/v1/b.proto": `
+syntax = "proto3";
+
+package b.v1;
+
+import "a/v1/a2.proto";
+
+message B {
+  a.v1.A2 a = 1;
+}
+`,
+
+	// Phase-6 extension: no syntax statement -> SYNTAX_SPECIFIED at the
+	// protoast.FilePosition (line 1, column 1).
+	"nosyntax/v1/no_syntax.proto": `
+package nosyntax.v1;
+
+message N {
+  int32 id = 1;
+}
+`,
+
+	// Phase-6 extension: proto2 required field -> FIELD_NOT_REQUIRED at the
+	// declared-name token (NamePos).
+	"reqfield/v1/required_field.proto": `
+syntax = "proto2";
+
+package reqfield.v1;
+
+message R {
+  required int32 id = 1;
+  optional string name = 2;
+  repeated int32 nums = 3;
+}
+`,
+
 	// Packageless -> PACKAGE_DEFINED at the zero Position literal; invisible
 	// to every group rule.
 	"pkgless/orphan.proto": `
@@ -281,12 +353,26 @@ func golden(path, rule, filename string, offset, line, column int, source, messa
 	}
 }
 
-// goldenIssues is the committed golden: all 73 findings of the byte-frozen
-// old engine over the corpus below, every field populated, stored in the
-// engine's D-01 order (path, rule, line, column, source). Captured from the
-// old engine while the oracle still exists (05-01 Task 1); the linked engine
-// must reproduce it exactly, message for message (05-01 Task 2).
+// goldenIssues is the committed golden: all 94 findings over the corpus
+// below, every field populated, stored in the engine's D-01 order (path,
+// rule, line, column, source). The 73 Phase-4-corpus findings were captured
+// from the byte-frozen old engine while that oracle still existed (05-01
+// Task 1); the 21 Phase-6-extension findings were re-captured from the linked
+// engine (06-02 — the three new rules have no old-engine oracle; lab parity
+// is their oracle, cross-validated by the 06-03 teeth corpus). The linked
+// engine must reproduce the whole block exactly, message for message.
 var goldenIssues = []core.IssueInfo{
+	golden("a/v1/a.proto", "COMMENT_FIELD", "", 74, 9, 3, "b", "field comments must not be empty"),
+	golden("a/v1/a.proto", "COMMENT_MESSAGE", "", 60, 8, 1, "A", "message comments must not be empty"),
+	golden("a/v1/a.proto", "MESSAGE_PASCAL_CASE", "", 60, 8, 1, "A", "message name should be PascalCase"),
+	golden("a/v1/a.proto", "PACKAGE_NO_IMPORT_CYCLE", "", 36, 6, 1, "a.v1 -> b.v1 -> a.v1", "package import cycle"),
+	golden("a/v1/a2.proto", "COMMENT_FIELD", "", 51, 7, 3, "id", "field comments must not be empty"),
+	golden("a/v1/a2.proto", "COMMENT_MESSAGE", "", 36, 6, 1, "A2", "message comments must not be empty"),
+	golden("a/v1/a2.proto", "FILE_LOWER_SNAKE_CASE", "a/v1/a2.proto", 0, 0, 0, "a/v1/a2.proto", "file name should be lower_snake_case.proto"),
+	golden("b/v1/b.proto", "COMMENT_FIELD", "", 75, 9, 3, "a", "field comments must not be empty"),
+	golden("b/v1/b.proto", "COMMENT_MESSAGE", "", 61, 8, 1, "B", "message comments must not be empty"),
+	golden("b/v1/b.proto", "MESSAGE_PASCAL_CASE", "", 61, 8, 1, "B", "message name should be PascalCase"),
+	golden("b/v1/b.proto", "PACKAGE_NO_IMPORT_CYCLE", "", 36, 6, 1, "b.v1 -> a.v1 -> b.v1", "package import cycle"),
 	golden("casing_pkg/teeth2.proto", "FILE_LOWER_SNAKE_CASE", "casing_pkg/teeth2.proto", 0, 0, 0, "casing_pkg/teeth2.proto", "file name should be lower_snake_case.proto"),
 	golden("casing_pkg/teeth2.proto", "PACKAGE_DIRECTORY_MATCH", "", 21, 4, 1, "casing_pkg/teeth2.proto", "package \"badPkg.v2\" does not match module-relative directory \"casing_pkg\"; expected \"casing_pkg\""),
 	golden("casing_pkg/teeth2.proto", "PACKAGE_LOWER_SNAKE_CASE", "", 21, 4, 1, "badPkg.v2", "package name should be lower_snake_case"),
@@ -299,6 +385,10 @@ var goldenIssues = []core.IssueInfo{
 	golden("dir_b/third.proto", "PACKAGE_SAME_DIRECTORY", "", 21, 4, 1, "samed.v1", "different proto files in the same package should be in the same directory"),
 	golden("inv/v1/InvalidName.proto", "FILE_LOWER_SNAKE_CASE", "inv/v1/InvalidName.proto", 0, 0, 0, "inv/v1/InvalidName.proto", "file name should be lower_snake_case.proto"),
 	golden("no_version/nover.proto", "PACKAGE_VERSION_SUFFIX", "", 21, 4, 1, "no_version", "package name should have a version suffix"),
+	golden("nosyntax/v1/no_syntax.proto", "COMMENT_FIELD", "", 37, 5, 3, "id", "field comments must not be empty"),
+	golden("nosyntax/v1/no_syntax.proto", "COMMENT_MESSAGE", "", 23, 4, 1, "N", "message comments must not be empty"),
+	golden("nosyntax/v1/no_syntax.proto", "MESSAGE_PASCAL_CASE", "", 23, 4, 1, "N", "message name should be PascalCase"),
+	golden("nosyntax/v1/no_syntax.proto", "SYNTAX_SPECIFIED", "nosyntax/v1/no_syntax.proto", 0, 1, 1, "nosyntax/v1/no_syntax.proto", "syntax should be specified"),
 	golden("opts/v1/alpha.proto", "COMMENT_MESSAGE", "", 293, 14, 1, "AlphaMsg", "message comments must not be empty"),
 	golden("opts/v1/beta.proto", "COMMENT_MESSAGE", "", 289, 14, 1, "BetaMsg", "message comments must not be empty"),
 	golden("opts/v1/beta.proto", "PACKAGE_SAME_CSHARP_NAMESPACE", "", 151, 9, 1, "\"Beta.V1\"", "different proto files in the same package should have the same csharp_namespace"),
@@ -309,6 +399,12 @@ var goldenIssues = []core.IssueInfo{
 	golden("opts/v1/beta.proto", "PACKAGE_SAME_RUBY_PACKAGE", "", 223, 11, 1, "\"Beta::V1\"", "all files in the same package must have the same ruby_package option"),
 	golden("opts/v1/beta.proto", "PACKAGE_SAME_SWIFT_PREFIX", "", 223, 11, 1, "\"Beta::V1\"", "all files in the same package must have the same swift_prefix option"),
 	golden("pkgless/orphan.proto", "PACKAGE_DEFINED", "pkgless/orphan.proto", 0, 0, 0, "pkgless/orphan.proto", "package should be defined"),
+	golden("reqfield/v1/required_field.proto", "COMMENT_FIELD", "", 57, 7, 3, "id", "field comments must not be empty"),
+	golden("reqfield/v1/required_field.proto", "COMMENT_FIELD", "", 82, 8, 3, "name", "field comments must not be empty"),
+	golden("reqfield/v1/required_field.proto", "COMMENT_FIELD", "", 110, 9, 3, "nums", "field comments must not be empty"),
+	golden("reqfield/v1/required_field.proto", "COMMENT_MESSAGE", "", 43, 6, 1, "R", "message comments must not be empty"),
+	golden("reqfield/v1/required_field.proto", "FIELD_NOT_REQUIRED", "", 72, 7, 18, "id", "field should not be required"),
+	golden("reqfield/v1/required_field.proto", "MESSAGE_PASCAL_CASE", "", 43, 6, 1, "R", "message name should be PascalCase"),
 	golden("teeth/v1/teeth.proto", "COMMENT_ENUM", "", 143, 10, 1, "ABC", "enum comments must not be empty"),
 	golden("teeth/v1/teeth.proto", "COMMENT_ENUM", "", 190, 15, 1, "ZeroEnum", "enum comments must not be empty"),
 	golden("teeth/v1/teeth.proto", "COMMENT_ENUM", "", 248, 20, 1, "AliasEnum", "enum comments must not be empty"),
@@ -395,8 +491,8 @@ func requireTotalOrder(t *testing.T, issues []core.IssueInfo) {
 
 // requireGoldenPurity asserts the shared anti-vacuity guards before the
 // golden compare: zero COMPILE findings (the corpus compiles under the linked
-// engine's full type resolution), the pinned 73 count, and the coverage
-// invariant — every one of the 41 registry names fires at least once.
+// engine's full type resolution), the pinned count, and the coverage
+// invariant — every one of the 44 registry names fires at least once.
 func requireGoldenPurity(t *testing.T, got []core.IssueInfo) {
 	t.Helper()
 

@@ -15,7 +15,7 @@ import (
 
 func TestLintSelectionValidationCollectsAllLocations(t *testing.T) {
 	t.Parallel()
-	const raw = "version: v1\nlinters:\n  enable: [NO_SUCH_RULE, PACKAGE_NO_IMPORT_CYCLE]\n  disable: [NOT_A_RULE]\nissues:\n  exclude-rules:\n    - linters: [UNKNOWN_EXCLUSION]\n"
+	const raw = "version: v1\nlinters:\n  enable: [NO_SUCH_RULE, ALSO_UNKNOWN_RULE]\n  disable: [NOT_A_RULE]\nissues:\n  exclude-rules:\n    - linters: [UNKNOWN_EXCLUSION]\n"
 	issues := ValidatePolicyYAML([]byte(raw))
 	require.Len(t, issues, 4)
 	for _, issue := range issues {
@@ -29,7 +29,7 @@ func TestLintSelectionValidationCollectsAllLocations(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, issues, fileIssues)
 	_, err = ParsePolicy(strings.NewReader(raw))
-	for _, name := range []string{"NO_SUCH_RULE", "PACKAGE_NO_IMPORT_CYCLE", "NOT_A_RULE", "UNKNOWN_EXCLUSION"} {
+	for _, name := range []string{"NO_SUCH_RULE", "ALSO_UNKNOWN_RULE", "NOT_A_RULE", "UNKNOWN_EXCLUSION"} {
 		require.ErrorContains(t, err, name)
 	}
 }
@@ -54,7 +54,7 @@ func TestLintSelectionValidationMatchesRuntimeCatalog(t *testing.T) {
 	}
 	data, err := SchemaJSON("easyp")
 	require.NoError(t, err)
-	assert.NotContains(t, string(data), "PACKAGE_NO_IMPORT_CYCLE")
+	assert.Contains(t, string(data), "PACKAGE_NO_IMPORT_CYCLE")
 }
 
 func TestProgrammaticLintPolicyRejectsInvalidNames(t *testing.T) {

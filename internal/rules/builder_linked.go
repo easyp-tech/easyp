@@ -11,8 +11,10 @@ import (
 // by configuration. The same single validateConfigRuleNames call (D-06:
 // rules.New remains THE validator, same error wrapping), the same group
 // order, and the same use/except/ignore_only plumbing as the old constructor
-// deleted in the Phase-5 flip — but constructs the 41 port types under their
-// canonical unsuffixed names (the Phase-5 consolidation renamed them; their
+// deleted in the Phase-5 flip — but constructs the 44 registry types under
+// their canonical unsuffixed names (the Phase-5 consolidation renamed them;
+// Phase 6 added PackageNoImportCycle, SyntaxSpecified and FieldNotRequired;
+// their
 // registry names come from core.GetRuleName's pure reflection over the type
 // names, with no per-type overrides).
 //
@@ -32,6 +34,7 @@ func New(cfg config.LintConfig) ([]core.Rule, map[string][]string, error) {
 			Prefix: cfg.PackageDirectoryPrefix,
 		},
 		&PackageSameDirectory{},
+		&PackageNoImportCycle{},
 
 		//	basicGroup — batch 2 (casing) and batch 3 (semantic)
 		&EnumFirstValueZero{},
@@ -54,6 +57,8 @@ func New(cfg config.LintConfig) ([]core.Rule, map[string][]string, error) {
 		&PackageSameSwiftPrefix{},
 		&RPCPascalCase{},
 		&ServicePascalCase{},
+		&SyntaxSpecified{},
+		&FieldNotRequired{},
 		//	defaultGroup — batch 4
 		&EnumValuePrefix{},
 		&EnumZeroValueSuffix{

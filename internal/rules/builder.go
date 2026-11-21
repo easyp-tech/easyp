@@ -134,6 +134,7 @@ func addMinimal(res []string) []string {
 	res = append(res, core.GetRuleName(&PackageDefined{}))
 	res = append(res, core.GetRuleName(&PackageDirectoryMatch{}))
 	res = append(res, core.GetRuleName(&PackageSameDirectory{}))
+	res = append(res, core.GetRuleName(&PackageNoImportCycle{}))
 
 	return res
 }
@@ -159,6 +160,8 @@ func addBasic(res []string) []string {
 	res = append(res, core.GetRuleName(&PackageSameSwiftPrefix{}))
 	res = append(res, core.GetRuleName(&RPCPascalCase{}))
 	res = append(res, core.GetRuleName(&ServicePascalCase{}))
+	res = append(res, core.GetRuleName(&SyntaxSpecified{}))
+	res = append(res, core.GetRuleName(&FieldNotRequired{}))
 	return res
 }
 

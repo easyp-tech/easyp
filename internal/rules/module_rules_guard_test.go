@@ -2,9 +2,9 @@ package rules_test
 
 // Wave-0 ModuleRule-set guard (D-03, internal/core/lint_model.go), strengthened
 // by the finishing batch 04-07 to EXACT-SET equality: with the registry
-// complete (41/41 rules), exactly the ten documented cross-file rules may
-// implement core.ModuleRule — no more, no fewer. PackageNoImportCycle arrives
-// with Phase 6 and must be absent until then.
+// complete (44/44 rules), exactly the eleven documented cross-file rules may
+// implement core.ModuleRule — no more, no fewer. PackageNoImportCycle arrived
+// with Phase 6 (Phase 06-02).
 
 import (
 	"testing"
@@ -16,9 +16,10 @@ import (
 	"github.com/easyp-tech/easyp/internal/rules"
 )
 
-// moduleRuleNames is the D-03 ten-name set as registry names.
+// moduleRuleNames is the D-03 eleven-name set as registry names.
 var moduleRuleNames = map[string]bool{
 	"DIRECTORY_SAME_PACKAGE":           true,
+	"PACKAGE_NO_IMPORT_CYCLE":          true,
 	"PACKAGE_SAME_DIRECTORY":           true,
 	"PACKAGE_SAME_CSHARP_NAMESPACE":    true,
 	"PACKAGE_SAME_GO_PACKAGE":          true,
@@ -51,7 +52,7 @@ func TestModuleRuleSet(t *testing.T) {
 	}
 
 	// Exact set: every ModuleRule the registry holds must be one of the D-03
-	// ten, and every D-03 ten must implement ModuleRule — no more, no fewer.
+	// eleven, and every D-03 eleven must implement ModuleRule — no more, no fewer.
 	require.ElementsMatch(t, wantNames, gotNames,
-		"the ModuleRule set must equal the D-03 ten-name set exactly")
+		"the ModuleRule set must equal the D-03 eleven-name set exactly")
 }
