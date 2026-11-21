@@ -39,16 +39,16 @@ progress:[███░░░░░░░] 25%
 See: .planning/PROJECT.md (updated 2026-11-21)
 
 **Core value:** EasyP остаётся drop-in buf-совместимым инструментом: формат вывода, коды выхода и конфигурация не ломаются между версиями — миграции внутренностей незаметны пользователю.
-**Current focus:** Milestone v1.1 import-easyprotoc — Phase 1 (Merge main и примирение путей)
+**Current focus:** Milestone v1.1 import-easyprotoc — Phase 2 (Переключение потребителей и удаление вендор-копии)
 
 ## Current Position
 
 Phase: 2 — Переключение потребителей и удаление вендор-копии
 Current Plan: 4
 Total Plans in Phase: 2
-Plan: 01-01 complete (merge commit 994c503); next 01-02
-Status: Executing — plan 01-01 complete, plan 01-02 pending
-Last activity: 2026-11-21 — Phase 1 complete, transitioned to Phase 2
+Plan: 02-01 complete (feat 5342455); next 02-02
+Status: Executing — plan 02-01 complete, plan 02-02 pending
+Last activity: 2026-11-21 — plan 02-01 landed the easyprotoc consumer swap and the vendor-tree deletion
 
 ## Performance Metrics
 
