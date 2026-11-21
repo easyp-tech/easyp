@@ -81,6 +81,7 @@ Milestone «Миграция линтера на собственный комп
 | Детерминизм вывода — усиление, не паритет: тотальная сортировка (path, rule, line, col) на выходе движка | Порядок main не контракт (map iteration); паритет порядка ломает детерминизм без пользы | ✓ Phase 3 — repeated_runs_byte_identical (5 прогонов) |
 | Coexistence Option A: suffixed <Rule>Linked типы + LintRuleName() override; старый путь байт-заморожен до Phase 5 | Один контракт не может реализовать оба Validate-сигнатуры; bridge — антипаттерн | ✓ Phase 4 — 41/41 портов, реестр parity-proven, 53 parity-ячейки |
 | Переключение через identity-консолидацию (не правку шва): buildCore/lint_v1 текстуально неизменны, binding'и меняются через rename map | Откат = revert одного коммита (roadmap SC); минимальный-флип отвергнут как лишний шов | ✓ Phase 5 — flip 4238fbe атомарен, golden байт-идентичен, консолидация 263f067 |
+| Новые правила = verbatim lab-порты + один атомарный registry/schema/MCP коммит | Правила, схемы и MCP меняются согласованно (SC-3); derivation loop закрыт (registry → AllLintUseValues → enums → MCP) | ✓ Phase 6 — реестр 44, teeth-parity 2/2/1/1/1/1, corpora leg → Phase 7 |
 
 ## Evolution
 
@@ -100,4 +101,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-11-20 after Phase 5*
+*Last updated: 2026-11-21 after Phase 6*
