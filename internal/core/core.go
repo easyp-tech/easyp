@@ -34,8 +34,7 @@ type Core struct {
 	managedMode           ManagedModeConfig
 	goPackageOutputPrefix string
 
-	breakingCheckConfig     BreakingCheckConfig
-	currentProjectGitWalker CurrentProjectGitWalker
+	breakingCheckConfig BreakingCheckConfig
 
 	localExecutor   plugin.Executor
 	remoteExecutor  plugin.Executor
@@ -72,11 +71,10 @@ type Options struct {
 	// WalkSourceFiles optionally visits verified immutable proto inputs under an
 	// absolute import root. Paths passed to the visitor are absolute. Returning
 	// false selects the normal local filesystem walk instead.
-	WalkSourceFiles         func(string, func(string) error) (bool, error)
-	FileModules             map[string]string
-	CurrentProjectGitWalker CurrentProjectGitWalker
-	BreakingCheckConfig     BreakingCheckConfig
-	ManagedModeConfig       ManagedModeConfig
+	WalkSourceFiles     func(string, func(string) error) (bool, error)
+	FileModules         map[string]string
+	BreakingCheckConfig BreakingCheckConfig
+	ManagedModeConfig   ManagedModeConfig
 	// GoPackageOutputPrefix places source-relative Go output under its effective
 	// go_package, relative to this import prefix. Path markers use their stable parent.
 	GoPackageOutputPrefix string
@@ -86,28 +84,27 @@ type Options struct {
 func New(options Options) *Core {
 	terminal := console.New()
 	return &Core{
-		rules:                   options.Rules,
-		ignore:                  options.Ignore,
-		ignoreOnly:              options.IgnoreOnly,
-		allowCommentIgnores:     options.AllowCommentIgnores,
-		knownLintRules:          slices.Clone(options.KnownLintRules),
-		logger:                  options.Logger,
-		plugins:                 options.Plugins,
-		pluginWorkDir:           options.PluginWorkDir,
-		inputs:                  options.Inputs,
-		importRoots:             slices.Clone(options.ImportRoots),
-		importFileAllowed:       options.ImportFileAllowed,
-		sourceFileOpen:          options.OpenSourceFile,
-		sourceSession:           options.SourceSession,
-		sourceFilesWalk:         options.WalkSourceFiles,
-		fileModules:             maps.Clone(options.FileModules),
-		currentProjectGitWalker: options.CurrentProjectGitWalker,
-		breakingCheckConfig:     options.BreakingCheckConfig,
-		managedMode:             options.ManagedModeConfig,
-		goPackageOutputPrefix:   options.GoPackageOutputPrefix,
-		localExecutor:           plugin.NewLocalPluginExecutor(options.Logger),
-		remoteExecutor:          plugin.NewRemotePluginExecutor(options.Logger),
-		builtinExecutor:         plugin.NewBuiltinPluginExecutor(options.Logger),
-		commandExecutor:         plugin.NewCommandPluginExecutor(terminal, options.Logger),
+		rules:                 options.Rules,
+		ignore:                options.Ignore,
+		ignoreOnly:            options.IgnoreOnly,
+		allowCommentIgnores:   options.AllowCommentIgnores,
+		knownLintRules:        slices.Clone(options.KnownLintRules),
+		logger:                options.Logger,
+		plugins:               options.Plugins,
+		pluginWorkDir:         options.PluginWorkDir,
+		inputs:                options.Inputs,
+		importRoots:           slices.Clone(options.ImportRoots),
+		importFileAllowed:     options.ImportFileAllowed,
+		sourceFileOpen:        options.OpenSourceFile,
+		sourceSession:         options.SourceSession,
+		sourceFilesWalk:       options.WalkSourceFiles,
+		fileModules:           maps.Clone(options.FileModules),
+		breakingCheckConfig:   options.BreakingCheckConfig,
+		managedMode:           options.ManagedModeConfig,
+		goPackageOutputPrefix: options.GoPackageOutputPrefix,
+		localExecutor:         plugin.NewLocalPluginExecutor(options.Logger),
+		remoteExecutor:        plugin.NewRemotePluginExecutor(options.Logger),
+		builtinExecutor:       plugin.NewBuiltinPluginExecutor(options.Logger),
+		commandExecutor:       plugin.NewCommandPluginExecutor(terminal, options.Logger),
 	}
 }
