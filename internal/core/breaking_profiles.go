@@ -9,13 +9,12 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
-	"sync"
 
-	"github.com/easyp-tech/easyprotoc/protoc"
 	"google.golang.org/protobuf/reflect/protodesc"
 	"google.golang.org/protobuf/reflect/protoreflect"
 	"google.golang.org/protobuf/types/descriptorpb"
 
+	"github.com/easyp-tech/easyp/internal/compilerbackend"
 	"github.com/easyp-tech/easyp/internal/config"
 	"github.com/easyp-tech/easyp/internal/core/path_helpers"
 )
@@ -115,91 +114,17 @@ func (c *Core) compileBreakingGraph(ctx context.Context, walker DirWalker) (*bre
 	if len(imports) == 0 {
 		imports = []string{root}
 	}
-	var (
-		diagnosticsMu sync.Mutex
-		diagnostics   []string
-	)
-	compiled, err := protoc.Compile(ctx, targets,
-		protoc.WithResolver(breakingImportResolver{
-			importPaths: imports,
-			open:        c.breakingSourceAccessor(ctx, root),
-		}),
-		protoc.WithStandardImports(true),
-		protoc.WithIncludeImports(true),
-		protoc.WithIncludeSourceInfo(true),
-		protoc.WithErrorHandler(func(diagnostic protoc.Diagnostic) {
-			if diagnostic.IsWarn {
-				return
-			}
-			diagnosticsMu.Lock()
-			diagnostics = append(diagnostics, diagnostic.String())
-			diagnosticsMu.Unlock()
-		}),
-	)
+	compiled, err := compilerbackend.Compile(ctx, compilerbackend.Request{
+		Files:           targets,
+		ImportPaths:     imports,
+		Accessor:        c.breakingSourceAccessor(ctx, root),
+		StandardImports: true,
+		SourceInfo:      true,
+	})
 	if err != nil {
-		if len(diagnostics) > 0 {
-			return nil, fmt.Errorf("Compile: %s: %w", strings.Join(diagnostics, "\n"), err)
-		}
 		return nil, fmt.Errorf("Compile: %w", err)
 	}
-	files := compiled.Files()
-	if files == nil {
-		return nil, fmt.Errorf("Files: descriptor set is empty")
-	}
-	compiledPaths := make(map[string]bool, len(files))
-	for _, file := range files {
-		compiledPaths[file.Path()] = true
-	}
-	for _, name := range targets {
-		if !compiledPaths[name] {
-			return nil, fmt.Errorf("FindFileByPath: %q not found", name)
-		}
-	}
-	return buildBreakingGraph(files, targetPaths), nil
-}
-
-// breakingImportResolver looks up each import as join(importPath, name), in
-// import-path order, through the breaking source accessor.
-type breakingImportResolver struct {
-	importPaths []string
-	open        func(string) (io.ReadCloser, error)
-}
-
-// FindFileByPath implements protoc.Resolver.
-func (r breakingImportResolver) FindFileByPath(ctx context.Context, path string) ([]byte, error) {
-	if err := ctx.Err(); err != nil {
-		return nil, err
-	}
-	if len(r.importPaths) == 0 {
-		return r.read(path)
-	}
-	for _, importPath := range r.importPaths {
-		data, err := r.read(filepath.Join(importPath, path))
-		if errors.Is(err, protoc.ErrFileNotFound) {
-			continue
-		}
-		return data, err
-	}
-	return nil, protoc.ErrFileNotFound
-}
-
-func (r breakingImportResolver) read(name string) ([]byte, error) {
-	reader, err := r.open(name)
-	if err != nil {
-		if errors.Is(err, os.ErrNotExist) {
-			return nil, protoc.ErrFileNotFound
-		}
-		return nil, err
-	}
-	data, err := io.ReadAll(reader)
-	closeErr := reader.Close()
-	if err != nil {
-		return nil, fmt.Errorf("ReadAll: %w", err)
-	}
-	if closeErr != nil {
-		return nil, fmt.Errorf("Close: %w", closeErr)
-	}
-	return data, nil
+	return buildBreakingGraph(compiled.Files, targetPaths), nil
 }
 
 // Current and baseline walkers own different physical trees. Declared source
