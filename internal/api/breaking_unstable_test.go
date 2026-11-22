@@ -58,7 +58,7 @@ func TestBreakingIgnoreUnstableConfigReachesCore(t *testing.T) {
 				writeV1GenerateFixture(t, baseline, pkg+"_old.proto", content)
 				writeV1GenerateFixture(t, current, pkg+"_new.proto", content)
 			}
-			app, err := buildCore(logger.NewNop(), config.Config{BreakingCheck: cfg}, nil)
+			app, err := buildCore(logger.NewNop(), config.Config{BreakingCheck: cfg}, nil, nil)
 			require.NoError(t, err)
 			issues, err := app.CompareBreaking(t.Context(), fs.NewFSWalker(current, "."), fs.NewFSWalker(baseline, "."), nil)
 			require.NoError(t, err)

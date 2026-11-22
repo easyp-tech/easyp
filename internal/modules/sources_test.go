@@ -1,14 +1,18 @@
 package modules
 
 import (
+	"fmt"
+	"io"
 	"os"
 	"path/filepath"
+	"sync"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	v1 "github.com/easyp-tech/easyp/internal/config/v1"
+	"github.com/easyp-tech/easyp/internal/sourceview"
 )
 
 func TestModuleSourcesPreserveBufSelection(t *testing.T) {
@@ -253,4 +257,79 @@ func TestBufSelectionAllowsConsumerAliasToSelectedDependency(t *testing.T) {
 	require.NoError(t, err)
 	assert.True(t, append(own, deps...).FileAllowed()(filepath.Join(root, "alias.proto")))
 	require.NoError(t, Tidy(t.Context(), root, nil))
+}
+
+func TestSourceOpenerInSessionAndFilterMemo(t *testing.T) {
+	t.Parallel()
+
+	root, outside := t.TempDir(), t.TempDir()
+	writeV1GenerateFixture(t, root, v1.ModuleFile, "module example.test/app\nroots proto\n")
+	writeV1GenerateFixture(t, root, "proto/a/one.proto", "syntax = \"proto3\"; // one\n")
+	writeV1GenerateFixture(t, root, "proto/a/two.proto", "syntax = \"proto3\"; // two\n")
+	writeV1GenerateFixture(t, root, "proto/nested/protobuf.mod", "module example.test/nested\n")
+	writeV1GenerateFixture(t, root, "proto/nested/hidden.proto", "syntax = \"proto3\"; // nested\n")
+	writeV1GenerateFixture(t, outside, "secret.proto", "syntax = \"proto3\"; // secret\n")
+	require.NoError(t, os.Symlink(filepath.Join(outside, "secret.proto"), filepath.Join(root, "proto/a/escape.proto")))
+
+	_, module, err := ReadManifest(root)
+	require.NoError(t, err)
+	roots, err := ModuleSources(root, module)
+	require.NoError(t, err)
+
+	session := sourceview.NewSession()
+	t.Cleanup(func() {
+		require.NoError(t, session.Close())
+	})
+
+	allowed := roots.FileAllowed()
+	open := roots.SourceOpenerIn(session, allowed)
+
+	assert.False(t, allowed(filepath.Join(root, "proto/nested/hidden.proto")))
+	_, err = open(filepath.Join(root, "proto/nested/hidden.proto"))
+	require.ErrorIs(t, err, os.ErrNotExist)
+
+	_, err = open(filepath.Join(root, "proto/a/escape.proto"))
+	require.ErrorIs(t, err, sourceview.ErrOutsideRoot)
+
+	var wg sync.WaitGroup
+	errs := make(chan error, 16)
+	paths := []struct {
+		rel  string
+		want string
+	}{
+		{rel: "proto/a/one.proto", want: "syntax = \"proto3\"; // one\n"},
+		{rel: "proto/a/two.proto", want: "syntax = \"proto3\"; // two\n"},
+	}
+	for range 8 {
+		for _, tc := range paths {
+			wg.Add(1)
+			go func(rel, want string) {
+				defer wg.Done()
+				full := filepath.Join(root, rel)
+				if !allowed(full) {
+					errs <- fmt.Errorf("allowed(%s) = false", rel)
+					return
+				}
+				file, openErr := open(full)
+				if openErr != nil {
+					errs <- fmt.Errorf("open(%s): %w", rel, openErr)
+					return
+				}
+				data, readErr := io.ReadAll(file)
+				closeErr := file.Close()
+				if readErr != nil || closeErr != nil {
+					errs <- fmt.Errorf("read/close(%s): %v %v", rel, readErr, closeErr)
+					return
+				}
+				if string(data) != want {
+					errs <- fmt.Errorf("read(%s) = %q, want %q", rel, data, want)
+				}
+			}(tc.rel, tc.want)
+		}
+	}
+	wg.Wait()
+	close(errs)
+	for err := range errs {
+		require.NoError(t, err)
+	}
 }
