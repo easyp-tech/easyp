@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"fmt"
+	"io"
 	"io/fs"
 	"log/slog"
 	"maps"
@@ -71,6 +72,7 @@ func (b BreakingCheck) checkV1Policies(ctx *cli.Context, log logger.Logger, conf
 			_ = snapshot.Close()
 		}
 	}()
+	// Closed before the snapshots it may hold open roots in.
 	session := sourceview.NewSession()
 	defer func() {
 		err := session.Close()
@@ -86,7 +88,7 @@ func (b BreakingCheck) checkV1Policies(ctx *cli.Context, log logger.Logger, conf
 			return nil, fmt.Errorf("resolveV1BreakingPolicy: %w", err)
 		}
 		if policy.Breaking.Extends != "" {
-			resolved, err := b.checkV1ExtendedBreakingSource(ctx, log, configPath, projectRoot, scanRoot, scanPath, source, policy, cache, snapshots, seen)
+			resolved, err := b.checkV1ExtendedBreakingSource(ctx, log, configPath, projectRoot, scanRoot, scanPath, source, policy, cache, snapshots, seen, session)
 			if err != nil {
 				return nil, fmt.Errorf("checkV1ExtendedBreakingSource: %w", err)
 			}
@@ -152,13 +154,15 @@ func (b BreakingCheck) checkV1Policies(ctx *cli.Context, log logger.Logger, conf
 			if err != nil {
 				return nil, fmt.Errorf("baseline %s module %s: %w", cfg.AgainstGitRef, module, err)
 			}
-			app := core.New(core.Options{Logger: log, ImportRoots: currentImports.Paths(), ImportFileAllowed: currentImports.FileAllowed(), OpenSourceFile: currentImports.OpenSourceFile, SourceSession: session, BreakingCheckConfig: core.BreakingCheckConfig{
+			currentAllowed, currentOpen := breakingRevisionSources(currentImports, session)
+			baselineAllowed, baselineOpen := breakingRevisionSources(baselineImports, session)
+			app := core.New(core.Options{Logger: log, ImportRoots: currentImports.Paths(), ImportFileAllowed: currentAllowed, OpenSourceFile: currentOpen, SourceSession: session, BreakingCheckConfig: core.BreakingCheckConfig{
 				IgnoreDirs: append(append([]string(nil), ignorePaths...), defaultVendorDir), AgainstGitRef: cfg.AgainstGitRef,
 				FilesCheck:     slices.Contains(cfg.Use, core.BreakingCheckFilesCheck),
 				Categories:     cfg.Categories,
 				IgnoreUnstable: cfg.IgnoreUnstable,
 			}})
-			found, err := app.CompareBreakingWithImports(ctx.Context, newBreakingWalker(repositoryRoot, currentFiles), newBreakingWalker(snapshot.Root, baselineFiles), core.BreakingImports{Paths: baselineImports.Paths(), FileAllowed: baselineImports.FileAllowed(), Open: baselineImports.OpenSourceFile})
+			found, err := app.CompareBreakingWithImports(ctx.Context, newBreakingWalker(repositoryRoot, currentFiles), newBreakingWalker(snapshot.Root, baselineFiles), core.BreakingImports{Paths: baselineImports.Paths(), FileAllowed: baselineAllowed, Open: baselineOpen})
 			if err != nil {
 				return nil, fmt.Errorf("CompareBreaking module %s against %s: %w", module, cfg.AgainstGitRef, err)
 			}
@@ -302,14 +306,8 @@ func (b BreakingCheck) checkV1ExtendedBreakingSource(
 	configPath, projectRoot, scanRoot, scanPath, source string,
 	policy v1.Policy, cache modules.Cache,
 	snapshots map[string]*gitadapter.Snapshot, seen map[breakingIssueKey]bool,
+	session *sourceview.Session,
 ) ([]core.IssueInfo, error) {
-	session := sourceview.NewSession()
-	defer func() {
-		err := session.Close()
-		if err != nil {
-			log.Error(ctx.Context, "Close", slog.Any("error", err))
-		}
-	}()
 	repositoryRoot, err := gitadapter.RepositoryRoot(scanRoot)
 	if err != nil {
 		return nil, fmt.Errorf("RepositoryRoot: %w", err)
@@ -476,11 +474,13 @@ func (b BreakingCheck) checkV1ExtendedBreakingSource(
 		if err != nil {
 			return nil, fmt.Errorf("baseline %s module %s: %w", cfg.AgainstGitRef, module, err)
 		}
-		app := core.New(core.Options{Logger: log, ImportRoots: currentImports.Paths(), ImportFileAllowed: currentImports.FileAllowed(), OpenSourceFile: currentImports.OpenSourceFile, SourceSession: session, BreakingCheckConfig: core.BreakingCheckConfig{
+		currentAllowed, currentOpen := breakingRevisionSources(currentImports, session)
+		baselineAllowed, baselineOpen := breakingRevisionSources(baselineImports, session)
+		app := core.New(core.Options{Logger: log, ImportRoots: currentImports.Paths(), ImportFileAllowed: currentAllowed, OpenSourceFile: currentOpen, SourceSession: session, BreakingCheckConfig: core.BreakingCheckConfig{
 			IgnoreDirs: append(append([]string(nil), ignorePaths...), defaultVendorDir), AgainstGitRef: cfg.AgainstGitRef,
 			FilesCheck: slices.Contains(cfg.Use, core.BreakingCheckFilesCheck), Categories: cfg.Categories, IgnoreUnstable: cfg.IgnoreUnstable,
 		}})
-		findings, err := app.CompareBreakingWithImports(ctx.Context, newBreakingWalker(repositoryRoot, currentFiles), newBreakingWalker(snapshot.Root, baselineFiles), core.BreakingImports{Paths: baselineImports.Paths(), FileAllowed: baselineImports.FileAllowed(), Open: baselineImports.OpenSourceFile})
+		findings, err := app.CompareBreakingWithImports(ctx.Context, newBreakingWalker(repositoryRoot, currentFiles), newBreakingWalker(snapshot.Root, baselineFiles), core.BreakingImports{Paths: baselineImports.Paths(), FileAllowed: baselineAllowed, Open: baselineOpen})
 		if err != nil {
 			return nil, fmt.Errorf("CompareBreaking module %s against %s: %w", module, cfg.AgainstGitRef, err)
 		}
@@ -509,4 +509,11 @@ func (b BreakingCheck) checkV1ExtendedBreakingSource(
 type breakingIssueKey struct {
 	path, rule, message string
 	line, column        int
+}
+
+// breakingRevisionSources builds one revision's source filter once and opens
+// its files through the run's session. Each revision keeps its own opener.
+func breakingRevisionSources(imports modules.SourceRoots, session *sourceview.Session) (func(string) bool, func(string) (io.ReadCloser, error)) {
+	allowed := imports.FileAllowed()
+	return allowed, imports.SourceOpenerIn(session, allowed)
 }
