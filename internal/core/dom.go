@@ -11,9 +11,6 @@ import (
 	"github.com/yoheimuta/go-protoparser/v4/parser/meta"
 )
 
-// Position is a location in a proto file: 1-based line and column.
-type Position = meta.Position
-
 type (
 	// Rule is an interface for a rule checking.
 	Rule interface {
@@ -29,9 +26,21 @@ type (
 		Path string
 	}
 
+	// Position represents a source location within a proto file.
+	Position struct {
+		// Filename is the name of the file, if any.
+		Filename string
+		// Offset is the byte offset, starting at 0.
+		Offset int
+		// Line is the 1-based line number.
+		Line int
+		// Column is the 1-based column number.
+		Column int
+	}
+
 	// Issue contains the information of an issue.
 	Issue struct {
-		Position   meta.Position
+		Position   Position
 		SourceName string
 		Message    string
 		RuleName   string
@@ -54,6 +63,14 @@ type (
 	}
 )
 
+// String formats the position as filename:line:column or line:column.
+func (p Position) String() string {
+	if p.Filename != "" {
+		return fmt.Sprintf("%s:%d:%d", p.Filename, p.Line, p.Column)
+	}
+	return fmt.Sprintf("%d:%d", p.Line, p.Column)
+}
+
 func GetPackageName(protoFile *unordered.Proto) PackageName {
 	if len(protoFile.ProtoBody.Packages) == 0 {
 		return ""
@@ -66,7 +83,7 @@ func GetPackageName(protoFile *unordered.Proto) PackageName {
 func AppendIssue(
 	issues []Issue, lintRule Rule, pos meta.Position, sourceName string, comments []*parser.Comment,
 ) []Issue {
-	return append(issues, buildError(lintRule, pos, sourceName))
+	return append(issues, buildError(lintRule, Position(pos), sourceName))
 }
 
 // GetRuleName returns rule name
@@ -94,7 +111,7 @@ func toUpperSnakeCase(s string) string {
 }
 
 // buildError creates an Issue.
-func buildError(lintRule Rule, pos meta.Position, sourceName string) Issue {
+func buildError(lintRule Rule, pos Position, sourceName string) Issue {
 	return Issue{
 		Position:   pos,
 		SourceName: sourceName,
