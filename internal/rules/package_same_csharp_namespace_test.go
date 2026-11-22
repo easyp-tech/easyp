@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"github.com/yoheimuta/go-protoparser/v4/parser/meta"
 
 	"github.com/easyp-tech/easyp/internal/core"
 	"github.com/easyp-tech/easyp/internal/rules"
@@ -34,7 +33,7 @@ func TestPackageSameCSharpNamespace_Validate(t *testing.T) {
 		"invalid": {
 			fileNames: []string{invalidAuthProto5, invalidAuthProto6},
 			wantIssues: &core.Issue{
-				Position: meta.Position{
+				Position: core.Position{
 					Filename: "",
 					Offset:   142,
 					Line:     9,
