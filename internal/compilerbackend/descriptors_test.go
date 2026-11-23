@@ -1,9 +1,8 @@
-package compiler
+package compilerbackend
 
 import (
 	"io"
 	"io/fs"
-	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -27,16 +26,11 @@ message First { option (custom.note) = "kept"; shared.Value value = 1; }`,
 		"preview/shared.proto": `syntax = "proto3"; package shared; message Value { bool text = 1; }`,
 		"preview/broken.proto": `this unimported file must never be parsed`,
 	}
-	resolve := StandardImports(func(name string) (io.ReadCloser, error) {
-		source, ok := sources[name]
-		if !ok {
-			return nil, fs.ErrNotExist
-		}
-		return io.NopCloser(strings.NewReader(source)), nil
-	})
-	options := Options{Resolve: resolve, SourceInfo: true}
-	targets := []string{"second.proto", "first.proto", "second.proto"}
-	compiled, err := CompileDescriptorSet(t.Context(), targets, options)
+	req := Request{
+		Files:    []string{"second.proto", "first.proto", "second.proto"},
+		Accessor: mapAccessor(sources), StandardImports: true, SourceInfo: true,
+	}
+	compiled, err := CompileDescriptorSet(t.Context(), req)
 	require.NoError(t, err)
 	var names []string
 	for _, file := range compiled.Files {
@@ -65,7 +59,7 @@ message First { option (custom.note) = "kept"; shared.Value value = 1; }`,
 	compiled.Files[0].Name = proto.String("mutated.proto")
 	compiled.Files[len(compiled.Files)-1].MessageType[0].Name = proto.String("Mutated")
 	compiled.Dependencies[0] = "mutated.proto"
-	again, err := CompileDescriptorSet(t.Context(), targets, options)
+	again, err := CompileDescriptorSet(t.Context(), req)
 	require.NoError(t, err)
 	assert.True(t, proto.Equal(want, &descriptorpb.FileDescriptorSet{File: again.Files}))
 	assert.Equal(t, []string{"google/protobuf/descriptor.proto", "options.proto", "shared.proto"}, again.Dependencies)
@@ -73,8 +67,9 @@ message First { option (custom.note) = "kept"; shared.Value value = 1; }`,
 
 func TestCompileDescriptorSetKeepsResolverFailure(t *testing.T) {
 	t.Parallel()
-	compiled, err := CompileDescriptorSet(t.Context(), []string{"denied.proto"}, Options{
-		Resolve: func(string) (io.ReadCloser, error) { return nil, fs.ErrPermission },
+	compiled, err := CompileDescriptorSet(t.Context(), Request{
+		Files:    []string{"denied.proto"},
+		Accessor: func(string) (io.ReadCloser, error) { return nil, fs.ErrPermission },
 	})
 	require.ErrorIs(t, err, fs.ErrPermission)
 	assert.Empty(t, compiled.Files)

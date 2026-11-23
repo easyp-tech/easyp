@@ -1,4 +1,4 @@
-package compiler
+package compilerbackend
 
 import (
 	"io"
@@ -51,8 +51,9 @@ func TestCompileOpensOnlyReachableDependencyFiles(t *testing.T) {
 			}
 			var mu sync.Mutex
 			opened := make(map[string]bool)
-			set, err := CompileDescriptorSet(t.Context(), []string{"request.proto"}, Options{
-				Resolve: func(name string) (io.ReadCloser, error) {
+			set, err := CompileDescriptorSet(t.Context(), Request{
+				Files: []string{"request.proto"},
+				Accessor: func(name string) (io.ReadCloser, error) {
 					mu.Lock()
 					opened[name] = true
 					mu.Unlock()

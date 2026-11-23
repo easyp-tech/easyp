@@ -1,4 +1,4 @@
-package compiler
+package compilerbackend
 
 import (
 	"context"
@@ -9,6 +9,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/easyp-tech/easyprotoc/protoc"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/protobuf/reflect/protodesc"
@@ -30,8 +31,9 @@ func TestCompileUsesAuthorizedVirtualSourcesAndTargetOrder(t *testing.T) {
 		}
 		return io.NopCloser(strings.NewReader(text)), nil
 	}
-	set, err := CompileDescriptorSet(t.Context(), []string{"b.proto", "a.proto", "b.proto"}, Options{
-		Resolve: SourceResolver([]string{root}, accessor, true), SourceInfo: true,
+	set, err := CompileDescriptorSet(t.Context(), Request{
+		Files: []string{"b.proto", "a.proto", "b.proto"}, ImportPaths: []string{root},
+		Accessor: accessor, StandardImports: true, SourceInfo: true,
 	})
 	require.NoError(t, err)
 	require.Len(t, set.Files, 3)
@@ -48,34 +50,37 @@ func TestCompilePreservesResolverFailure(t *testing.T) {
 	for _, tt := range []struct {
 		name string
 		err  error
+		want error
 	}{
-		{name: "permission", err: fs.ErrPermission},
-		{name: "missing", err: fs.ErrNotExist},
+		{name: "permission", err: fs.ErrPermission, want: fs.ErrPermission},
+		{name: "missing", err: fs.ErrNotExist, want: protoc.ErrFileNotFound},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			set, err := CompileDescriptorSet(t.Context(), []string{"entry.proto"}, Options{Resolve: func(name string) (io.ReadCloser, error) {
+			set, err := CompileDescriptorSet(t.Context(), Request{Files: []string{"entry.proto"}, Accessor: func(name string) (io.ReadCloser, error) {
 				if name == "entry.proto" {
 					return io.NopCloser(strings.NewReader("syntax=\"proto3\";\n\n\nimport \"denied.proto\";\nmessage Entry {}")), nil
 				}
 				return nil, tt.err
 			}})
-			require.ErrorIs(t, err, tt.err)
+			require.ErrorIs(t, err, tt.want)
 			assert.Empty(t, set.Files)
 			assert.Contains(t, err.Error(), "denied.proto")
 		})
 	}
 }
 
-func TestSourceResolverRespectsRootOrderAndTerminalErrors(t *testing.T) {
+func TestDescriptorCompileRespectsRootOrderAndTerminalErrors(t *testing.T) {
 	t.Parallel()
 	denied := errors.New("source denied")
 	var opened []string
-	resolve := SourceResolver([]string{"first", "second"}, func(name string) (io.ReadCloser, error) {
-		opened = append(opened, name)
-		return nil, denied
-	}, true)
-	_, err := resolve("google/protobuf/empty.proto")
+	_, err := CompileDescriptorSet(t.Context(), Request{
+		Files: []string{"google/protobuf/empty.proto"}, ImportPaths: []string{"first", "second"}, StandardImports: true,
+		Accessor: func(name string) (io.ReadCloser, error) {
+			opened = append(opened, name)
+			return nil, denied
+		},
+	})
 	require.ErrorIs(t, err, denied)
 	assert.Equal(t, []string{filepath.Join("first", "google/protobuf/empty.proto")}, opened)
 }
@@ -85,7 +90,7 @@ func TestCompileReportsSourceLocationsAndSyntaxErrors(t *testing.T) {
 	resolve := func(string) (io.ReadCloser, error) {
 		return io.NopCloser(strings.NewReader("syntax=\"proto3\";\npackage api;\nmessage Item {\n  string value=1;\n}\n")), nil
 	}
-	set, err := CompileDescriptorSet(t.Context(), []string{"api.proto"}, Options{Resolve: resolve, SourceInfo: true})
+	set, err := CompileDescriptorSet(t.Context(), Request{Files: []string{"api.proto"}, Accessor: resolve, SourceInfo: true})
 	require.NoError(t, err)
 	registry, err := protodesc.NewFiles(&descriptorpb.FileDescriptorSet{File: set.Files})
 	require.NoError(t, err)
@@ -95,7 +100,7 @@ func TestCompileReportsSourceLocationsAndSyntaxErrors(t *testing.T) {
 	location := file.SourceLocations().ByDescriptor(field)
 	assert.Equal(t, 3, location.StartLine)
 	assert.Equal(t, 2, location.StartColumn)
-	_, err = CompileDescriptorSet(t.Context(), []string{"bad.proto"}, Options{Resolve: func(string) (io.ReadCloser, error) {
+	_, err = CompileDescriptorSet(t.Context(), Request{Files: []string{"bad.proto"}, Accessor: func(string) (io.ReadCloser, error) {
 		return io.NopCloser(strings.NewReader("syntax=\"proto3\";\nmessage Item {\n  Missing value=1;\n}\n")), nil
 	}})
 	require.Error(t, err)
@@ -106,7 +111,7 @@ func TestCompileCanceledDoesNotOpenSources(t *testing.T) {
 	t.Parallel()
 	ctx, cancel := context.WithCancel(t.Context())
 	cancel()
-	_, err := CompileDescriptorSet(ctx, []string{"input.proto"}, Options{Resolve: func(string) (io.ReadCloser, error) {
+	_, err := CompileDescriptorSet(ctx, Request{Files: []string{"input.proto"}, Accessor: func(string) (io.ReadCloser, error) {
 		t.Error("canceled compilation opened a source")
 		return nil, fs.ErrNotExist
 	}})
@@ -130,7 +135,7 @@ func TestCompileClosesSourcesAndPreservesBothErrors(t *testing.T) {
 	readErr := errors.New("read failed")
 	closeErr := errors.New("close failed")
 	source := &failingSource{readErr: readErr, closeErr: closeErr}
-	set, err := CompileDescriptorSet(t.Context(), []string{"input.proto"}, Options{Resolve: func(string) (io.ReadCloser, error) { return source, nil }})
+	set, err := CompileDescriptorSet(t.Context(), Request{Files: []string{"input.proto"}, Accessor: func(string) (io.ReadCloser, error) { return source, nil }})
 	require.ErrorIs(t, err, readErr)
 	require.ErrorIs(t, err, closeErr)
 	assert.True(t, source.closed)

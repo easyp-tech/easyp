@@ -10,6 +10,7 @@ import (
 	"github.com/easyp-tech/easyp/internal/adapters/console"
 	"github.com/easyp-tech/easyp/internal/adapters/plugin"
 	"github.com/easyp-tech/easyp/internal/logger"
+	"github.com/easyp-tech/easyp/internal/sourceview"
 )
 
 // Core provide to business logic of EasyP.
@@ -26,14 +27,14 @@ type Core struct {
 	importRoots           []string
 	importFileAllowed     func(string) bool
 	sourceFileOpen        func(string) (io.ReadCloser, error)
+	sourceSession         *sourceview.Session
 	sourceFilesWalk       func(string, func(string) error) (bool, error)
 	sourceBoundary        string
 	fileModules           map[string]string
 	managedMode           ManagedModeConfig
 	goPackageOutputPrefix string
 
-	breakingCheckConfig     BreakingCheckConfig
-	currentProjectGitWalker CurrentProjectGitWalker
+	breakingCheckConfig BreakingCheckConfig
 
 	localExecutor   plugin.Executor
 	remoteExecutor  plugin.Executor
@@ -64,14 +65,16 @@ type Options struct {
 	ImportFileAllowed func(string) bool
 	// OpenSourceFile opens logical sources within their owning bounded roots.
 	OpenSourceFile func(string) (io.ReadCloser, error)
+	// SourceSession, if set, is used for local opens that bypass
+	// OpenSourceFile, so they share the command's open roots.
+	SourceSession *sourceview.Session
 	// WalkSourceFiles optionally visits verified immutable proto inputs under an
 	// absolute import root. Paths passed to the visitor are absolute. Returning
 	// false selects the normal local filesystem walk instead.
-	WalkSourceFiles         func(string, func(string) error) (bool, error)
-	FileModules             map[string]string
-	CurrentProjectGitWalker CurrentProjectGitWalker
-	BreakingCheckConfig     BreakingCheckConfig
-	ManagedModeConfig       ManagedModeConfig
+	WalkSourceFiles     func(string, func(string) error) (bool, error)
+	FileModules         map[string]string
+	BreakingCheckConfig BreakingCheckConfig
+	ManagedModeConfig   ManagedModeConfig
 	// GoPackageOutputPrefix places source-relative Go output under its effective
 	// go_package, relative to this import prefix. Path markers use their stable parent.
 	GoPackageOutputPrefix string
@@ -81,27 +84,27 @@ type Options struct {
 func New(options Options) *Core {
 	terminal := console.New()
 	return &Core{
-		rules:                   options.Rules,
-		ignore:                  options.Ignore,
-		ignoreOnly:              options.IgnoreOnly,
-		allowCommentIgnores:     options.AllowCommentIgnores,
-		knownLintRules:          slices.Clone(options.KnownLintRules),
-		logger:                  options.Logger,
-		plugins:                 options.Plugins,
-		pluginWorkDir:           options.PluginWorkDir,
-		inputs:                  options.Inputs,
-		importRoots:             slices.Clone(options.ImportRoots),
-		importFileAllowed:       options.ImportFileAllowed,
-		sourceFileOpen:          options.OpenSourceFile,
-		sourceFilesWalk:         options.WalkSourceFiles,
-		fileModules:             maps.Clone(options.FileModules),
-		currentProjectGitWalker: options.CurrentProjectGitWalker,
-		breakingCheckConfig:     options.BreakingCheckConfig,
-		managedMode:             options.ManagedModeConfig,
-		goPackageOutputPrefix:   options.GoPackageOutputPrefix,
-		localExecutor:           plugin.NewLocalPluginExecutor(options.Logger),
-		remoteExecutor:          plugin.NewRemotePluginExecutor(options.Logger),
-		builtinExecutor:         plugin.NewBuiltinPluginExecutor(options.Logger),
-		commandExecutor:         plugin.NewCommandPluginExecutor(terminal, options.Logger),
+		rules:                 options.Rules,
+		ignore:                options.Ignore,
+		ignoreOnly:            options.IgnoreOnly,
+		allowCommentIgnores:   options.AllowCommentIgnores,
+		knownLintRules:        slices.Clone(options.KnownLintRules),
+		logger:                options.Logger,
+		plugins:               options.Plugins,
+		pluginWorkDir:         options.PluginWorkDir,
+		inputs:                options.Inputs,
+		importRoots:           slices.Clone(options.ImportRoots),
+		importFileAllowed:     options.ImportFileAllowed,
+		sourceFileOpen:        options.OpenSourceFile,
+		sourceSession:         options.SourceSession,
+		sourceFilesWalk:       options.WalkSourceFiles,
+		fileModules:           maps.Clone(options.FileModules),
+		breakingCheckConfig:   options.BreakingCheckConfig,
+		managedMode:           options.ManagedModeConfig,
+		goPackageOutputPrefix: options.GoPackageOutputPrefix,
+		localExecutor:         plugin.NewLocalPluginExecutor(options.Logger),
+		remoteExecutor:        plugin.NewRemotePluginExecutor(options.Logger),
+		builtinExecutor:       plugin.NewBuiltinPluginExecutor(options.Logger),
+		commandExecutor:       plugin.NewCommandPluginExecutor(terminal, options.Logger),
 	}
 }

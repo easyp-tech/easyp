@@ -5,8 +5,6 @@ import (
 	"io"
 	"os"
 	"path/filepath"
-
-	"github.com/easyp-tech/easyp/internal/sourceview"
 )
 
 // openSourceFile is shared by descriptor compilation and syntax-based import lookup.
@@ -24,8 +22,8 @@ func (c *Core) openSourceFile(path string) (io.ReadCloser, error) {
 		}
 		relative, err := filepath.Rel(root, path)
 		if err == nil && filepath.IsLocal(relative) {
-			return sourceview.OpenLocal(context.Background(), root, relative)
+			return c.sourceSession.OpenLocal(context.Background(), root, relative)
 		}
 	}
-	return sourceview.OpenLocal(context.Background(), filepath.Dir(path), filepath.Base(path))
+	return c.sourceSession.OpenLocal(context.Background(), filepath.Dir(path), filepath.Base(path))
 }

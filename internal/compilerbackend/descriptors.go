@@ -1,4 +1,4 @@
-package compiler
+package compilerbackend
 
 import (
 	"context"
@@ -8,6 +8,8 @@ import (
 	"google.golang.org/protobuf/encoding/protowire"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/reflect/protodesc"
+	"google.golang.org/protobuf/reflect/protoreflect"
+	"google.golang.org/protobuf/reflect/protoregistry"
 	"google.golang.org/protobuf/types/descriptorpb"
 	"google.golang.org/protobuf/types/dynamicpb"
 
@@ -23,9 +25,12 @@ type DescriptorSet struct {
 
 // CompileDescriptorSet returns validated descriptor messages with typed custom
 // options and dependencies ordered before the files that import them.
-func CompileDescriptorSet(ctx context.Context, targets []string, options Options) (DescriptorSet, error) {
-	set, err := compileDescriptors(ctx, targets, options)
-	if err != nil || set == nil {
+func CompileDescriptorSet(ctx context.Context, req Request) (DescriptorSet, error) {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	set, err := compileDescriptors(ctx, req)
+	if err != nil {
 		return DescriptorSet{}, err
 	}
 	byName := make(map[string]*descriptorpb.FileDescriptorProto, len(set.File))
@@ -58,7 +63,7 @@ func CompileDescriptorSet(ctx context.Context, targets []string, options Options
 		}
 		return nil
 	}
-	for _, target := range targets {
+	for _, target := range req.Files {
 		if err := visit(filepath.ToSlash(filepath.Clean(target)), false); err != nil {
 			return DescriptorSet{}, fmt.Errorf("visit: %w", err)
 		}
@@ -66,13 +71,13 @@ func CompileDescriptorSet(ctx context.Context, targets []string, options Options
 	return descriptors, nil
 }
 
-func compileDescriptors(ctx context.Context, targets []string, options Options) (*descriptorpb.FileDescriptorSet, error) {
-	result, err := compileNative(ctx, targets, options)
-	if err != nil || result == nil {
+func compileDescriptors(ctx context.Context, req Request) (*descriptorpb.FileDescriptorSet, error) {
+	result, err := compileEasyprotoc(ctx, req)
+	if err != nil {
 		return nil, err
 	}
 	wire := result.WireBytes()
-	set, err := decodeDescriptorSet(ctx, wire, options.MaxParallelism, proto.UnmarshalOptions{})
+	set, err := decodeDescriptorSet(ctx, wire, req.MaxParallelism, proto.UnmarshalOptions{})
 	if err != nil {
 		return nil, fmt.Errorf("decodeDescriptorSet: %w", err)
 	}
@@ -82,13 +87,33 @@ func compileDescriptors(ctx context.Context, targets []string, options Options) 
 	}
 	if hasExtensions(set) {
 		// Use the checked registry to decode user-defined option fields.
-		unmarshal := proto.UnmarshalOptions{Resolver: dynamicpb.NewTypes(registry)}
-		set, err = decodeDescriptorSet(ctx, wire, options.MaxParallelism, unmarshal)
+		unmarshal := proto.UnmarshalOptions{Resolver: descriptorExtensions{dynamicpb.NewTypes(registry)}}
+		set, err = decodeDescriptorSet(ctx, wire, req.MaxParallelism, unmarshal)
 		if err != nil {
 			return nil, fmt.Errorf("decode custom options: %w", err)
 		}
 	}
 	return set, ctx.Err()
+}
+
+type descriptorExtensions struct {
+	*dynamicpb.Types
+}
+
+func (r descriptorExtensions) FindExtensionByName(name protoreflect.FullName) (protoreflect.ExtensionType, error) {
+	extension, err := r.Types.FindExtensionByName(name)
+	if err == protoregistry.NotFound {
+		return protoregistry.GlobalTypes.FindExtensionByName(name)
+	}
+	return extension, err
+}
+
+func (r descriptorExtensions) FindExtensionByNumber(message protoreflect.FullName, number protoreflect.FieldNumber) (protoreflect.ExtensionType, error) {
+	extension, err := r.Types.FindExtensionByNumber(message, number)
+	if err == protoregistry.NotFound {
+		return protoregistry.GlobalTypes.FindExtensionByNumber(message, number)
+	}
+	return extension, err
 }
 
 func hasExtensions(set *descriptorpb.FileDescriptorSet) bool {

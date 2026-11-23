@@ -7,7 +7,7 @@ require (
 	github.com/a8m/envsubst v1.4.3
 	github.com/bufbuild/protocompile v0.14.1
 	github.com/charmbracelet/x/term v0.2.1
-	github.com/easyp-tech/easyprotoc v0.0.0-20261116213945-33d964cb33fa
+	github.com/easyp-tech/easyprotoc v0.1.1-0.20261123230332-d7e9d3660d5d
 	github.com/easyp-tech/service/api v1.0.0
 	github.com/go-git/go-billy/v5 v5.6.2
 	github.com/go-git/go-git/v5 v5.16.3
@@ -21,7 +21,7 @@ require (
 	golang.org/x/mod v0.38.0
 	golang.org/x/sys v0.47.0
 	google.golang.org/grpc v1.83.2
-	google.golang.org/protobuf v1.37.0-rc.1
+	google.golang.org/protobuf v1.36.12
 	gopkg.in/yaml.v3 v3.0.1
 )
 
@@ -58,7 +58,6 @@ require (
 	golang.org/x/exp v0.0.0-20250408133849-7e4ce0ab07d0 // indirect
 	golang.org/x/net v0.58.0 // indirect
 	golang.org/x/oauth2 v0.36.0 // indirect
-	golang.org/x/sync v0.22.0 // indirect
 	golang.org/x/text v0.41.0 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20260526163538-3dc84a4a5aaa // indirect
 	gopkg.in/warnings.v0 v0.1.2 // indirect

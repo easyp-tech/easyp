@@ -6,16 +6,15 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
-	"slices"
 
 	"github.com/urfave/cli/v2"
 
-	"github.com/easyp-tech/easyp/internal/adapters/go_git"
 	"github.com/easyp-tech/easyp/internal/config"
 	"github.com/easyp-tech/easyp/internal/core"
 	"github.com/easyp-tech/easyp/internal/logger"
 	"github.com/easyp-tech/easyp/internal/modules"
 	"github.com/easyp-tech/easyp/internal/rules"
+	"github.com/easyp-tech/easyp/internal/sourceview"
 )
 
 // getLogger extracts the logger.Logger from CLI context metadata.
@@ -59,28 +58,29 @@ func getEasypPath(log logger.Logger) (string, error) {
 	return easypPath, nil
 }
 
-func buildCore(log logger.Logger, cfg config.Config, importRoots modules.SourceRoots) (*core.Core, error) {
+// buildCore builds a Core configured to open sources through session, which the
+// caller closes when the command finishes.
+func buildCore(log logger.Logger, cfg config.Config, importRoots modules.SourceRoots, session *sourceview.Session) (*core.Core, error) {
 
 	lintRules, ignoreOnly, err := rules.New(cfg.Lint)
 	if err != nil {
 		return nil, fmt.Errorf("New: %w", err)
 	}
 
+	allowed := importRoots.FileAllowed()
 	return core.New(core.Options{
-		Rules:                   lintRules,
-		Ignore:                  append(append([]string(nil), cfg.Lint.Ignore...), defaultVendorDir),
-		IgnoreOnly:              ignoreOnly,
-		AllowCommentIgnores:     cfg.Lint.AllowCommentIgnores,
-		KnownLintRules:          rules.AllRuleNames(),
-		Logger:                  log,
-		ImportRoots:             importRoots.Paths(),
-		ImportFileAllowed:       importRoots.FileAllowed(),
-		OpenSourceFile:          importRoots.OpenSourceFile,
-		CurrentProjectGitWalker: go_git.New(),
+		Rules:               lintRules,
+		Ignore:              append(append([]string(nil), cfg.Lint.Ignore...), defaultVendorDir),
+		IgnoreOnly:          ignoreOnly,
+		AllowCommentIgnores: cfg.Lint.AllowCommentIgnores,
+		KnownLintRules:      rules.AllRuleNames(),
+		Logger:              log,
+		ImportRoots:         importRoots.Paths(),
+		ImportFileAllowed:   allowed,
+		OpenSourceFile:      importRoots.SourceOpenerIn(session, allowed),
+		SourceSession:       session,
 		BreakingCheckConfig: core.BreakingCheckConfig{
 			IgnoreDirs:     append(append([]string(nil), cfg.BreakingCheck.Ignore...), defaultVendorDir),
-			AgainstGitRef:  cfg.BreakingCheck.AgainstGitRef,
-			FilesCheck:     slices.Contains(cfg.BreakingCheck.Use, core.BreakingCheckFilesCheck),
 			Categories:     cfg.BreakingCheck.Categories,
 			IgnoreUnstable: cfg.BreakingCheck.IgnoreUnstable,
 		},

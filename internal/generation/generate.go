@@ -30,6 +30,9 @@ type Request struct {
 	DescriptorSetOut    string
 	DescriptorSetOutDir string
 	IncludeImports      bool
+
+	// session keeps bounded source roots open for one Run invocation.
+	session *sourceview.Session
 }
 
 type generationTarget struct {
@@ -54,6 +57,13 @@ func Run(ctx context.Context, log logger.Logger, cache modules.Cache, request Re
 		return fmt.Errorf("--descriptor_set_out and --descriptor_set_out_dir are mutually exclusive")
 	}
 	exportDescriptors := request.DescriptorSetOut != "" || request.DescriptorSetOutDir != ""
+	request.session = sourceview.NewSession()
+	defer func() {
+		err := request.session.Close()
+		if err != nil {
+			resultErr = errors.Join(resultErr, fmt.Errorf("Close: %w", err))
+		}
+	}()
 	workDir, err := filepath.Abs(request.WorkDir)
 	if err != nil {
 		return fmt.Errorf("Abs: %w", err)

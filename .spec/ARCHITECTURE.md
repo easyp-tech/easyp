@@ -101,11 +101,11 @@ Local replacements use an ephemeral main-module overlay graph and never alter th
 
 ## Generation
 
-Generation uses the <code>github.com/easyp-tech/easyprotoc/protoc</code> Go library through <code>internal/compiler</code>. The adapter requests the complete import closure, decodes the descriptor messages in parallel, validates the graph, and interprets custom options using its extension definitions. Resolver-only mode makes the caller's source view authoritative for exclusions, permissions and virtual sources. Embedded standard sources are resolved only after a not-found result.
+Generation, breaking checks, tidy import rewrites and migration source-binding proofs compile through <code>internal/compilerbackend</code> using the <code>easyprotoc/protoc</code> Go library. The backend requests the import closure and uses the caller's source accessor for exclusions, permissions and virtual sources. Embedded standard sources are resolved only after a not-found result.
 
-Breaking graphs, tidy import rewrites and migration source-binding proofs use <code>protocompile</code>. Lint uses <code>go-protoparser</code>. Plugin compiler metadata identifies <code>easyp-protoc</code> and the pinned library version.
+Lint uses <code>go-protoparser</code>. Plugin compiler metadata identifies the EasyP version.
 
-Generation uses <code>CompileDescriptorSet</code> to consume the decoded messages in target and import traversal order. It validates managed transformations when preparing the plan. <code>GenerationPlan.Targets</code> copies selected logical names, and <code>DescriptorSet</code> returns independent descriptor copies. Export reuses the validated snapshot for a single graph or directory output and validates each multi-graph union for conflicting descriptors and symbols.
+Generation uses <code>CompileDescriptorSet</code> to decode files in parallel, validate the descriptor graph and resolve custom options. It consumes the decoded messages in target and import traversal order and validates managed transformations when preparing the plan. Export reuses the validated snapshot for a single graph or directory output and validates each multi-graph union for conflicting descriptors and symbols.
 
 ~~~text
 api.Generate.Action: flags + cwd + cache

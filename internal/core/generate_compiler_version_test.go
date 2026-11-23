@@ -69,10 +69,7 @@ func TestGenerateSetsCompilerVersionInRequest(t *testing.T) {
 	}
 
 	suffix := compilerVersion.GetSuffix()
-	if !strings.Contains(suffix, "easyp-protoc-") {
-		t.Fatalf("compiler_version suffix = %q, expected easyp-protoc marker", suffix)
-	}
-	if !strings.Contains(suffix, "-easyp") {
+	if !strings.HasPrefix(suffix, "easyp") {
 		t.Fatalf("compiler_version suffix = %q, expected easyp marker", suffix)
 	}
 }
@@ -200,9 +197,6 @@ func assertNoUnknownCompilerVersion(t *testing.T, content string) {
 func assertCompilerVersionMarkerPresent(t *testing.T, content string) {
 	t.Helper()
 
-	if !strings.Contains(content, "easyp-protoc-") {
-		t.Fatalf("generated file does not contain easyp-protoc marker")
-	}
 	if !strings.Contains(content, "-easyp") {
 		t.Fatalf("generated file does not contain easyp marker")
 	}

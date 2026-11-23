@@ -20,20 +20,27 @@ type (
 		Validate(ProtoInfo) ([]Issue, error)
 	}
 
-	// CurrentProjectGitWalker is provider for fs walking for current project
-	CurrentProjectGitWalker interface {
-		GetDirWalker(workingDir, gitRef, path string) (DirWalker, error)
-	}
-
 	// IssueInfo contains the information of an issue and the path.
 	IssueInfo struct {
 		Issue
 		Path string
 	}
 
+	// Position represents a source location within a proto file.
+	Position struct {
+		// Filename is the name of the file, if any.
+		Filename string
+		// Offset is the byte offset, starting at 0.
+		Offset int
+		// Line is the 1-based line number.
+		Line int
+		// Column is the 1-based column number.
+		Column int
+	}
+
 	// Issue contains the information of an issue.
 	Issue struct {
-		Position   meta.Position
+		Position   Position
 		SourceName string
 		Message    string
 		RuleName   string
@@ -54,57 +61,15 @@ type (
 		Info                 *unordered.Proto
 		ProtoFilesFromImport map[ImportPath]*unordered.Proto
 	}
-
-	Import struct {
-		ProtoFilePath string
-		PackageName   PackageName
-		*parser.Import
-	}
-
-	Service struct {
-		ProtoFilePath string
-		PackageName   PackageName
-		*unordered.Service
-	}
-
-	Message struct {
-		MessagePath   string
-		ProtoFilePath string
-		PackageName   PackageName
-		*unordered.Message
-	}
-
-	OneOf struct {
-		OneOfPath     string
-		ProtoFilePath string
-		PackageName   PackageName
-		*parser.Oneof
-	}
-
-	Enum struct {
-		EnumPath      string
-		ProtoFilePath string
-		PackageName   PackageName
-		*unordered.Enum
-	}
-
-	Collection struct {
-		Imports  map[ImportPath]Import
-		Services map[string]Service
-		// key message path - for supporting nested messages:
-		// message MainMessage {
-		// 		message NestedMessage{};
-		// };
-		// will be: MainMessage.NestedMessage
-		Messages map[string]Message
-		OneOfs   map[string]OneOf
-		Enums    map[string]Enum
-	}
-
-	// collects proto data collections
-	// packageName -> services,messages etc
-	ProtoData map[PackageName]*Collection
 )
+
+// String formats the position as filename:line:column or line:column.
+func (p Position) String() string {
+	if p.Filename != "" {
+		return fmt.Sprintf("%s:%d:%d", p.Filename, p.Line, p.Column)
+	}
+	return fmt.Sprintf("%d:%d", p.Line, p.Column)
+}
 
 func GetPackageName(protoFile *unordered.Proto) PackageName {
 	if len(protoFile.ProtoBody.Packages) == 0 {
@@ -118,7 +83,7 @@ func GetPackageName(protoFile *unordered.Proto) PackageName {
 func AppendIssue(
 	issues []Issue, lintRule Rule, pos meta.Position, sourceName string, comments []*parser.Comment,
 ) []Issue {
-	return append(issues, buildError(lintRule, pos, sourceName))
+	return append(issues, buildError(lintRule, Position(pos), sourceName))
 }
 
 // GetRuleName returns rule name
@@ -146,7 +111,7 @@ func toUpperSnakeCase(s string) string {
 }
 
 // buildError creates an Issue.
-func buildError(lintRule Rule, pos meta.Position, sourceName string) Issue {
+func buildError(lintRule Rule, pos Position, sourceName string) Issue {
 	return Issue{
 		Position:   pos,
 		SourceName: sourceName,

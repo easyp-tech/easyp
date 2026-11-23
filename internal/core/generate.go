@@ -20,7 +20,7 @@ import (
 	"google.golang.org/protobuf/types/pluginpb"
 
 	pluginexecutor "github.com/easyp-tech/easyp/internal/adapters/plugin"
-	"github.com/easyp-tech/easyp/internal/compiler"
+	"github.com/easyp-tech/easyp/internal/compilerbackend"
 	"github.com/easyp-tech/easyp/internal/core/path_helpers"
 	"github.com/easyp-tech/easyp/internal/parallel"
 	"github.com/easyp-tech/easyp/internal/sourceview"
@@ -145,9 +145,12 @@ func (c *Core) prepareGeneration(ctx context.Context, root string, selected []st
 	// Search local roots before dependency roots.
 	slices.Reverse(imports)
 
-	compiled, err := compiler.CompileDescriptorSet(ctx, files, compiler.Options{
-		Resolve:    compiler.SourceResolver(imports, c.openSourceFile, true),
-		SourceInfo: true,
+	compiled, err := compilerbackend.CompileDescriptorSet(ctx, compilerbackend.Request{
+		Files:           files,
+		ImportPaths:     imports,
+		Accessor:        c.openSourceFile,
+		StandardImports: true,
+		SourceInfo:      true,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("CompileDescriptorSet: %w", err)
