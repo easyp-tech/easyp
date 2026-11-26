@@ -14,11 +14,3 @@ func isUnstablePackage(name PackageName) bool {
 	component = component[strings.LastIndexByte(component, '.')+1:]
 	return unstablePackageVersion.MatchString(component)
 }
-
-func excludeUnstablePackages(data ProtoData) {
-	for name := range data {
-		if isUnstablePackage(name) {
-			delete(data, name)
-		}
-	}
-}

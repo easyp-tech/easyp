@@ -174,10 +174,10 @@ func (r *lintResolver) FindFileByPath(ctx context.Context, path string) ([]byte,
 		// dangling source alias (:176), a nested-repository crossing (:209).
 		// Either shape sets broken so the classifier falls back instead of
 		// letting the compiler mask the cause as a misleading "not
-		// found"-shaped COMPILE remark. The deliberate plain rejections —
-		// openImportFile's "invalid import path" and the missing
-		// classification above — stay raw, keeping the etalon A4 COMPILE
-		// classification for non-local imports.
+		// found"-shaped COMPILE remark. Plain rejections such as
+		// openImportFile's "invalid import path" are propagated directly by
+		// easyprotoc as non-compilation errors, so they also fall back to the
+		// per-file path and preserve the original command error.
 		var pathErr *os.PathError
 		if errors.As(err, &pathErr) {
 			r.broken.Store(true)

@@ -47,10 +47,11 @@ func TestReadFileFromImportSearchOrder(t *testing.T) {
 			}
 			app := &Core{logger: logger.NewNop(), importRoots: []string{first, second}}
 
-			file, err := app.readFileFromImport(t.Context(), fs.NewFSWalker(project, "."), importName)
+			file, err := app.linkedFileFromImport(t.Context(), fs.NewFSWalker(project, "."), importName)
 
 			require.NoError(t, err)
-			assert.Equal(t, tt.wantPackage, GetPackageName(file))
+			require.Len(t, file.Packages, 1)
+			assert.Equal(t, tt.wantPackage, PackageName(file.Packages[0].Name))
 		})
 	}
 }
@@ -84,7 +85,7 @@ func TestReadFileFromImportClosesOpenedFile(t *testing.T) {
 			disk := &mockImportFS{file: file}
 			app := &Core{logger: logger.NewNop()}
 
-			_, err = app.readFileFromImport(t.Context(), disk, "item.proto")
+			_, err = app.linkedFileFromImport(t.Context(), disk, "item.proto")
 
 			if tt.wantMessage != "" {
 				assert.ErrorContains(t, err, tt.wantMessage)
@@ -126,7 +127,7 @@ func TestReadFileFromImportPreservesErrors(t *testing.T) {
 			app := &Core{logger: logger.NewNop()}
 			disk := &mockImportFS{err: tt.openErr}
 
-			_, err := app.readFileFromImport(t.Context(), disk, tt.importName)
+			_, err := app.linkedFileFromImport(t.Context(), disk, tt.importName)
 
 			switch {
 			case tt.wantErr != nil:
@@ -138,42 +139,6 @@ func TestReadFileFromImportPreservesErrors(t *testing.T) {
 			default:
 				require.ErrorContains(t, err, tt.wantMessage)
 			}
-		})
-	}
-}
-
-func TestBreakingProtoInfoReadErrorLabels(t *testing.T) {
-	t.Parallel()
-
-	tests := []struct {
-		name      string
-		content   string
-		wantLabel string
-	}{
-		{name: "open_failure", wantLabel: "Open:"},
-		{name: "parse_failure", content: "invalid proto", wantLabel: "readProtoFileWithDirectives:"},
-		{
-			name:      "import_failure",
-			content:   "syntax = \"proto3\";\n\nimport \"missing.proto\";\n\npackage twins;\n",
-			wantLabel: "readFilesFromImport:",
-		},
-	}
-
-	for _, tt := range tests {
-		tt := tt
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-
-			root := t.TempDir()
-			if tt.content != "" {
-				writeImportSource(t, root, "item.proto", tt.content)
-			}
-			engine := &Core{logger: logger.NewNop(), importRoots: []string{root}}
-
-			_, err := engine.breakingProtoInfoRead(t.Context(), fs.NewFSWalker(root, "."), "item.proto")
-
-			require.Error(t, err)
-			assert.ErrorContains(t, err, tt.wantLabel)
 		})
 	}
 }

@@ -10,5 +10,3 @@ node_modules
 .rules-mcp
 
 /examples/generated/
-.planning/state.json
-.planning/research/.cache/

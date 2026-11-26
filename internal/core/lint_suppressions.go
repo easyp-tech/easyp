@@ -2,10 +2,56 @@ package core
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/easyp-tech/easyp/internal/protoast"
 )
+
+type suppressionRange struct {
+	rule        string
+	first, last int
+}
+
+type suppressionRanges []suppressionRange
+
+func (ranges suppressionRanges) contains(rule string, line int) bool {
+	for _, r := range ranges {
+		if r.rule == rule && line >= r.first && line <= r.last {
+			return true
+		}
+	}
+	return false
+}
+
+func compactDirectiveNames(names []string) []string {
+	var result []string
+	for _, name := range names {
+		if !slices.Contains(result, name) {
+			result = append(result, name)
+		}
+	}
+	return result
+}
+
+func parseDirectivePrefix(text string) (string, string, bool) {
+	for _, prefix := range []struct{ text, action string }{{"easyp:disable", "disable"}, {"easyp:enable", "enable"}, {"nolint:", "legacy"}, {"buf:lint:ignore", "legacy"}} {
+		if !strings.HasPrefix(text, prefix.text) {
+			continue
+		}
+		rest := strings.TrimPrefix(text, prefix.text)
+		if !strings.HasSuffix(prefix.text, ":") && rest != "" && rest[0] != ' ' && rest[0] != '\t' {
+			return "", "", true
+		}
+		rest, _, _ = strings.Cut(rest, " -- ")
+		rest, _, _ = strings.Cut(rest, " // ")
+		return prefix.action, strings.TrimSpace(rest), true
+	}
+	if strings.HasPrefix(text, "easyp:") {
+		return "", "", true
+	}
+	return "", "", false
+}
 
 // linkedDirectiveComment is a comment with the line range of the declaration
 // it annotates; first is 0 when it annotates nothing.

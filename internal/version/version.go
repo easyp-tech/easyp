@@ -12,17 +12,15 @@ import (
 )
 
 const (
-	develVersion           = "devel"
-	unknownVersion         = "unknown"
-	develMainVersion       = "(devel)"
-	protocompileModulePath = "github.com/bufbuild/protocompile"
-	revisionPrefix         = 7
+	develVersion     = "devel"
+	unknownVersion   = "unknown"
+	develMainVersion = "(devel)"
+	revisionPrefix   = 7
 )
 
 type buildMetadata struct {
-	easypVersion        string
-	protocompileVersion string
-	compilerVersion     *pluginpb.Version
+	easypVersion    string
+	compilerVersion *pluginpb.Version
 }
 
 var (
@@ -62,16 +60,10 @@ func buildMetadataFromBuildInfo(bi *debug.BuildInfo, release string) buildMetada
 	if easypVersion == "" {
 		easypVersion = easypVersionFromBuildInfo(bi)
 	}
-	protocompileVersion := dependencyVersion(bi, protocompileModulePath)
 
-	return buildMetadataFromVersions(easypVersion, protocompileVersion)
-}
-
-func buildMetadataFromVersions(easypVersion, protocompileVersion string) buildMetadata {
 	return buildMetadata{
-		easypVersion:        easypVersion,
-		protocompileVersion: protocompileVersion,
-		compilerVersion:     compilerVersionFromVersions(protocompileVersion, easypVersion),
+		easypVersion:    easypVersion,
+		compilerVersion: compilerVersionFromEasyp(easypVersion),
 	}
 }
 
@@ -82,7 +74,7 @@ func cloneVersion(version *pluginpb.Version) *pluginpb.Version {
 			Major:  proto.Int32(0),
 			Minor:  proto.Int32(0),
 			Patch:  proto.Int32(0),
-			Suffix: proto.String(buildCompilerSuffix(unknownVersion, "", "")),
+			Suffix: proto.String(buildCompilerSuffix(unknownVersion, "")),
 		}
 	}
 
@@ -98,16 +90,18 @@ func cloneVersion(version *pluginpb.Version) *pluginpb.Version {
 	return clone
 }
 
-func compilerVersionFromVersions(protocompileVersion, easypVersion string) *pluginpb.Version {
-	major, minor, patch := semverMajorMinorPatch(protocompileVersion)
-	_, protocompileSuffix := splitVersionCoreAndSuffix(protocompileVersion)
+// compilerVersionFromEasyp reports easyp itself as the compiler: its semantic
+// version, with the suffix marking easyp and carrying any prerelease or build
+// detail, so plugins print e.g. "v1.0.0-easyp".
+func compilerVersionFromEasyp(easypVersion string) *pluginpb.Version {
 	easypCore, easypSuffix := splitVersionCoreAndSuffix(easypVersion)
+	major, minor, patch := semverMajorMinorPatch(easypCore)
 
 	return &pluginpb.Version{
 		Major:  proto.Int32(major),
 		Minor:  proto.Int32(minor),
 		Patch:  proto.Int32(patch),
-		Suffix: proto.String(buildCompilerSuffix(easypCore, protocompileSuffix, easypSuffix)),
+		Suffix: proto.String(buildCompilerSuffix(easypCore, easypSuffix)),
 	}
 }
 
@@ -144,15 +138,13 @@ func semverMajorMinorPatch(rawVersion string) (int32, int32, int32) {
 	return int32(major), int32(minor), int32(patch)
 }
 
-func buildCompilerSuffix(easypCore, protocompileSuffix, easypSuffix string) string {
-	easypCore = sanitizeSuffixToken(easypCore)
-
-	parts := []string{easypCore, "bufbuild-protocompile"}
-	if protocompileSuffix = sanitizeOptionalToken(protocompileSuffix); protocompileSuffix != "" {
-		parts = append(parts, protocompileSuffix)
+// buildCompilerSuffix names easyp and adds what the numbers cannot say: a
+// non-release core such as "devel" or a revision, then the version suffix.
+func buildCompilerSuffix(easypCore, easypSuffix string) string {
+	parts := []string{"easyp"}
+	if !semver.IsValid(easypCore) {
+		parts = append(parts, sanitizeSuffixToken(easypCore))
 	}
-
-	parts = append(parts, "easyp")
 	if easypSuffix = sanitizeOptionalToken(easypSuffix); easypSuffix != "" {
 		parts = append(parts, easypSuffix)
 	}
@@ -283,32 +275,6 @@ func replaceDirtyMarkers(value string) string {
 	value = strings.ReplaceAll(value, ".DIRTY", ".modified")
 
 	return value
-}
-
-func dependencyVersion(bi *debug.BuildInfo, modulePath string) string {
-	if bi == nil {
-		return unknownVersion
-	}
-
-	for _, dep := range bi.Deps {
-		if dep.Path != modulePath {
-			continue
-		}
-
-		if v := strings.TrimSpace(dep.Version); v != "" && v != develMainVersion {
-			return v
-		}
-
-		if dep.Replace != nil {
-			if v := strings.TrimSpace(dep.Replace.Version); v != "" && v != develMainVersion {
-				return v
-			}
-		}
-
-		return unknownVersion
-	}
-
-	return unknownVersion
 }
 
 func buildSetting(bi *debug.BuildInfo, key string) string {

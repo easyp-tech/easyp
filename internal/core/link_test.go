@@ -228,25 +228,23 @@ func TestLinkSources(t *testing.T) {
 			},
 		},
 		{
-			name:  "non_local_import_compile",
+			name:  "non_local_import_fallback",
 			paths: []string{"outside_user.proto"},
 			sources: [][]byte{
 				[]byte("syntax = \"proto3\";\n\npackage example;\n\nimport \"../outside.proto\";\n\nmessage A {\n  string name = 1;\n}\n"),
 			},
 			assert: func(t *testing.T, engine *Core, walker *fs.FSWalker, linked *protoc.Linked, issues []IssueInfo) {
 				require.Nil(t, linked)
-				require.NotEmpty(t, issues)
+				require.Nil(t, issues)
 
-				// A non-local import path fails with a plain error, not
-				// os.ErrNotExist, so the missing flag stays false and the
-				// etalon classifies the corpus as COMPILE (research A4).
-				found := false
-				for _, issue := range issues {
-					if issue.RuleName == CompileRuleName && strings.Contains(issue.Message, "../outside.proto") {
-						found = true
-					}
-				}
-				assert.True(t, found, "expected a COMPILE issue referencing the non-local import path, got: %+v", issues)
+				// A non-local import path fails with a plain resolver error
+				// ("invalid import path"), which easyprotoc v0.1.0 propagates
+				// without turning it into ErrCompilationFailed, so linkSources
+				// falls back to the per-file path and preserves the command error.
+				_, err := engine.protoInfoFromSource(t.Context(), walker, "outside_user.proto", []byte("syntax = \"proto3\";\n\npackage example;\n\nimport \"../outside.proto\";\n\nmessage A {\n  string name = 1;\n}\n"))
+				require.Error(t, err)
+				assert.ErrorContains(t, err, "invalid import path")
+				assert.ErrorContains(t, err, "../outside.proto")
 			},
 		},
 		{

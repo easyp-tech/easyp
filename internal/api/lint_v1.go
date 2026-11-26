@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	iofs "io/fs"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"slices"
@@ -108,6 +109,13 @@ func (l Lint) actionV1(ctx *cli.Context, log logger.Logger, configPath, projectR
 		return modules.ResolvePolicyGraph(graphCtx, moduleDir, cache, flags.IsFrozen(ctx))
 	})
 	var issues []core.IssueInfo
+	session := sourceview.NewSession()
+	defer func() {
+		err := session.Close()
+		if err != nil {
+			log.Error(ctx.Context, "Close", slog.Any("error", err))
+		}
+	}()
 	for _, file := range files {
 		unselectedReplacement, err := replacements.isUnselectedReplacementSource(searchDir, file)
 		if err != nil {
@@ -184,7 +192,7 @@ func (l Lint) actionV1(ctx *cli.Context, log logger.Logger, configPath, projectR
 				}
 				importRoots = roots
 			}
-			app, err := buildCore(log, config.Config{Lint: lintConfig}, importRoots)
+			app, err := buildCore(log, config.Config{Lint: lintConfig}, importRoots, session)
 			if err != nil {
 				return fmt.Errorf("buildCore: %w", err)
 			}

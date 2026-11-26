@@ -41,11 +41,13 @@ func prepareV1ModuleCore(log logger.Logger, request Request, configPath, moduleD
 	if err != nil {
 		return nil, nil, fmt.Errorf("prepareV1GeneratorConfig: %w", err)
 	}
+	allowed := allSources.FileAllowed()
 	options.Logger = log
 	options.PluginWorkDir = request.WorkDir
 	options.ImportRoots = importRoots.Paths()
-	options.ImportFileAllowed = allSources.FileAllowed()
-	options.OpenSourceFile = allSources.OpenSourceFile
+	options.ImportFileAllowed = allowed
+	options.OpenSourceFile = allSources.SourceOpenerIn(request.session, allowed)
+	options.SourceSession = request.session
 	options.WalkSourceFiles = sources.WalkSnapshotFiles
 	if options.ManagedModeConfig.Enabled || options.ManagedModeConfig.GoPackageOnly {
 		options.FileModules = owners

@@ -20,7 +20,7 @@ Human-facing docs: [README.md](README.md) and https://easyp.tech.
 | <code>cmd/easyp</code> | CLI entrypoint |
 | <code>internal/api</code> | CLI command wiring |
 | <code>internal/core</code> | Proto parsing, lint/breaking engines and low-level plugin execution |
-| <code>internal/protoast</code> | Local adaptation seam over the compiler's syntax tree (rune-column positions, divergence D-07); the package is not migrated into the module |
+| <code>internal/protoast</code> | Local adaptation seam over the compiler's syntax tree (rune-column positions); the package is not migrated into the module |
 | <code>internal/modules</code> | Dependency resolution, manifest/lock operations, import roots and vendoring |
 | <code>internal/generation</code> | Consumer-project discovery, module selection, inherited generation options and descriptor export |
 | <code>internal/migration</code> | Legacy-to-v1 migration plans, validation and guarded apply |

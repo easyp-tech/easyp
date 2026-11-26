@@ -650,7 +650,7 @@ cmd_artifact() {
 
   # Save a snapshot of the artifact being registered (revision tracking)
   local rev_count
-  rev_count="$(read_field "revision_count_${phase}" 2>/dev/null || echo "")"
+  rev_count="$(read_field "revision_count_${phase}")"
   [ -z "$rev_count" ] && rev_count=0
   rev_count=$((rev_count + 1))
   local rev_name

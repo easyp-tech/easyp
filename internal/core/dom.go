@@ -5,25 +5,13 @@ import (
 	"strings"
 	"unicode"
 
-	"github.com/yoheimuta/go-protoparser/v4/interpret/unordered"
-	"github.com/yoheimuta/go-protoparser/v4/parser"
-	"github.com/yoheimuta/go-protoparser/v4/parser/meta"
-
 	"github.com/easyp-tech/easyp/internal/protoast"
 )
 
-// Position is a source position carried by issues. It is an alias of
-// protoast.Position so lint findings already speak the type the future engine
-// emits; go-protoparser values are converted at the AppendIssue boundary via
-// fromMetaPos.
+// Position is a source position carried by issues.
 type Position = protoast.Position
 
 type (
-	// CurrentProjectGitWalker is provider for fs walking for current project
-	CurrentProjectGitWalker interface {
-		GetDirWalker(workingDir, gitRef, path string) (DirWalker, error)
-	}
-
 	// IssueInfo contains the information of an issue and the path.
 	IssueInfo struct {
 		Issue
@@ -43,65 +31,7 @@ type (
 
 	// PackageName type alias for package name `package` section in protofile.
 	PackageName string
-
-	Import struct {
-		ProtoFilePath string
-		PackageName   PackageName
-		*parser.Import
-	}
-
-	Service struct {
-		ProtoFilePath string
-		PackageName   PackageName
-		*unordered.Service
-	}
-
-	Message struct {
-		MessagePath   string
-		ProtoFilePath string
-		PackageName   PackageName
-		*unordered.Message
-	}
-
-	OneOf struct {
-		OneOfPath     string
-		ProtoFilePath string
-		PackageName   PackageName
-		*parser.Oneof
-	}
-
-	Enum struct {
-		EnumPath      string
-		ProtoFilePath string
-		PackageName   PackageName
-		*unordered.Enum
-	}
-
-	Collection struct {
-		Imports  map[ImportPath]Import
-		Services map[string]Service
-		// key message path - for supporting nested messages:
-		// message MainMessage {
-		// 		message NestedMessage{};
-		// };
-		// will be: MainMessage.NestedMessage
-		Messages map[string]Message
-		OneOfs   map[string]OneOf
-		Enums    map[string]Enum
-	}
-
-	// collects proto data collections
-	// packageName -> services,messages etc
-	ProtoData map[PackageName]*Collection
 )
-
-func GetPackageName(protoFile *unordered.Proto) PackageName {
-	if len(protoFile.ProtoBody.Packages) == 0 {
-		return ""
-	}
-
-	return PackageName(protoFile.ProtoBody.Packages[0].Name)
-}
 
 // toUpperSnakeCase converts a string from PascalCase or camelCase to UPPER_SNEAK_CASE.
 func toUpperSnakeCase(s string) string {
@@ -120,18 +50,6 @@ func toUpperSnakeCase(s string) string {
 	}
 
 	return string(result)
-}
-
-// fromMetaPos converts a go-protoparser source position to the issue position
-// type. The field sets are identical in name, type, and order, so the
-// conversion copies every field and changes no value.
-func fromMetaPos(p meta.Position) Position {
-	return Position{
-		Filename: p.Filename,
-		Offset:   p.Offset,
-		Line:     p.Line,
-		Column:   p.Column,
-	}
 }
 
 type OpenImportFileError struct {

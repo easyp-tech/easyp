@@ -1,105 +1,14 @@
 package core
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"io"
 	"os"
 	"path/filepath"
 
-	"github.com/yoheimuta/go-protoparser/v4"
-	"github.com/yoheimuta/go-protoparser/v4/interpret/unordered"
-
 	"github.com/easyp-tech/easyp/wellknownimports"
 )
-
-// breakingProtoInfoRead is the breaking-owned read-model constructor (D-06):
-// formerly the twin of the lint read constructor deleted in the 05-03 flip —
-// the lint path now reads through protoInfoFromSource. Behaviorally identical
-// in Phase 1; only the read-model type differs.
-func (c *Core) breakingProtoInfoRead(ctx context.Context, fs FS, path string) (BreakingProtoInfo, error) {
-	f, err := c.openDiskSource(fs, path)
-	if err != nil {
-		return BreakingProtoInfo{}, fmt.Errorf("Open: %w", err)
-	}
-	defer c.close(ctx, f, path)
-
-	protoFile, comments, err := readProtoFileWithDirectives(f)
-	if err != nil {
-		return BreakingProtoInfo{}, fmt.Errorf("readProtoFileWithDirectives: %w", err)
-	}
-
-	protoFilesFromImport, err := c.readFilesFromImport(ctx, fs, protoFile)
-	if err != nil {
-		return BreakingProtoInfo{}, fmt.Errorf("readFilesFromImport: %w", err)
-	}
-
-	breakingInfo := BreakingProtoInfo{
-		directiveComments:    comments,
-		Path:                 path,
-		Info:                 protoFile,
-		ProtoFilesFromImport: protoFilesFromImport,
-	}
-	breakingInfo.ImportPath = c.sourceImportPath(fs, path)
-	return breakingInfo, nil
-}
-
-// BreakingProtoInfo is the breaking-owned read model for one proto file (D-06).
-type BreakingProtoInfo struct {
-	directiveComments    []directiveComment
-	Path                 string
-	ImportPath           string
-	Info                 *unordered.Proto
-	ProtoFilesFromImport map[ImportPath]*unordered.Proto
-}
-
-func readProtoFile(f io.Reader) (*unordered.Proto, error) {
-	got, err := protoparser.Parse(f)
-	if err != nil {
-		return nil, fmt.Errorf("Parse: %w", err)
-	}
-
-	proto, err := unordered.InterpretProto(got)
-	if err != nil {
-		return nil, fmt.Errorf("InterpretProto: %w", err)
-	}
-
-	return proto, nil
-}
-
-// readFilesFromImport reads all files that imported from scanning file
-func (c *Core) readFilesFromImport(
-	ctx context.Context, disk FS, scanProto *unordered.Proto,
-) (map[ImportPath]*unordered.Proto, error) {
-	protoFilesFromImport := make(map[ImportPath]*unordered.Proto, len(scanProto.ProtoBody.Imports))
-
-	for _, imp := range scanProto.ProtoBody.Imports {
-		importPath := ConvertImportPath(imp.Location)
-		fileFromImport, err := c.readFileFromImport(ctx, disk, string(importPath))
-		if err != nil {
-			return nil, fmt.Errorf("readFileFromImport: %w", err)
-		}
-
-		protoFilesFromImport[importPath] = fileFromImport
-	}
-
-	return protoFilesFromImport, nil
-}
-
-func (c *Core) readFileFromImport(ctx context.Context, disk FS, importName string) (*unordered.Proto, error) {
-	f, err := c.openImportFile(disk, importName)
-	if err != nil {
-		return nil, fmt.Errorf("openImportFile: %w", err)
-	}
-	defer c.close(ctx, f, importName)
-
-	proto, err := readProtoFile(f)
-	if err != nil {
-		return nil, fmt.Errorf("readProtoFile: %w", &os.PathError{Op: "parse", Path: importName, Err: err})
-	}
-	return proto, nil
-}
 
 func (c *Core) openImportFile(disk FS, importName string) (io.ReadCloser, error) {
 	if !filepath.IsLocal(importName) {

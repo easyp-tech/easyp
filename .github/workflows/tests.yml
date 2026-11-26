@@ -17,13 +17,6 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # TestAcceptanceGates builds the ratified v1.0 baseline oracle from commit
-      # 1e9a596 and fails (never skips) when it is absent. The default shallow
-      # checkout does not contain it, so fetch it explicitly by full SHA
-      # (upload-pack rejects shortened SHA wants).
-      - name: Fetch acceptance baseline oracle (TestAcceptanceGates)
-        run: git fetch --no-tags --depth=1 origin 1e9a5965517058787411a0d5b77dbbeb7d556f44
-
       - name: Install Go
         uses: actions/setup-go@v5
         with:
