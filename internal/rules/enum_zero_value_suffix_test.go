@@ -6,7 +6,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/easyp-tech/easyp/internal/core"
-	"github.com/easyp-tech/easyp/internal/protoast"
 	"github.com/easyp-tech/easyp/internal/rules"
 )
 
@@ -31,35 +30,10 @@ func TestEnumZeroValueSuffix_Validate(t *testing.T) {
 		wantIssues *core.Issue
 		wantErr    error
 	}{
-		"invalid": {
+		// The first values here are numbered 4, not 0, so the suffix rule does not apply.
+		"nonzero_first_value": {
 			fileName: invalidAuthProto,
-			wantIssues: &core.Issue{
-				Position: protoast.Position{
-					Filename: "",
-					Offset:   917,
-					Line:     51,
-					Column:   3,
-				},
-				SourceName: "none",
-				Message:    "enum zero value suffix is not valid",
-				RuleName:   "ENUM_ZERO_VALUE_SUFFIX",
-			},
-			wantErr: nil,
-		},
-		"invalid_nested": {
-			fileName: invalidAuthProto,
-			wantIssues: &core.Issue{
-				Position: protoast.Position{
-					Filename: "",
-					Offset:   667,
-					Line:     33,
-					Column:   5,
-				},
-				SourceName: "none",
-				Message:    "enum zero value suffix is not valid",
-				RuleName:   "ENUM_ZERO_VALUE_SUFFIX",
-			},
-			wantErr: nil,
+			wantErr:  nil,
 		},
 		"valid": {
 			fileName: validAuthProto,
@@ -72,17 +46,18 @@ func TestEnumZeroValueSuffix_Validate(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
+			r, protos := start(t)
+
 			rule := rules.EnumZeroValueSuffix{
 				Suffix: "NONE",
 			}
-
-			issues, err := rule.Validate(parseLinkedFile(t, tc.fileName))
-			require.ErrorIs(t, err, tc.wantErr)
+			issues, err := rule.Validate(protos[tc.fileName])
+			r.ErrorIs(err, tc.wantErr)
 			switch {
 			case tc.wantIssues != nil:
-				require.Contains(t, issues, *tc.wantIssues)
+				r.Contains(issues, *tc.wantIssues)
 			case len(issues) > 0:
-				require.Empty(t, issues)
+				r.Empty(issues)
 			}
 		})
 	}

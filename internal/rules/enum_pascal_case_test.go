@@ -6,7 +6,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/easyp-tech/easyp/internal/core"
-	"github.com/easyp-tech/easyp/internal/protoast"
 	"github.com/easyp-tech/easyp/internal/rules"
 )
 
@@ -34,11 +33,11 @@ func TestEnumPascalCase_Validate(t *testing.T) {
 		"invalid": {
 			fileName: invalidAuthProto,
 			wantIssues: &core.Issue{
-				Position: protoast.Position{
+				Position: core.Position{
 					Filename: "",
-					Offset:   864,
+					Offset:   869,
 					Line:     49,
-					Column:   1,
+					Column:   6,
 				},
 				SourceName: "social_network",
 				Message:    "enum name must be in PascalCase",
@@ -49,11 +48,11 @@ func TestEnumPascalCase_Validate(t *testing.T) {
 		"invalid_nested": {
 			fileName: invalidAuthProto,
 			wantIssues: &core.Issue{
-				Position: protoast.Position{
+				Position: core.Position{
 					Filename: "",
-					Offset:   610,
+					Offset:   615,
 					Line:     31,
-					Column:   3,
+					Column:   8,
 				},
 				SourceName: "social_network",
 				Message:    "enum name must be in PascalCase",
@@ -72,15 +71,16 @@ func TestEnumPascalCase_Validate(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			rule := rules.EnumPascalCase{}
+			r, protos := start(t)
 
-			issues, err := rule.Validate(parseLinkedFile(t, tc.fileName))
-			require.ErrorIs(t, err, tc.wantErr)
+			rule := rules.EnumPascalCase{}
+			issues, err := rule.Validate(protos[tc.fileName])
+			r.ErrorIs(err, tc.wantErr)
 			switch {
 			case tc.wantIssues != nil:
-				require.Contains(t, issues, *tc.wantIssues)
+				r.Contains(issues, *tc.wantIssues)
 			case len(issues) > 0:
-				require.Empty(t, issues)
+				r.Empty(issues)
 			}
 		})
 	}

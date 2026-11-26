@@ -448,13 +448,8 @@ func (l *literal) String() string {
 // pos converts a byte offset into a Position. It implements easyp's output
 // contract: 1-based lines, 1-based columns counted in runes, and a tab
 // advancing the column by exactly one. This deliberately diverges from
-// upstream protoc's byte columns with tab stops of 8; re-apply the divergence
-// whenever the github.com/easyp-tech/easyprotoc version in go.mod is bumped.
-// The divergence lives in three places: this pos computation, the position
-// wording in the protoast package doc, and the tab expectations in
-// protoast_test.go. Both gates must stay green after a bump:
-// TestPositionRuneColumns (position_test.go) and
-// TestProtoastPositionsMatchLegacyContract (internal/core/position_parity_test.go).
+// upstream protoc's byte columns with tab stops of 8; keep
+// TestPositionRuneColumns passing whenever easyprotoc is bumped in go.mod.
 func (b *builder) pos(off uint32) Position {
 	if off > b.ast.SrcLen {
 		off = b.ast.SrcLen

@@ -56,12 +56,12 @@ func TestPackageDirectoryMatch_Validate(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			r := require.New(t)
+			r, protos := start(t)
 
 			rule := rules.PackageDirectoryMatch{
 				Root: "./../../testdata/",
 			}
-			issues, err := rule.Validate(parseLinkedFile(t, tc.fileName))
+			issues, err := rule.Validate(protos[tc.fileName])
 			r.ErrorIs(err, tc.wantErr)
 			switch {
 			case tc.wantIssues != nil:
@@ -76,8 +76,8 @@ func TestPackageDirectoryMatch_Validate(t *testing.T) {
 func TestPackageDirectoryMatch_ModuleQualifiedPackage(t *testing.T) {
 	t.Parallel()
 
-	r := require.New(t)
-	info := parseLinkedFile(t, validAuthProto)
+	r, protos := start(t)
+	info := protos[validAuthProto]
 	info.ImportPath = "v1/service.proto"
 	rule := rules.PackageDirectoryMatch{Root: ".", Prefix: "user"}
 

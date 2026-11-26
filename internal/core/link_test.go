@@ -24,13 +24,13 @@ func TestLinkSources(t *testing.T) {
 		sources [][]byte
 		setup   func(t *testing.T, root string)
 		newCore func(t *testing.T, root string) *Core
-		assert  func(t *testing.T, engine *Core, walker *fs.FSWalker, linked *protoc.Linked, issues []IssueInfo)
+		assert  func(t *testing.T, engine *Core, walker *fs.FSWalker, linked *linkedFiles, issues []IssueInfo)
 	}{
 		{
 			name:    "compile_error",
 			paths:   []string{"test.proto"},
 			sources: [][]byte{[]byte("syntax = \"proto3\";\npackage example;\nmessage bad_name {\n  required string s = 1;\n}\n")},
-			assert: func(t *testing.T, engine *Core, walker *fs.FSWalker, linked *protoc.Linked, issues []IssueInfo) {
+			assert: func(t *testing.T, engine *Core, walker *fs.FSWalker, linked *linkedFiles, issues []IssueInfo) {
 				require.Nil(t, linked)
 				require.Len(t, issues, 1)
 				assert.Equal(t, CompileRuleName, issues[0].RuleName)
@@ -47,7 +47,7 @@ func TestLinkSources(t *testing.T) {
 			name:    "compiling_with_wkt",
 			paths:   []string{"event.proto"},
 			sources: [][]byte{[]byte("syntax = \"proto3\";\n\npackage example;\n\nimport \"google/protobuf/timestamp.proto\";\n\nmessage Event {\n  google.protobuf.Timestamp at = 1;\n}\n")},
-			assert: func(t *testing.T, engine *Core, walker *fs.FSWalker, linked *protoc.Linked, issues []IssueInfo) {
+			assert: func(t *testing.T, engine *Core, walker *fs.FSWalker, linked *linkedFiles, issues []IssueInfo) {
 				require.NotNil(t, linked)
 				assert.Empty(t, issues)
 			},
@@ -56,7 +56,7 @@ func TestLinkSources(t *testing.T) {
 			name:    "missing_import",
 			paths:   []string{"orphan.proto"},
 			sources: [][]byte{[]byte("syntax = \"proto3\";\n\npackage example;\n\nimport \"missing.proto\";\n")},
-			assert: func(t *testing.T, engine *Core, walker *fs.FSWalker, linked *protoc.Linked, issues []IssueInfo) {
+			assert: func(t *testing.T, engine *Core, walker *fs.FSWalker, linked *linkedFiles, issues []IssueInfo) {
 				require.Nil(t, linked)
 				require.Nil(t, issues)
 			},
@@ -68,7 +68,7 @@ func TestLinkSources(t *testing.T) {
 				[]byte("syntax = \"proto3\";\n\npackage example;\n\nimport \"b.proto\";\n\nmessage A {\n  dep.B ok = 1;\n}\n"),
 				[]byte("syntax = \"proto3\";\n\npackage dep;\n\nmessage B {\n  Ghost field = 1;\n}\n"),
 			},
-			assert: func(t *testing.T, engine *Core, walker *fs.FSWalker, linked *protoc.Linked, issues []IssueInfo) {
+			assert: func(t *testing.T, engine *Core, walker *fs.FSWalker, linked *linkedFiles, issues []IssueInfo) {
 				require.Nil(t, linked)
 				require.Len(t, issues, 1)
 				assert.Contains(t, issues[0].Message, "Ghost")
@@ -83,7 +83,7 @@ func TestLinkSources(t *testing.T) {
 				[]byte("syntax = \"proto3\";\npackage zexample;\nmessage bad_name_z {\n  required string s = 1;\n}\n"),
 				[]byte("syntax = \"proto3\";\npackage aexample;\nmessage bad_name_a {\n  required string s = 1;\n}\n"),
 			},
-			assert: func(t *testing.T, engine *Core, walker *fs.FSWalker, linked *protoc.Linked, issues []IssueInfo) {
+			assert: func(t *testing.T, engine *Core, walker *fs.FSWalker, linked *linkedFiles, issues []IssueInfo) {
 				require.Nil(t, linked)
 				require.Len(t, issues, 2)
 				assert.Equal(t, "a.proto", issues[0].Path)
@@ -105,7 +105,7 @@ func TestLinkSources(t *testing.T) {
 				[]byte("syntax = \"proto3\";\n\npackage fine;\n\nmessage Fine {\n  string name = 1;\n}\n"),
 				[]byte("syntax = \"proto3\";\npackage broken;\nmessage bad_name {\n  required string s = 1;\n}\n"),
 			},
-			assert: func(t *testing.T, engine *Core, walker *fs.FSWalker, linked *protoc.Linked, issues []IssueInfo) {
+			assert: func(t *testing.T, engine *Core, walker *fs.FSWalker, linked *linkedFiles, issues []IssueInfo) {
 				require.Nil(t, linked)
 				require.Len(t, issues, 1)
 				assert.Equal(t, "broken.proto", issues[0].Path)
@@ -119,7 +119,7 @@ func TestLinkSources(t *testing.T) {
 				[]byte("syntax = \"proto3\";\n\npackage fine;\n\nmessage Fine {\n  string name = 1;\n}\n"),
 				[]byte("syntax = \"proto3\";\n\npackage broken;\n\nmessage Truncated {\n  string name = 1;\n"),
 			},
-			assert: func(t *testing.T, engine *Core, walker *fs.FSWalker, linked *protoc.Linked, issues []IssueInfo) {
+			assert: func(t *testing.T, engine *Core, walker *fs.FSWalker, linked *linkedFiles, issues []IssueInfo) {
 				require.Nil(t, linked)
 				require.Nil(t, issues)
 			},
@@ -131,7 +131,7 @@ func TestLinkSources(t *testing.T) {
 				[]byte("syntax = \"proto3\";\n\npackage broken;\n\nmessage Truncated {\n  string name = 1;\n"),
 				[]byte("syntax = \"proto3\";\n\npackage dep;\n\nmessage B {\n  Ghost field = 1;\n}\n"),
 			},
-			assert: func(t *testing.T, engine *Core, walker *fs.FSWalker, linked *protoc.Linked, issues []IssueInfo) {
+			assert: func(t *testing.T, engine *Core, walker *fs.FSWalker, linked *linkedFiles, issues []IssueInfo) {
 				require.Nil(t, linked)
 				require.Nil(t, issues)
 			},
@@ -142,7 +142,7 @@ func TestLinkSources(t *testing.T) {
 			sources: [][]byte{
 				[]byte("syntax = \"proto3\";\n\npackage dep;\n\nmessage B {\n  Ghost field = 1;\n}\n"),
 			},
-			assert: func(t *testing.T, engine *Core, walker *fs.FSWalker, linked *protoc.Linked, issues []IssueInfo) {
+			assert: func(t *testing.T, engine *Core, walker *fs.FSWalker, linked *linkedFiles, issues []IssueInfo) {
 				require.Nil(t, linked)
 				require.NotEmpty(t, issues)
 				for _, issue := range issues {
@@ -161,7 +161,7 @@ func TestLinkSources(t *testing.T) {
 				writeImportSource(t, root, "a.proto", "syntax = \"proto3\";\n\npackage example;\n\nimport \"b.proto\";\n\nmessage A {\n  dep.B ok = 1;\n}\n")
 				writeImportSource(t, root, "b.proto", "syntax = \"proto3\";\n\npackage dep;\n\nimport \"missing.proto\";\n\nmessage B {\n  string name = 1;\n}\n")
 			},
-			assert: func(t *testing.T, engine *Core, walker *fs.FSWalker, linked *protoc.Linked, issues []IssueInfo) {
+			assert: func(t *testing.T, engine *Core, walker *fs.FSWalker, linked *linkedFiles, issues []IssueInfo) {
 				require.Nil(t, linked)
 				require.Nil(t, issues)
 
@@ -201,7 +201,7 @@ func TestLinkSources(t *testing.T) {
 					},
 				}
 			},
-			assert: func(t *testing.T, engine *Core, walker *fs.FSWalker, linked *protoc.Linked, issues []IssueInfo) {
+			assert: func(t *testing.T, engine *Core, walker *fs.FSWalker, linked *linkedFiles, issues []IssueInfo) {
 				require.Nil(t, linked)
 				require.Nil(t, issues)
 
@@ -222,7 +222,7 @@ func TestLinkSources(t *testing.T) {
 			sources: [][]byte{
 				[]byte("syntax = \"proto3\";\n\npackage example;\n\nimport \"google/protobuf/timestamp.proto\";\n\nmessage Event {\n  google.protobuf.Timestamp at = 1;\n}\n"),
 			},
-			assert: func(t *testing.T, engine *Core, walker *fs.FSWalker, linked *protoc.Linked, issues []IssueInfo) {
+			assert: func(t *testing.T, engine *Core, walker *fs.FSWalker, linked *linkedFiles, issues []IssueInfo) {
 				require.NotNil(t, linked)
 				assert.Empty(t, issues)
 			},
@@ -233,7 +233,7 @@ func TestLinkSources(t *testing.T) {
 			sources: [][]byte{
 				[]byte("syntax = \"proto3\";\n\npackage example;\n\nimport \"../outside.proto\";\n\nmessage A {\n  string name = 1;\n}\n"),
 			},
-			assert: func(t *testing.T, engine *Core, walker *fs.FSWalker, linked *protoc.Linked, issues []IssueInfo) {
+			assert: func(t *testing.T, engine *Core, walker *fs.FSWalker, linked *linkedFiles, issues []IssueInfo) {
 				require.Nil(t, linked)
 				require.Nil(t, issues)
 
@@ -253,20 +253,15 @@ func TestLinkSources(t *testing.T) {
 			sources: [][]byte{
 				mustReadFixture(t, "testdata/link/tab_utf8/broken.proto"),
 			},
-			assert: func(t *testing.T, engine *Core, walker *fs.FSWalker, linked *protoc.Linked, issues []IssueInfo) {
+			assert: func(t *testing.T, engine *Core, walker *fs.FSWalker, linked *linkedFiles, issues []IssueInfo) {
 				require.Nil(t, linked)
 				require.Len(t, issues, 1)
 				assert.Equal(t, CompileRuleName, issues[0].RuleName)
 				assert.Contains(t, issues[0].Message, "Required fields are not allowed")
 
-				// Compiler LineCol convention (github.com/easyp-tech/easyprotoc/lexer/token.go:121-123):
-				// 1-based line, 1-based column, tab stop 8, byte columns. The
-				// error token on line 6 follows a leading tab (col0 0 -> 8) and
-				// 28 more bytes (`/* ` + 8 two-byte Cyrillic letters + ` ` + a
-				// 4-byte emoji + ` */ `), so it starts at col0 36 -> column 37.
-				// The Phase 1 D-07 rune-column contract would put the same
-				// offset at column 19 — the fixture provably diverges, so the
-				// two coordinate systems cannot be silently mixed.
+				// Compiler LineCol convention: 1-based line, 1-based byte column,
+				// tab stop 8. The error token on line 6 follows a leading tab
+				// (col0 0 -> 8) and 28 more bytes, so it starts at col0 36 -> 37.
 				assert.Equal(t, 6, issues[0].Position.Line)
 				assert.Equal(t, 37, issues[0].Position.Column)
 			},
@@ -278,7 +273,7 @@ func TestLinkSources(t *testing.T) {
 				[]byte("syntax = \"proto3\";\n\npackage cycle;\n\nimport \"b.proto\";\n\nmessage A {\n  B b = 1;\n}\n"),
 				[]byte("syntax = \"proto3\";\n\npackage cycle;\n\nimport \"a.proto\";\n\nmessage B {\n  A a = 1;\n}\n"),
 			},
-			assert: func(t *testing.T, engine *Core, walker *fs.FSWalker, linked *protoc.Linked, issues []IssueInfo) {
+			assert: func(t *testing.T, engine *Core, walker *fs.FSWalker, linked *linkedFiles, issues []IssueInfo) {
 				require.Nil(t, linked)
 				require.NotEmpty(t, issues)
 
@@ -304,11 +299,11 @@ func TestLinkSources(t *testing.T) {
 				mustReadFixture(t, "testdata/link/multi_file/b.proto"),
 				mustReadFixture(t, "testdata/link/multi_file/a.proto"),
 			},
-			assert: func(t *testing.T, engine *Core, walker *fs.FSWalker, linked *protoc.Linked, issues []IssueInfo) {
+			assert: func(t *testing.T, engine *Core, walker *fs.FSWalker, linked *linkedFiles, issues []IssueInfo) {
 				require.Nil(t, linked)
 				require.Len(t, issues, 2)
 
-				// D-03 ordering holds across files: by path, then line, then col.
+				// Deterministic ordering across files: by path, then line, then col.
 				assert.Equal(t, "a.proto", issues[0].Path)
 				assert.Equal(t, CompileRuleName, issues[0].RuleName)
 				assert.Equal(t, "b.proto", issues[1].Path)
@@ -350,14 +345,8 @@ func mustReadFixture(t *testing.T, rel string) []byte {
 	return src
 }
 
-// TestLinkSourcesWarnDrop drives synthetic protoc.Diagnostic values through
-// diagCollector — the exact handler linkSources registers with
-// protoc.WithErrorHandler, the same function value protoc.Link invokes at
-// runtime. The collector slice is diagnostics' only channel into the D-03
-// sort and COMPILE issue construction, so a warn dropped at this handler
-// structurally can never surface as a COMPILE issue (gap G-02-3, research
-// A3). The test constructs diagnostic values; it never parses or matches
-// diagnostic text (D-01).
+// TestLinkSourcesWarnDrop verifies that diagCollector drops warnings while
+// preserving errors safely under concurrent calls.
 func TestLinkSourcesWarnDrop(t *testing.T) {
 	t.Parallel()
 
@@ -411,9 +400,7 @@ func TestLinkSourcesWarnDrop(t *testing.T) {
 	t.Run("handler_race_mixed", func(t *testing.T) {
 		t.Parallel()
 
-		// Contention pin on the extracted seam (research Pitfall 7): the
-		// mutex discipline must hold under concurrent mixed warn/error posts
-		// — no lost updates, no warn leakage.
+		// Verify mutex safety under concurrent mixed warn/error posts.
 		const goroutines = 4
 		const pairsPerGoroutine = 25
 

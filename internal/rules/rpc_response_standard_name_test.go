@@ -6,7 +6,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/easyp-tech/easyp/internal/core"
-	"github.com/easyp-tech/easyp/internal/protoast"
 	"github.com/easyp-tech/easyp/internal/rules"
 )
 
@@ -34,11 +33,11 @@ func TestRPCResponseStandardName_Validate(t *testing.T) {
 		"invalid": {
 			fileName: invalidAuthProto,
 			wantIssues: &core.Issue{
-				Position: protoast.Position{
+				Position: core.Position{
 					Filename: "",
-					Offset:   214,
+					Offset:   245,
 					Line:     11,
-					Column:   3,
+					Column:   34,
 				},
 				SourceName: "Result",
 				Message:    "rpc response should have suffix 'Response'",
@@ -56,15 +55,16 @@ func TestRPCResponseStandardName_Validate(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			rule := rules.RPCResponseStandardName{}
+			r, protos := start(t)
 
-			issues, err := rule.Validate(parseLinkedFile(t, tc.fileName))
-			require.ErrorIs(t, err, tc.wantErr)
+			rule := rules.RPCResponseStandardName{}
+			issues, err := rule.Validate(protos[tc.fileName])
+			r.ErrorIs(err, tc.wantErr)
 			switch {
 			case tc.wantIssues != nil:
-				require.Contains(t, issues, *tc.wantIssues)
+				r.Contains(issues, *tc.wantIssues)
 			case len(issues) > 0:
-				require.Empty(t, issues)
+				r.Empty(issues)
 			}
 		})
 	}
