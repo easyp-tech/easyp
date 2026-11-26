@@ -168,19 +168,18 @@ than adding parallelism to code with shared global state.
 helper for rule tests. It parses <code>.proto</code> files from <code>testdata/</code> and returns
 both <code>*require.Assertions</code> and a map of <code>core.ProtoInfo</code>.
 
-The helper marks itself as a helper and registers file cleanup:
+The helper marks itself as a helper and parses with the easyp lint model:
 
 ~~~go
 func parseFile(t testing.TB, assert *require.Assertions, path string) core.ProtoInfo {
     t.Helper()
 
-    f, err := os.Open(path)
+    src, err := os.ReadFile(path)
     assert.NoError(err)
-    t.Cleanup(func() { assert.NoError(f.Close()) })
 
-    got, err := protoparser.Parse(f)
+    file, err := protoast.Parse(path, src)
     assert.NoError(err)
-    // interpret the parsed proto and its imports
+    // parse the file's imports from testdata the same way
 }
 ~~~
 

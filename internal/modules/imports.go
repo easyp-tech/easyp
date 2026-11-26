@@ -1,7 +1,6 @@
 package modules
 
 import (
-	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -11,9 +10,7 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/bufbuild/protocompile/ast"
-	"github.com/bufbuild/protocompile/parser"
-	"github.com/bufbuild/protocompile/reporter"
+	"github.com/easyp-tech/easyprotoc/protoc/syntax"
 
 	"github.com/easyp-tech/easyp/internal/sourceview"
 	"github.com/easyp-tech/easyp/internal/workspace"
@@ -39,15 +36,13 @@ func ReadProtoImports(path string) ([]string, error) {
 
 // ParseProtoImports follows protobuf syntax, including comments and escaped paths.
 func ParseProtoImports(path string, raw []byte) ([]string, error) {
-	file, err := parser.Parse(path, bytes.NewReader(raw), reporter.NewHandler(nil))
+	file, err := syntax.Parse(path, raw)
 	if err != nil {
 		return nil, fmt.Errorf("Parse: %w", err)
 	}
 	var imports []string
-	for _, declaration := range file.Decls {
-		if imported, ok := declaration.(*ast.ImportNode); ok {
-			imports = append(imports, imported.Name.AsString())
-		}
+	for _, imported := range file.AST.Imports {
+		imports = append(imports, file.Text(imported.Path))
 	}
 	return imports, nil
 }
