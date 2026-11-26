@@ -5,7 +5,6 @@ go 1.26.6
 require (
 	github.com/Yakwilik/go-yamlvalidator v0.3.1
 	github.com/a8m/envsubst v1.4.3
-	github.com/bufbuild/protocompile v0.14.1
 	github.com/charmbracelet/x/term v0.2.1
 	github.com/easyp-tech/easyprotoc v0.1.0
 	github.com/easyp-tech/service/api v1.0.0
@@ -17,7 +16,6 @@ require (
 	github.com/tetratelabs/wazero v1.9.0
 	github.com/urfave/cli/v2 v2.27.7
 	github.com/wasilibs/wazero-helpers v0.0.0-20250123031827-cd30c44769bb
-	github.com/yoheimuta/go-protoparser/v4 v4.14.2
 	golang.org/x/mod v0.38.0
 	golang.org/x/sys v0.47.0
 	google.golang.org/grpc v1.83.2
