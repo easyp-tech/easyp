@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// TestPositionRuneColumns pins the position contract (decision D-07a):
+// TestPositionRuneColumns pins the rune-column position contract:
 // 1-based lines, 1-based columns counted in runes, and a tab advancing the
 // column by exactly one — the output contract of the legacy go-protoparser
 // lint path, not protoc's byte columns with tab stops of 8. The

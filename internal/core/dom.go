@@ -2,16 +2,36 @@ package core
 
 import (
 	"fmt"
+	"reflect"
 	"strings"
 	"unicode"
 
 	"github.com/easyp-tech/easyp/internal/protoast"
 )
 
-// Position is a source position carried by issues.
+// Position is a location in a proto file: 1-based line, 1-based rune column
+// and 0-based byte offset. Its JSON form matches earlier releases.
 type Position = protoast.Position
 
 type (
+	// Rule is an interface for a rule checking.
+	Rule interface {
+		// Message returns the message of the rule.
+		Message() string
+		// Validate validates the proto rule.
+		Validate(ProtoInfo) ([]Issue, error)
+	}
+
+	// ModuleRule needs every file before it can report, such as rules that
+	// compare files of one package or directory. Lint passes each file to
+	// Collect and asks for findings once, after the last file; it does not
+	// call Validate. Suppressions and ignore_only apply to the findings by path.
+	ModuleRule interface {
+		Rule
+		Collect(ProtoInfo) error
+		Finish() []IssueInfo
+	}
+
 	// IssueInfo contains the information of an issue and the path.
 	IssueInfo struct {
 		Issue
@@ -26,12 +46,45 @@ type (
 		RuleName   string
 	}
 
+	// Resolution is what linking adds to a file.
+	Resolution struct {
+		// UsedImports holds the direct imports that define, or publicly
+		// re-export a file that defines, a name this file refers to.
+		UsedImports map[ImportPath]bool
+		// RPCTypes maps an rpc's byte offset to its request and response
+		// types, fully qualified without a leading dot.
+		RPCTypes map[int][2]string
+	}
+
 	// ImportPath type alias for path import in proto file
 	ImportPath string
 
 	// PackageName type alias for package name `package` section in protofile.
 	PackageName string
+
+	// ProtoInfo is the information of a proto file.
+	ProtoInfo struct {
+		Path string
+		// ImportPath is relative to a declared source root, independently of the scan root.
+		ImportPath string
+		// File is the lint view of the file; ImportedFiles holds its direct imports.
+		File          *protoast.File
+		ImportedFiles map[ImportPath]*protoast.File
+		// Resolved holds name resolution across files; nil when the files
+		// could not be linked, in which case rules fall back to the syntax.
+		Resolved *Resolution
+	}
 )
+
+// AppendIssue records a rule finding. The lint engine applies per-file suppressions.
+func AppendIssue(issues []Issue, lintRule Rule, pos Position, sourceName string) []Issue {
+	return append(issues, buildError(lintRule, pos, sourceName))
+}
+
+// GetRuleName returns rule name
+func GetRuleName(rule Rule) string {
+	return toUpperSnakeCase(reflect.TypeOf(rule).Elem().Name())
+}
 
 // toUpperSnakeCase converts a string from PascalCase or camelCase to UPPER_SNEAK_CASE.
 func toUpperSnakeCase(s string) string {
@@ -50,6 +103,16 @@ func toUpperSnakeCase(s string) string {
 	}
 
 	return string(result)
+}
+
+// buildError creates an Issue.
+func buildError(lintRule Rule, pos Position, sourceName string) Issue {
+	return Issue{
+		Position:   pos,
+		SourceName: sourceName,
+		Message:    lintRule.Message(),
+		RuleName:   GetRuleName(lintRule),
+	}
 }
 
 type OpenImportFileError struct {

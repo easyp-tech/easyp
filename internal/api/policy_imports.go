@@ -39,12 +39,15 @@ type policyReplacementSources struct {
 	frozen                      bool
 	manifests                   map[string]v1.Module
 	targets                     map[string][]string
+	// readFile reads a manifest like workspace.ReadFileAt.
+	readFile func(string) ([]byte, error)
 }
 
 func newPolicyReplacementSources(ctx context.Context, projectRoot, repositoryRoot string, cache func() (modules.Cache, error), frozen bool) *policyReplacementSources {
 	return &policyReplacementSources{
 		ctx: ctx, projectRoot: projectRoot, repositoryRoot: repositoryRoot, cache: cache, frozen: frozen,
 		manifests: make(map[string]v1.Module), targets: make(map[string][]string),
+		readFile: workspace.ReadFileAt,
 	}
 }
 
@@ -162,7 +165,7 @@ func (s *policyReplacementSources) replacementManifest(directory string) (v1.Mod
 	if module, known := s.manifests[directory]; known {
 		return module, nil
 	}
-	raw, err := workspace.ReadFileAt(filepath.Join(directory, v1.ModuleFile))
+	raw, err := s.readFile(filepath.Join(directory, v1.ModuleFile))
 	if err != nil && !errors.Is(err, os.ErrNotExist) {
 		return v1.Module{}, fmt.Errorf("ReadFile: %w", err)
 	}
@@ -218,6 +221,19 @@ func ensureV1PolicyImportRoots(ctx context.Context, cache modules.Cache, moduleD
 }
 
 func policyImportRoots(ctx context.Context, cache modules.Cache, moduleDir string, frozen bool) (modules.SourceRoots, error) {
+	roots, err := policyImportRootsUnchecked(ctx, cache, moduleDir, frozen)
+	if err != nil {
+		return nil, err
+	}
+	if err := modules.CheckSourceCollisions(roots); err != nil {
+		return nil, fmt.Errorf("CheckSourceCollisions: %w", err)
+	}
+	return roots, nil
+}
+
+// policyImportRootsUnchecked is policyImportRoots without the import collision
+// check, for callers that run the check themselves.
+func policyImportRootsUnchecked(ctx context.Context, cache modules.Cache, moduleDir string, frozen bool) (modules.SourceRoots, error) {
 	var dependencies modules.SourceRoots
 	var err error
 	if frozen {
@@ -240,9 +256,5 @@ func policyImportRoots(ctx context.Context, cache modules.Cache, moduleDir strin
 			return nil, fmt.Errorf("EnsureSources: %w", err)
 		}
 	}
-	allSources := append(roots, dependencies...)
-	if err := modules.CheckSourceCollisions(allSources); err != nil {
-		return nil, fmt.Errorf("CheckSourceCollisions: %w", err)
-	}
-	return allSources, nil
+	return append(roots, dependencies...), nil
 }

@@ -6,7 +6,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/easyp-tech/easyp/internal/core"
-	"github.com/easyp-tech/easyp/internal/protoast"
 	"github.com/easyp-tech/easyp/internal/rules"
 )
 
@@ -34,11 +33,11 @@ func TestMessagePascalCase_Validate(t *testing.T) {
 		"invalid": {
 			fileName: invalidAuthProto,
 			wantIssues: &core.Issue{
-				Position: protoast.Position{
+				Position: core.Position{
 					Filename: "",
-					Offset:   536,
+					Offset:   544,
 					Line:     26,
-					Column:   1,
+					Column:   9,
 				},
 				SourceName: "Delete_Info",
 				Message:    "message name should be PascalCase",
@@ -57,15 +56,16 @@ func TestMessagePascalCase_Validate(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			rule := rules.MessagePascalCase{}
+			r, protos := start(t)
 
-			issues, err := rule.Validate(parseLinkedFile(t, tc.fileName))
-			require.ErrorIs(t, err, tc.wantErr)
+			rule := rules.MessagePascalCase{}
+			issues, err := rule.Validate(protos[tc.fileName])
+			r.ErrorIs(err, tc.wantErr)
 			switch {
 			case tc.wantIssues != nil:
-				require.Contains(t, issues, *tc.wantIssues)
+				r.Contains(issues, *tc.wantIssues)
 			case len(issues) > 0:
-				require.Empty(t, issues)
+				r.Empty(issues)
 			}
 		})
 	}

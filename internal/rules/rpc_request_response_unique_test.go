@@ -6,7 +6,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/easyp-tech/easyp/internal/core"
-	"github.com/easyp-tech/easyp/internal/protoast"
 	"github.com/easyp-tech/easyp/internal/rules"
 )
 
@@ -27,31 +26,27 @@ func TestRPCRequestResponseUnique_Validate(t *testing.T) {
 	t.Parallel()
 
 	tests := map[string]struct {
-		fileNames  []string
+		fileName   string
 		wantIssues *core.Issue
 		wantErr    error
 	}{
 		"invalid": {
-			// invalidAuthProto re-uses the TokenData type: the second use issues
-			// at that rpc's keyword position with the written type as the source
-			// (the first user is exempt — main is per-file first-exempt on
-			// written names; the rule runs through the Collect/Finish driver).
-			fileNames: []string{invalidAuthProto},
+			fileName: invalidAuthProto,
 			wantIssues: &core.Issue{
-				Position: protoast.Position{
+				Position: core.Position{
 					Filename: "",
 					Offset:   375,
 					Line:     14,
 					Column:   3,
 				},
-				SourceName: "TokenData",
+				SourceName: "Session.TokenData",
 				Message:    "request and response types must be unique across all RPCs",
 				RuleName:   "RPC_REQUEST_RESPONSE_UNIQUE",
 			},
 		},
 		"valid": {
-			fileNames: []string{validAuthProto},
-			wantErr:   nil,
+			fileName: validAuthProto,
+			wantErr:  nil,
 		},
 	}
 
@@ -60,20 +55,16 @@ func TestRPCRequestResponseUnique_Validate(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			rule := &rules.RPCRequestResponseUnique{}
+			r, protos := start(t)
 
-			var infos []core.ProtoInfo
-			for _, fileName := range tc.fileNames {
-				infos = append(infos, parseLinkedFile(t, fileName))
-			}
-
-			issues, err := validate(rule, infos...)
-			require.ErrorIs(t, err, tc.wantErr)
+			rule := rules.RPCRequestResponseUnique{}
+			issues, err := validate(&rule, protos[tc.fileName])
+			r.ErrorIs(err, tc.wantErr)
 			switch {
 			case tc.wantIssues != nil:
-				require.Contains(t, issues, *tc.wantIssues)
+				r.Contains(issues, *tc.wantIssues)
 			case len(issues) > 0:
-				require.Empty(t, issues)
+				r.Empty(issues)
 			}
 		})
 	}

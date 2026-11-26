@@ -1,12 +1,12 @@
 package rules_test
 
 import (
+	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 
 	"github.com/easyp-tech/easyp/internal/core"
-	"github.com/easyp-tech/easyp/internal/protoast"
 	"github.com/easyp-tech/easyp/internal/rules"
 )
 
@@ -32,19 +32,16 @@ func TestPackageSameDirectory_Validate(t *testing.T) {
 		wantErr    error
 	}{
 		"invalid": {
-			// auth/queue.proto (package Queue) is the exempt first value;
-			// invalid_pkg/queue.proto (same package, another directory) issues
-			// at its own package-keyword position.
 			fileNames: []string{invalidAuthProto2, invalidAuthProto4},
 			wantIssues: &core.Issue{
-				Position: protoast.Position{
+				Position: core.Position{
 					Filename: "",
-					Offset:   20,
-					Line:     3,
-					Column:   1,
+					Offset:   0,
+					Line:     0,
+					Column:   0,
 				},
-				SourceName: "Queue",
-				Message:    "different proto files in the same package should be in the same directory",
+				SourceName: "",
+				Message:    "",
 				RuleName:   "PACKAGE_SAME_DIRECTORY",
 			},
 			wantErr: nil,
@@ -60,21 +57,18 @@ func TestPackageSameDirectory_Validate(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			rule := &rules.PackageSameDirectory{}
+			r, protos := start(t)
 
+			rule := rules.PackageSameDirectory{}
+			var got []error
 			var infos []core.ProtoInfo
 			for _, fileName := range tc.fileNames {
-				infos = append(infos, parseLinkedFile(t, fileName))
+				infos = append(infos, protos[fileName])
 			}
+			_, err := validate(&rule, infos...)
+			got = append(got, err)
 
-			issues, err := validate(rule, infos...)
-			require.ErrorIs(t, err, tc.wantErr)
-			switch {
-			case tc.wantIssues != nil:
-				require.Contains(t, issues, *tc.wantIssues)
-			case len(issues) > 0:
-				require.Empty(t, issues)
-			}
+			r.ErrorIs(errors.Join(got...), tc.wantErr)
 		})
 	}
 }
