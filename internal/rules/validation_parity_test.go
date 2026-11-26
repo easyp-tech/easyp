@@ -1,0 +1,140 @@
+package rules
+
+import (
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
+	"github.com/easyp-tech/easyp/internal/config"
+	"github.com/easyp-tech/easyp/internal/core"
+)
+
+// parityLintRule is a minimal core.Rule double for the construction cell:
+// the linked engine consumes pre-validated rule lists, so the double needs no
+// name of its own.
+type parityLintRule struct{}
+
+var _ core.Rule = parityLintRule{}
+
+func (parityLintRule) Message() string { return "validation parity guard" }
+
+func (parityLintRule) Validate(_ core.ProtoInfo) ([]core.Issue, error) {
+	return nil, nil
+}
+
+// TestLintUseValidationParity pins LINT-ENG-06 (D-06): an unknown rule or
+// group name in lint.use fails with main's exact validation error through the
+// untouched rules.New chain (ValidateNames -> validateConfigRuleNames ->
+// core.ErrInvalidRule, wrapped per selection as "validateConfigRuleNames:
+// use:/except:/ignore_only: "), PACKAGE_NO_IMPORT_CYCLE validates through the
+// same generic surface as every other name (the Phase 6 special case is
+// removed — one validator surface, no engine-side validation), and a valid
+// config constructs the old engine output and the linked engine with no
+// second name validation anywhere — rules.New is THE validator.
+func TestLintUseValidationParity(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name       string
+		cfg        config.LintConfig
+		wantPrefix string
+		wantName   string
+	}{
+		{
+			name:       "unknown_rule_in_use",
+			cfg:        config.LintConfig{Use: []string{"NOT_A_RULE"}},
+			wantPrefix: "validateConfigRuleNames: use: ",
+			wantName:   "NOT_A_RULE",
+		},
+		{
+			// Groups and rules fail identically: ValidateNames has no
+			// group-specific branch, the allowed set simply does not contain
+			// the name.
+			name:       "unknown_group_in_use",
+			cfg:        config.LintConfig{Use: []string{"NOT_A_GROUP"}},
+			wantPrefix: "validateConfigRuleNames: use: ",
+			wantName:   "NOT_A_GROUP",
+		},
+		{
+			name:       "unknown_name_in_except",
+			cfg:        config.LintConfig{Use: []string{"MINIMAL"}, Except: []string{"NOT_A_RULE"}},
+			wantPrefix: "validateConfigRuleNames: except: ",
+			wantName:   "NOT_A_RULE",
+		},
+		{
+			name:       "unknown_name_in_ignore_only",
+			cfg:        config.LintConfig{IgnoreOnly: map[string][]string{"NOT_A_RULE": {"generated"}}},
+			wantPrefix: "validateConfigRuleNames: ignore_only: ",
+			wantName:   "NOT_A_RULE",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			_, _, err := New(tt.cfg)
+
+			require.ErrorIs(t, err, core.ErrInvalidRule)
+			require.ErrorContains(t, err, tt.wantPrefix)
+			require.ErrorContains(t, err, tt.wantName)
+		})
+	}
+
+	t.Run("valid_config_still_constructs", func(t *testing.T) {
+		t.Parallel()
+
+		// The pre-validated config outputs rules.New hands to the old path,
+		// pinned as-is.
+		selected, ignoreOnly, err := New(config.LintConfig{Use: []string{"MINIMAL"}})
+		require.NoError(t, err)
+		assert.NotNil(t, selected)
+		assert.NotEmpty(t, selected)
+		assert.NotNil(t, ignoreOnly)
+
+		// The linked engine consumes pre-validated rule lists: core.New takes
+		// Rule values directly and exposes no error surface at all — the
+		// absence of a second name validator IS the parity contract (one name
+		// surface: this registry feeds config validation, directive
+		// validation via KnownLintRules, and future schemas).
+		linked := core.New(core.Options{Rules: []core.Rule{parityLintRule{}}})
+		assert.NotNil(t, linked)
+	})
+
+	t.Run("package_no_import_cycle_constructs", func(t *testing.T) {
+		t.Parallel()
+
+		// The Phase 6 registry flip removed the special case: the name
+		// validates through the same generic Contains surface as every other
+		// name, in use, except, and ignore_only, and constructs.
+		selected, ignoreOnly, err := New(config.LintConfig{Use: []string{"PACKAGE_NO_IMPORT_CYCLE"}})
+		require.NoError(t, err)
+		assert.NotNil(t, ignoreOnly)
+		var names []string
+		for _, r := range selected {
+			names = append(names, core.GetRuleName(r))
+		}
+		assert.Contains(t, names, "PACKAGE_NO_IMPORT_CYCLE")
+
+		_, _, err = New(config.LintConfig{Use: []string{"MINIMAL"}, Except: []string{"PACKAGE_NO_IMPORT_CYCLE"}})
+		assert.NoError(t, err)
+
+		_, _, err = New(config.LintConfig{IgnoreOnly: map[string][]string{"PACKAGE_NO_IMPORT_CYCLE": {"generated"}}})
+		assert.NoError(t, err)
+	})
+
+	t.Run("registry_covers_all_names", func(t *testing.T) {
+		t.Parallel()
+
+		// The registry is the single name source: every group key and every
+		// rule name is a valid lint.use value for the config validation this
+		// guard pins.
+		allowed := AllLintUseValues()
+		for _, group := range []string{"MINIMAL", "BASIC", "DEFAULT", "COMMENTS", "UNARY_RPC"} {
+			assert.Contains(t, allowed, group)
+		}
+		for _, name := range AllRuleNames() {
+			assert.Contains(t, allowed, name)
+		}
+	})
+}

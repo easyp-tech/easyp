@@ -27,11 +27,12 @@
 | <code>internal/migration</code> | <code>local_selection_proof.go</code>, <code>git_selection.go</code>, <code>migration_namespaces.go</code>, <code>migration_bindings.go</code>, <code>git_imports.go</code> | Own local/Git selection evidence, observe namespaces and prove selected/reachable source bindings |
 | <code>internal/migration</code> | <code>build_candidates.go</code> | Preflight output conflicts and synchronize candidate previews with transaction write proposals |
 | <code>internal/workspace</code> | <code>discovery.go</code> | Repository boundary, ancestor config/module selection, recursive discovery exclusions |
-| <code>internal/core</code> | <code>core.go</code>, <code>dom.go</code>, <code>proto_info_read.go</code>, <code>lint.go</code> | Engine options, proto representations and lint execution |
+| <code>internal/core</code> | <code>core.go</code>, <code>dom.go</code>, <code>proto_info_read.go</code>, <code>lint_linked.go</code>, <code>lint_linked_read.go</code>, <code>lint_model.go</code> | Engine options, proto representations and lint execution |
 | <code>internal/core</code> | <code>generate.go</code>, <code>managed_mode.go</code>, <code>generate_bucket.go</code>, <code>generate_insertion_point.go</code> | Descriptor compilation, managed mode, plugins and output |
-| <code>internal/core</code> | <code>comment_suppressions.go</code>, <code>instruction_parser.go</code>, <code>unstable_package_matcher.go</code> | Per-engine lint directives, protobuf instruction names and unstable package matching |
+| <code>internal/core</code> | <code>lint_suppressions.go</code>, <code>instruction_parser.go</code>, <code>unstable_package_matcher.go</code> | Per-engine lint directives, protobuf instruction names and unstable package matching |
 | <code>internal/core/path_helpers</code> | <code>is_target_path.go</code>, <code>v1_source.go</code> | Target path matching and v1 source exclusions |
-| <code>internal/core</code> | <code>breaking_check.go</code>, <code>breaking_checker.go</code> | Read and compare current/historical proto models |
+| <code>internal/core</code> | <code>breaking_check.go</code>, <code>breaking_profiles.go</code> | Compare current/historical proto descriptors |
+| <code>internal/protoast</code> | <code>protoast.go</code>, <code>build.go</code>, <code>outline.go</code>, <code>walk.go</code>, <code>comments.go</code> | Local lint view over the compiler's syntax tree; owns EasyP's rune-column position contract |
 | <code>internal/rules</code> | <code>builder.go</code> and individual rules | Named lint groups and implementations of <code>core.Rule</code> |
 
 <code>modules</code> and <code>generation</code> are callable with <code>context.Context</code> and explicit inputs. Core no longer owns dependency downloads or lock updates. CLI code does not know the physical Git cache layout.

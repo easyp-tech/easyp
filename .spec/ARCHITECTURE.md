@@ -16,10 +16,12 @@ EasyP v1 separates CLI composition, module operations, generation preparation, a
 | <code>internal/workspace</code> | Repository boundary and ancestor/module/config discovery | Filesystem |
 | <code>internal/schemagen</code> | Write versioned JSON Schemas for YAML configs and latest aliases | V1 schema builder, filesystem |
 | <code>internal/generation</code> | Discover generator configs, inherit options, select modules, translate to engine options, run generation | V1 models, module source operations, core, logger |
-| <code>internal/core</code> | Proto parsing/compilation, managed descriptors, plugin execution, lint and breaking engines | Explicit roots/options, rules, plugin executors and Git tree walker |
+| <code>internal/core</code> | Proto parsing/compilation, managed descriptors, plugin execution, lint and breaking engines | Explicit roots/options, rules, plugin executors and Git tree walker; compiler packages (<code>protoc</code>, <code>protoc/syntax</code>, <code>parser</code>) from the pinned <code>github.com/easyp-tech/easyprotoc</code> module |
 | <code>internal/fs/fs</code> | Directory walking, exclusive regular-file copy, temporary-file replacement | OS filesystem |
 
 <code>modules</code>, <code>generation</code>, and the infrastructure adapters do not import the CLI package. Neither module operations nor generation require <code>*cli.Context</code>. The CLI resolves <code>EASYPPATH</code> and supplies a cache instance; only the Git adapter knows its on-disk layout.
+
+<code>internal/core</code> consumes its compiler packages from the pinned <code>github.com/easyp-tech/easyprotoc</code> module; version updates happen by bumping that pin in <code>go.mod</code>. <code>internal/protoast</code> remains a local adaptation seam: it preserves EasyP's rune-column position contract, so the re-sync note in <code>internal/protoast/build.go</code> applies on every bump.
 
 ## Dependency operations
 
@@ -127,7 +129,7 @@ Within each prepared target, at most four plugin invocations run concurrently wi
 
 ## Policy and validation commands
 
-Lint/breaking CLI adapters select producer policy and prepare shared module import roots before constructing the engine. <code>buildCore</code> in <code>internal/api/runtime.go</code> constructs only lint/breaking engines. <code>core.Options</code> carries <code>AllowCommentIgnores</code> and <code>KnownLintRules</code> per engine; comment directives are parsed and applied to findings by <code>internal/core/comment_suppressions.go</code>. Breaking comparisons use historical Git trees and the baseline-specific roots prepared by the API layer.
+Lint/breaking CLI adapters select producer policy and prepare shared module import roots before constructing the engine. <code>buildCore</code> in <code>internal/api/runtime.go</code> constructs only lint/breaking engines. <code>core.Options</code> carries <code>AllowCommentIgnores</code> and <code>KnownLintRules</code> per engine; comment directives are parsed and applied to findings by <code>internal/core/lint_suppressions.go</code>. Breaking comparisons use historical Git trees and the baseline-specific roots prepared by the API layer.
 
 <code>validate-config</code> calls <code>config/v1.ValidatePath</code>; recursive file discovery and structured YAML validation belong to that package. <code>internal/schemagen</code> writes schemas from <code>v1.SchemaJSON</code>; <code>mcp/easypconfig</code> exposes the same model to MCP clients. The generated pairs are <code>schemas/easyp-v1.schema.json</code> / <code>schemas/easyp.schema.json</code>, <code>schemas/easyp.gen-v1.schema.json</code> / <code>schemas/easyp.gen.schema.json</code>, and <code>schemas/protobuf.lock-v1.schema.json</code> / <code>schemas/protobuf.lock.schema.json</code>. The native manifest is not a YAML schema target.
 

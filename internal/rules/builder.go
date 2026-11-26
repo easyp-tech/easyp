@@ -1,11 +1,8 @@
 package rules
 
 import (
-	"fmt"
-
 	"github.com/samber/lo"
 
-	"github.com/easyp-tech/easyp/internal/config"
 	"github.com/easyp-tech/easyp/internal/core"
 )
 
@@ -55,91 +52,6 @@ func AllLintUseValues() []string {
 	values = append(values, AllRuleNames()...)
 
 	return lo.Uniq(values)
-}
-
-// New returns a map of rules and a map of ignore only rules by configuration.
-func New(cfg config.LintConfig) ([]core.Rule, map[string][]string, error) {
-	if err := validateConfigRuleNames(cfg); err != nil {
-		return nil, nil, fmt.Errorf("validateConfigRuleNames: %w", err)
-	}
-	allRules := []core.Rule{
-		//	minGroup
-		&DirectorySamePackage{},
-		&PackageDefined{},
-		&PackageDirectoryMatch{
-			Root:   ".",
-			Prefix: cfg.PackageDirectoryPrefix,
-		},
-		&PackageSameDirectory{},
-
-		//	basicGroup
-		&EnumFirstValueZero{},
-		&EnumNoAllowAlias{},
-		&EnumPascalCase{},
-		&EnumValueUpperSnakeCase{},
-		&FieldLowerSnakeCase{},
-		&ImportNoPublic{},
-		&ImportNoWeak{},
-		&ImportUsed{},
-		&MessagePascalCase{},
-		&OneofLowerSnakeCase{},
-		&PackageLowerSnakeCase{},
-		&PackageSameCsharpNamespace{},
-		&PackageSameGoPackage{},
-		&PackageSameJavaMultipleFiles{},
-		&PackageSameJavaPackage{},
-		&PackageSamePHPNamespace{},
-		&PackageSameRubyPackage{},
-		&PackageSameSwiftPrefix{},
-		&RPCPascalCase{},
-		&ServicePascalCase{},
-		//	defaultGroup
-		&EnumValuePrefix{},
-		&EnumZeroValueSuffix{
-			Suffix: defaultIfEmpty(cfg.EnumZeroValueSuffix, "UNSPECIFIED"),
-		},
-		&FileLowerSnakeCase{},
-		&RPCRequestResponseUnique{},
-		&RPCRequestStandardName{},
-		&RPCResponseStandardName{},
-		&PackageVersionSuffix{},
-		&ServiceSuffix{
-			Suffix: defaultIfEmpty(cfg.ServiceSuffix, "Service"),
-		},
-		//	commentsGroup
-		&CommentEnum{},
-		&CommentEnumValue{},
-		&CommentField{},
-		&CommentMessage{},
-		&CommentOneof{},
-		&CommentRPC{},
-		&CommentService{},
-		//	unaryRPCGroup
-		&RPCNoClientStreaming{},
-		&RPCNoServerStreaming{},
-	}
-
-	rules := make(map[string]core.Rule)
-	for _, rule := range allRules {
-		ruleName := core.GetRuleName(rule)
-		rules[ruleName] = rule
-	}
-
-	use := unwrapLintGroups(cfg.Use)
-	use = removeExcept(unwrapLintGroups(cfg.Except), use)
-
-	res := make([]core.Rule, len(use))
-
-	for i, ruleName := range use {
-		rule, ok := rules[ruleName]
-		if !ok {
-			return nil, nil, fmt.Errorf("%w: %s", core.ErrInvalidRule, ruleName)
-		}
-
-		res[i] = rule
-	}
-
-	return res, unwrapIgnoreOnly(cfg.IgnoreOnly), nil
 }
 
 func unwrapIgnoreOnly(ignoreOnly map[string][]string) map[string][]string {
@@ -222,6 +134,7 @@ func addMinimal(res []string) []string {
 	res = append(res, core.GetRuleName(&PackageDefined{}))
 	res = append(res, core.GetRuleName(&PackageDirectoryMatch{}))
 	res = append(res, core.GetRuleName(&PackageSameDirectory{}))
+	res = append(res, core.GetRuleName(&PackageNoImportCycle{}))
 
 	return res
 }
@@ -247,6 +160,8 @@ func addBasic(res []string) []string {
 	res = append(res, core.GetRuleName(&PackageSameSwiftPrefix{}))
 	res = append(res, core.GetRuleName(&RPCPascalCase{}))
 	res = append(res, core.GetRuleName(&ServicePascalCase{}))
+	res = append(res, core.GetRuleName(&SyntaxSpecified{}))
+	res = append(res, core.GetRuleName(&FieldNotRequired{}))
 	return res
 }
 

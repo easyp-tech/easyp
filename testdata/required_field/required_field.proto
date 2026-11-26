@@ -1,0 +1,9 @@
+syntax = "proto2";
+
+package reqfield.v1;
+
+message R {
+  required int32 id = 1;
+  optional string name = 2;
+  repeated int32 nums = 3;
+}

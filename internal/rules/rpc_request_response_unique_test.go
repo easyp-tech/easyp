@@ -6,6 +6,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/easyp-tech/easyp/internal/core"
+	"github.com/easyp-tech/easyp/internal/protoast"
 	"github.com/easyp-tech/easyp/internal/rules"
 )
 
@@ -26,14 +27,18 @@ func TestRPCRequestResponseUnique_Validate(t *testing.T) {
 	t.Parallel()
 
 	tests := map[string]struct {
-		fileName   string
+		fileNames  []string
 		wantIssues *core.Issue
 		wantErr    error
 	}{
 		"invalid": {
-			fileName: invalidAuthProto,
+			// invalidAuthProto re-uses the TokenData type: the second use issues
+			// at that rpc's keyword position with the written type as the source
+			// (the first user is exempt — main is per-file first-exempt on
+			// written names; the rule runs through the Collect/Finish driver).
+			fileNames: []string{invalidAuthProto},
 			wantIssues: &core.Issue{
-				Position: core.Position{
+				Position: protoast.Position{
 					Filename: "",
 					Offset:   375,
 					Line:     14,
@@ -45,8 +50,8 @@ func TestRPCRequestResponseUnique_Validate(t *testing.T) {
 			},
 		},
 		"valid": {
-			fileName: validAuthProto,
-			wantErr:  nil,
+			fileNames: []string{validAuthProto},
+			wantErr:   nil,
 		},
 	}
 
@@ -55,16 +60,20 @@ func TestRPCRequestResponseUnique_Validate(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			r, protos := start(t)
+			rule := &rules.RPCRequestResponseUnique{}
 
-			rule := rules.RPCRequestResponseUnique{}
-			issues, err := rule.Validate(protos[tc.fileName])
-			r.ErrorIs(err, tc.wantErr)
+			var infos []core.ProtoInfo
+			for _, fileName := range tc.fileNames {
+				infos = append(infos, parseLinkedFile(t, fileName))
+			}
+
+			issues, err := validate(rule, infos...)
+			require.ErrorIs(t, err, tc.wantErr)
 			switch {
 			case tc.wantIssues != nil:
-				r.Contains(issues, *tc.wantIssues)
+				require.Contains(t, issues, *tc.wantIssues)
 			case len(issues) > 0:
-				r.Empty(issues)
+				require.Empty(t, issues)
 			}
 		})
 	}

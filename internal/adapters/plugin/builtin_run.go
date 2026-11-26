@@ -14,6 +14,21 @@ import (
 	"github.com/tetratelabs/wazero/experimental"
 )
 
+// runtimeCreationMu serializes wazero runtime construction: wazero v1.9.0's
+// internal/version.GetWazeroVersion() writes a package global on first use
+// and is not safe under concurrent NewRuntimeWithConfig calls (race reported
+// from builtin_run.go:144 and builtin_impl.go:143).
+var runtimeCreationMu sync.Mutex
+
+// newRuntimeSerialized is the default runtimeFactory. The guard serializes
+// runtime construction only — invocations stay concurrent (per-invocation
+// runtimes are the documented design, see BuiltinRun).
+func newRuntimeSerialized(ctx context.Context, config wazero.RuntimeConfig) wazero.Runtime {
+	runtimeCreationMu.Lock()
+	defer runtimeCreationMu.Unlock()
+	return wazero.NewRuntimeWithConfig(ctx, config)
+}
+
 type builtinRunContextKey struct{}
 
 // BuiltinRun owns compiled builtin modules for one command. Each invocation
@@ -56,7 +71,7 @@ func EnsureBuiltinRun(ctx context.Context) (context.Context, *BuiltinRun) {
 			WithCoreFeatures(api.CoreFeaturesV2 | experimental.CoreFeaturesThreads).
 			WithCloseOnContextDone(true).
 			WithCompilationCache(cache),
-		runtimeFactory: wazero.NewRuntimeWithConfig,
+		runtimeFactory: newRuntimeSerialized,
 		modules:        make(map[[sha256.Size]byte]*builtinCompilation),
 	}
 	return context.WithValue(ctx, builtinRunContextKey{}, run), run

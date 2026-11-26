@@ -1,0 +1,9 @@
+syntax = "proto3";
+
+package same.v1;
+
+import "import_cycle/sp2.proto";
+
+message SP1 {
+  same.v1.SP2 s = 1;
+}

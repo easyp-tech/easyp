@@ -15,10 +15,6 @@ func ValidateNames(names []string) error {
 	allowed := AllLintUseValues()
 	var issues []error
 	for _, name := range names {
-		if name == "PACKAGE_NO_IMPORT_CYCLE" {
-			issues = append(issues, fmt.Errorf("%w: %s is not implemented", core.ErrInvalidRule, name))
-			continue
-		}
 		if !slices.Contains(allowed, name) {
 			issues = append(issues, fmt.Errorf("%w: %s", core.ErrInvalidRule, name))
 		}

@@ -1,0 +1,7 @@
+syntax = "proto3";
+
+package same.v1;
+
+message SP2 {
+  int32 id = 1;
+}

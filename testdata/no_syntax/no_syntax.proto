@@ -1,0 +1,5 @@
+package nosyntax.v1;
+
+message N {
+  int32 id = 1;
+}

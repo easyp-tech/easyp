@@ -1,0 +1,9 @@
+syntax = "proto3";
+
+package b.v1;
+
+import "import_cycle/a2.proto";
+
+message B {
+  a.v1.A2 a = 1;
+}
