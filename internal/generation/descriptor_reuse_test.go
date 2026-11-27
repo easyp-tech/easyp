@@ -115,7 +115,7 @@ func TestDescriptorDirectorySnapshotPreservesMetadata(t *testing.T) {
 				IncludeImports:      tt.includeImports,
 			}
 
-			outputs, err := planDescriptorOutputs(request, []preparedDescriptorTarget{target})
+			outputs, err := planDescriptorOutputs(t.Context(), request, []preparedDescriptorTarget{target})
 
 			require.NoError(t, err)
 			require.Len(t, outputs, 1)

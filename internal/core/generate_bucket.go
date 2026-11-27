@@ -2,6 +2,7 @@ package core
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"go/parser"
 	"go/token"
@@ -11,6 +12,8 @@ import (
 	"slices"
 	"strings"
 	"sync"
+
+	"github.com/easyp-tech/easyp/internal/parallel"
 )
 
 // ImmutableData represents an immutable byte slice.
@@ -113,12 +116,11 @@ func (b *GenerateBucket) DumpToFs(ctx context.Context) error {
 		}
 		packages[key] = parsed.Name.Name
 	}
-	// Apply the completed bucket in path order so write failures are deterministic too.
-	for _, path := range paths {
-		if err := ctx.Err(); err != nil {
-			return err
-		}
-		file := b.filesToWrite[path]
+	// Write on bounded workers; errors are reported in path order, so the
+	// failure is as deterministic as a serial write, though files after it may
+	// already be written.
+	return parallel.Run(ctx, len(paths), maxWriteWorkers, func(index int) error {
+		path := paths[index]
 		dir := filepath.Dir(path)
 		if err := os.MkdirAll(dir, 0755); err != nil {
 			return fmt.Errorf("os.MkdirAll %s: %w", dir, err)
@@ -129,15 +131,17 @@ func (b *GenerateBucket) DumpToFs(ctx context.Context) error {
 			return fmt.Errorf("os.Create %s: %w", path, err)
 		}
 
-		_, err = f.Write(file.Data())
+		_, err = f.Write(b.filesToWrite[path].Data())
 		if err != nil {
-			return fmt.Errorf("f.Write %s: %w", path, err)
+			return errors.Join(fmt.Errorf("f.Write %s: %w", path, err), f.Close())
 		}
 
 		if err := f.Close(); err != nil {
 			return fmt.Errorf("f.Close %s: %w", path, err)
 		}
-	}
-
-	return nil
+		return nil
+	})
 }
+
+// maxWriteWorkers bounds concurrent generated-file writes.
+const maxWriteWorkers = 8

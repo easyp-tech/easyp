@@ -33,3 +33,25 @@ func TestGenerateBucketValidationUsesPathOrder(t *testing.T) {
 		require.ErrorContains(t, bucket.DumpToFs(t.Context()), filepath.Join(root, "a.go"))
 	}
 }
+
+func TestGenerateBucketWriteErrorsUsePathOrder(t *testing.T) {
+	t.Parallel()
+	root := t.TempDir()
+	for _, name := range []string{"a-file", "m-file"} {
+		require.NoError(t, os.WriteFile(filepath.Join(root, name), nil, 0o644))
+	}
+	for range 20 {
+		bucket := NewGenerateBucket()
+		for i := range 50 {
+			bucket.PutFile(t.Context(), filepath.Join(root, "ok", string(rune('a'+i%26))+string(rune('a'+i/26))+".txt"), []byte("data"))
+		}
+		bucket.PutFile(t.Context(), filepath.Join(root, "m-file", "x.txt"), []byte("data"))
+		bucket.PutFile(t.Context(), filepath.Join(root, "a-file", "x.txt"), []byte("data"))
+		err := bucket.DumpToFs(t.Context())
+		require.ErrorContains(t, err, "os.MkdirAll "+filepath.Join(root, "a-file"))
+		assert.NotContains(t, err.Error(), "m-file")
+	}
+	data, err := os.ReadFile(filepath.Join(root, "ok", "aa.txt"))
+	require.NoError(t, err)
+	assert.Equal(t, "data", string(data))
+}
