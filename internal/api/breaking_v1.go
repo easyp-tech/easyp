@@ -60,12 +60,6 @@ func (b BreakingCheck) checkV1Policies(ctx *cli.Context, log logger.Logger, conf
 	if err != nil {
 		return nil, fmt.Errorf("moduleCache: %w", err)
 	}
-	replacements := newPolicyReplacementSources(ctx.Context, projectRoot, projectRoot, func() (modules.Cache, error) { return cache, nil }, flags.IsFrozen(ctx))
-	sources, err := discoverV1BreakingPolicySources(replacements, scanPath, projectRoot, configPath)
-	if err != nil {
-		return nil, fmt.Errorf("discoverV1BreakingPolicySources: %w", err)
-	}
-	currentReplacements := newPolicyReplacementSources(ctx.Context, repositoryRoot, repositoryRoot, func() (modules.Cache, error) { return cache, nil }, flags.IsFrozen(ctx))
 	snapshots := make(map[string]*gitadapter.Snapshot)
 	defer func() {
 		for _, snapshot := range snapshots {
@@ -80,6 +74,16 @@ func (b BreakingCheck) checkV1Policies(ctx *cli.Context, log logger.Logger, conf
 			log.Error(ctx.Context, "Close", slog.Any("error", err))
 		}
 	}()
+	reader := newSessionFileReader(session)
+	policies := newBreakingPolicies(projectRoot, configPath)
+	replacements := newPolicyReplacementSources(ctx.Context, projectRoot, projectRoot, func() (modules.Cache, error) { return cache, nil }, flags.IsFrozen(ctx))
+	replacements.readFile = reader.readFileAt
+	sources, err := discoverV1BreakingPolicySources(replacements, scanPath, projectRoot, configPath)
+	if err != nil {
+		return nil, fmt.Errorf("discoverV1BreakingPolicySources: %w", err)
+	}
+	currentReplacements := newPolicyReplacementSources(ctx.Context, repositoryRoot, repositoryRoot, func() (modules.Cache, error) { return cache, nil }, flags.IsFrozen(ctx))
+	currentReplacements.readFile = reader.readFileAt
 	var issues []core.IssueInfo
 	seen := make(map[breakingIssueKey]bool)
 	for _, source := range sources {
@@ -116,6 +120,7 @@ func (b BreakingCheck) checkV1Policies(ctx *cli.Context, log logger.Logger, conf
 			return nil, fmt.Errorf("discoverBreakingScopes current: %w", err)
 		}
 		baselineReplacements := newPolicyReplacementSources(ctx.Context, snapshot.Root, snapshot.RepositoryRoot, func() (modules.Cache, error) { return cache, nil }, flags.IsFrozen(ctx))
+		baselineReplacements.readFile = reader.readFileAt
 		baseline, err := selectedPolicyScopes(baselineReplacements, relative, flags.IsFrozen(ctx))
 		if err != nil {
 			return nil, fmt.Errorf("discoverBreakingScopes baseline: %w", err)
@@ -132,12 +137,12 @@ func (b BreakingCheck) checkV1Policies(ctx *cli.Context, log logger.Logger, conf
 			// Keep the whole selected module in each comparison so FILE moves and
 			// package members spanning policy subtrees remain comparable.
 			ownFiles := append(append([]string(nil), currentFiles...), baselineFiles...)
-			relevant, err := breakingScopeUsesPolicy(repositoryRoot, ownFiles, projectRoot, configPath, source)
+			relevant, err := breakingScopeUsesPolicy(repositoryRoot, ownFiles, policies.resolve, source)
 			if err != nil {
 				return nil, err
 			}
 			if flags.IsFrozen(ctx) && len(ownFiles) == 0 {
-				_, owner, err := resolveV1BreakingPolicy(filepath.Join(repositoryRoot, module), projectRoot, configPath)
+				_, owner, err := policies.resolve(filepath.Join(repositoryRoot, module))
 				if err != nil {
 					return nil, fmt.Errorf("resolveV1BreakingPolicy: %w", err)
 				}
@@ -150,10 +155,19 @@ func (b BreakingCheck) checkV1Policies(ctx *cli.Context, log logger.Logger, conf
 			if err != nil {
 				return nil, fmt.Errorf("current module %s: %w", module, err)
 			}
-			baselineImports, err := breakingImportRootsMode(ctx.Context, cache, snapshot.Root, module, baselineFiles, snapshot, flags.IsFrozen(ctx))
+			baselineImports, baselineCheck, err := breakingImportRootsUnchecked(ctx.Context, cache, snapshot.Root, module, baselineFiles, snapshot, flags.IsFrozen(ctx))
 			if err != nil {
 				return nil, fmt.Errorf("baseline %s module %s: %w", cfg.AgainstGitRef, module, err)
 			}
+			// The baseline collision check runs while both revisions compile;
+			// its failure still wins over the comparison, as if it ran first.
+			var collisionChecks backgroundChecks
+			collisionChecks.start(func() error {
+				if err := baselineCheck(); err != nil {
+					return fmt.Errorf("baseline %s module %s: %w", cfg.AgainstGitRef, module, err)
+				}
+				return nil
+			})
 			currentAllowed, currentOpen := breakingRevisionSources(currentImports, session)
 			baselineAllowed, baselineOpen := breakingRevisionSources(baselineImports, session)
 			app := core.New(core.Options{Logger: log, ImportRoots: currentImports.Paths(), ImportFileAllowed: currentAllowed, OpenSourceFile: currentOpen, SourceSession: session, BreakingCheckConfig: core.BreakingCheckConfig{
@@ -162,6 +176,9 @@ func (b BreakingCheck) checkV1Policies(ctx *cli.Context, log logger.Logger, conf
 				IgnoreUnstable: cfg.IgnoreUnstable,
 			}})
 			found, err := app.CompareBreakingWithImports(ctx.Context, newBreakingWalker(repositoryRoot, currentFiles), newBreakingWalker(snapshot.Root, baselineFiles), core.BreakingImports{Paths: baselineImports.Paths(), FileAllowed: baselineAllowed, Open: baselineOpen})
+			if checkErr := collisionChecks.wait(); checkErr != nil {
+				return nil, checkErr
+			}
 			if err != nil {
 				return nil, fmt.Errorf("CompareBreaking module %s against %s: %w", module, cfg.AgainstGitRef, err)
 			}
@@ -169,7 +186,7 @@ func (b BreakingCheck) checkV1Policies(ctx *cli.Context, log logger.Logger, conf
 				owned := slices.Contains(ownFiles, filepath.ToSlash(issue.Path))
 				if owned {
 					directory := filepath.Dir(filepath.Join(repositoryRoot, issue.Path))
-					_, owner, err := resolveV1BreakingPolicy(directory, projectRoot, configPath)
+					_, owner, err := policies.resolve(directory)
 					if err != nil {
 						return nil, fmt.Errorf("resolveV1BreakingPolicy: %w", err)
 					}
@@ -192,13 +209,13 @@ func (b BreakingCheck) checkV1Policies(ctx *cli.Context, log logger.Logger, conf
 	return issues, nil
 }
 
-func breakingScopeUsesPolicy(repositoryRoot string, files []string, projectRoot, configPath, source string) (bool, error) {
+func breakingScopeUsesPolicy(repositoryRoot string, files []string, resolve func(string) (v1.Policy, string, error), source string) (bool, error) {
 	directories := make([]string, 0, len(files))
 	for _, file := range files {
 		directories = append(directories, filepath.Dir(filepath.Join(repositoryRoot, file)))
 	}
 	for _, directory := range directories {
-		_, owner, err := resolveV1BreakingPolicy(directory, projectRoot, configPath)
+		_, owner, err := resolve(directory)
 		if err != nil {
 			return false, fmt.Errorf("resolveV1BreakingPolicy: %w", err)
 		}
@@ -266,6 +283,32 @@ func discoverV1BreakingPolicySources(replacements *policyReplacementSources, sca
 	return result, nil
 }
 
+// breakingPolicies memoizes resolveV1BreakingPolicy by directory for one run,
+// since every finding asks for the policy owning its directory.
+type breakingPolicies struct {
+	projectRoot, configPath string
+	resolved                map[string]resolvedBreakingPolicy
+}
+
+type resolvedBreakingPolicy struct {
+	policy v1.Policy
+	source string
+	err    error
+}
+
+func newBreakingPolicies(projectRoot, configPath string) *breakingPolicies {
+	return &breakingPolicies{projectRoot: projectRoot, configPath: configPath, resolved: map[string]resolvedBreakingPolicy{}}
+}
+
+func (p *breakingPolicies) resolve(directory string) (v1.Policy, string, error) {
+	if cached, ok := p.resolved[directory]; ok {
+		return cached.policy, cached.source, cached.err
+	}
+	policy, source, err := resolveV1BreakingPolicy(directory, p.projectRoot, p.configPath)
+	p.resolved[directory] = resolvedBreakingPolicy{policy: policy, source: source, err: err}
+	return policy, source, err
+}
+
 func resolveV1BreakingPolicy(directory, projectRoot, configPath string) (v1.Policy, string, error) {
 	for _, dir := range ancestorDirs(directory, projectRoot) {
 		path := v1PolicyPath(dir, projectRoot, configPath)
@@ -307,6 +350,8 @@ func (b BreakingCheck) checkV1ExtendedBreakingSource(
 	snapshots map[string]*gitadapter.Snapshot, seen map[breakingIssueKey]bool,
 	session *sourceview.Session,
 ) ([]core.IssueInfo, error) {
+	reader := newSessionFileReader(session)
+	policies := newBreakingPolicies(projectRoot, configPath)
 	repositoryRoot, err := gitadapter.RepositoryRoot(scanRoot)
 	if err != nil {
 		return nil, fmt.Errorf("RepositoryRoot: %w", err)
@@ -320,6 +365,7 @@ func (b BreakingCheck) checkV1ExtendedBreakingSource(
 		return nil, fmt.Errorf("%w: %s", core.ErrRootOutsideProject, scanPath)
 	}
 	replacements := newPolicyReplacementSources(ctx.Context, repositoryRoot, repositoryRoot, func() (modules.Cache, error) { return cache, nil }, flags.IsFrozen(ctx))
+	replacements.readFile = reader.readFileAt
 	current, err := selectedPolicyScopes(replacements, relative, flags.IsFrozen(ctx))
 	if err != nil {
 		return nil, fmt.Errorf("selectedPolicyScopes: %w", err)
@@ -351,12 +397,12 @@ func (b BreakingCheck) checkV1ExtendedBreakingSource(
 			if queued[module] {
 				continue
 			}
-			relevant, err := breakingScopeUsesPolicy(repositoryRoot, scopes[module].files, projectRoot, configPath, source)
+			relevant, err := breakingScopeUsesPolicy(repositoryRoot, scopes[module].files, policies.resolve, source)
 			if err != nil {
 				return err
 			}
 			if len(scopes[module].files) == 0 {
-				_, owner, err := resolveV1BreakingPolicy(filepath.Join(repositoryRoot, module), projectRoot, configPath)
+				_, owner, err := policies.resolve(filepath.Join(repositoryRoot, module))
 				if err != nil {
 					return err
 				}
@@ -387,6 +433,7 @@ func (b BreakingCheck) checkV1ExtendedBreakingSource(
 		if !known {
 			var err error
 			baselineReplacements := newPolicyReplacementSources(ctx.Context, snapshot.Root, snapshot.RepositoryRoot, func() (modules.Cache, error) { return cache, nil }, flags.IsFrozen(ctx))
+			baselineReplacements.readFile = reader.readFileAt
 			scopes, err = selectedPolicyScopes(baselineReplacements, relative, flags.IsFrozen(ctx))
 			if err != nil {
 				return nil, nil, fmt.Errorf("selectedPolicyScopes: %w", err)
@@ -469,22 +516,32 @@ func (b BreakingCheck) checkV1ExtendedBreakingSource(
 		if err != nil {
 			return nil, fmt.Errorf("current module %s: %w", module, err)
 		}
-		baselineImports, err := breakingImportRootsMode(ctx.Context, cache, snapshot.Root, module, baselineFiles, snapshot, flags.IsFrozen(ctx))
+		baselineImports, baselineCheck, err := breakingImportRootsUnchecked(ctx.Context, cache, snapshot.Root, module, baselineFiles, snapshot, flags.IsFrozen(ctx))
 		if err != nil {
 			return nil, fmt.Errorf("baseline %s module %s: %w", cfg.AgainstGitRef, module, err)
 		}
+		var collisionChecks backgroundChecks
+		collisionChecks.start(func() error {
+			if err := baselineCheck(); err != nil {
+				return fmt.Errorf("baseline %s module %s: %w", cfg.AgainstGitRef, module, err)
+			}
+			return nil
+		})
 		currentAllowed, currentOpen := breakingRevisionSources(currentImports, session)
 		baselineAllowed, baselineOpen := breakingRevisionSources(baselineImports, session)
 		app := core.New(core.Options{Logger: log, ImportRoots: currentImports.Paths(), ImportFileAllowed: currentAllowed, OpenSourceFile: currentOpen, SourceSession: session, BreakingCheckConfig: core.BreakingCheckConfig{
 			IgnoreDirs: append(append([]string(nil), ignorePaths...), defaultVendorDir), Categories: cfg.Categories, IgnoreUnstable: cfg.IgnoreUnstable,
 		}})
 		findings, err := app.CompareBreakingWithImports(ctx.Context, newBreakingWalker(repositoryRoot, currentFiles), newBreakingWalker(snapshot.Root, baselineFiles), core.BreakingImports{Paths: baselineImports.Paths(), FileAllowed: baselineAllowed, Open: baselineOpen})
+		if checkErr := collisionChecks.wait(); checkErr != nil {
+			return nil, checkErr
+		}
 		if err != nil {
 			return nil, fmt.Errorf("CompareBreaking module %s against %s: %w", module, cfg.AgainstGitRef, err)
 		}
 		for _, issue := range findings {
 			if slices.Contains(ownFiles, filepath.ToSlash(issue.Path)) {
-				_, owner, err := resolveV1BreakingPolicy(filepath.Dir(filepath.Join(repositoryRoot, issue.Path)), projectRoot, configPath)
+				_, owner, err := policies.resolve(filepath.Dir(filepath.Join(repositoryRoot, issue.Path)))
 				if err != nil {
 					return nil, err
 				}

@@ -9,9 +9,13 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"runtime"
 	"strings"
+	"sync"
 
 	gogit "github.com/go-git/go-git/v5"
+	"github.com/go-git/go-git/v5/plumbing/cache"
+	"github.com/go-git/go-git/v5/storage/filesystem"
 
 	"github.com/easyp-tech/easyp/internal/adapters/gitsnapshot"
 	v1 "github.com/easyp-tech/easyp/internal/config/v1"
@@ -44,8 +48,37 @@ func RepositoryRoot(directory string) (string, error) {
 	return worktree.Filesystem.Root(), nil
 }
 
-// Close removes the temporary snapshot.
-func (s *Snapshot) Close() error { return os.RemoveAll(s.Root) }
+// Close removes the temporary snapshot. A baseline can hold thousands of files,
+// so they are unlinked concurrently first; RemoveAll then removes the rest and
+// reports any failure.
+func (s *Snapshot) Close() error {
+	removeFilesConcurrently(s.Root)
+	return os.RemoveAll(s.Root)
+}
+
+func removeFilesConcurrently(root string) {
+	var files []string
+	_ = filepath.WalkDir(root, func(name string, entry fs.DirEntry, err error) error {
+		if err == nil && !entry.IsDir() {
+			files = append(files, name)
+		}
+		return nil
+	})
+	names := make(chan string)
+	var wg sync.WaitGroup
+	for range min(runtime.NumCPU(), 8) {
+		wg.Go(func() {
+			for name := range names {
+				_ = os.Remove(name)
+			}
+		})
+	}
+	for _, name := range files {
+		names <- name
+	}
+	close(names)
+	wg.Wait()
+}
 
 // SnapshotRevision materializes a revision's protobuf inputs, including hidden
 // local replacement directories. Only relevant regular files are materialized.
@@ -61,6 +94,12 @@ func SnapshotRevision(ctx context.Context, directory, ref string) (_ *Snapshot, 
 	if err != nil {
 		return nil, fmt.Errorf("Worktree: %w", err)
 	}
+	repository, closeStorage, err := keepPackDescriptors(repository, wt)
+	if err != nil {
+		return nil, fmt.Errorf("keepPackDescriptors: %w", err)
+	}
+	// Only read-only packfiles stay open, so closing them cannot affect the stage.
+	defer func() { _ = closeStorage() }()
 	commit, err := baselineCommit(repository, ref)
 	if err != nil {
 		return nil, fmt.Errorf("baselineCommit: %w", err)
@@ -80,6 +119,9 @@ func SnapshotRevision(ctx context.Context, directory, ref string) (_ *Snapshot, 
 		}
 	}()
 	view := sourceview.NewImmutable(tree)
+	// The walk is the only writer of the private stage, so validated
+	// directories need not be reread for every file.
+	destination := gitsnapshot.NewDestinationValidator(root)
 	err = view.Walk(ctx, ".", func(name string, resolved sourceview.Resolution, walkErr error) error {
 		if walkErr != nil {
 			if !snapshotInput(name) || snapshotAdditionalPolicy(name) {
@@ -109,7 +151,7 @@ func SnapshotRevision(ctx context.Context, directory, ref string) (_ *Snapshot, 
 		if closeErr != nil {
 			return fmt.Errorf("Close: %w", closeErr)
 		}
-		if err := gitsnapshot.ValidateDestination(root, name); err != nil {
+		if err := destination.Validate(name); err != nil {
 			return fmt.Errorf("ValidateDestination: %w", err)
 		}
 		target := filepath.Join(root, relative)
@@ -119,6 +161,7 @@ func SnapshotRevision(ctx context.Context, directory, ref string) (_ *Snapshot, 
 		if err := os.WriteFile(target, raw, 0o600); err != nil {
 			return fmt.Errorf("WriteFile: %w", err)
 		}
+		destination.Record(name)
 		return nil
 	})
 	if err != nil {
@@ -128,6 +171,22 @@ func SnapshotRevision(ctx context.Context, directory, ref string) (_ *Snapshot, 
 		return nil, fmt.Errorf("validateSnapshotRoots: %w", err)
 	}
 	return snapshot, nil
+}
+
+// keepPackDescriptors reopens repository's storage with packfiles kept open, so
+// staging thousands of blobs does not reopen a packfile for every object. The
+// returned function closes them once staging is done.
+func keepPackDescriptors(repository *gogit.Repository, wt *gogit.Worktree) (*gogit.Repository, func() error, error) {
+	storage, ok := repository.Storer.(*filesystem.Storage)
+	if !ok {
+		return repository, func() error { return nil }, nil
+	}
+	kept := filesystem.NewStorageWithOptions(storage.Filesystem(), cache.NewObjectLRUDefault(), filesystem.Options{KeepDescriptors: true})
+	reopened, err := gogit.Open(kept, wt.Filesystem)
+	if err != nil {
+		return nil, nil, fmt.Errorf("Open: %w", err)
+	}
+	return reopened, kept.Close, nil
 }
 
 // Required roots come from revision-local manifests, not filename extensions.
