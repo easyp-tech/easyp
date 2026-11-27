@@ -70,36 +70,44 @@ func selectV1ProtoFiles(files []string, filters []v1.ProtoFileFilter) []string {
 	}
 	selected := make([]string, 0, len(files))
 	for _, name := range files {
-		if filepath.Ext(name) != ".proto" {
-			selected = append(selected, name)
-			continue
-		}
-		insideRoot, allowed := false, false
-		for _, filter := range filters {
-			if !v1FileWithin(name, filter.Root) {
-				continue
-			}
-			insideRoot = true
-			included := len(filter.Includes) == 0
-			for _, directory := range filter.Includes {
-				included = included || v1FileWithin(name, directory)
-			}
-			for _, directory := range filter.Excludes {
-				if v1FileWithin(name, directory) {
-					included = false
-					break
-				}
-			}
-			if included {
-				allowed = true
-				break
-			}
-		}
-		if !insideRoot || allowed {
+		if filepath.Ext(name) != ".proto" || v1SourcePathSelected(name, filters) {
 			selected = append(selected, name)
 		}
 	}
 	return selected
+}
+
+// Physical targets can supply proto bytes without having a .proto suffix.
+func v1SourcePathSelected(name string, filters []v1.ProtoFileFilter) bool {
+	return v1SourceSelected(name, filters, false)
+}
+
+func v1SourceDirectorySelected(name string, filters []v1.ProtoFileFilter) bool {
+	return v1SourceSelected(name, filters, true)
+}
+
+func v1SourceSelected(name string, filters []v1.ProtoFileFilter, includeAncestors bool) bool {
+	insideRoot := false
+	for _, filter := range filters {
+		if !v1FileWithin(name, filter.Root) && (!includeAncestors || !v1FileWithin(filter.Root, name)) {
+			continue
+		}
+		insideRoot = true
+		included := len(filter.Includes) == 0
+		for _, directory := range filter.Includes {
+			included = included || v1FileWithin(name, directory) || (includeAncestors && v1FileWithin(directory, name))
+		}
+		for _, directory := range filter.Excludes {
+			if v1FileWithin(name, directory) {
+				included = false
+				break
+			}
+		}
+		if included {
+			return true
+		}
+	}
+	return !insideRoot
 }
 
 func v1FileWithin(name, directory string) bool {

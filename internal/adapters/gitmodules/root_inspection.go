@@ -43,6 +43,9 @@ func inspectV1Snapshot(ctx context.Context, view *sourceview.View, directory str
 		if err := ctx.Err(); err != nil {
 			return fmt.Errorf("Err: %w", err)
 		}
+		if resolved.Info != nil && resolved.Info.IsDir() && (!v1SourceDirectorySelected(logical, module.ProtoFilters) || !v1SourceDirectorySelected(resolved.Path, module.ProtoFilters)) {
+			return fs.SkipDir
+		}
 		if walkErr != nil {
 			// Match strict snapshots: unentered submodules are opaque, while
 			// aliases attempting to enter them remain source path failures.
@@ -58,7 +61,7 @@ func inspectV1Snapshot(ctx context.Context, view *sourceview.View, directory str
 			}
 			return nil
 		}
-		if path.Ext(logical) != ".proto" || len(selectV1ProtoFiles([]string{logical}, module.ProtoFilters)) == 0 {
+		if path.Ext(logical) != ".proto" || !v1SourcePathSelected(logical, module.ProtoFilters) || !v1SourcePathSelected(resolved.Path, module.ProtoFilters) {
 			return nil
 		}
 		file, err := view.Open(ctx, logical)

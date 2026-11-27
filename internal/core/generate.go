@@ -16,7 +16,6 @@ import (
 
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/reflect/protodesc"
-	"google.golang.org/protobuf/reflect/protoreflect"
 	"google.golang.org/protobuf/types/descriptorpb"
 	"google.golang.org/protobuf/types/pluginpb"
 
@@ -146,7 +145,7 @@ func (c *Core) prepareGeneration(ctx context.Context, root string, selected []st
 	// Search local roots before dependency roots.
 	slices.Reverse(imports)
 
-	compiled, err := compilerbackend.Compile(ctx, compilerbackend.Request{
+	compiled, err := compilerbackend.CompileDescriptorSet(ctx, compilerbackend.Request{
 		Files:           files,
 		ImportPaths:     imports,
 		Accessor:        c.openSourceFile,
@@ -154,10 +153,10 @@ func (c *Core) prepareGeneration(ctx context.Context, root string, selected []st
 		SourceInfo:      true,
 	})
 	if err != nil {
-		return nil, fmt.Errorf("Compile: %w", err)
+		return nil, fmt.Errorf("CompileDescriptorSet: %w", err)
 	}
 
-	fileDescriptors, dependencyFiles := collectFileDescriptors(compiled)
+	fileDescriptors, dependencyFiles := compiled.Files, compiled.Dependencies
 
 	fileNames := make([]string, len(fileDescriptors))
 	for i, fd := range fileDescriptors {
@@ -171,10 +170,18 @@ func (c *Core) prepareGeneration(ctx context.Context, root string, selected []st
 		if err := ApplyManagedMode(fileDescriptors, c.managedMode, fileToModule); err != nil {
 			return nil, fmt.Errorf("ApplyManagedMode: %w", err)
 		}
+		if _, err := protodesc.NewFiles(&descriptorpb.FileDescriptorSet{File: fileDescriptors}); err != nil {
+			return nil, fmt.Errorf("NewFiles after managed mode: %w", err)
+		}
 	}
 
 	return &GenerationPlan{core: c, root: root, files: files,
 		descriptors: fileDescriptors, dependencyFiles: dependencyFiles}, nil
+}
+
+// Targets returns an independent copy of the selected logical source names.
+func (p *GenerationPlan) Targets() []string {
+	return slices.Clone(p.files)
 }
 
 // DescriptorSet returns an independent copy of the prepared descriptors.
@@ -237,39 +244,6 @@ func (p *GenerationPlan) ExecuteInto(ctx context.Context, filesToWrite *Generate
 	}
 	p.core.logger.Info(ctx, "code generation completed")
 	return nil
-}
-
-// collectFileDescriptors orders each descriptor after its imports, preserving
-// the compiler's target order and recording files first reached as dependencies.
-func collectFileDescriptors(compiled *compilerbackend.Result) ([]*descriptorpb.FileDescriptorProto, []string) {
-	var descriptors []*descriptorpb.FileDescriptorProto
-	var dependencies []string
-	processed := make(map[string]bool)
-
-	var visit func(protoreflect.FileDescriptor, bool)
-	visit = func(file protoreflect.FileDescriptor, dependency bool) {
-		name := file.Path()
-		if processed[name] {
-			return
-		}
-		for i := range file.Imports().Len() {
-			visit(file.Imports().Get(i).FileDescriptor, true)
-		}
-		fdp, ok := compiled.Protos[name]
-		if !ok {
-			fdp = protodesc.ToFileDescriptorProto(file)
-		}
-		descriptors = append(descriptors, fdp)
-		processed[name] = true
-		if dependency {
-			dependencies = append(dependencies, name)
-		}
-	}
-
-	for _, file := range compiled.Files {
-		visit(file, false)
-	}
-	return descriptors, dependencies
 }
 
 // addFileWithInsertionPoint add file to bucket with insertion point support

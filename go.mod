@@ -6,7 +6,7 @@ require (
 	github.com/Yakwilik/go-yamlvalidator v0.3.1
 	github.com/a8m/envsubst v1.4.3
 	github.com/charmbracelet/x/term v0.2.1
-	github.com/easyp-tech/easyprotoc v0.1.0
+	github.com/easyp-tech/easyprotoc v0.1.1
 	github.com/easyp-tech/service/api v1.0.0
 	github.com/go-git/go-billy/v5 v5.6.2
 	github.com/go-git/go-git/v5 v5.16.3

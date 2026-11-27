@@ -103,6 +103,10 @@ Local replacements use an ephemeral main-module overlay graph and never alter th
 
 ## Generation
 
+Generation, breaking checks, tidy import rewrites and migration source-binding proofs compile through <code>internal/compilerbackend</code> using the <code>easyprotoc/protoc</code> Go library. The backend requests the import closure and uses the caller's source accessor for exclusions, permissions and virtual sources. Embedded standard sources are resolved only after a not-found result. Plugin compiler metadata identifies the EasyP version.
+
+Generation uses <code>CompileDescriptorSet</code> to decode files in parallel, validate the descriptor graph and resolve custom options. It consumes the decoded messages in target and import traversal order and validates managed transformations when preparing the plan. Export reuses the validated snapshot for a single graph or directory output and validates each multi-graph union for conflicting descriptors and symbols.
+
 ~~~text
 api.Generate.Action: flags + cwd + cache
   -> generation.Run(context, logger, cache, Request)

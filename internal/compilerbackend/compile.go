@@ -44,6 +44,37 @@ type Result struct {
 // Compile compiles the requested proto files and returns linked descriptors
 // alongside their descriptor protos.
 func Compile(ctx context.Context, req Request) (*Result, error) {
+	compiled, err := compileEasyprotoc(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+	compiledFiles, err := compiled.Files()
+	if err != nil {
+		return nil, fmt.Errorf("Files: %w", err)
+	}
+	byPath := make(map[string]protoreflect.FileDescriptor, len(compiledFiles))
+	for _, fd := range compiledFiles {
+		byPath[fd.Path()] = fd
+	}
+
+	files := make([]protoreflect.FileDescriptor, len(req.Files))
+	for i, name := range req.Files {
+		fd, ok := byPath[filepath.ToSlash(filepath.Clean(name))]
+		if !ok {
+			return nil, fmt.Errorf("compiled target %q not found in descriptor set", name)
+		}
+		files[i] = fd
+	}
+
+	ds := compiled.DescriptorSet()
+	protos := make(map[string]*descriptorpb.FileDescriptorProto, len(ds.GetFile()))
+	for _, fdp := range ds.GetFile() {
+		protos[fdp.GetName()] = fdp
+	}
+	return &Result{Files: files, Protos: protos}, nil
+}
+
+func compileEasyprotoc(ctx context.Context, req Request) (*protoc.Result, error) {
 	if ctx != nil {
 		if err := ctx.Err(); err != nil {
 			return nil, err
@@ -52,10 +83,6 @@ func Compile(ctx context.Context, req Request) (*Result, error) {
 	if len(req.Files) == 0 {
 		return nil, ErrNoInputFiles
 	}
-	return compileEasyprotoc(ctx, req)
-}
-
-func compileEasyprotoc(ctx context.Context, req Request) (*Result, error) {
 	open := req.Accessor
 	if open == nil {
 		open = func(name string) (io.ReadCloser, error) {
@@ -96,38 +123,7 @@ func compileEasyprotoc(ctx context.Context, req Request) (*Result, error) {
 		return nil, err
 	}
 
-	compiledFiles, err := compiled.Files()
-	if err != nil {
-		return nil, fmt.Errorf("Files: %w", err)
-	}
-	byPath := make(map[string]protoreflect.FileDescriptor, len(compiledFiles))
-	for _, fd := range compiledFiles {
-		byPath[fd.Path()] = fd
-	}
-
-	files := make([]protoreflect.FileDescriptor, len(req.Files))
-	for i, name := range req.Files {
-		fd, ok := byPath[name]
-		if !ok {
-			clean := strings.TrimPrefix(filepath.Clean(filepath.ToSlash(name)), "./")
-			fd, ok = byPath[clean]
-		}
-		if !ok {
-			return nil, fmt.Errorf("compiled target %q not found in descriptor set", name)
-		}
-		files[i] = fd
-	}
-
-	ds := compiled.DescriptorSet()
-	protos := make(map[string]*descriptorpb.FileDescriptorProto, len(ds.GetFile()))
-	for _, fdp := range ds.GetFile() {
-		protos[fdp.GetName()] = fdp
-	}
-
-	return &Result{
-		Files:  files,
-		Protos: protos,
-	}, nil
+	return compiled, nil
 }
 
 type accessorResolver struct {
@@ -140,6 +136,9 @@ func (r accessorResolver) FindFileByPath(ctx context.Context, path string) ([]by
 		if err := ctx.Err(); err != nil {
 			return nil, err
 		}
+	}
+	if path == "." || !fs.ValidPath(path) || strings.ContainsAny(path, "\\:\x00") {
+		return nil, fmt.Errorf("invalid proto import path %q", path)
 	}
 	if len(r.importPaths) == 0 {
 		return r.read(path)
@@ -158,20 +157,23 @@ func (r accessorResolver) FindFileByPath(ctx context.Context, path string) ([]by
 func (r accessorResolver) read(name string) ([]byte, error) {
 	reader, err := r.open(name)
 	if err != nil {
-		if errors.Is(err, os.ErrNotExist) || errors.Is(err, fs.ErrNotExist) {
+		if errors.Is(err, fs.ErrNotExist) {
 			return nil, protoc.ErrFileNotFound
 		}
 		return nil, err
 	}
+	if reader == nil {
+		return nil, fmt.Errorf("accessor returned no source for %q", name)
+	}
 	data, readErr := io.ReadAll(reader)
 	closeErr := reader.Close()
 	if readErr != nil {
-		return nil, fmt.Errorf("ReadAll: %w", readErr)
+		readErr = fmt.Errorf("ReadAll: %w", readErr)
 	}
 	if closeErr != nil {
-		return nil, fmt.Errorf("Close: %w", closeErr)
+		closeErr = fmt.Errorf("Close: %w", closeErr)
 	}
-	return data, nil
+	return data, errors.Join(readErr, closeErr)
 }
 
 // ReaderAccessor adapts a lookup function returning plain readers.
