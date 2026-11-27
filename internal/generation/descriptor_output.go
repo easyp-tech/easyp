@@ -1,6 +1,7 @@
 package generation
 
 import (
+	"context"
 	"crypto/sha256"
 	"fmt"
 	"os"
@@ -9,9 +10,9 @@ import (
 	"slices"
 	"strings"
 
-	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/descriptorpb"
 
+	"github.com/easyp-tech/easyp/internal/core"
 	"github.com/easyp-tech/easyp/internal/fs/fs"
 )
 
@@ -21,14 +22,14 @@ type descriptorOutput struct {
 	mode os.FileMode
 }
 
-func planDescriptorOutputs(request Request, targets []preparedDescriptorTarget) ([]descriptorOutput, error) {
+func planDescriptorOutputs(ctx context.Context, request Request, targets []preparedDescriptorTarget) ([]descriptorOutput, error) {
 	var outputs []descriptorOutput
 	if request.DescriptorSetOut != "" {
 		set, err := combineDescriptorTargets(targets, request.IncludeImports)
 		if err != nil {
 			return nil, err
 		}
-		output, err := prepareDescriptorOutput(request.DescriptorSetOut, set)
+		output, err := prepareDescriptorOutput(ctx, request.DescriptorSetOut, set)
 		if err != nil {
 			return nil, err
 		}
@@ -53,7 +54,7 @@ func planDescriptorOutputs(request Request, targets []preparedDescriptorTarget) 
 		if !request.IncludeImports {
 			set = descriptorSetForTargets(target.full, target.plan.Targets())
 		}
-		output, err := prepareDescriptorOutput(outputPath, set)
+		output, err := prepareDescriptorOutput(ctx, outputPath, set)
 		if err != nil {
 			return nil, err
 		}
@@ -107,8 +108,8 @@ func descriptorFileStem(name, identity string) string {
 	return fmt.Sprintf("%s-%x", slug, digest[:6])
 }
 
-func prepareDescriptorOutput(path string, set *descriptorpb.FileDescriptorSet) (descriptorOutput, error) {
-	raw, err := proto.MarshalOptions{Deterministic: true}.Marshal(set)
+func prepareDescriptorOutput(ctx context.Context, path string, set *descriptorpb.FileDescriptorSet) (descriptorOutput, error) {
+	raw, err := core.MarshalDescriptorSet(ctx, set.GetFile())
 	if err != nil {
 		return descriptorOutput{}, fmt.Errorf("Marshal: %w", err)
 	}

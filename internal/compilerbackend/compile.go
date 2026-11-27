@@ -31,6 +31,10 @@ type Request struct {
 	StandardImports bool
 	SourceInfo      bool
 	MaxParallelism  int
+	// ResolveExtensions decodes custom option extensions into typed dynamicpb
+	// fields during CompileDescriptorSet. Leaving it false preserves custom
+	// option wire bytes verbatim in unknown fields without a second unmarshal.
+	ResolveExtensions bool
 }
 
 // Result holds compiled target descriptors in request order and

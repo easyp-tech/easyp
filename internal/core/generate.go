@@ -43,7 +43,7 @@ func (c *Core) Generate(ctx context.Context, root, descriptorSetOut string, incl
 		return fmt.Errorf("PrepareGeneration: %w", err)
 	}
 	if descriptorSetOut != "" {
-		data, err := proto.MarshalOptions{Deterministic: true}.Marshal(plan.DescriptorSet(includeImports))
+		data, err := MarshalDescriptorSet(ctx, plan.Descriptors(includeImports))
 		if err != nil {
 			return fmt.Errorf("Marshal: %w", err)
 		}
@@ -186,19 +186,31 @@ func (p *GenerationPlan) Targets() []string {
 
 // DescriptorSet returns an independent copy of the prepared descriptors.
 func (p *GenerationPlan) DescriptorSet(includeImports bool) *descriptorpb.FileDescriptorSet {
-	set := &descriptorpb.FileDescriptorSet{}
-	targets := make(map[string]bool, len(p.files))
-	if !includeImports {
-		for _, file := range p.files {
-			targets[file] = true
-		}
-	}
-	for _, file := range p.descriptors {
-		if includeImports || targets[file.GetName()] {
-			set.File = append(set.File, proto.Clone(file).(*descriptorpb.FileDescriptorProto))
-		}
+	descriptors := p.Descriptors(includeImports)
+	set := &descriptorpb.FileDescriptorSet{File: make([]*descriptorpb.FileDescriptorProto, 0, len(descriptors))}
+	for _, file := range descriptors {
+		set.File = append(set.File, proto.Clone(file).(*descriptorpb.FileDescriptorProto))
 	}
 	return set
+}
+
+// Descriptors returns the prepared descriptors in DescriptorSet order without
+// copying them. The plan still owns them: callers must not modify them.
+func (p *GenerationPlan) Descriptors(includeImports bool) []*descriptorpb.FileDescriptorProto {
+	if includeImports {
+		return slices.Clone(p.descriptors)
+	}
+	targets := make(map[string]bool, len(p.files))
+	for _, file := range p.files {
+		targets[file] = true
+	}
+	files := make([]*descriptorpb.FileDescriptorProto, 0, len(p.files))
+	for _, file := range p.descriptors {
+		if targets[file.GetName()] {
+			files = append(files, file)
+		}
+	}
+	return files
 }
 
 // Execute invokes plugins using the prepared graph, without compiling it again.

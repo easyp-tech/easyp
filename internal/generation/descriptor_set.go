@@ -36,7 +36,7 @@ func generateV1DescriptorSet(ctx context.Context, log logger.Logger, cache modul
 	if err != nil {
 		return fmt.Errorf("prepareDescriptorTargets: %w", err)
 	}
-	outputs, err := planDescriptorOutputs(request, prepared)
+	outputs, err := planDescriptorOutputs(ctx, request, prepared)
 	if err != nil {
 		return fmt.Errorf("planDescriptorOutputs: %w", err)
 	}
@@ -101,7 +101,7 @@ func prepareDescriptorTargets(ctx context.Context, log logger.Logger, cache modu
 			}
 		}
 		label := fmt.Sprintf("project %q, module %q (%s)", relativeDescriptorPath(request.WorkDir, filepath.Dir(target.configPath)), selected.module.Name, relativeDescriptorPath(request.WorkDir, selected.directory))
-		app, owners, err := prepareV1ModuleCore(log, request, target.configPath, selected.directory, target.config, selected.module, selected.dependencies, selected.sources)
+		app, index, err := prepareV1ModuleCore(log, request, target.configPath, selected.directory, target.config, selected.module, selected.dependencies, selected.sources)
 		if err != nil {
 			return nil, fmt.Errorf("prepareV1ModuleCore for %s: %w", label, err)
 		}
@@ -111,13 +111,18 @@ func prepareDescriptorTargets(ctx context.Context, log logger.Logger, cache modu
 		} else {
 			plan, err = app.PrepareGeneration(ctx, selected.directory)
 		}
+		// The index ran before compilation once, so its failure still wins.
+		owners, indexErr := index.wait()
+		if indexErr != nil {
+			return nil, fmt.Errorf("prepareV1ModuleCore for %s: %w", label, indexErr)
+		}
 		if err != nil {
 			return nil, fmt.Errorf("PrepareGeneration for %s: %w", label, err)
 		}
 		item := preparedDescriptorTarget{target: target, selected: selected, plan: plan, label: label}
 		if request.DescriptorSetOut != "" || request.DescriptorSetOutDir != "" {
 			// Preparation validates the graph, including managed transformations.
-			item.full = plan.DescriptorSet(true)
+			item.full = &descriptorpb.FileDescriptorSet{File: plan.Descriptors(true)}
 			item.fullValidated = true
 			item.owners = owners
 			item.versions = descriptorVersions(request, selected)

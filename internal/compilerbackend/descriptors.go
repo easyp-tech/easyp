@@ -23,8 +23,9 @@ type DescriptorSet struct {
 	Dependencies []string
 }
 
-// CompileDescriptorSet returns validated descriptor messages with typed custom
-// options and dependencies ordered before the files that import them.
+// CompileDescriptorSet returns validated descriptor messages with dependencies
+// ordered before the files that import them. Set Request.ResolveExtensions to
+// also decode user-defined option extensions into typed Go fields.
 func CompileDescriptorSet(ctx context.Context, req Request) (DescriptorSet, error) {
 	if ctx == nil {
 		ctx = context.Background()
@@ -85,7 +86,7 @@ func compileDescriptors(ctx context.Context, req Request) (*descriptorpb.FileDes
 	if err != nil {
 		return nil, fmt.Errorf("NewFiles: %w", err)
 	}
-	if hasExtensions(set) {
+	if req.ResolveExtensions && hasExtensions(set) {
 		// Use the checked registry to decode user-defined option fields.
 		unmarshal := proto.UnmarshalOptions{Resolver: descriptorExtensions{dynamicpb.NewTypes(registry)}}
 		set, err = decodeDescriptorSet(ctx, wire, req.MaxParallelism, unmarshal)
