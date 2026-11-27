@@ -12,14 +12,6 @@ import (
 	"github.com/easyp-tech/easyp/wellknownimports"
 )
 
-func (c *Core) protoInfoRead(ctx context.Context, fs FS, path string) (ProtoInfo, error) {
-	src, err := c.readSource(ctx, fs, path)
-	if err != nil {
-		return ProtoInfo{}, err
-	}
-	return c.protoInfoFromSource(ctx, fs, path, src)
-}
-
 // readSource reads a linted file through the same opener imports use.
 func (c *Core) readSource(ctx context.Context, fs FS, path string) ([]byte, error) {
 	f, err := c.openDiskSource(fs, path)
