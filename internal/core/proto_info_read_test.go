@@ -47,7 +47,7 @@ func TestReadFileFromImportSearchOrder(t *testing.T) {
 			}
 			app := &Core{logger: logger.NewNop(), importRoots: []string{first, second}}
 
-			file, err := app.linkedFileFromImport(t.Context(), fs.NewFSWalker(project, "."), importName)
+			file, err := app.readFileFromImport(t.Context(), fs.NewFSWalker(project, "."), importName)
 
 			require.NoError(t, err)
 			require.Len(t, file.Packages, 1)
@@ -85,7 +85,7 @@ func TestReadFileFromImportClosesOpenedFile(t *testing.T) {
 			disk := &mockImportFS{file: file}
 			app := &Core{logger: logger.NewNop()}
 
-			_, err = app.linkedFileFromImport(t.Context(), disk, "item.proto")
+			_, err = app.readFileFromImport(t.Context(), disk, "item.proto")
 
 			if tt.wantMessage != "" {
 				assert.ErrorContains(t, err, tt.wantMessage)
@@ -127,7 +127,7 @@ func TestReadFileFromImportPreservesErrors(t *testing.T) {
 			app := &Core{logger: logger.NewNop()}
 			disk := &mockImportFS{err: tt.openErr}
 
-			_, err := app.linkedFileFromImport(t.Context(), disk, tt.importName)
+			_, err := app.readFileFromImport(t.Context(), disk, tt.importName)
 
 			switch {
 			case tt.wantErr != nil:

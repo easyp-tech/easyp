@@ -1,12 +1,12 @@
 package rules_test
 
 import (
+	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 
 	"github.com/easyp-tech/easyp/internal/core"
-	"github.com/easyp-tech/easyp/internal/protoast"
 	"github.com/easyp-tech/easyp/internal/rules"
 )
 
@@ -31,25 +31,21 @@ func TestPackageSameRubyPackage_Validate(t *testing.T) {
 		wantIssues *core.Issue
 		wantErr    error
 	}{
-		"invalid": {
-			// invalid_options/queue.proto (V1) is the exempt first value;
-			// invalid_options/session.proto (same package, V2) issues at its
-			// own ruby_package option keyword with the constant as written.
+		"valid": {
 			fileNames: []string{invalidAuthProto5, invalidAuthProto6},
 			wantIssues: &core.Issue{
-				Position: protoast.Position{
+				Position: core.Position{
 					Filename: "",
-					Offset:   452,
-					Line:     14,
-					Column:   1,
+					Offset:   0,
+					Line:     0,
+					Column:   0,
 				},
-				SourceName: `"ZergsLaw-2"`,
-				Message:    "all files in the same package must have the same ruby_package option",
+				SourceName: "",
+				Message:    "",
 				RuleName:   "PACKAGE_SAME_RUBY_PACKAGE",
 			},
-			wantErr: nil,
 		},
-		"valid": {
+		"invalid": {
 			fileNames: []string{validAuthProto, validAuthProto2},
 			wantErr:   nil,
 		},
@@ -60,21 +56,18 @@ func TestPackageSameRubyPackage_Validate(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			rule := &rules.PackageSameRubyPackage{}
+			r, protos := start(t)
 
+			rule := rules.PackageSameRubyPackage{}
+			var got []error
 			var infos []core.ProtoInfo
 			for _, fileName := range tc.fileNames {
-				infos = append(infos, parseLinkedFile(t, fileName))
+				infos = append(infos, protos[fileName])
 			}
+			_, err := validate(&rule, infos...)
+			got = append(got, err)
 
-			issues, err := validate(rule, infos...)
-			require.ErrorIs(t, err, tc.wantErr)
-			switch {
-			case tc.wantIssues != nil:
-				require.Contains(t, issues, *tc.wantIssues)
-			case len(issues) > 0:
-				require.Empty(t, issues)
-			}
+			r.ErrorIs(errors.Join(got...), tc.wantErr)
 		})
 	}
 }

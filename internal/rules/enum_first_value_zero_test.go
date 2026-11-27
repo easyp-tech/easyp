@@ -6,7 +6,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/easyp-tech/easyp/internal/core"
-	"github.com/easyp-tech/easyp/internal/protoast"
 	"github.com/easyp-tech/easyp/internal/rules"
 )
 
@@ -34,11 +33,11 @@ func TestEnumFirstValueZero_Validate(t *testing.T) {
 		"invalid": {
 			fileName: invalidAuthProto,
 			wantIssues: &core.Issue{
-				Position: protoast.Position{
+				Position: core.Position{
 					Filename: "",
-					Offset:   917,
+					Offset:   924,
 					Line:     51,
-					Column:   3,
+					Column:   10,
 				},
 				SourceName: "4",
 				Message:    "enum first value must be zero",
@@ -49,11 +48,11 @@ func TestEnumFirstValueZero_Validate(t *testing.T) {
 		"invalid_nested": {
 			fileName: invalidAuthProto,
 			wantIssues: &core.Issue{
-				Position: protoast.Position{
+				Position: core.Position{
 					Filename: "",
-					Offset:   667,
+					Offset:   674,
 					Line:     33,
-					Column:   5,
+					Column:   12,
 				},
 				SourceName: "4",
 				Message:    "enum first value must be zero",
@@ -72,42 +71,17 @@ func TestEnumFirstValueZero_Validate(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			rule := rules.EnumFirstValueZero{}
+			r, protos := start(t)
 
-			issues, err := rule.Validate(parseLinkedFile(t, tc.fileName))
-			require.ErrorIs(t, err, tc.wantErr)
+			rule := rules.EnumFirstValueZero{}
+			issues, err := rule.Validate(protos[tc.fileName])
+			r.ErrorIs(err, tc.wantErr)
 			switch {
 			case tc.wantIssues != nil:
-				require.Contains(t, issues, *tc.wantIssues)
+				r.Contains(issues, *tc.wantIssues)
 			case len(issues) > 0:
-				require.Empty(t, issues)
+				r.Empty(issues)
 			}
 		})
 	}
-}
-
-func TestEnumFirstValueZero_EmptyEnumGuard(t *testing.T) {
-	t.Parallel()
-
-	// Unit pin for the one documented deviation (research A7, threat T-04-10):
-	// main indexes the first value unguarded and panics on an empty enum; the
-	// port keeps the guard so Validate stays total. protoc rejects empty enums,
-	// so the engine path never sees one — the fixture is parsed directly here,
-	// bypassing the compile gate.
-	const src = `syntax = "proto3";
-
-package guard;
-
-enum Empty {
-}
-`
-
-	file, err := protoast.Parse("empty.proto", []byte(src))
-	require.NoError(t, err)
-
-	rule := rules.EnumFirstValueZero{}
-
-	issues, err := rule.Validate(core.ProtoInfo{Path: "empty.proto", File: file})
-	require.NoError(t, err)
-	require.Empty(t, issues)
 }

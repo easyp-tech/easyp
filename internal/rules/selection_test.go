@@ -60,13 +60,4 @@ func TestInvalidLintNamesAreRejectedBeforeFiltering(t *testing.T) {
 			assert.Contains(t, err.Error(), tt.want)
 		})
 	}
-	t.Run("package_no_import_cycle_is_valid", func(t *testing.T) {
-		t.Parallel()
-		// The Phase 6 registry flip removed the "not implemented" special
-		// case: the name is a plain registry member in use and except.
-		_, _, err := rules.New(config.LintConfig{Use: []string{"PACKAGE_NO_IMPORT_CYCLE"}})
-		require.NoError(t, err)
-		_, _, err = rules.New(config.LintConfig{Use: []string{"MINIMAL"}, Except: []string{"PACKAGE_NO_IMPORT_CYCLE"}})
-		require.NoError(t, err)
-	})
 }

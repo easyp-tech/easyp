@@ -26,7 +26,7 @@ import (
 	"github.com/easyp-tech/easyp/internal/workspace"
 )
 
-func (l Lint) actionV1(ctx *cli.Context, log logger.Logger, configPath, projectRoot, lintRoot string) error {
+func (l Lint) actionV1(ctx *cli.Context, log logger.Logger, configPath, projectRoot, lintRoot string) (retErr error) {
 	raw, err := workspace.ReadFile(projectRoot, configPath)
 	if err != nil {
 		return fmt.Errorf("ReadFile: %w", err)
@@ -59,6 +59,21 @@ func (l Lint) actionV1(ctx *cli.Context, log logger.Logger, configPath, projectR
 	if err != nil {
 		return fmt.Errorf("WalkDir: %w", err)
 	}
+	session := sourceview.NewSession()
+	defer func() {
+		if err := session.Close(); err != nil {
+			log.Error(ctx.Context, "Close", slog.Any("error", err))
+		}
+	}()
+	dirs := newLintDirCache(projectRoot, configPath, session)
+	// Import collision checks run while files are linted. A failed check wins
+	// over anything that happened after it started, as if it had run in place.
+	var collisionChecks backgroundChecks
+	defer func() {
+		if err := collisionChecks.wait(); err != nil {
+			retErr = err
+		}
+	}()
 	var cache modules.Cache
 	replacements := newPolicyReplacementSources(ctx.Context, projectRoot, projectRoot, func() (modules.Cache, error) {
 		if cache == nil {
@@ -70,6 +85,7 @@ func (l Lint) actionV1(ctx *cli.Context, log logger.Logger, configPath, projectR
 		}
 		return cache, nil
 	}, flags.IsFrozen(ctx))
+	replacements.readFile = dirs.reader.readFileAt
 	if flags.IsFrozen(ctx) {
 		relative, err := filepath.Rel(projectRoot, searchDir)
 		if err != nil {
@@ -109,13 +125,6 @@ func (l Lint) actionV1(ctx *cli.Context, log logger.Logger, configPath, projectR
 		return modules.ResolvePolicyGraph(graphCtx, moduleDir, cache, flags.IsFrozen(ctx))
 	})
 	var issues []core.IssueInfo
-	session := sourceview.NewSession()
-	defer func() {
-		err := session.Close()
-		if err != nil {
-			log.Error(ctx.Context, "Close", slog.Any("error", err))
-		}
-	}()
 	for _, file := range files {
 		unselectedReplacement, err := replacements.isUnselectedReplacementSource(searchDir, file)
 		if err != nil {
@@ -124,11 +133,11 @@ func (l Lint) actionV1(ctx *cli.Context, log logger.Logger, configPath, projectR
 		if unselectedReplacement {
 			continue
 		}
-		moduleDir, err := findV1PolicyModuleDir(projectRoot, filepath.Dir(file))
+		moduleDir, err := dirs.moduleDir(filepath.Dir(file))
 		if err != nil {
 			return fmt.Errorf("findV1PolicyModuleDir: %w", err)
 		}
-		policy, policyKey, lintersPresence, settingsPresence, err := resolveV1LintPolicyDetailed(filepath.Dir(file), projectRoot, configPath)
+		policy, policyKey, lintersPresence, settingsPresence, err := dirs.lintPolicy(filepath.Dir(file))
 		if err != nil {
 			return fmt.Errorf("resolveV1LintPolicy: %w", err)
 		}
@@ -184,10 +193,22 @@ func (l Lint) actionV1(ctx *cli.Context, log logger.Logger, configPath, projectR
 							return fmt.Errorf("moduleCache: %w", err)
 						}
 					}
-					roots, err = policyImportRoots(ctx.Context, cache, moduleDir, flags.IsFrozen(ctx))
+					// Resolving roots may fetch modules, which must not happen
+					// after an earlier module failed its check.
+					if err := collisionChecks.wait(); err != nil {
+						return err
+					}
+					roots, err = policyImportRootsUnchecked(ctx.Context, cache, moduleDir, flags.IsFrozen(ctx))
 					if err != nil {
 						return fmt.Errorf("ensureV1PolicyImportRoots: %w", err)
 					}
+					checked := roots
+					collisionChecks.start(func() error {
+						if err := modules.CheckSourceCollisions(checked); err != nil {
+							return fmt.Errorf("ensureV1PolicyImportRoots: CheckSourceCollisions: %w", err)
+						}
+						return nil
+					})
 					moduleRoots[moduleDir] = roots
 				}
 				importRoots = roots
@@ -228,6 +249,9 @@ func (l Lint) actionV1(ctx *cli.Context, log logger.Logger, configPath, projectR
 	slices.SortStableFunc(issues, func(a, b core.IssueInfo) int {
 		return strings.Compare(filepath.ToSlash(a.Path), filepath.ToSlash(b.Path))
 	})
+	if err := collisionChecks.wait(); err != nil {
+		return err
+	}
 	if len(issues) == 0 {
 		return nil
 	}
@@ -282,6 +306,12 @@ func resolveV1LintPolicy(directory, projectRoot, configPath string) (v1.Policy, 
 }
 
 func resolveV1LintPolicyDetailed(directory, projectRoot, configPath string) (v1.Policy, v1LintPolicySources, v1.PolicyPresence, v1.PolicyPresence, error) {
+	return resolveV1LintPolicyWith(readV1PolicyFile, directory, projectRoot, configPath)
+}
+
+func resolveV1LintPolicyWith(
+	readPolicy func(string) (v1PolicyFile, bool, error), directory, projectRoot, configPath string,
+) (v1.Policy, v1LintPolicySources, v1.PolicyPresence, v1.PolicyPresence, error) {
 	var result v1.Policy
 	var sources v1LintPolicySources
 	lintersPresence := v1.NewPolicyPresence()
@@ -289,7 +319,7 @@ func resolveV1LintPolicyDetailed(directory, projectRoot, configPath string) (v1.
 	var foundFile bool
 	for _, dir := range ancestorDirs(directory, projectRoot) {
 		path := v1PolicyPath(dir, projectRoot, configPath)
-		file, found, err := readV1PolicyFile(path)
+		file, found, err := readPolicy(path)
 		if err != nil {
 			return v1.Policy{}, v1LintPolicySources{}, v1.PolicyPresence{}, v1.PolicyPresence{}, fmt.Errorf("readV1PolicyFile: %w", err)
 		}

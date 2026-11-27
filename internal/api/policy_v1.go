@@ -18,7 +18,11 @@ type v1PolicyFile struct {
 }
 
 func readV1PolicyFile(path string) (v1PolicyFile, bool, error) {
-	raw, found, err := readOptionalFile(path)
+	return readV1PolicyFileWith(readOptionalFile, path)
+}
+
+func readV1PolicyFileWith(read func(string) ([]byte, bool, error), path string) (v1PolicyFile, bool, error) {
+	raw, found, err := read(path)
 	if err != nil {
 		return v1PolicyFile{}, false, fmt.Errorf("readOptionalFile: %w", err)
 	}

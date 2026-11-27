@@ -38,9 +38,18 @@ func WalkAt(boundary, root string, visit func(string, fs.DirEntry, error) error)
 	if err != nil {
 		return fmt.Errorf("Rel: %w", err)
 	}
+	physicalRootDir, physicalBoundary := physicalRoot(root), physicalRoot(boundary)
 	return sourceview.WalkLocal(context.Background(), boundary, relative, func(logical string, resolved sourceview.Resolution, walkErr error) error {
 		path := filepath.Join(boundary, filepath.FromSlash(logical))
-		if SkipDirectory(root, path) {
+		// A resolved regular file cannot contain .git, so only its name can
+		// skip it.
+		var skip bool
+		if walkErr == nil && resolved.Info.Mode().IsRegular() {
+			skip = path != root && skippedName(filepath.Base(path))
+		} else {
+			skip = SkipDirectory(root, path)
+		}
+		if skip {
 			if resolved.Info == nil || !resolved.Info.IsDir() {
 				return nil
 			}
@@ -60,7 +69,7 @@ func WalkAt(boundary, root string, visit func(string, fs.DirEntry, error) error)
 			}
 			return visit(path, entry, walkErr)
 		}
-		if resolved.Info.IsDir() && SkipDirectory(physicalRoot(root), filepath.Join(physicalRoot(boundary), filepath.FromSlash(resolved.Path))) {
+		if resolved.Info.IsDir() && SkipDirectory(physicalRootDir, filepath.Join(physicalBoundary, filepath.FromSlash(resolved.Path))) {
 			return fs.SkipDir
 		}
 		return visit(path, fs.FileInfoToDirEntry(resolved.Info), nil)

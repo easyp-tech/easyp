@@ -32,7 +32,7 @@ func TestReadFileFromImportUsesV1Roots(t *testing.T) {
 			app := New(Options{Logger: logger.NewNop(), ImportRoots: roots})
 			roots[0] = t.TempDir()
 
-			parsed, err := app.linkedFileFromImport(t.Context(), fs.NewFSWalker(project, "."), tt.importPath)
+			parsed, err := app.readFileFromImport(t.Context(), fs.NewFSWalker(project, "."), tt.importPath)
 
 			require.NoError(t, err)
 			require.NotNil(t, parsed)

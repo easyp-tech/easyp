@@ -1,6 +1,7 @@
 package api
 
 import (
+	"bufio"
 	"bytes"
 	"encoding/json"
 	"errors"
@@ -106,14 +107,21 @@ func (l Lint) action(ctx *cli.Context, log logger.Logger) error {
 }
 
 func printIssues(format string, w io.Writer, issues []core.IssueInfo) error {
+	var printer func(io.Writer, []core.IssueInfo) error
 	switch format {
 	case flags.TextFormat:
-		return textPrinter(w, issues)
+		printer = textPrinter
 	case flags.JSONFormat:
-		return jsonPrinter(w, issues)
+		printer = jsonPrinter
 	default:
 		return fmt.Errorf("unsupported format: %s", format)
 	}
+	// One write per issue is a system call per line on large projects.
+	buffered := bufio.NewWriter(w)
+	if err := printer(buffered, issues); err != nil {
+		return err
+	}
+	return buffered.Flush()
 }
 
 // textPrinter prints the error in text format.

@@ -26,27 +26,41 @@ const (
 	importNotUsed            = "./../../testdata/import_used/not_used.proto"
 	noLintBufComment         = "./../../testdata/no_lint/no_lint_buf_comment.proto"
 	noLintEasypComment       = "./../../testdata/no_lint/no_lint_easyp_comment.proto"
-	noSyntaxProto            = `./../../testdata/no_syntax/no_syntax.proto`
-	requiredFieldProto       = `./../../testdata/required_field/required_field.proto`
-	importCycleA             = "./../../testdata/import_cycle/a.proto"
-	importCycleB             = "./../../testdata/import_cycle/b/b.proto"
-	importCycleA2            = "./../../testdata/import_cycle/a2.proto"
-	importCycleSamePkg1      = "./../../testdata/import_cycle/sp1.proto"
-	importCycleSamePkg2      = "./../../testdata/import_cycle/sp2.proto"
 )
 
-// parseLinkedFile builds a ProtoInfo for a testdata file (the linked
-// contract's helper, mirroring the etalon's protoast-era parseFile): the file
-// itself is parsed with protoast.Parse and its direct imports are parsed from
-// ./../../testdata, skipping the ones that are not stored there.
-func parseLinkedFile(t testing.TB, path string) core.ProtoInfo {
+func start(t testing.TB) (*require.Assertions, map[string]core.ProtoInfo) {
+	t.Helper()
+
+	assert := require.New(t)
+
+	protos := map[string]core.ProtoInfo{
+		invalidAuthProto:         parseFile(t, assert, invalidAuthProto),
+		invalidAuthProto2:        parseFile(t, assert, invalidAuthProto2),
+		invalidAuthProto3:        parseFile(t, assert, invalidAuthProto3),
+		invalidAuthProto4:        parseFile(t, assert, invalidAuthProto4),
+		invalidAuthProto5:        parseFile(t, assert, invalidAuthProto5),
+		invalidAuthProto6:        parseFile(t, assert, invalidAuthProto6),
+		invalidAuthProtoEmptyPkg: parseFile(t, assert, invalidAuthProtoEmptyPkg),
+		invalidsSessionProto:     parseFile(t, assert, invalidsSessionProto),
+		validAuthProto:           parseFile(t, assert, validAuthProto),
+		validAuthProto2:          parseFile(t, assert, validAuthProto2),
+		importUsed:               parseFile(t, assert, importUsed),
+		importNotUsed:            parseFile(t, assert, importNotUsed),
+		noLintBufComment:         parseFile(t, assert, noLintBufComment),
+		noLintEasypComment:       parseFile(t, assert, noLintEasypComment),
+	}
+
+	return assert, protos
+}
+
+func parseFile(t testing.TB, assert *require.Assertions, path string) core.ProtoInfo {
 	t.Helper()
 
 	src, err := os.ReadFile(path)
-	require.NoError(t, err)
+	assert.NoError(err)
 
 	file, err := protoast.Parse(path, src)
-	require.NoError(t, err)
+	assert.NoError(err)
 
 	imported := make(map[core.ImportPath]*protoast.File)
 
@@ -61,7 +75,7 @@ func parseLinkedFile(t testing.TB, path string) core.ProtoInfo {
 		}
 
 		parsed, err := protoast.Parse(string(importPath), src)
-		require.NoError(t, err)
+		assert.NoError(err)
 
 		imported[importPath] = parsed
 	}
@@ -73,8 +87,8 @@ func parseLinkedFile(t testing.TB, path string) core.ProtoInfo {
 	}
 }
 
-// validate runs a linked-contract rule over infos the way lint does: module
-// rules collect every file and report once, other rules report per file.
+// validate runs rule over infos the way lint does: module rules collect every
+// file and report once, other rules report per file.
 func validate(rule core.Rule, infos ...core.ProtoInfo) ([]core.Issue, error) {
 	moduleRule, ok := rule.(core.ModuleRule)
 	if !ok {
@@ -98,4 +112,12 @@ func validate(rule core.Rule, infos ...core.ProtoInfo) ([]core.Issue, error) {
 		issues = append(issues, found.Issue)
 	}
 	return issues, nil
+}
+
+// parseProto builds a ProtoInfo from source text for small, focused cases.
+func parseProto(t testing.TB, path, src string) core.ProtoInfo {
+	t.Helper()
+	file, err := protoast.Parse(path, []byte(src))
+	require.NoError(t, err)
+	return core.ProtoInfo{Path: path, File: file}
 }
