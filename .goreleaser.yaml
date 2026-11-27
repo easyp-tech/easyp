@@ -95,8 +95,9 @@ changelog:
 
 release:
   skip_upload: false
-  prerelease: true
-  make_latest: false
+  # A stable vX.Y.Z tag becomes GitHub Latest; a nightly stays a prerelease.
+  prerelease: auto
+  make_latest: '{{ if .Prerelease }}false{{ else }}true{{ end }}'
   github:
     owner: easyp-tech
     name: easyp
@@ -114,6 +115,8 @@ dockers_v2:
       - "ghcr.io/easyp-tech/easyp"
     tags:
       - "{{ .Tag }}"
+      # Empty for a prerelease, which GoReleaser skips: nightlies never move latest.
+      - '{{ if not .Prerelease }}latest{{ end }}'
     dockerfile: Dockerfile
     platforms:
       - linux/amd64
@@ -136,3 +139,26 @@ dockers_v2:
       - internal
       - mcp
       - wellknownimports
+
+brews:
+  - description: Easy modern protobuf tooling for all your needs.
+    homepage: https://easyp.tech
+    # auto: prereleases (nightlies) never update the formula.
+    skip_upload: auto
+    repository:
+      owner: easyp-tech
+      name: homebrew-tap
+    commit_author:
+      name: easyp-tech-releaser
+      email: action@github.com
+    directory: Formula
+    install: |
+      bin.install "easyp"
+      bin.install "easyp-mcp"
+      output = Utils.popen_read("#{bin}/easyp completion bash")
+      (bash_completion/"easyp").write output
+      output = Utils.popen_read("#{bin}/easyp completion zsh")
+      (zsh_completion/"_easyp").write output
+      prefix.install_metafiles
+    test: |
+      system "#{bin}/easyp --version"

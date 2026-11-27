@@ -1,9 +1,11 @@
-name: "v1 Nightly Release"
+name: "Release"
 on:
   push:
     tags:
-      # v1 stays opt-in after the branch is merged into main.
-      - 'v1.0.0-nightly.*'
+      # Stable v1.X.Y and v1.X.Y-nightly.YYYYMMDD.N. The glob is broad on
+      # purpose: scripts/validate-release-tag.sh decides, before any
+      # credentials are used.
+      - 'v1.*.*'
 
 concurrency:
   group: release-${{ github.ref }}
@@ -20,7 +22,7 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Validate release tag and source branch
+      - name: Validate release tag, channel and source branch
         run: bash scripts/validate-release-tag.sh "$GITHUB_REF_NAME"
 
       - name: Set up QEMU
