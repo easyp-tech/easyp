@@ -2,9 +2,12 @@ package rules
 
 import (
 	"github.com/easyp-tech/easyp/internal/core"
+	"github.com/easyp-tech/easyp/internal/protoast"
 )
 
-// EnumNoAllowAlias this rule checks that enums are PascalCase.
+var _ core.Rule = (*EnumNoAllowAlias)(nil)
+
+// EnumNoAllowAlias this rule checks that enums do not set allow_alias to true.
 type EnumNoAllowAlias struct{}
 
 // Message implements lint.Rule.
@@ -15,23 +18,13 @@ func (e *EnumNoAllowAlias) Message() string {
 // Validate implements lint.Rule.
 func (e *EnumNoAllowAlias) Validate(protoInfo core.ProtoInfo) ([]core.Issue, error) {
 	var res []core.Issue
-	for _, enum := range protoInfo.Info.ProtoBody.Enums {
-		for _, opt := range enum.EnumBody.Options {
-			if opt.OptionName == "allow_alias" {
-				res = core.AppendIssue(res, e, enum.Meta.Pos, enum.EnumName, enum.Comments)
+	protoInfo.File.Walk(protoast.Visitor{Enum: func(enum *protoast.Enum) {
+		for _, opt := range enum.Options {
+			if opt.Name == "allow_alias" && opt.Value == "true" {
+				res = core.AppendIssue(res, e, opt.Pos, enum.Name)
 			}
 		}
-	}
-
-	for _, msg := range protoInfo.Info.ProtoBody.Messages {
-		for _, enum := range msg.MessageBody.Enums {
-			for _, opt := range enum.EnumBody.Options {
-				if opt.OptionName == "allow_alias" {
-					res = core.AppendIssue(res, e, enum.Meta.Pos, enum.EnumName, enum.Comments)
-				}
-			}
-		}
-	}
+	}})
 
 	return res, nil
 }

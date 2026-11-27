@@ -35,9 +35,9 @@ func TestServiceSuffix_Validate(t *testing.T) {
 			wantIssues: &core.Issue{
 				Position: core.Position{
 					Filename: "",
-					Offset:   197,
+					Offset:   205,
 					Line:     10,
-					Column:   1,
+					Column:   9,
 				},
 				SourceName: "auth",
 				Message:    "service name should have suffix",

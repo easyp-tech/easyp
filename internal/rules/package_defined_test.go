@@ -36,8 +36,8 @@ func TestPackageDefined_Validate(t *testing.T) {
 				Position: core.Position{
 					Filename: "./../../testdata/auth/empty_pkg.proto",
 					Offset:   0,
-					Line:     0,
-					Column:   0,
+					Line:     1,
+					Column:   1,
 				},
 				SourceName: "./../../testdata/auth/empty_pkg.proto",
 				Message:    "package should be defined",

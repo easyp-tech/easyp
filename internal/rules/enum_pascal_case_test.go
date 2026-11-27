@@ -35,9 +35,9 @@ func TestEnumPascalCase_Validate(t *testing.T) {
 			wantIssues: &core.Issue{
 				Position: core.Position{
 					Filename: "",
-					Offset:   864,
+					Offset:   869,
 					Line:     49,
-					Column:   1,
+					Column:   6,
 				},
 				SourceName: "social_network",
 				Message:    "enum name must be in PascalCase",
@@ -50,9 +50,9 @@ func TestEnumPascalCase_Validate(t *testing.T) {
 			wantIssues: &core.Issue{
 				Position: core.Position{
 					Filename: "",
-					Offset:   610,
+					Offset:   615,
 					Line:     31,
-					Column:   3,
+					Column:   8,
 				},
 				SourceName: "social_network",
 				Message:    "enum name must be in PascalCase",

@@ -1,0 +1,160 @@
+package rules
+
+import (
+	"strconv"
+	"strings"
+
+	"github.com/easyp-tech/easyp/internal/core"
+	"github.com/easyp-tech/easyp/internal/protoast"
+)
+
+// fileOption returns the last file-level option called name.
+func fileOption(file *protoast.File, name string) *protoast.Option {
+	var found *protoast.Option
+	for _, opt := range file.Options {
+		if opt.Name == name {
+			found = opt
+		}
+	}
+	return found
+}
+
+// optionString returns a literal's value: strings unquoted, other literals as written.
+func optionString(literal string) string {
+	if unquoted, err := strconv.Unquote(literal); err == nil {
+		return unquoted
+	}
+	if len(literal) >= 2 && literal[0] == '\'' && literal[len(literal)-1] == '\'' {
+		return literal[1 : len(literal)-1]
+	}
+	return literal
+}
+
+// enumNumber parses an enum value number as written: decimal, hex or octal, with sign.
+func enumNumber(number string) (int64, bool) {
+	n, err := strconv.ParseInt(number, 0, 64)
+	return n, err == nil
+}
+
+// leadingCommentDocuments reports whether the comment directly above a
+// declaration documents it: some line must be non-empty and not a lint
+// directive. Detached comments, separated by a blank line, do not count.
+func leadingCommentDocuments(decl *protoast.Decl) bool {
+	for _, comment := range decl.Leading {
+		for _, line := range comment.Lines() {
+			line = strings.TrimSpace(line)
+			if line == "" || isLintDirective(line) {
+				continue
+			}
+			return true
+		}
+	}
+	return false
+}
+
+func isLintDirective(line string) bool {
+	for _, prefix := range []string{"buf:lint:ignore", "nolint:", "easyp:"} {
+		if strings.HasPrefix(line, prefix) {
+			return true
+		}
+	}
+	return false
+}
+
+// packagePosition is where package findings go: the package statement, or the
+// file itself when the file has no package.
+func packagePosition(info core.ProtoInfo) (core.Position, string) {
+	if len(info.File.Packages) == 0 {
+		return protoast.FilePosition(info.Path), ""
+	}
+	pkg := info.File.Packages[0]
+	return pkg.Pos, pkg.Name
+}
+
+// groupedValues collects one value per file within groups such as packages or
+// directories, and reports every file of a group whose files disagree.
+type groupedValues struct {
+	groups map[string][]groupedValue
+	order  []string
+}
+
+type groupedValue struct {
+	path, value, source string
+	pos                 core.Position
+}
+
+func (g *groupedValues) add(group string, value groupedValue) {
+	if g.groups == nil {
+		g.groups = make(map[string][]groupedValue)
+	}
+	if _, ok := g.groups[group]; !ok {
+		g.order = append(g.order, group)
+	}
+	g.groups[group] = append(g.groups[group], value)
+}
+
+// mismatches returns an issue for every file of each group with more than one
+// distinct value, then resets the collector.
+func (g *groupedValues) mismatches(rule core.Rule) []core.IssueInfo {
+	var res []core.IssueInfo
+	for _, group := range g.order {
+		values := g.groups[group]
+		distinct := make(map[string]bool)
+		for _, v := range values {
+			distinct[v.value] = true
+		}
+		if len(distinct) < 2 {
+			continue
+		}
+		for _, v := range values {
+			for _, issue := range core.AppendIssue(nil, rule, v.pos, v.source) {
+				res = append(res, core.IssueInfo{Issue: issue, Path: v.path})
+			}
+		}
+	}
+	*g = groupedValues{}
+	return res
+}
+
+// packageHasVersionSuffix applies buf's package version rule: at least two
+// components, the last one v<major>, v<major>test..., or
+// v<major>[p<patch>](alpha|beta)[<minor>], with major >= 1.
+func packageHasVersionSuffix(pkg string) bool {
+	parts := strings.Split(pkg, ".")
+	if pkg == "" || len(parts) < 2 {
+		return false
+	}
+	component := parts[len(parts)-1]
+	if len(component) < 2 || component[0] != 'v' {
+		return false
+	}
+	version := component[1:]
+	if strings.Contains(version, "test") {
+		major, _, _ := strings.Cut(version, "test")
+		return versionNumber(major, 1)
+	}
+	alpha, beta := strings.Contains(version, "alpha"), strings.Contains(version, "beta")
+	if alpha && beta {
+		return false
+	}
+	if !alpha && !beta {
+		return versionNumber(version, 1)
+	}
+	level := "alpha"
+	if beta {
+		level = "beta"
+	}
+	majorPatch, minor, _ := strings.Cut(version, level)
+	if minor != "" && !versionNumber(minor, 1) {
+		return false
+	}
+	if major, patch, ok := strings.Cut(majorPatch, "p"); ok {
+		return versionNumber(major, 1) && versionNumber(patch, 1)
+	}
+	return versionNumber(majorPatch, 1)
+}
+
+func versionNumber(s string, minimum int64) bool {
+	n, err := strconv.ParseInt(s, 10, 64)
+	return err == nil && n >= minimum
+}

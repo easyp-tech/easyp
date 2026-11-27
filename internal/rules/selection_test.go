@@ -51,8 +51,6 @@ func TestInvalidLintNamesAreRejectedBeforeFiltering(t *testing.T) {
 		{name: "unknown disabled", cfg: config.LintConfig{Except: []string{"NO_SUCH_RULE"}}, want: "NO_SUCH_RULE"},
 		{name: "unknown cannot cancel itself", cfg: config.LintConfig{Use: []string{"NO_SUCH_RULE"}, Except: []string{"NO_SUCH_RULE"}}, want: "NO_SUCH_RULE"},
 		{name: "unknown exclusion", cfg: config.LintConfig{IgnoreOnly: map[string][]string{"NO_SUCH_RULE": {"generated"}}}, want: "NO_SUCH_RULE"},
-		{name: "unimplemented enabled", cfg: config.LintConfig{Use: []string{"PACKAGE_NO_IMPORT_CYCLE"}}, want: "not implemented"},
-		{name: "unimplemented disabled", cfg: config.LintConfig{Except: []string{"PACKAGE_NO_IMPORT_CYCLE"}}, want: "not implemented"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

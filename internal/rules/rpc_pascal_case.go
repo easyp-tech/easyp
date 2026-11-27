@@ -1,14 +1,13 @@
 package rules
 
 import (
-	"regexp"
-
 	"github.com/easyp-tech/easyp/internal/core"
+	"github.com/easyp-tech/easyp/internal/protoast"
 )
 
 var _ core.Rule = (*RPCPascalCase)(nil)
 
-// RPCPascalCase this rule checks that RPCs are PascalCase.
+// RPCPascalCase this rule checks that RPC names are PascalCase.
 type RPCPascalCase struct{}
 
 // Message implements lint.Rule.
@@ -19,14 +18,11 @@ func (c *RPCPascalCase) Message() string {
 // Validate implements lint.Rule.
 func (c *RPCPascalCase) Validate(protoInfo core.ProtoInfo) ([]core.Issue, error) {
 	var res []core.Issue
-	pascalCase := regexp.MustCompile("^[A-Z][a-zA-Z0-9]*$")
-	for _, service := range protoInfo.Info.ProtoBody.Services {
-		for _, rpc := range service.ServiceBody.RPCs {
-			if !pascalCase.MatchString(rpc.RPCName) {
-				res = core.AppendIssue(res, c, rpc.Meta.Pos, rpc.RPCName, rpc.Comments)
-			}
+	protoInfo.File.Walk(protoast.Visitor{RPC: func(_ *protoast.Service, rpc *protoast.RPC) {
+		if rpc.Name != toPascalCase(rpc.Name) {
+			res = core.AppendIssue(res, c, rpc.NamePos, rpc.Name)
 		}
-	}
+	}})
 
 	return res, nil
 }

@@ -1,0 +1,7 @@
+syntax = "proto3";
+
+package tab_utf8;
+
+message Broken {
+	/* проверка 🎉 */ required string name = 1;
+}

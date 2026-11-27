@@ -1,9 +1,8 @@
 package rules
 
 import (
-	"regexp"
-
 	"github.com/easyp-tech/easyp/internal/core"
+	"github.com/easyp-tech/easyp/internal/protoast"
 )
 
 var _ core.Rule = (*FieldLowerSnakeCase)(nil)
@@ -19,15 +18,11 @@ func (c *FieldLowerSnakeCase) Message() string {
 // Validate implements lint.Rule.
 func (c *FieldLowerSnakeCase) Validate(protoInfo core.ProtoInfo) ([]core.Issue, error) {
 	var res []core.Issue
-
-	lowerSnakeCase := regexp.MustCompile("^[a-z0-9]+(_[a-z0-9]+)*$")
-	for _, message := range protoInfo.Info.ProtoBody.Messages {
-		for _, field := range message.MessageBody.Fields {
-			if !lowerSnakeCase.MatchString(field.FieldName) {
-				res = core.AppendIssue(res, c, field.Meta.Pos, field.FieldName, field.Comments)
-			}
+	protoInfo.File.Walk(protoast.Visitor{Field: func(field *protoast.Field) {
+		if field.Name != toLowerSnakeCase(field.Name) {
+			res = core.AppendIssue(res, c, field.NamePos, field.Name)
 		}
-	}
+	}})
 
 	return res, nil
 }

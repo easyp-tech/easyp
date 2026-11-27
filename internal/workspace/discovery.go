@@ -76,12 +76,15 @@ func SkipDirectory(root, dir string) bool {
 	if dir == root {
 		return false
 	}
-	name := filepath.Base(dir)
-	if strings.HasPrefix(name, ".") || name == "easyp_vendor" || name == "node_modules" {
+	if skippedName(filepath.Base(dir)) {
 		return true
 	}
 	_, err := os.Lstat(filepath.Join(dir, ".git"))
 	return err == nil
+}
+
+func skippedName(name string) bool {
+	return strings.HasPrefix(name, ".") || name == "easyp_vendor" || name == "node_modules"
 }
 
 // Policy finds an ancestor policy or one unambiguous outermost policy below start.

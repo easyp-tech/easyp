@@ -20,6 +20,7 @@ Human-facing docs: [README.md](README.md) and https://easyp.tech.
 | <code>cmd/easyp</code> | CLI entrypoint |
 | <code>internal/api</code> | CLI command wiring |
 | <code>internal/core</code> | Proto parsing, lint/breaking engines and low-level plugin execution |
+| <code>internal/protoast</code> | Local adaptation seam over the compiler's syntax tree (rune-column positions); the package is not migrated into the module |
 | <code>internal/modules</code> | Dependency resolution, manifest/lock operations, import roots and vendoring |
 | <code>internal/generation</code> | Consumer-project discovery, module selection, inherited generation options and descriptor export |
 | <code>internal/migration</code> | Legacy-to-v1 migration plans, validation and guarded apply |
@@ -89,5 +90,6 @@ After behavior changes, run the relevant tests (at least the packages you touche
 - Hand-edit generated schema JSON: <code>schemas/easyp-v1.schema.json</code>, <code>schemas/easyp.schema.json</code>, <code>schemas/easyp.gen-v1.schema.json</code>, <code>schemas/easyp.gen.schema.json</code>, <code>schemas/protobuf.lock-v1.schema.json</code>, <code>schemas/protobuf.lock.schema.json</code>.
 - Commit or “fix” generated dependency/build noise, <code>coverage.out</code>, or the local <code>easyp</code> binary in the repo root. The documentation site lives in the separate docs repository.
 - Add parallel agent instruction files (<code>.cursor/rules/</code>, <code>CLAUDE.md</code>) unless explicitly requested; keep this file the source of truth.
+- Copy or vendor the compiler module's code into this repository. The protobuf compiler is consumed as the pinned module <code>github.com/easyp-tech/easyprotoc</code> (version in <code>go.mod</code>); compiler fixes go upstream in that module and arrive here by bumping the version in <code>go.mod</code>, never by copying module code in.
 
 Shared producer policies use section-scoped <code>extends</code> from bounded local files or already declared/locked modules. See [.spec/config/policy-extends.md](.spec/config/policy-extends.md). No standalone policy versions or unpinned reference downloads are allowed.

@@ -2,6 +2,7 @@ package rules
 
 import (
 	"github.com/easyp-tech/easyp/internal/core"
+	"github.com/easyp-tech/easyp/internal/protoast"
 )
 
 var _ core.Rule = (*CommentService)(nil)
@@ -17,12 +18,11 @@ func (c *CommentService) Message() string {
 // Validate implements lint.Rule.
 func (c *CommentService) Validate(protoInfo core.ProtoInfo) ([]core.Issue, error) {
 	var res []core.Issue
-
-	for _, service := range protoInfo.Info.ProtoBody.Services {
-		if len(service.Comments) == 0 {
-			res = core.AppendIssue(res, c, service.Meta.Pos, service.ServiceName, service.Comments)
+	protoInfo.File.Walk(protoast.Visitor{Service: func(service *protoast.Service) {
+		if !leadingCommentDocuments(&service.Decl) {
+			res = core.AppendIssue(res, c, service.Pos, service.Name)
 		}
-	}
+	}})
 
 	return res, nil
 }

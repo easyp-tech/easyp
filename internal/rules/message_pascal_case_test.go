@@ -35,9 +35,9 @@ func TestMessagePascalCase_Validate(t *testing.T) {
 			wantIssues: &core.Issue{
 				Position: core.Position{
 					Filename: "",
-					Offset:   536,
+					Offset:   544,
 					Line:     26,
-					Column:   1,
+					Column:   9,
 				},
 				SourceName: "Delete_Info",
 				Message:    "message name should be PascalCase",

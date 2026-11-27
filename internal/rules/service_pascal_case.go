@@ -1,8 +1,6 @@
 package rules
 
 import (
-	"regexp"
-
 	"github.com/easyp-tech/easyp/internal/core"
 )
 
@@ -19,11 +17,9 @@ func (c *ServicePascalCase) Message() string {
 // Validate implements lint.Rule.
 func (c *ServicePascalCase) Validate(protoInfo core.ProtoInfo) ([]core.Issue, error) {
 	var res []core.Issue
-
-	pascalCase := regexp.MustCompile("^[A-Z][a-z]+([A-Z]|[a-z]+)*$")
-	for _, service := range protoInfo.Info.ProtoBody.Services {
-		if !pascalCase.MatchString(service.ServiceName) {
-			res = core.AppendIssue(res, c, service.Meta.Pos, service.ServiceName, service.Comments)
+	for _, service := range protoInfo.File.Services {
+		if service.Name != toPascalCase(service.Name) {
+			res = core.AppendIssue(res, c, service.NamePos, service.Name)
 		}
 	}
 

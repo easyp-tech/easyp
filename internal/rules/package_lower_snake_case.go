@@ -1,14 +1,14 @@
 package rules
 
 import (
-	"regexp"
+	"strings"
 
 	"github.com/easyp-tech/easyp/internal/core"
 )
 
 var _ core.Rule = (*PackageLowerSnakeCase)(nil)
 
-// PackageLowerSnakeCase his rule checks that packages are lower_snake_case.
+// PackageLowerSnakeCase this rule checks that every package component is lower_snake_case.
 type PackageLowerSnakeCase struct{}
 
 // Message implements lint.Rule.
@@ -19,10 +19,13 @@ func (c *PackageLowerSnakeCase) Message() string {
 // Validate implements lint.Rule.
 func (c *PackageLowerSnakeCase) Validate(protoInfo core.ProtoInfo) ([]core.Issue, error) {
 	var res []core.Issue
-	lowerSnakeCase := regexp.MustCompile("^[a-z]+([_|[.][a-z0-9]+)*$")
-	for _, pack := range protoInfo.Info.ProtoBody.Packages {
-		if !lowerSnakeCase.MatchString(pack.Name) {
-			res = core.AppendIssue(res, c, pack.Meta.Pos, pack.Name, pack.Comments)
+	for _, pkg := range protoInfo.File.Packages {
+		parts := strings.Split(pkg.Name, ".")
+		for i, part := range parts {
+			parts[i] = toLowerSnakeCase(part)
+		}
+		if pkg.Name != strings.Join(parts, ".") {
+			res = core.AppendIssue(res, c, pkg.Pos, pkg.Name)
 		}
 	}
 

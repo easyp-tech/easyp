@@ -6,10 +6,9 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"github.com/yoheimuta/go-protoparser/v4"
-	"github.com/yoheimuta/go-protoparser/v4/interpret/unordered"
 
 	"github.com/easyp-tech/easyp/internal/core"
+	"github.com/easyp-tech/easyp/internal/protoast"
 )
 
 const (
@@ -57,42 +56,68 @@ func start(t testing.TB) (*require.Assertions, map[string]core.ProtoInfo) {
 func parseFile(t testing.TB, assert *require.Assertions, path string) core.ProtoInfo {
 	t.Helper()
 
-	f, err := os.Open(path)
-	assert.NoError(err)
-	t.Cleanup(func() { assert.NoError(f.Close()) })
-
-	got, err := protoparser.Parse(f)
+	src, err := os.ReadFile(path)
 	assert.NoError(err)
 
-	res, err := unordered.InterpretProto(got)
+	file, err := protoast.Parse(path, src)
 	assert.NoError(err)
 
-	protoFilesFromImport := make(map[core.ImportPath]*unordered.Proto)
+	imported := make(map[core.ImportPath]*protoast.File)
 
 	// read imports files
-	for _, imp := range res.ProtoBody.Imports {
+	for _, imp := range file.Imports {
 		importPath := core.ConvertImportPath(imp.Location)
 		fullPath := filepath.Join("./../../testdata", string(importPath))
 
-		f, err := os.Open(fullPath)
+		src, err := os.ReadFile(fullPath)
 		if err != nil {
 			continue
 		}
 
-		t.Cleanup(func() { assert.NoError(f.Close()) })
-
-		got, err := protoparser.Parse(f)
+		parsed, err := protoast.Parse(string(importPath), src)
 		assert.NoError(err)
 
-		res, err := unordered.InterpretProto(got)
-		assert.NoError(err)
-
-		protoFilesFromImport[importPath] = res
+		imported[importPath] = parsed
 	}
 
 	return core.ProtoInfo{
-		Path:                 path,
-		Info:                 res,
-		ProtoFilesFromImport: protoFilesFromImport,
+		Path:          path,
+		File:          file,
+		ImportedFiles: imported,
 	}
+}
+
+// validate runs rule over infos the way lint does: module rules collect every
+// file and report once, other rules report per file.
+func validate(rule core.Rule, infos ...core.ProtoInfo) ([]core.Issue, error) {
+	moduleRule, ok := rule.(core.ModuleRule)
+	if !ok {
+		var issues []core.Issue
+		for _, info := range infos {
+			found, err := rule.Validate(info)
+			if err != nil {
+				return nil, err
+			}
+			issues = append(issues, found...)
+		}
+		return issues, nil
+	}
+	for _, info := range infos {
+		if err := moduleRule.Collect(info); err != nil {
+			return nil, err
+		}
+	}
+	var issues []core.Issue
+	for _, found := range moduleRule.Finish() {
+		issues = append(issues, found.Issue)
+	}
+	return issues, nil
+}
+
+// parseProto builds a ProtoInfo from source text for small, focused cases.
+func parseProto(t testing.TB, path, src string) core.ProtoInfo {
+	t.Helper()
+	file, err := protoast.Parse(path, []byte(src))
+	require.NoError(t, err)
+	return core.ProtoInfo{Path: path, File: file}
 }

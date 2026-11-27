@@ -60,10 +60,12 @@ func TestPackageSameJavaMultipleFiles_Validate(t *testing.T) {
 
 			rule := rules.PackageSameJavaMultipleFiles{}
 			var got []error
+			var infos []core.ProtoInfo
 			for _, fileName := range tc.fileNames {
-				_, err := rule.Validate(protos[fileName])
-				got = append(got, err)
+				infos = append(infos, protos[fileName])
 			}
+			_, err := validate(&rule, infos...)
+			got = append(got, err)
 
 			r.ErrorIs(errors.Join(got...), tc.wantErr)
 		})

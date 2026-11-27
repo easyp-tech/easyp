@@ -35,9 +35,9 @@ func TestRPCPascalCase_Validate(t *testing.T) {
 			wantIssues: &core.Issue{
 				Position: core.Position{
 					Filename: "",
-					Offset:   300,
+					Offset:   304,
 					Line:     13,
-					Column:   3,
+					Column:   7,
 				},
 				SourceName: "delete",
 				Message:    "RPC names should be PascalCase",

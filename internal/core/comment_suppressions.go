@@ -2,12 +2,10 @@ package core
 
 import (
 	"fmt"
-	"reflect"
 	"slices"
 	"strings"
 
-	"github.com/yoheimuta/go-protoparser/v4/parser"
-	"github.com/yoheimuta/go-protoparser/v4/parser/meta"
+	"github.com/easyp-tech/easyp/internal/protoast"
 )
 
 type suppressionRange struct {
@@ -25,9 +23,26 @@ func (ranges suppressionRanges) contains(rule string, line int) bool {
 	return false
 }
 
+// directiveComment is a comment with the line range of the declaration it
+// annotates; first is 0 when it annotates nothing.
 type directiveComment struct {
-	comment     *parser.Comment
+	comment     *protoast.Comment
 	first, last int
+}
+
+func directiveComments(file *protoast.File) []directiveComment {
+	if file == nil {
+		return nil
+	}
+	comments := make([]directiveComment, 0, len(file.Comments))
+	for _, comment := range file.Comments {
+		d := directiveComment{comment: comment}
+		if owner := file.Owner(comment); owner != nil {
+			d.first, d.last = owner.Pos.Line, max(owner.Pos.Line, owner.End.Line)
+		}
+		comments = append(comments, d)
+	}
+	return comments
 }
 
 type parsedDirective struct {
@@ -39,10 +54,7 @@ type parsedDirective struct {
 // commentSuppressions uses parser comments, not textual substring matching, so
 // marker-like text inside strings is never interpreted as a directive.
 func (c *Core) commentSuppressions(info ProtoInfo) (suppressionRanges, error) {
-	comments := info.directiveComments
-	if comments == nil {
-		comments = collectDirectiveComments(info.Info)
-	}
+	comments := directiveComments(info.File)
 	known := make(map[string]bool)
 	for _, name := range c.knownLintRules {
 		known[name] = true
@@ -62,12 +74,12 @@ func (c *Core) commentSuppressions(info ProtoInfo) (suppressionRanges, error) {
 			}
 			names := strings.FieldsFunc(rest, func(r rune) bool { return r == ',' || r == ' ' || r == '\t' })
 			if action == "" || len(names) == 0 {
-				return nil, fmt.Errorf("%s:%d:%d: malformed lint directive %q", info.Path, comment.comment.Meta.Pos.Line, comment.comment.Meta.Pos.Column, text)
+				return nil, fmt.Errorf("%s:%d:%d: malformed lint directive %q", info.Path, comment.comment.Pos.Line, comment.comment.Pos.Column, text)
 			}
 			names = compactDirectiveNames(names)
 			for _, name := range names {
 				if !known[name] {
-					return nil, fmt.Errorf("%s:%d:%d: unknown or unsupported lint rule %q in comment directive", info.Path, comment.comment.Meta.Pos.Line, comment.comment.Meta.Pos.Column, name)
+					return nil, fmt.Errorf("%s:%d:%d: unknown or unsupported lint rule %q in comment directive", info.Path, comment.comment.Pos.Line, comment.comment.Pos.Column, name)
 				}
 			}
 			parsed = append(parsed, parsedDirective{action: action, rules: names, comment: comment})
@@ -87,12 +99,12 @@ func (c *Core) commentSuppressions(info ProtoInfo) (suppressionRanges, error) {
 			}
 			stack := pending[name]
 			if len(stack) == 0 {
-				return nil, fmt.Errorf("%s:%d: easyp:enable %s has no preceding disable", info.Path, directive.comment.comment.Meta.Pos.Line, name)
+				return nil, fmt.Errorf("%s:%d: easyp:enable %s has no preceding disable", info.Path, directive.comment.comment.Pos.Line, name)
 			}
 			begin := stack[len(stack)-1]
 			pending[name] = stack[:len(stack)-1]
-			start := parsed[begin].comment.comment.Meta.Pos.Line
-			ranges = append(ranges, suppressionRange{name, start, directive.comment.comment.Meta.Pos.Line - 1})
+			start := parsed[begin].comment.comment.Pos.Line
+			ranges = append(ranges, suppressionRange{name, start, directive.comment.comment.Pos.Line - 1})
 			paired[fmt.Sprintf("%d:%s", begin, name)] = true
 		}
 	}
@@ -105,7 +117,7 @@ func (c *Core) commentSuppressions(info ProtoInfo) (suppressionRanges, error) {
 				continue
 			}
 			if directive.comment.first <= 0 {
-				return nil, fmt.Errorf("%s:%d: suppression %s must annotate a declaration or have a matching easyp:enable", info.Path, directive.comment.comment.Meta.Pos.Line, name)
+				return nil, fmt.Errorf("%s:%d: suppression %s must annotate a declaration or have a matching easyp:enable", info.Path, directive.comment.comment.Pos.Line, name)
 			}
 			ranges = append(ranges, suppressionRange{name, directive.comment.first, directive.comment.last})
 		}
@@ -140,92 +152,4 @@ func parseDirectivePrefix(text string) (string, string, bool) {
 		return "", "", true
 	}
 	return "", "", false
-}
-
-// collectDirectiveComments reads declaration metadata generically across the
-// parser's ordered and unordered node types, including inline comments.
-func collectDirectiveComments(root any) []directiveComment {
-	found := make(map[*parser.Comment]directiveComment)
-	seen := make(map[uintptr]bool)
-	var visit func(reflect.Value)
-	visit = func(value reflect.Value) {
-		if !value.IsValid() {
-			return
-		}
-		if value.Kind() == reflect.Interface {
-			if !value.IsNil() {
-				visit(value.Elem())
-			}
-			return
-		}
-		if value.Kind() == reflect.Pointer {
-			if value.IsNil() {
-				return
-			}
-			if comment, ok := value.Interface().(*parser.Comment); ok {
-				if _, exists := found[comment]; !exists {
-					found[comment] = directiveComment{comment: comment}
-				}
-				return
-			}
-			pointer := value.Pointer()
-			if seen[pointer] {
-				return
-			}
-			seen[pointer] = true
-			visit(value.Elem())
-			return
-		}
-		switch value.Kind() {
-		case reflect.Struct:
-			var location meta.Meta
-			field := value.FieldByName("Meta")
-			if field.IsValid() && field.CanInterface() {
-				location, _ = field.Interface().(meta.Meta)
-			}
-			if location.Pos.Line > 0 {
-				last := max(location.Pos.Line, location.LastPos.Line)
-				for _, name := range []string{"Comments", "InlineComment", "InlineCommentBehindLeftCurly"} {
-					field := value.FieldByName(name)
-					if !field.IsValid() || !field.CanInterface() {
-						continue
-					}
-					var attached []*parser.Comment
-					switch comments := field.Interface().(type) {
-					case []*parser.Comment:
-						attached = comments
-					case *parser.Comment:
-						if comments != nil {
-							attached = []*parser.Comment{comments}
-						}
-					}
-					for _, comment := range attached {
-						found[comment] = directiveComment{comment, location.Pos.Line, last}
-					}
-				}
-			}
-			for i := 0; i < value.NumField(); i++ {
-				field := value.Field(i)
-				if field.CanInterface() {
-					visit(field)
-				}
-			}
-		case reflect.Slice, reflect.Array:
-			for i := 0; i < value.Len(); i++ {
-				visit(value.Index(i))
-			}
-		}
-	}
-	visit(reflect.ValueOf(root))
-	result := make([]directiveComment, 0, len(found))
-	for _, comment := range found {
-		result = append(result, comment)
-	}
-	slices.SortFunc(result, func(a, b directiveComment) int {
-		if a.comment.Meta.Pos.Line != b.comment.Meta.Pos.Line {
-			return a.comment.Meta.Pos.Line - b.comment.Meta.Pos.Line
-		}
-		return a.comment.Meta.Pos.Column - b.comment.Meta.Pos.Column
-	})
-	return result
 }

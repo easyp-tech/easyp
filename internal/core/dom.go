@@ -6,10 +6,12 @@ import (
 	"strings"
 	"unicode"
 
-	"github.com/yoheimuta/go-protoparser/v4/interpret/unordered"
-	"github.com/yoheimuta/go-protoparser/v4/parser"
-	"github.com/yoheimuta/go-protoparser/v4/parser/meta"
+	"github.com/easyp-tech/easyp/internal/protoast"
 )
+
+// Position is a location in a proto file: 1-based line, 1-based rune column
+// and 0-based byte offset. Its JSON form matches earlier releases.
+type Position = protoast.Position
 
 type (
 	// Rule is an interface for a rule checking.
@@ -20,22 +22,20 @@ type (
 		Validate(ProtoInfo) ([]Issue, error)
 	}
 
+	// ModuleRule needs every file before it can report, such as rules that
+	// compare files of one package or directory. Lint passes each file to
+	// Collect and asks for findings once, after the last file; it does not
+	// call Validate. Suppressions and ignore_only apply to the findings by path.
+	ModuleRule interface {
+		Rule
+		Collect(ProtoInfo) error
+		Finish() []IssueInfo
+	}
+
 	// IssueInfo contains the information of an issue and the path.
 	IssueInfo struct {
 		Issue
 		Path string
-	}
-
-	// Position represents a source location within a proto file.
-	Position struct {
-		// Filename is the name of the file, if any.
-		Filename string
-		// Offset is the byte offset, starting at 0.
-		Offset int
-		// Line is the 1-based line number.
-		Line int
-		// Column is the 1-based column number.
-		Column int
 	}
 
 	// Issue contains the information of an issue.
@@ -46,6 +46,16 @@ type (
 		RuleName   string
 	}
 
+	// Resolution is what linking adds to a file.
+	Resolution struct {
+		// UsedImports holds the direct imports that define, or publicly
+		// re-export a file that defines, a name this file refers to.
+		UsedImports map[ImportPath]bool
+		// RPCTypes maps an rpc's byte offset to its request and response
+		// types, fully qualified without a leading dot.
+		RPCTypes map[int][2]string
+	}
+
 	// ImportPath type alias for path import in proto file
 	ImportPath string
 
@@ -54,36 +64,21 @@ type (
 
 	// ProtoInfo is the information of a proto file.
 	ProtoInfo struct {
-		directiveComments []directiveComment
-		Path              string
+		Path string
 		// ImportPath is relative to a declared source root, independently of the scan root.
-		ImportPath           string
-		Info                 *unordered.Proto
-		ProtoFilesFromImport map[ImportPath]*unordered.Proto
+		ImportPath string
+		// File is the lint view of the file; ImportedFiles holds its direct imports.
+		File          *protoast.File
+		ImportedFiles map[ImportPath]*protoast.File
+		// Resolved holds name resolution across files; nil when the files
+		// could not be linked, in which case rules fall back to the syntax.
+		Resolved *Resolution
 	}
 )
 
-// String formats the position as filename:line:column or line:column.
-func (p Position) String() string {
-	if p.Filename != "" {
-		return fmt.Sprintf("%s:%d:%d", p.Filename, p.Line, p.Column)
-	}
-	return fmt.Sprintf("%d:%d", p.Line, p.Column)
-}
-
-func GetPackageName(protoFile *unordered.Proto) PackageName {
-	if len(protoFile.ProtoBody.Packages) == 0 {
-		return ""
-	}
-
-	return PackageName(protoFile.ProtoBody.Packages[0].Name)
-}
-
 // AppendIssue records a rule finding. The lint engine applies per-file suppressions.
-func AppendIssue(
-	issues []Issue, lintRule Rule, pos meta.Position, sourceName string, comments []*parser.Comment,
-) []Issue {
-	return append(issues, buildError(lintRule, Position(pos), sourceName))
+func AppendIssue(issues []Issue, lintRule Rule, pos Position, sourceName string) []Issue {
+	return append(issues, buildError(lintRule, pos, sourceName))
 }
 
 // GetRuleName returns rule name

@@ -30,35 +30,10 @@ func TestEnumZeroValueSuffix_Validate(t *testing.T) {
 		wantIssues *core.Issue
 		wantErr    error
 	}{
-		"invalid": {
+		// The first values here are numbered 4, not 0, so the suffix rule does not apply.
+		"nonzero_first_value": {
 			fileName: invalidAuthProto,
-			wantIssues: &core.Issue{
-				Position: core.Position{
-					Filename: "",
-					Offset:   917,
-					Line:     51,
-					Column:   3,
-				},
-				SourceName: "none",
-				Message:    "enum zero value suffix is not valid",
-				RuleName:   "ENUM_ZERO_VALUE_SUFFIX",
-			},
-			wantErr: nil,
-		},
-		"invalid_nested": {
-			fileName: invalidAuthProto,
-			wantIssues: &core.Issue{
-				Position: core.Position{
-					Filename: "",
-					Offset:   667,
-					Line:     33,
-					Column:   5,
-				},
-				SourceName: "none",
-				Message:    "enum zero value suffix is not valid",
-				RuleName:   "ENUM_ZERO_VALUE_SUFFIX",
-			},
-			wantErr: nil,
+			wantErr:  nil,
 		},
 		"valid": {
 			fileName: validAuthProto,

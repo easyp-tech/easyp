@@ -1,15 +1,18 @@
 package rules
 
 import (
+	"strings"
+
 	"github.com/easyp-tech/easyp/internal/core"
+	"github.com/easyp-tech/easyp/internal/protoast"
 )
 
 var _ core.Rule = (*EnumZeroValueSuffix)(nil)
 
-// EnumZeroValueSuffix this rule requires that all enum values have a zero value with a defined suffix.
-// By default, it verifies that the zero value of all enums ends in _UNSPECIFIED, but the suffix is configurable.
+// EnumZeroValueSuffix this rule checks that every enum value numbered zero ends with the configured suffix.
 type EnumZeroValueSuffix struct {
-	Suffix string `json:"suffix" yaml:"suffix" ENV:"ENUM_ZERO_VALUE_SUFFIX"`
+	// Suffix is the required ending, with or without its leading underscore.
+	Suffix string
 }
 
 // Message implements lint.Rule.
@@ -20,34 +23,15 @@ func (e *EnumZeroValueSuffix) Message() string {
 // Validate implements lint.Rule.
 func (e *EnumZeroValueSuffix) Validate(protoInfo core.ProtoInfo) ([]core.Issue, error) {
 	var res []core.Issue
-
-	for _, enum := range protoInfo.Info.ProtoBody.Enums {
-		zeroValue := enum.EnumBody.EnumFields[0]
-		if zeroValue.Ident != pascalToUpperSnake(enum.EnumName)+"_"+e.Suffix {
-			res = core.AppendIssue(
-				res,
-				e,
-				zeroValue.Meta.Pos,
-				zeroValue.Ident,
-				zeroValue.Comments,
-			)
-		}
+	suffix := e.Suffix
+	if !strings.HasPrefix(suffix, "_") {
+		suffix = "_" + suffix
 	}
-
-	for _, msg := range protoInfo.Info.ProtoBody.Messages {
-		for _, enum := range msg.MessageBody.Enums {
-			zeroValue := enum.EnumBody.EnumFields[0]
-			if zeroValue.Ident != pascalToUpperSnake(enum.EnumName)+"_"+e.Suffix {
-				res = core.AppendIssue(
-					res,
-					e,
-					zeroValue.Meta.Pos,
-					zeroValue.Ident,
-					zeroValue.Comments,
-				)
-			}
+	protoInfo.File.Walk(protoast.Visitor{EnumValue: func(_ *protoast.Enum, value *protoast.EnumValue) {
+		if n, ok := enumNumber(value.Number); ok && n == 0 && !strings.HasSuffix(value.Name, suffix) {
+			res = core.AppendIssue(res, e, value.NamePos, value.Name)
 		}
-	}
+	}})
 
 	return res, nil
 }

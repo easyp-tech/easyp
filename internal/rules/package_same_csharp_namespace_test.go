@@ -59,14 +59,12 @@ func TestPackageSameCSharpNamespace_Validate(t *testing.T) {
 			r, protos := start(t)
 
 			rule := rules.PackageSameCsharpNamespace{}
-			var issues []core.Issue
+			var infos []core.ProtoInfo
 			for _, fileName := range tc.fileNames {
-				issue, err := rule.Validate(protos[fileName])
-				r.ErrorIs(err, tc.wantErr)
-				if err == nil {
-					issues = append(issues, issue...)
-				}
+				infos = append(infos, protos[fileName])
 			}
+			issues, err := validate(&rule, infos...)
+			r.ErrorIs(err, tc.wantErr)
 
 			switch {
 			case tc.wantIssues != nil:

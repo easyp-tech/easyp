@@ -71,6 +71,7 @@ func New(cfg config.LintConfig) ([]core.Rule, map[string][]string, error) {
 			Prefix: cfg.PackageDirectoryPrefix,
 		},
 		&PackageSameDirectory{},
+		&PackageNoImportCycle{},
 
 		//	basicGroup
 		&EnumFirstValueZero{},
@@ -93,10 +94,12 @@ func New(cfg config.LintConfig) ([]core.Rule, map[string][]string, error) {
 		&PackageSameSwiftPrefix{},
 		&RPCPascalCase{},
 		&ServicePascalCase{},
+		&SyntaxSpecified{},
+		&FieldNotRequired{},
 		//	defaultGroup
 		&EnumValuePrefix{},
 		&EnumZeroValueSuffix{
-			Suffix: defaultIfEmpty(cfg.EnumZeroValueSuffix, "UNSPECIFIED"),
+			Suffix: defaultIfEmpty(cfg.EnumZeroValueSuffix, "NONE"),
 		},
 		&FileLowerSnakeCase{},
 		&RPCRequestResponseUnique{},
@@ -222,6 +225,7 @@ func addMinimal(res []string) []string {
 	res = append(res, core.GetRuleName(&PackageDefined{}))
 	res = append(res, core.GetRuleName(&PackageDirectoryMatch{}))
 	res = append(res, core.GetRuleName(&PackageSameDirectory{}))
+	res = append(res, core.GetRuleName(&PackageNoImportCycle{}))
 
 	return res
 }
@@ -247,6 +251,8 @@ func addBasic(res []string) []string {
 	res = append(res, core.GetRuleName(&PackageSameSwiftPrefix{}))
 	res = append(res, core.GetRuleName(&RPCPascalCase{}))
 	res = append(res, core.GetRuleName(&ServicePascalCase{}))
+	res = append(res, core.GetRuleName(&SyntaxSpecified{}))
+	res = append(res, core.GetRuleName(&FieldNotRequired{}))
 	return res
 }
 

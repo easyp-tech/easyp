@@ -2,20 +2,14 @@ package rules
 
 import (
 	"github.com/easyp-tech/easyp/internal/core"
+	"github.com/easyp-tech/easyp/internal/protoast"
 )
 
-var _ core.Rule = (*PackageSameRubyPackage)(nil)
+var _ core.ModuleRule = (*PackageSameRubyPackage)(nil)
 
-// PackageSameRubyPackage checks that all files with a given package have the same value for the ruby_package option.
+// PackageSameRubyPackage this rule checks that all files of a package set the ruby_package option to one value. A file without the option counts as its own value; every file of a disagreeing package is reported.
 type PackageSameRubyPackage struct {
-	// dir => package
-	cache map[string]string
-}
-
-func (p *PackageSameRubyPackage) lazyInit() {
-	if p.cache == nil {
-		p.cache = make(map[string]string)
-	}
+	files groupedValues
 }
 
 // Message implements lint.Rule.
@@ -23,29 +17,19 @@ func (p *PackageSameRubyPackage) Message() string {
 	return "all files in the same package must have the same ruby_package option"
 }
 
-// Validate implements lint.Rule.
-func (p *PackageSameRubyPackage) Validate(protoInfo core.ProtoInfo) ([]core.Issue, error) {
-	p.lazyInit()
+// Validate implements lint.Rule. Lint calls Collect and Finish instead.
+func (p *PackageSameRubyPackage) Validate(core.ProtoInfo) ([]core.Issue, error) { return nil, nil }
 
-	var res []core.Issue
-
-	if len(protoInfo.Info.ProtoBody.Packages) == 0 {
-		return res, nil
+// Collect implements core.ModuleRule.
+func (p *PackageSameRubyPackage) Collect(protoInfo core.ProtoInfo) error {
+	_, pkg := packagePosition(protoInfo)
+	value := groupedValue{path: protoInfo.Path, pos: protoast.FilePosition(protoInfo.Path)}
+	if opt := fileOption(protoInfo.File, "ruby_package"); opt != nil {
+		value.value, value.source, value.pos = optionString(opt.Value), opt.Value, opt.Pos
 	}
-
-	packageName := protoInfo.Info.ProtoBody.Packages[0].Name
-	for _, option := range protoInfo.Info.ProtoBody.Options {
-		if option.OptionName == "ruby_package" {
-			if p.cache[packageName] == "" {
-				p.cache[packageName] = option.Constant
-				continue
-			}
-
-			if p.cache[packageName] != option.Constant {
-				res = core.AppendIssue(res, p, option.Meta.Pos, option.Constant, option.Comments)
-			}
-		}
-	}
-
-	return res, nil
+	p.files.add(pkg, value)
+	return nil
 }
+
+// Finish implements core.ModuleRule.
+func (p *PackageSameRubyPackage) Finish() []core.IssueInfo { return p.files.mismatches(p) }

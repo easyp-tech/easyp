@@ -2,13 +2,12 @@ package rules
 
 import (
 	"github.com/easyp-tech/easyp/internal/core"
+	"github.com/easyp-tech/easyp/internal/protoast"
 )
 
 var _ core.Rule = (*EnumFirstValueZero)(nil)
 
-// EnumFirstValueZero this rule enforces that the first enum value is the zero value,
-// which is a proto3 requirement on build,
-// but isn't required in proto2 on build. The rule enforces that the requirement is also followed in proto2.
+// EnumFirstValueZero this rule checks that the first value of every enum is numerically zero.
 type EnumFirstValueZero struct{}
 
 // Message implements lint.Rule.
@@ -19,19 +18,15 @@ func (c *EnumFirstValueZero) Message() string {
 // Validate implements lint.Rule.
 func (c *EnumFirstValueZero) Validate(protoInfo core.ProtoInfo) ([]core.Issue, error) {
 	var res []core.Issue
-	for _, enum := range protoInfo.Info.ProtoBody.Enums {
-		if val := enum.EnumBody.EnumFields[0]; val.Number != "0" {
-			res = core.AppendIssue(res, c, val.Meta.Pos, val.Number, val.Comments)
+	protoInfo.File.Walk(protoast.Visitor{Enum: func(enum *protoast.Enum) {
+		if len(enum.Values) == 0 {
+			return
 		}
-	}
-
-	for _, msg := range protoInfo.Info.ProtoBody.Messages {
-		for _, enum := range msg.MessageBody.Enums {
-			if val := enum.EnumBody.EnumFields[0]; val.Number != "0" {
-				res = core.AppendIssue(res, c, val.Meta.Pos, val.Number, val.Comments)
-			}
+		first := enum.Values[0]
+		if n, ok := enumNumber(first.Number); !ok || n != 0 {
+			res = core.AppendIssue(res, c, first.NumberPos, first.Number)
 		}
-	}
+	}})
 
 	return res, nil
 }

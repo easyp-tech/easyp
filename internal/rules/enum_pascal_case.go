@@ -1,9 +1,8 @@
 package rules
 
 import (
-	"regexp"
-
 	"github.com/easyp-tech/easyp/internal/core"
+	"github.com/easyp-tech/easyp/internal/protoast"
 )
 
 var _ core.Rule = (*EnumPascalCase)(nil)
@@ -19,20 +18,11 @@ func (c *EnumPascalCase) Message() string {
 // Validate implements lint.Rule.
 func (c *EnumPascalCase) Validate(protoInfo core.ProtoInfo) ([]core.Issue, error) {
 	var res []core.Issue
-	pascalCase := regexp.MustCompile("^[A-Z][a-z]+(?:[A-Z][a-z]+)*$")
-	for _, enum := range protoInfo.Info.ProtoBody.Enums {
-		if !pascalCase.MatchString(enum.EnumName) {
-			res = core.AppendIssue(res, c, enum.Meta.Pos, enum.EnumName, enum.Comments)
+	protoInfo.File.Walk(protoast.Visitor{Enum: func(enum *protoast.Enum) {
+		if enum.Name != toPascalCase(enum.Name) {
+			res = core.AppendIssue(res, c, enum.NamePos, enum.Name)
 		}
-	}
-
-	for _, msg := range protoInfo.Info.ProtoBody.Messages {
-		for _, enum := range msg.MessageBody.Enums {
-			if !pascalCase.MatchString(enum.EnumName) {
-				res = core.AppendIssue(res, c, enum.Meta.Pos, enum.EnumName, enum.Comments)
-			}
-		}
-	}
+	}})
 
 	return res, nil
 }

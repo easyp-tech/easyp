@@ -81,17 +81,17 @@ func TestPackageDirectoryMatch_ModuleQualifiedPackage(t *testing.T) {
 	info.ImportPath = "v1/service.proto"
 	rule := rules.PackageDirectoryMatch{Root: ".", Prefix: "user"}
 
-	info.Info.ProtoBody.Packages[0].Name = "user.v1"
+	info.File.Packages[0].Name = "user.v1"
 	issues, err := rule.Validate(info)
 	r.NoError(err)
 	r.Empty(issues)
 
-	info.Info.ProtoBody.Packages[0].Name = "v1"
+	info.File.Packages[0].Name = "v1"
 	issues, err = rule.Validate(info)
 	r.NoError(err)
 	r.Empty(issues)
 
-	info.Info.ProtoBody.Packages[0].Name = "other.v1"
+	info.File.Packages[0].Name = "other.v1"
 	issues, err = rule.Validate(info)
 	r.NoError(err)
 	r.Len(issues, 1)

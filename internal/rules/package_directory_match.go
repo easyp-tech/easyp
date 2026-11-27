@@ -36,7 +36,7 @@ func (d *PackageDirectoryMatch) Validate(protoInfo core.ProtoInfo) ([]core.Issue
 		qualifiedPackage = d.Prefix + "." + expectedPackage
 	}
 
-	for _, pkgInfo := range protoInfo.Info.ProtoBody.Packages {
+	for _, pkgInfo := range protoInfo.File.Packages {
 		if pkgInfo.Name == expectedPackage || pkgInfo.Name == qualifiedPackage {
 			continue
 		}
@@ -44,7 +44,7 @@ func (d *PackageDirectoryMatch) Validate(protoInfo core.ProtoInfo) ([]core.Issue
 		if protoInfo.ImportPath != "" {
 			sourceName = protoInfo.ImportPath
 		}
-		res = core.AppendIssue(res, d, pkgInfo.Meta.Pos, sourceName, pkgInfo.Comments)
+		res = core.AppendIssue(res, d, pkgInfo.Pos, sourceName)
 		if qualifiedPackage != expectedPackage {
 			res[len(res)-1].Message = fmt.Sprintf("package %q does not match module-relative directory %q; expected %q or module-qualified %q", pkgInfo.Name, preparePath, expectedPackage, qualifiedPackage)
 		} else {

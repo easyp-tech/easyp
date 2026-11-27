@@ -1,20 +1,17 @@
 package rules
 
 import (
-	"path/filepath"
-	"regexp"
-
-	"github.com/yoheimuta/go-protoparser/v4/parser/meta"
+	"strings"
 
 	"github.com/easyp-tech/easyp/internal/core"
+	"github.com/easyp-tech/easyp/internal/protoast"
+	"path/filepath"
 )
 
 var _ core.Rule = (*FileLowerSnakeCase)(nil)
 
-// FileLowerSnakeCase this rule says that all .proto files must be named as lower_snake_case.proto.
-// This is the widely accepted standard.
-type FileLowerSnakeCase struct {
-}
+// FileLowerSnakeCase this rule checks that file names are lower_snake_case.
+type FileLowerSnakeCase struct{}
 
 // Message implements lint.Rule.
 func (f *FileLowerSnakeCase) Message() string {
@@ -24,22 +21,11 @@ func (f *FileLowerSnakeCase) Message() string {
 // Validate implements lint.Rule.
 func (f *FileLowerSnakeCase) Validate(protoInfo core.ProtoInfo) ([]core.Issue, error) {
 	var res []core.Issue
-
-	fileName := filepath.Base(protoInfo.Path)
-	if !isLowerSnakeCase(fileName) {
-		res = core.AppendIssue(res, f, meta.Position{
-			Filename: protoInfo.Path,
-			Offset:   0,
-			Line:     0,
-			Column:   0,
-		}, protoInfo.Path, nil)
+	base := filepath.Base(protoInfo.Path)
+	name := strings.TrimSuffix(base, filepath.Ext(base))
+	if name != toLowerSnakeCase(name) {
+		res = core.AppendIssue(res, f, protoast.FilePosition(protoInfo.Path), protoInfo.Path)
 	}
 
 	return res, nil
-}
-
-var matchLowerSnakeCase = regexp.MustCompile("^[a-z]+([_|[.][a-z0-9]+)*$")
-
-func isLowerSnakeCase(s string) bool {
-	return matchLowerSnakeCase.MatchString(s)
 }

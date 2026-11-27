@@ -1,23 +1,15 @@
 package rules
 
 import (
-	"path/filepath"
-
 	"github.com/easyp-tech/easyp/internal/core"
+	"path/filepath"
 )
 
-var _ core.Rule = (*DirectorySamePackage)(nil)
+var _ core.ModuleRule = (*DirectorySamePackage)(nil)
 
-// DirectorySamePackage this rule checks that all files in a given directory are in the same package.
+// DirectorySamePackage this rule checks that all files in a directory have the same package; every file of a mixed directory is reported.
 type DirectorySamePackage struct {
-	// dir => package
-	cache map[string]string
-}
-
-func (d *DirectorySamePackage) lazyInit() {
-	if d.cache == nil {
-		d.cache = make(map[string]string)
-	}
+	files groupedValues
 }
 
 // Message implements lint.Rule.
@@ -25,22 +17,15 @@ func (d *DirectorySamePackage) Message() string {
 	return "all files in the same directory must have the same package name"
 }
 
-// Validate implements lint.Rule.
-func (d *DirectorySamePackage) Validate(protoInfo core.ProtoInfo) ([]core.Issue, error) {
-	d.lazyInit()
-	var res []core.Issue
+// Validate implements lint.Rule. Lint calls Collect and Finish instead.
+func (d *DirectorySamePackage) Validate(core.ProtoInfo) ([]core.Issue, error) { return nil, nil }
 
-	directory := filepath.Dir(protoInfo.Path)
-	for _, pack := range protoInfo.Info.ProtoBody.Packages {
-		if d.cache[directory] == "" {
-			d.cache[directory] = pack.Name
-			continue
-		}
-
-		if d.cache[directory] != pack.Name {
-			res = core.AppendIssue(res, d, pack.Meta.Pos, pack.Name, pack.Comments)
-		}
-	}
-
-	return res, nil
+// Collect implements core.ModuleRule.
+func (d *DirectorySamePackage) Collect(protoInfo core.ProtoInfo) error {
+	pos, pkg := packagePosition(protoInfo)
+	d.files.add(filepath.Dir(protoInfo.Path), groupedValue{path: protoInfo.Path, value: pkg, source: pkg, pos: pos})
+	return nil
 }
+
+// Finish implements core.ModuleRule.
+func (d *DirectorySamePackage) Finish() []core.IssueInfo { return d.files.mismatches(d) }

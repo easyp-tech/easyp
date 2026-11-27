@@ -1,14 +1,16 @@
 package rules
 
 import (
+	"strings"
+
 	"github.com/easyp-tech/easyp/internal/core"
+	"github.com/easyp-tech/easyp/internal/protoast"
 )
 
 var _ core.Rule = (*RPCResponseStandardName)(nil)
 
-// RPCResponseStandardName checks that RPC response type names are RPCNameResponse or ServiceNameRPCNameResponse.
-type RPCResponseStandardName struct {
-}
+// RPCResponseStandardName this rule checks that RPC response types are named <RPC>Response or <Service><RPC>Response.
+type RPCResponseStandardName struct{}
 
 // Message implements lint.Rule.
 func (r *RPCResponseStandardName) Message() string {
@@ -18,14 +20,13 @@ func (r *RPCResponseStandardName) Message() string {
 // Validate implements lint.Rule.
 func (r *RPCResponseStandardName) Validate(protoInfo core.ProtoInfo) ([]core.Issue, error) {
 	var res []core.Issue
-
-	for _, service := range protoInfo.Info.ProtoBody.Services {
-		for _, rpc := range service.ServiceBody.RPCs {
-			if rpc.RPCResponse.MessageType != rpc.RPCName+"Response" && rpc.RPCResponse.MessageType != service.ServiceName+rpc.RPCName+"Response" {
-				res = core.AppendIssue(res, r, rpc.Meta.Pos, rpc.RPCResponse.MessageType, rpc.Comments)
-			}
+	protoInfo.File.Walk(protoast.Visitor{RPC: func(service *protoast.Service, rpc *protoast.RPC) {
+		name := rpc.Response.Type[strings.LastIndex(rpc.Response.Type, ".")+1:]
+		expected := toPascalCase(rpc.Name) + "Response"
+		if name != expected && name != toPascalCase(service.Name)+expected {
+			res = core.AppendIssue(res, r, rpc.Response.Pos, rpc.Response.Type)
 		}
-	}
+	}})
 
 	return res, nil
 }

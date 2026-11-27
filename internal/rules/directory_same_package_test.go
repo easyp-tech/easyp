@@ -60,11 +60,13 @@ func TestDirectorySamePackage_Validate(t *testing.T) {
 
 			rule := rules.DirectorySamePackage{}
 			var res []core.Issue
+			var infos []core.ProtoInfo
 			for _, fileName := range tc.fileNames {
-				issues, err := rule.Validate(protos[fileName])
-				r.ErrorIs(err, tc.wantErr)
-				res = append(res, issues...)
+				infos = append(infos, protos[fileName])
 			}
+			issues, err := validate(&rule, infos...)
+			r.ErrorIs(err, tc.wantErr)
+			res = append(res, issues...)
 			if len(res) > 0 {
 				r.Contains(res, *tc.wantIssues)
 			}

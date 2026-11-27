@@ -1,9 +1,8 @@
 package rules
 
 import (
-	"regexp"
-
 	"github.com/easyp-tech/easyp/internal/core"
+	"github.com/easyp-tech/easyp/internal/protoast"
 )
 
 var _ core.Rule = (*EnumValueUpperSnakeCase)(nil)
@@ -19,24 +18,11 @@ func (c *EnumValueUpperSnakeCase) Message() string {
 // Validate implements lint.Rule.
 func (c *EnumValueUpperSnakeCase) Validate(protoInfo core.ProtoInfo) ([]core.Issue, error) {
 	var res []core.Issue
-	upperSnakeCase := regexp.MustCompile("^[A-Z0-9]+(_[A-Z0-9]+)*$")
-	for _, enum := range protoInfo.Info.ProtoBody.Enums {
-		for _, field := range enum.EnumBody.EnumFields {
-			if !upperSnakeCase.MatchString(field.Ident) {
-				res = core.AppendIssue(res, c, field.Meta.Pos, field.Ident, field.Comments)
-			}
+	protoInfo.File.Walk(protoast.Visitor{EnumValue: func(_ *protoast.Enum, value *protoast.EnumValue) {
+		if value.Name != toUpperSnakeCase(value.Name) {
+			res = core.AppendIssue(res, c, value.NamePos, value.Name)
 		}
-	}
-
-	for _, msg := range protoInfo.Info.ProtoBody.Messages {
-		for _, enum := range msg.MessageBody.Enums {
-			for _, field := range enum.EnumBody.EnumFields {
-				if !upperSnakeCase.MatchString(field.Ident) {
-					res = core.AppendIssue(res, c, field.Meta.Pos, field.Ident, field.Comments)
-				}
-			}
-		}
-	}
+	}})
 
 	return res, nil
 }

@@ -35,9 +35,9 @@ func TestMessageFieldLowerSnakeCase_Validate(t *testing.T) {
 			wantIssues: &core.Issue{
 				Position: core.Position{
 					Filename: "",
-					Offset:   560,
+					Offset:   567,
 					Line:     27,
-					Column:   3,
+					Column:   10,
 				},
 				SourceName: "Session_id",
 				Message:    "message field should be lower_snake_case",

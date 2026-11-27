@@ -2,20 +2,14 @@ package rules
 
 import (
 	"github.com/easyp-tech/easyp/internal/core"
+	"github.com/easyp-tech/easyp/internal/protoast"
 )
 
-var _ core.Rule = (*PackageSameCsharpNamespace)(nil)
+var _ core.ModuleRule = (*PackageSameCsharpNamespace)(nil)
 
-// PackageSameCsharpNamespace checks that all files with a given package have the same value for the csharp_namespace option.
+// PackageSameCsharpNamespace this rule checks that all files of a package set the csharp_namespace option to one value. A file without the option counts as its own value; every file of a disagreeing package is reported.
 type PackageSameCsharpNamespace struct {
-	// dir => package
-	cache map[string]string
-}
-
-func (p *PackageSameCsharpNamespace) lazyInit() {
-	if p.cache == nil {
-		p.cache = make(map[string]string)
-	}
+	files groupedValues
 }
 
 // Message implements lint.Rule.
@@ -23,29 +17,19 @@ func (p *PackageSameCsharpNamespace) Message() string {
 	return "different proto files in the same package should have the same csharp_namespace"
 }
 
-// Validate implements lint.Rule.
-func (p *PackageSameCsharpNamespace) Validate(protoInfo core.ProtoInfo) ([]core.Issue, error) {
-	p.lazyInit()
+// Validate implements lint.Rule. Lint calls Collect and Finish instead.
+func (p *PackageSameCsharpNamespace) Validate(core.ProtoInfo) ([]core.Issue, error) { return nil, nil }
 
-	var res []core.Issue
-
-	if len(protoInfo.Info.ProtoBody.Packages) == 0 {
-		return res, nil
+// Collect implements core.ModuleRule.
+func (p *PackageSameCsharpNamespace) Collect(protoInfo core.ProtoInfo) error {
+	_, pkg := packagePosition(protoInfo)
+	value := groupedValue{path: protoInfo.Path, pos: protoast.FilePosition(protoInfo.Path)}
+	if opt := fileOption(protoInfo.File, "csharp_namespace"); opt != nil {
+		value.value, value.source, value.pos = optionString(opt.Value), opt.Value, opt.Pos
 	}
-
-	packageName := protoInfo.Info.ProtoBody.Packages[0].Name
-	for _, option := range protoInfo.Info.ProtoBody.Options {
-		if option.OptionName == "csharp_namespace" {
-			if p.cache[packageName] == "" {
-				p.cache[packageName] = option.Constant
-				continue
-			}
-
-			if p.cache[packageName] != option.Constant {
-				res = core.AppendIssue(res, p, option.Meta.Pos, option.Constant, option.Comments)
-			}
-		}
-	}
-
-	return res, nil
+	p.files.add(pkg, value)
+	return nil
 }
+
+// Finish implements core.ModuleRule.
+func (p *PackageSameCsharpNamespace) Finish() []core.IssueInfo { return p.files.mismatches(p) }

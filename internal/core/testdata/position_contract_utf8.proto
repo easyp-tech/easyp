@@ -1,0 +1,19 @@
+syntax = "proto3";
+
+// Проверка контракта позиций: колонки считаются в рунах, таб = +1. 🚀
+option java_string = "привет, мир 😀"; package position.v1;
+
+message /* привет */ Utf8Contract {
+	string tabbed_field = 1;
+  /* смайлик 😀😀😀 перед полем */ repeated string after_emoji = 2;
+  string trailing = 3; // хвост
+}
+
+enum /* вид */ Kind {
+	KIND_UNSPECIFIED = 0;
+	/* перед значением 😀 */ KIND_AFTER_EMOJI = 1;
+}
+
+service /* сервис */ Echo {
+		rpc /* вызов */ Ping(google.protobuf.Empty) returns (Utf8Contract) {}
+}

@@ -35,9 +35,9 @@ func TestRPCResponseStandardName_Validate(t *testing.T) {
 			wantIssues: &core.Issue{
 				Position: core.Position{
 					Filename: "",
-					Offset:   214,
+					Offset:   245,
 					Line:     11,
-					Column:   3,
+					Column:   34,
 				},
 				SourceName: "Result",
 				Message:    "rpc response should have suffix 'Response'",

@@ -1,16 +1,19 @@
 package rules
 
 import (
-	"github.com/yoheimuta/go-protoparser/v4/interpret/unordered"
-	"github.com/yoheimuta/go-protoparser/v4/parser"
-
 	"github.com/easyp-tech/easyp/internal/core"
+	"github.com/easyp-tech/easyp/internal/protoast"
 )
 
 var _ core.Rule = (*ImportUsed)(nil)
 
 // ImportUsed this rule checks that all the imports declared across your Protobuf files are actually used.
-type ImportUsed struct {
+// It keeps no state between files, so files can be checked concurrently.
+type ImportUsed struct{}
+
+// importUsage tracks, for one file without resolved names, which imports its
+// written names point to.
+type importUsage struct {
 	instrParser  core.InstructionParser
 	isImportUsed map[core.ImportPath]bool
 	pkgToImport  map[core.PackageName][]core.ImportPath
@@ -23,140 +26,158 @@ func (i *ImportUsed) Message() string {
 
 // Validate implements core.Rule.
 func (i *ImportUsed) Validate(checkingProto core.ProtoInfo) ([]core.Issue, error) {
-	var res []core.Issue
+	if checkingProto.Resolved != nil {
+		return i.validateResolved(checkingProto), nil
+	}
 
-	i.instrParser = core.InstructionParser{
-		SourcePkgName: core.GetPackageName(checkingProto.Info),
+	var res []core.Issue
+	u := &importUsage{}
+
+	u.instrParser = core.InstructionParser{
+		SourcePkgName: core.PackageName(checkingProto.File.PackageName()),
 	}
 
 	// collects flags if import was used
-	i.isImportUsed = make(map[core.ImportPath]bool)
+	u.isImportUsed = make(map[core.ImportPath]bool)
 
 	// collects pkg name -> import path
-	i.pkgToImport = make(map[core.PackageName][]core.ImportPath)
-	for importPath, proto := range checkingProto.ProtoFilesFromImport {
-		pkgName := core.GetPackageName(proto)
+	u.pkgToImport = make(map[core.PackageName][]core.ImportPath)
+	for importPath, proto := range checkingProto.ImportedFiles {
+		pkgName := core.PackageName(proto.PackageName())
 		if pkgName == "" {
 			// skip if package is omitted
 			continue
 		}
 
-		i.pkgToImport[pkgName] = append(i.pkgToImport[pkgName], importPath)
+		u.pkgToImport[pkgName] = append(u.pkgToImport[pkgName], importPath)
 	}
 
 	// collects info about import in linted proto file
-	importInfo := make(map[core.ImportPath]*parser.Import)
-	for _, imp := range checkingProto.Info.ProtoBody.Imports {
+	importInfo := make(map[core.ImportPath]*protoast.Import)
+	for _, imp := range checkingProto.File.Imports {
 		importPath := core.ConvertImportPath(imp.Location)
-		i.isImportUsed[importPath] = false
+		u.isImportUsed[importPath] = false
 		importInfo[importPath] = imp
 	}
 
 	// look for import used
-	i.checkInServices(checkingProto.Info.ProtoBody.Services, checkingProto)
-	i.checkInMessages(checkingProto.Info.ProtoBody.Messages, checkingProto)
-	i.checkInExtends(checkingProto.Info.ProtoBody.Extends, checkingProto)
-	i.checkInOptions(checkingProto.Info.ProtoBody.Options, checkingProto)
+	u.checkInServices(checkingProto.File.Services, checkingProto)
+	u.checkInMessages(checkingProto.File.Messages, checkingProto)
+	u.checkInExtends(checkingProto.File.Extends, checkingProto)
+	u.checkInOptions(checkingProto.File.Options, checkingProto)
 
-	for imp, used := range i.isImportUsed {
+	for imp, used := range u.isImportUsed {
 		if !used {
-			res = core.AppendIssue(res, i, importInfo[imp].Meta.Pos, importInfo[imp].Location, importInfo[imp].Comments)
+			res = core.AppendIssue(res, i, importInfo[imp].Pos, importInfo[imp].Location)
 		}
 	}
 
 	return res, nil
 }
 
+// validateResolved reports non-public imports that no resolved name in the file
+// comes from, directly or through the import's public imports.
+func (i *ImportUsed) validateResolved(checkingProto core.ProtoInfo) []core.Issue {
+	var res []core.Issue
+	for _, imp := range checkingProto.File.Imports {
+		if imp.Public || checkingProto.Resolved.UsedImports[core.ImportPath(imp.Path)] {
+			continue
+		}
+		res = core.AppendIssue(res, i, imp.Pos, imp.Location)
+	}
+	return res
+}
+
 // checkIsImportUsed check if passed import is used in proto file
-func (i *ImportUsed) checkIsImportUsed(key string, checkingProto core.ProtoInfo) {
-	instruction := i.instrParser.Parse(key)
-	for _, importPath := range i.pkgToImport[instruction.PkgName] {
-		proto := checkingProto.ProtoFilesFromImport[importPath]
+func (u *importUsage) checkIsImportUsed(key string, checkingProto core.ProtoInfo) {
+	instruction := u.instrParser.Parse(key)
+	for _, importPath := range u.pkgToImport[instruction.PkgName] {
+		proto := checkingProto.ImportedFiles[importPath]
 		exist := existInProto(instruction.Instruction, proto)
 
 		if exist {
-			if _, ok := i.isImportUsed[importPath]; ok {
-				i.isImportUsed[importPath] = true
+			if _, ok := u.isImportUsed[importPath]; ok {
+				u.isImportUsed[importPath] = true
 			}
 		}
 	}
 }
 
 // check used imports in services
-func (i *ImportUsed) checkInServices(services []*unordered.Service, checkingProto core.ProtoInfo) {
+func (u *importUsage) checkInServices(services []*protoast.Service, checkingProto core.ProtoInfo) {
 	for _, service := range services {
-		for _, rpc := range service.ServiceBody.RPCs {
+		for _, rpc := range service.RPCs {
 			// look for in request
-			i.checkIsImportUsed(rpc.RPCRequest.MessageType, checkingProto)
+			u.checkIsImportUsed(rpc.Request.Type, checkingProto)
 
 			// look for in response
-			i.checkIsImportUsed(rpc.RPCResponse.MessageType, checkingProto)
+			u.checkIsImportUsed(rpc.Response.Type, checkingProto)
 
 			// look for in options
 			for _, rpcOption := range rpc.Options {
-				i.checkIsImportUsed(rpcOption.OptionName, checkingProto)
+				u.checkIsImportUsed(rpcOption.Name, checkingProto)
 			}
 		}
 	}
 }
 
 // check used imports in messages
-func (i *ImportUsed) checkInMessages(messages []*unordered.Message, checkingProto core.ProtoInfo) {
+func (u *importUsage) checkInMessages(messages []*protoast.Message, checkingProto core.ProtoInfo) {
 	for _, msg := range messages {
-		i.checkInMessages(msg.MessageBody.Messages, checkingProto)
+		u.checkInMessages(msg.Messages, checkingProto)
 
-		for _, field := range msg.MessageBody.Fields {
+		for _, field := range msg.Fields {
 			// look for field's type in imported files
-			i.checkIsImportUsed(field.Type, checkingProto)
+			u.checkIsImportUsed(field.Type, checkingProto)
 
 			// look for field's options in imported files
-			for _, fieldOption := range field.FieldOptions {
-				i.checkIsImportUsed(fieldOption.OptionName, checkingProto)
+			for _, fieldOption := range field.Options {
+				u.checkIsImportUsed(fieldOption.Name, checkingProto)
 			}
 		}
 
-		for _, oneOf := range msg.MessageBody.Oneofs {
-			for _, field := range oneOf.OneofFields {
-				i.checkIsImportUsed(field.Type, checkingProto)
+		for _, oneOf := range msg.Oneofs {
+			for _, field := range oneOf.Fields {
+				u.checkIsImportUsed(field.Type, checkingProto)
 			}
 		}
 	}
 }
 
-func (i *ImportUsed) checkInExtends(extends []*unordered.Extend, checkingProto core.ProtoInfo) {
+func (u *importUsage) checkInExtends(extends []*protoast.Extend, checkingProto core.ProtoInfo) {
 	for _, extend := range extends {
-		i.checkIsImportUsed(extend.MessageType, checkingProto)
+		u.checkIsImportUsed(extend.Type, checkingProto)
 	}
 }
 
-func (i *ImportUsed) checkInOptions(options []*parser.Option, checkingProto core.ProtoInfo) {
+func (u *importUsage) checkInOptions(options []*protoast.Option, checkingProto core.ProtoInfo) {
 	for _, option := range options {
-		i.checkIsImportUsed(option.OptionName, checkingProto)
+		u.checkIsImportUsed(option.Name, checkingProto)
 	}
 }
 
 // existInProto look for key in imported proto file
 // look for used instruction (key) in imported proto file
-func existInProto(key string, proto *unordered.Proto) bool {
+func existInProto(key string, proto *protoast.File) bool {
 	// look for key in extends
-	for _, extend := range proto.ProtoBody.Extends {
-		for _, field := range extend.ExtendBody.Fields {
-			if field.FieldName == key {
+	for _, extend := range proto.Extends {
+		for _, field := range extend.Fields {
+			if field.Name == key {
 				return true
 			}
 		}
 	}
 
 	// look for key in messages
-	for _, message := range proto.ProtoBody.Messages {
-		if message.MessageName == key {
+	for _, message := range proto.Messages {
+		if message.Name == key {
 			return true
 		}
 	}
 
 	// look for key in enum
-	for _, enum := range proto.ProtoBody.Enums {
-		if enum.EnumName == key {
+	for _, enum := range proto.Enums {
+		if enum.Name == key {
 			return true
 		}
 	}

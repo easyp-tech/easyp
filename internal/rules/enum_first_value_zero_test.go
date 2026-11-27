@@ -35,9 +35,9 @@ func TestEnumFirstValueZero_Validate(t *testing.T) {
 			wantIssues: &core.Issue{
 				Position: core.Position{
 					Filename: "",
-					Offset:   917,
+					Offset:   924,
 					Line:     51,
-					Column:   3,
+					Column:   10,
 				},
 				SourceName: "4",
 				Message:    "enum first value must be zero",
@@ -50,9 +50,9 @@ func TestEnumFirstValueZero_Validate(t *testing.T) {
 			wantIssues: &core.Issue{
 				Position: core.Position{
 					Filename: "",
-					Offset:   667,
+					Offset:   674,
 					Line:     33,
-					Column:   5,
+					Column:   12,
 				},
 				SourceName: "4",
 				Message:    "enum first value must be zero",

@@ -295,7 +295,7 @@ func TestDescribeLintSelectionMatchesExecutableRules(t *testing.T) {
 			require.True(t, ok)
 			assert.Contains(t, values, "ENUM_VALUE_PREFIX")
 			assert.Contains(t, values, "UNARY_RPC")
-			assert.NotContains(t, values, "PACKAGE_NO_IMPORT_CYCLE")
+			assert.Contains(t, values, "PACKAGE_NO_IMPORT_CYCLE")
 		})
 	}
 }

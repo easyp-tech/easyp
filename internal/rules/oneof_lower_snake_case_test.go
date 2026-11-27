@@ -35,9 +35,9 @@ func TestOneofLowerSnakeCase_Validate(t *testing.T) {
 			wantIssues: &core.Issue{
 				Position: core.Position{
 					Filename: "",
-					Offset:   748,
+					Offset:   754,
 					Line:     39,
-					Column:   3,
+					Column:   9,
 				},
 				SourceName: "SocialNetwork",
 				Message:    "oneof name should be lower_snake_case",

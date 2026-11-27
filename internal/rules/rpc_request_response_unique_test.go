@@ -39,7 +39,7 @@ func TestRPCRequestResponseUnique_Validate(t *testing.T) {
 					Line:     14,
 					Column:   3,
 				},
-				SourceName: "TokenData",
+				SourceName: "Session.TokenData",
 				Message:    "request and response types must be unique across all RPCs",
 				RuleName:   "RPC_REQUEST_RESPONSE_UNIQUE",
 			},
@@ -58,7 +58,7 @@ func TestRPCRequestResponseUnique_Validate(t *testing.T) {
 			r, protos := start(t)
 
 			rule := rules.RPCRequestResponseUnique{}
-			issues, err := rule.Validate(protos[tc.fileName])
+			issues, err := validate(&rule, protos[tc.fileName])
 			r.ErrorIs(err, tc.wantErr)
 			switch {
 			case tc.wantIssues != nil:

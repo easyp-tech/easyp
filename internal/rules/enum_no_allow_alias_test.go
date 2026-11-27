@@ -35,9 +35,9 @@ func TestEnumNoAllowAlias_Validate(t *testing.T) {
 			wantIssues: &core.Issue{
 				Position: core.Position{
 					Filename: "",
-					Offset:   864,
-					Line:     49,
-					Column:   1,
+					Offset:   888,
+					Line:     50,
+					Column:   3,
 				},
 				SourceName: "social_network",
 				Message:    "enum must not allow alias",
@@ -50,9 +50,9 @@ func TestEnumNoAllowAlias_Validate(t *testing.T) {
 			wantIssues: &core.Issue{
 				Position: core.Position{
 					Filename: "",
-					Offset:   610,
-					Line:     31,
-					Column:   3,
+					Offset:   636,
+					Line:     32,
+					Column:   5,
 				},
 				SourceName: "social_network",
 				Message:    "enum must not allow alias",

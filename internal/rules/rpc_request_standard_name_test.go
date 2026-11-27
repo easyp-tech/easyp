@@ -35,9 +35,9 @@ func TestRPCRequestStandardName_Validate(t *testing.T) {
 			wantIssues: &core.Issue{
 				Position: core.Position{
 					Filename: "",
-					Offset:   214,
+					Offset:   223,
 					Line:     11,
-					Column:   3,
+					Column:   12,
 				},
 				SourceName: "SessionInfo",
 				Message:    "rpc request should have suffix 'Request'",

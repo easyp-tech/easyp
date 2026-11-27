@@ -50,7 +50,8 @@ func TestReadFileFromImportSearchOrder(t *testing.T) {
 			file, err := app.readFileFromImport(t.Context(), fs.NewFSWalker(project, "."), importName)
 
 			require.NoError(t, err)
-			assert.Equal(t, tt.wantPackage, GetPackageName(file))
+			require.Len(t, file.Packages, 1)
+			assert.Equal(t, tt.wantPackage, PackageName(file.Packages[0].Name))
 		})
 	}
 }

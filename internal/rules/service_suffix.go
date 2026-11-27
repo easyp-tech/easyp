@@ -8,7 +8,7 @@ import (
 
 var _ core.Rule = (*ServiceSuffix)(nil)
 
-// ServiceSuffix this rule enforces that all services are suffixed with Service.
+// ServiceSuffix this rule checks that services end with the configured suffix.
 type ServiceSuffix struct {
 	Suffix string
 }
@@ -18,13 +18,12 @@ func (s *ServiceSuffix) Message() string {
 	return "service name should have suffix"
 }
 
-// Validate enforces that all services are suffixed with Service.
+// Validate implements lint.Rule.
 func (s *ServiceSuffix) Validate(protoInfo core.ProtoInfo) ([]core.Issue, error) {
 	var res []core.Issue
-
-	for _, service := range protoInfo.Info.ProtoBody.Services {
-		if !strings.HasSuffix(service.ServiceName, s.Suffix) {
-			res = core.AppendIssue(res, s, service.Meta.Pos, service.ServiceName, service.Comments)
+	for _, service := range protoInfo.File.Services {
+		if !strings.HasSuffix(service.Name, s.Suffix) {
+			res = core.AppendIssue(res, s, service.NamePos, service.Name)
 		}
 	}
 

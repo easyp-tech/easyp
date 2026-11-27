@@ -2,6 +2,7 @@ package rules
 
 import (
 	"github.com/easyp-tech/easyp/internal/core"
+	"github.com/easyp-tech/easyp/internal/protoast"
 )
 
 var _ core.Rule = (*CommentEnumValue)(nil)
@@ -17,34 +18,11 @@ func (c *CommentEnumValue) Message() string {
 // Validate implements lint.Rule.
 func (c *CommentEnumValue) Validate(protoInfo core.ProtoInfo) ([]core.Issue, error) {
 	var res []core.Issue
-
-	for _, enum := range protoInfo.Info.ProtoBody.Enums {
-		for _, field := range enum.EnumBody.EnumFields {
-			if len(field.Comments) == 0 {
-				res = core.AppendIssue(
-					res,
-					c,
-					field.Meta.Pos,
-					field.Ident,
-					field.Comments)
-			}
+	protoInfo.File.Walk(protoast.Visitor{EnumValue: func(_ *protoast.Enum, value *protoast.EnumValue) {
+		if !leadingCommentDocuments(&value.Decl) {
+			res = core.AppendIssue(res, c, value.Pos, value.Name)
 		}
-	}
-
-	for _, msg := range protoInfo.Info.ProtoBody.Messages {
-		for _, enum := range msg.MessageBody.Enums {
-			for _, field := range enum.EnumBody.EnumFields {
-				if len(field.Comments) == 0 {
-					res = core.AppendIssue(
-						res,
-						c,
-						field.Meta.Pos,
-						field.Ident,
-						field.Comments)
-				}
-			}
-		}
-	}
+	}})
 
 	return res, nil
 }

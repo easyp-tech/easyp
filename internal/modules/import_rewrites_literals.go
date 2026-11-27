@@ -6,9 +6,7 @@ import (
 	"slices"
 	"strconv"
 
-	"github.com/bufbuild/protocompile/ast"
-	"github.com/bufbuild/protocompile/parser"
-	"github.com/bufbuild/protocompile/reporter"
+	"github.com/easyp-tech/easyprotoc/protoc/syntax"
 )
 
 type importLiteralEdit struct {
@@ -18,18 +16,14 @@ type importLiteralEdit struct {
 }
 
 func rewriteProtoImportLiterals(path string, raw []byte, replacement func(string) (string, error)) ([]byte, [][2]string, error) {
-	file, err := parser.Parse(path, bytes.NewReader(raw), reporter.NewHandler(nil))
+	file, err := syntax.Parse(path, raw)
 	if err != nil {
 		return nil, nil, fmt.Errorf("Parse: %w", err)
 	}
 	var edits []importLiteralEdit
 	var mappings [][2]string
-	for _, declaration := range file.Decls {
-		imported, ok := declaration.(*ast.ImportNode)
-		if !ok {
-			continue
-		}
-		before := imported.Name.AsString()
+	for _, imported := range file.AST.Imports {
+		before := file.Text(imported.Path)
 		after, err := replacement(before)
 		if err != nil {
 			return nil, nil, fmt.Errorf("replacement: %w", err)
@@ -40,29 +34,25 @@ func rewriteProtoImportLiterals(path string, raw []byte, replacement func(string
 		if !ValidProtoImportPath(after) {
 			return nil, nil, fmt.Errorf("invalid replacement import %q", after)
 		}
-		var literals []*ast.StringLiteralNode
-		switch name := imported.Name.(type) {
-		case *ast.StringLiteralNode:
-			literals = append(literals, name)
-		case *ast.CompoundStringLiteralNode:
-			for _, child := range name.Children() {
-				literal, ok := child.(*ast.StringLiteralNode)
-				if !ok {
-					return nil, nil, fmt.Errorf("unsupported import literal in %s", path)
-				}
-				literals = append(literals, literal)
+		// The path may be split into adjacent literals; the first one takes
+		// the new path and the rest become empty, keeping comments between.
+		first := true
+		for i := file.TokenAt(imported.Span.Start); i < file.NumTokens(); i++ {
+			kind, start, end := file.Token(i)
+			if start >= imported.Span.End {
+				break
 			}
-		default:
-			return nil, nil, fmt.Errorf("unsupported import literal in %s", path)
-		}
-		for index, literal := range literals {
-			info := file.NodeInfo(literal)
+			if kind != syntax.KindString {
+				continue
+			}
 			value := ""
-			if index == 0 {
-				value = after
+			if first {
+				value, first = after, false
 			}
-			start := info.Start().Offset
-			edits = append(edits, importLiteralEdit{start: start, end: start + len(info.RawText()), value: strconv.Quote(value)})
+			edits = append(edits, importLiteralEdit{start: int(start), end: int(end), value: strconv.Quote(value)})
+		}
+		if first {
+			return nil, nil, fmt.Errorf("unsupported import literal in %s", path)
 		}
 		mapping := [2]string{before, after}
 		if !slices.Contains(mappings, mapping) {

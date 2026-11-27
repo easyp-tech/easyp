@@ -1,9 +1,8 @@
 package rules
 
 import (
-	"github.com/yoheimuta/go-protoparser/v4/parser/meta"
-
 	"github.com/easyp-tech/easyp/internal/core"
+	"github.com/easyp-tech/easyp/internal/protoast"
 )
 
 var _ core.Rule = (*PackageDefined)(nil)
@@ -19,11 +18,8 @@ func (p *PackageDefined) Message() string {
 // Validate implements lint.Rule.
 func (p *PackageDefined) Validate(protoInfo core.ProtoInfo) ([]core.Issue, error) {
 	var res []core.Issue
-
-	if len(protoInfo.Info.ProtoBody.Packages) == 0 {
-		res = core.AppendIssue(res, p, meta.Position{
-			Filename: protoInfo.Path,
-		}, protoInfo.Path, nil)
+	if len(protoInfo.File.Packages) == 0 {
+		res = core.AppendIssue(res, p, protoast.FilePosition(protoInfo.Path), protoInfo.Path)
 	}
 
 	return res, nil
