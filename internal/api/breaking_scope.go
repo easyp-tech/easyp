@@ -35,6 +35,7 @@ func discoverBreakingScopes(replacements *policyReplacementSources, scanRelative
 		return nil, fmt.Errorf("Stat: %w", err)
 	}
 	manifests := make(map[string]v1.Module)
+	moduleDirs := make(map[string]cachedModuleDir)
 	err := workspace.WalkAt(root, scan, func(path string, entry fs.DirEntry, walkErr error) error {
 		if errors.Is(walkErr, sourceview.ErrNestedRepository) && filepath.Ext(path) == ".proto" {
 			walkErr = nil
@@ -58,7 +59,7 @@ func discoverBreakingScopes(replacements *policyReplacementSources, scanRelative
 		if unselectedReplacement {
 			return nil
 		}
-		directory, err := findV1PolicyModuleDir(root, filepath.Dir(path))
+		directory, err := cachedFindV1PolicyModuleDir(moduleDirs, root, filepath.Dir(path))
 		if err != nil {
 			return err
 		}
@@ -144,44 +145,75 @@ func breakingImportRoots(ctx context.Context, cache modules.Cache, root, moduleR
 }
 
 func breakingImportRootsMode(ctx context.Context, cache modules.Cache, root, moduleRelative string, files []string, snapshot *gitadapter.Snapshot, frozen bool) (modules.SourceRoots, error) {
+	roots, check, err := breakingImportRootsUnchecked(ctx, cache, root, moduleRelative, files, snapshot, frozen)
+	if err != nil {
+		return nil, err
+	}
+	if err := check(); err != nil {
+		return nil, err
+	}
+	return roots, nil
+}
+
+// breakingImportRootsUnchecked is breakingImportRootsMode with the import
+// collision check returned to run later. The check must pass before the roots'
+// sources are trusted.
+func breakingImportRootsUnchecked(ctx context.Context, cache modules.Cache, root, moduleRelative string, files []string, snapshot *gitadapter.Snapshot, frozen bool) (modules.SourceRoots, func() error, error) {
+	unchecked := func() error { return nil }
+	collisions := func(roots modules.SourceRoots) func() error {
+		return func() error {
+			if err := modules.CheckSourceCollisions(roots); err != nil {
+				return fmt.Errorf("CheckSourceCollisions: %w", err)
+			}
+			return nil
+		}
+	}
 	directory := filepath.Join(root, moduleRelative)
 	if len(files) == 0 {
 		// A deleted module has no graph in this revision, but an explicit empty
 		// module still requires its own lock and replacement validation.
 		if !frozen {
-			return nil, nil
+			return nil, unchecked, nil
 		}
 		if _, err := os.Stat(filepath.Join(directory, v1.ModuleFile)); os.IsNotExist(err) {
-			return nil, nil
+			return nil, unchecked, nil
 		}
 	}
 	if snapshot != nil {
 		roots, legacy, err := migration.LegacyBaselineSources(ctx, directory, cache)
 		if err != nil {
-			return nil, fmt.Errorf("LegacyBaselineSources: %w", err)
+			return nil, nil, fmt.Errorf("LegacyBaselineSources: %w", err)
 		}
 		if legacy {
-			return roots, nil
+			return roots, unchecked, nil
 		}
 	}
 	if frozen {
-		return policyImportRoots(ctx, cache, directory, true)
+		roots, err := policyImportRootsUnchecked(ctx, cache, directory, true)
+		if err != nil {
+			return nil, nil, err
+		}
+		return roots, collisions(roots), nil
 	}
 	if _, err := os.Stat(filepath.Join(directory, v1.ModuleFile)); os.IsNotExist(err) {
-		return modules.SourceRoots{{Path: directory}}, nil
+		return modules.SourceRoots{{Path: directory}}, unchecked, nil
 	} else if err != nil {
-		return nil, fmt.Errorf("Stat: %w", err)
+		return nil, nil, fmt.Errorf("Stat: %w", err)
 	}
 	if snapshot == nil {
-		return ensureV1PolicyImportRoots(ctx, cache, directory)
+		roots, err := policyImportRootsUnchecked(ctx, cache, directory, false)
+		if err != nil {
+			return nil, nil, err
+		}
+		return roots, collisions(roots), nil
 	}
 	_, module, err := modules.ReadManifest(directory)
 	if err != nil {
-		return nil, fmt.Errorf("ReadManifest: %w", err)
+		return nil, nil, fmt.Errorf("ReadManifest: %w", err)
 	}
 	own, err := modules.ModuleSources(directory, module)
 	if err != nil {
-		return nil, fmt.Errorf("ModuleSources: %w", err)
+		return nil, nil, fmt.Errorf("ModuleSources: %w", err)
 	}
 	var dependencies modules.SourceRoots
 	if len(module.Replaces) > 0 {
@@ -189,21 +221,18 @@ func breakingImportRootsMode(ctx context.Context, cache modules.Cache, root, mod
 			return snapshotReplacementPath(snapshot, directory, target)
 		})
 		if err != nil {
-			return nil, fmt.Errorf("EnsureEffectiveGraph: %w", err)
+			return nil, nil, fmt.Errorf("EnsureEffectiveGraph: %w", err)
 		}
 		dependencies = graph.Sources
 	} else {
 		dependencies, err = modules.EnsureSources(ctx, directory, module, cache)
 		if err != nil {
-			return nil, fmt.Errorf("EnsureSources: %w", err)
+			return nil, nil, fmt.Errorf("EnsureSources: %w", err)
 		}
 	}
 
 	allSources := append(own, dependencies...)
-	if err := modules.CheckSourceCollisions(allSources); err != nil {
-		return nil, fmt.Errorf("CheckSourceCollisions: %w", err)
-	}
-	return allSources, nil
+	return allSources, collisions(allSources), nil
 }
 
 // Local replacements inside the repository are read from the baseline snapshot.
